@@ -1,0 +1,65 @@
+<script id="lang-switch">
+// The language switcher (HFR spec §4.3). Every page lives at <site>/<lang>/<path>, with the same <path>
+// in every language, so switching language swaps one segment of the address.
+const SITE_LANGS = ["en", "de", "fr"];
+
+// Which segment of a path is the language folder; -1 at the site root.
+function langIndex(path) {
+  return path.split("/").findIndex((part) => SITE_LANGS.includes(part));
+}
+
+// The same page and section in another language; null outside the language folders.
+function switchHref(path, hash, to) {
+  const i = langIndex(path);
+  if (i === -1) return null;
+  const parts = path.split("/");
+  parts[i] = to;
+  return parts.join("/") + hash;
+}
+
+// The home page of the language a path is in.
+function homeHref(path) {
+  return path.split("/").slice(0, langIndex(path) + 1).join("/") + "/index.html";
+}
+
+// Where to send a visitor at the site root: their earlier choice, else their browser's language, else English.
+// Browsers report region tags ("de-CH"), so only the part before the hyphen counts.
+function pickLang(stored, browserLangs) {
+  if (SITE_LANGS.includes(stored)) return stored;
+  for (const tag of browserLangs || []) {
+    const base = String(tag).toLowerCase().split("-")[0];
+    if (SITE_LANGS.includes(base)) return base;
+  }
+  return "en";
+}
+
+// localStorage can be missing or blocked (private windows, strict settings); the site works without it.
+function readChoice() {
+  try { return window.localStorage.getItem("hfr-stats-lang"); } catch (e) { return null; }
+}
+function saveChoice(lang) {
+  try { window.localStorage.setItem("hfr-stats-lang", lang); } catch (e) { /* not remembered */ }
+}
+
+if (typeof document !== "undefined") {
+  const path = window.location.pathname;
+  if (langIndex(path) === -1) {
+    // The site root. Its plain links work without JavaScript; with it, go straight to a language.
+    window.location.replace(pickLang(readChoice(), navigator.languages || [navigator.language]) + "/index.html");
+  } else {
+    const current = path.split("/")[langIndex(path)];
+    document.querySelectorAll("a.navbar-brand").forEach((a) => { a.href = homeHref(path); });
+    document.querySelectorAll("a.nav-link").forEach((a) => {
+      const lang = a.textContent.trim().toLowerCase();
+      if (!SITE_LANGS.includes(lang)) return;
+      a.href = switchHref(path, window.location.hash, lang);
+      if (lang === current) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+      a.addEventListener("click", () => {
+        saveChoice(lang);
+        a.href = switchHref(window.location.pathname, window.location.hash, lang);   // the section open now
+      });
+    });
+  }
+}
+</script>

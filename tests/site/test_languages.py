@@ -85,3 +85,10 @@ def test_root_page_offers_every_language_without_javascript(site):
     hrefs = {a["href"].removeprefix("./") for a in soup.select("main a[href]")}
     assert {"en/index.html", "de/index.html", "fr/index.html"} <= hrefs
     assert soup.select_one("#quarto-sidebar") is None
+
+
+def test_every_page_includes_the_switcher(site):
+    pages = sorted(p for p in SITE_ROOT.rglob("*.html") if "site_libs" not in p.parts)
+    assert pages
+    missing = [str(p.relative_to(SITE_ROOT)) for p in pages if 'id="lang-switch"' not in p.read_text(encoding="utf-8")]
+    assert missing == []
