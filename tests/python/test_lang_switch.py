@@ -56,3 +56,72 @@ def test_home_of_the_current_language():
 def test_blocked_storage_never_breaks_the_page():
     blocked = 'globalThis.window = { get localStorage() { throw new Error("blocked"); } };\n'
     assert run(['readChoice()', 'saveChoice("de") === undefined'], setup=blocked) == [None, True]
+
+
+# ---- the in-page half: the whole script against a stand-in for the browser ----------------------------
+
+PAGE = """
+const stored = {};
+const replaced = [];
+function link(text, href) {
+  return { textContent: text, href: href, attrs: {}, listeners: {},
+           setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
+           addEventListener(type, fn) { this.listeners[type] = fn; } };
+}
+const brand = link("HFR Ortho", "../index.html");
+const navLinks = [link("EN", "../en/index.html"), link("DE", "../de/index.html"), link("FR", "../fr/index.html"),
+                  link("", "https://github.com/hfr-ortho/stats-formation")];
+const storage = %(storage)s;
+const define = (name, value) => Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+define("document", { querySelectorAll: (sel) => sel.includes("navbar-brand") ? [brand]
+                                               : sel.includes("nav-link") ? navLinks : [] });
+define("navigator", { languages: %(languages)s, language: "en" });
+define("window", { location: { pathname: %(path)s, hash: %(hash)s, replace: (url) => replaced.push(url) },
+                   get localStorage() { if (storage === "blocked") throw new Error("blocked"); return storage; } });
+"""
+WORKING_STORAGE = '{ getItem: (k) => stored[k] ?? null, setItem: (k, v) => { stored[k] = v; } }'
+
+
+def run_page(path, hash="", languages='["en"]', storage=WORKING_STORAGE, after=""):
+    """Load the switcher on a stand-in page, then report what it did."""
+    setup = PAGE % {"storage": storage, "languages": languages, "path": json.dumps(path), "hash": json.dumps(hash)}
+    report = ("{replaced, stored, brand: brand.href, "
+              "links: Object.fromEntries(navLinks.map((a) => [a.textContent || 'github', [a.href, a.attrs['aria-current'] || null]]))}")
+    probe = setup + script() + "\n" + after + f"\nconsole.log(JSON.stringify({report}));"
+    out = subprocess.run([NODE, "-e", probe], capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    return json.loads(out.stdout)
+
+
+def test_root_sends_a_swiss_german_browser_to_german_even_with_storage_blocked():
+    assert run_page("/stats-formation/", languages='["de-CH", "de"]', storage='"blocked"')["replaced"] == ["de/index.html"]
+
+
+def test_root_prefers_the_language_chosen_earlier():
+    stored_fr = '{ getItem: () => "fr", setItem: () => {} }'
+    assert run_page("/stats-formation/", languages='["de-CH"]', storage=stored_fr)["replaced"] == ["fr/index.html"]
+
+
+def test_page_links_lead_to_the_same_section_in_each_language():
+    result = run_page("/stats-formation/de/catalog/06-two-unpaired-groups.html", hash="#mann-whitney")
+    assert result["replaced"] == []
+    assert result["brand"] == "/stats-formation/de/index.html"
+    assert result["links"] == {
+        "EN": ["/stats-formation/en/catalog/06-two-unpaired-groups.html#mann-whitney", None],
+        "DE": ["/stats-formation/de/catalog/06-two-unpaired-groups.html#mann-whitney", "true"],
+        "FR": ["/stats-formation/fr/catalog/06-two-unpaired-groups.html#mann-whitney", None],
+        "github": ["https://github.com/hfr-ortho/stats-formation", None],
+    }
+
+
+def test_clicking_takes_the_section_open_now_and_remembers_the_choice():
+    click_fr = 'window.location.hash = "#log-rank"; navLinks[2].listeners.click();'
+    result = run_page("/en/catalog/06-two-unpaired-groups.html", hash="#mann-whitney", after=click_fr)
+    assert result["links"]["FR"][0] == "/fr/catalog/06-two-unpaired-groups.html#log-rank"
+    assert result["stored"] == {"hfr-stats-lang": "fr"}
+
+
+def test_clicking_with_storage_blocked_still_switches():
+    click_fr = 'navLinks[2].listeners.click();'
+    result = run_page("/en/index.html", storage='"blocked"', after=click_fr)
+    assert result["links"]["FR"][0] == "/fr/index.html"
