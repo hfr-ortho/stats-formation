@@ -25,6 +25,8 @@ test_that("a missed visit has every measure missing", {
   missed <- is.na(proms$prom_score)
   expect_true(all(is.na(proms$visit_days[missed])))
   expect_true(all(is.na(proms$vr12_pcs[missed])))
+  expect_true(all(is.na(proms$promis_pf[missed])))
+  expect_true(all(is.na(proms$ohs[missed])))
   expect_true(all(is.na(proms$walking_aid[missed])))
 })
 
@@ -60,4 +62,21 @@ test_that("satisfaction tracks PROM improvement", {
   rho <- stats::cor(cohort$satisfaction_1yr, gain, method = "spearman",
                     use = "complete.obs")
   expect_gt(rho, 0.3)
+})
+
+test_that("PROMIS physical function is VR-12 PCS rescaled and improves from pre-op to 1 year", {
+  expect_equal(is.na(proms$promis_pf), is.na(proms$vr12_pcs))
+  expect_gt(stats::cor(proms$promis_pf, proms$vr12_pcs, use = "complete.obs"), 0.99)
+  expect_true(all(proms$promis_pf >= 10 & proms$promis_pf <= 80, na.rm = TRUE))
+  w <- wide("promis_pf")
+  expect_lt(stats::t.test(w$`1yr`, w$preop, paired = TRUE)$p.value, 0.001)
+})
+
+test_that("the Oxford Hip Score is for THA only, has a ceiling at 1 year and tracks HOOS JR", {
+  expect_true(all(is.na(proms$ohs[proms$instrument == "KOOS JR"])))
+  hips <- proms[proms$instrument == "HOOS JR", ]
+  expect_equal(is.na(hips$ohs), is.na(hips$prom_score))
+  yr1 <- hips[hips$visit == "1yr" & !is.na(hips$ohs), ]
+  expect_gte(mean(yr1$ohs == 48), 0.10)
+  expect_gt(stats::cor(yr1$ohs, yr1$prom_score, method = "spearman"), 0.7)
 })

@@ -1,8 +1,8 @@
-# PROMs in long format: one row per case x visit (preop, 6wk, 3mo, 1yr).
+# PROMs in long format: one row per case x visit (preop, 6wk, 3mo, 1yr): HOOS JR or KOOS JR, the Oxford Hip Score (THA), VR-12 and PROMIS-29+2 physical function, walking aid.
 # A missed visit keeps its row with every measure NA, so "expected but not
 # completed" stays visible. No visit is recorded after follow-up ended.
 
-make_proms_long <- function(cohort, seed = 20261008) {
+make_proms_long <- function(cohort, seed = 20261008, ohs_seed = 20261105) {
   set.seed(seed)
   visits <- tibble::tibble(
     visit     = c("preop", "6wk", "3mo", "1yr"),
@@ -57,9 +57,18 @@ make_proms_long <- function(cohort, seed = 20261008) {
     prom_score  = round(clamp(score, 0, 100), 1),
     vr12_pcs    = round(clamp(pcs, 0, 100), 1),
     vr12_mcs    = round(clamp(mcs, 0, 100), 1),
+    # PROMIS-29+2 physical function (T-score): VR-12 PCS rescaled, no new draws.
+    promis_pf   = round(clamp(0.9 * pcs + 8, 10, 80), 1),
     walking_aid = as.integer(aid)
   )
-  measures <- c("visit_days", "prom_score", "vr12_pcs", "vr12_mcs", "walking_aid")
+  measures <- c("visit_days", "prom_score", "vr12_pcs", "vr12_mcs", "promis_pf", "walking_aid")
   out[missed, measures] <- NA
-  out
+  # Oxford Hip Score (0-48, higher is better) for THA cases, tracking HOOS JR.
+  # Its noise comes from its own seed after every other draw, so no other value
+  # in this file (or any later dataset) changes.
+  noise <- withr::with_seed(ohs_seed, stats::rnorm(nrow(out), 0, 2.5))
+  out$ohs <- ifelse(out$instrument == "HOOS JR",
+                    as.integer(clamp(round(0.48 * out$prom_score + noise), 0, 48)),
+                    NA_integer_)
+  dplyr::relocate(out, ohs, .after = prom_score)
 }
