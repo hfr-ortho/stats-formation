@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 
-from sitelib import CELL_ANCHORS, PAGES, SITE_ROOT, load, target
+from sitelib import CELL_ANCHORS, PAGES, SITE_ROOT, load, target, text_of
 
 
 def test_every_page_is_built(site):
@@ -26,18 +26,6 @@ def test_catalog_pages_have_every_cell_anchor(site):
         assert missing == [], f"{page} is missing anchors {missing}"
 
 
-def test_every_page_carries_the_tjs_logo_in_both_themes(site):
-    for page in PAGES:
-        logos = load(page).select("a.sidebar-logo-link img")
-        assert [img["src"].rsplit("/", 1)[-1] for img in logos] == ["tjs-logo.png", "tjs-logo-dark.png"], page
-        assert all(img.get("alt") == "Total Joint Specialists" for img in logos), page
-    assert (SITE_ROOT / "images" / "tjs-logo.png").exists() and (SITE_ROOT / "images" / "tjs-logo-dark.png").exists()
-
-
-def test_the_browser_tab_shows_the_tjs_mark(site):
-    icon = load("index.html").select_one('link[rel="icon"]')
-    assert icon is not None and icon["href"].endswith("images/tjs-icon.png")
-    assert (SITE_ROOT / "images" / "tjs-icon.png").exists()
 
 
 def test_coming_soon_marking_is_consistent(site):
@@ -52,3 +40,24 @@ def test_root_page_links_the_english_site(site):
     soup = BeautifulSoup((SITE_ROOT / "index.html").read_text(encoding="utf-8"), "html.parser")
     assert "en/index.html" in {a["href"].removeprefix("./") for a in soup.select("main a[href]")}
     assert soup.select_one("#quarto-sidebar") is None
+
+
+def test_every_page_carries_the_hfr_mark_in_the_top_bar(site):
+    for page in PAGES:
+        logos = load(page).select("img.navbar-logo")
+        assert logos, page
+        assert all(img["src"].endswith("images/hfr-mark-white.svg") for img in logos), page
+        assert all(img.get("alt") == "HFR Hôpital fribourgeois" for img in logos), page
+    assert (SITE_ROOT / "images" / "hfr-mark-white.svg").exists()
+
+
+def test_the_browser_tab_shows_the_hfr_mark(site):
+    icon = load("index.html").select_one('link[rel="icon"]')
+    assert icon is not None and icon["href"].endswith("images/hfr-icon.svg")
+    assert (SITE_ROOT / "images" / "hfr-icon.svg").exists()
+
+
+def test_footer_says_synthetic_in_three_languages_and_credits_tjs(site):
+    footer = text_of(load("index.html").select_one("footer"))
+    assert "Synthetic data only · Nur synthetische Daten · Données synthétiques uniquement" in footer
+    assert "Adapted from the TJS Statistics Tutorials" in footer

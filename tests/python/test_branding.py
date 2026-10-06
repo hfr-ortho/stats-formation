@@ -57,3 +57,8 @@ def test_data_and_generators_never_mention_tjs():
     assert offenders(tracked("data", "data-raw", "templates", "scripts", "R")) == []
     for workbook in ["data/messy_abstraction_workbook.xlsx", "templates/data-collection-template.xlsx"]:
         assert [t for t in workbook_text(workbook) if TJS.search(t)] == [], workbook
+
+
+def test_nothing_in_the_repo_mentions_tjs():
+    assert offenders(tracked()) == []
+    assert not list((ROOT / "images").glob("tjs-*")), "remove the TJS images"
