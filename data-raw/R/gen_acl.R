@@ -4,9 +4,13 @@
 # hamstring vs BPTB (page 6). Return to sport at 12 months differs by graft and
 # rises with the pre-injury Tegner level. Everyone is followed for at least 2
 # years unless the graft fails, so failure within 2 years is known for all.
-# Rates are tuned for teaching.
+# No graft fails in the first 3 months, and a graft that fails within the first
+# year means no return to sport at 12 months. Rates are tuned for teaching.
+# Seed: 20261123, the third tried (20261103 + 10k) after the phase 2a review
+# added the proportional-hazards test: 20261103 broke proportional hazards by
+# chance (cox.zph p = 0.008) and 20261113 missed the slope effect (p = 0.063).
 
-make_acl_cohort <- function(seed = 20261103, n = 350) {
+make_acl_cohort <- function(seed = 20261123, n = 350) {
   set.seed(seed)
   age   <- as.integer(clamp(round(15 + stats::rgamma(n, shape = 3, scale = 4.5)), 15, 50))
   sex   <- sample(c("Female", "Male"), n, TRUE, prob = c(0.42, 0.58))
@@ -18,10 +22,11 @@ make_acl_cohort <- function(seed = 20261103, n = 350) {
     0.1 + graft_effect + 0.35 * (tegner_preinjury - 6.5) - 0.05 * (age - 28)))
 
   rate   <- 0.03 * exp(log(1.22) * (tibial_slope_deg - 10) - 0.03 * (age - 28))   # per year
-  t_fail <- stats::rexp(n, rate)
+  t_fail <- 0.25 + stats::rexp(n, rate)   # no failures in the first 3 months
   censor <- stats::runif(n, 2, 6)
   graft_failure  <- as.integer(t_fail <= censor)
   followup_years <- pmax(0.01, round(pmin(t_fail, censor), 2))
+  rts_12mo[graft_failure == 1 & t_fail < 1] <- 0L   # a failed graft in year 1 means no return to sport
 
   tibble::tibble(
     case_id = sprintf("A%04d", seq_len(n)),

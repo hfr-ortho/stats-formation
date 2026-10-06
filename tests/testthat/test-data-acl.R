@@ -32,3 +32,16 @@ test_that("return to sport rises with the pre-injury Tegner level and falls with
   expect_lt(co["age", "Estimate"], 0)
   expect_lt(co["age", "Pr(>|z|)"], 0.05)
 })
+
+test_that("no one returns to sport at 12 months after the graft failed within the first year", {
+  expect_true(all(acl$rts_12mo[acl$graft_failure == 1 & acl$followup_years < 1] == 0))
+})
+
+test_that("no graft fails in the first 3 months", {
+  expect_true(all(acl$followup_years[acl$graft_failure == 1] >= 0.25))
+})
+
+test_that("the slope effect meets proportional hazards, as page 14 asks readers to check", {
+  fit <- survival::coxph(survival::Surv(followup_years, graft_failure) ~ tibial_slope_deg, data = acl)
+  expect_gt(survival::cox.zph(fit)$table["tibial_slope_deg", "p"], 0.05)
+})

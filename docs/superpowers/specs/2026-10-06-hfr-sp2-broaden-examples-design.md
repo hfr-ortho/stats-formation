@@ -119,7 +119,8 @@ on the modified Budin view), `crossover_sign` (0/1).
 | foot & ankle | arms converge by 12 months | group × time in mixed models | EFAS difference at 12 months < 1 point; interaction p < 0.01 |
 | foot & ankle | EFAS rises over time in the boot arm | Friedman | p < 0.001 |
 | ACL | graft failure by 2 years unrelated to hamstring vs BPTB | a true null (keeps page 6's lesson) | Fisher p > 0.2 |
-| ACL | failure hazard rises with tibial slope | Cox | HR per degree 1.10–1.35, p < 0.05 |
+| ACL | failure hazard rises with tibial slope, with proportional hazards (added at the phase 2a review) | Cox | HR per degree 1.10–1.35, p < 0.05; `cox.zph` p > 0.05 |
+| ACL | no failure in the first 3 months; no return to sport after a failure in the first year (added at the phase 2a review) | a consistent timeline | both hold for every case |
 | ACL | return to sport differs by graft | chi-square | p < 0.05 |
 | ACL | return to sport rises with Tegner, falls with age | multiple logistic | Tegner OR > 1 and age OR < 1, both p < 0.05 |
 | imaging | Dunn 45° alpha angle about 4° above the frog-leg view (the Dunn view profiles the anterosuperior head-neck junction; corrected at the phase 2a review) | paired t | mean difference 3–5°, p < 0.001 |
