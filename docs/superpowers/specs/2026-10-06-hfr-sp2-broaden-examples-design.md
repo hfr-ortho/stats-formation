@@ -44,7 +44,7 @@ so no existing dataset changes.
 
 ### 3.1 `hip_fracture.csv` (trauma)
 
-One row per patient, about 400 patients aged 65 and over, most over 80.
+One row per patient, 1,200 patients aged 65 and over, most over 80 (about five years at a regional hospital; changed from about 400 at the phase 2a review so that a clinically plausible delay effect is detectable). Ages follow a smooth distribution up to 100; days count from admission, and survivors go home at least 3 days after surgery.
 
 | Variable | Notes |
 |------|------|
@@ -112,7 +112,7 @@ on the modified Budin view), `crossover_sign` (0/1).
 |------|------|------|------|
 | hip fracture | 30-day mortality about 7% | proportion, binomial | 5% ≤ rate ≤ 10% |
 | hip fracture | about 85% operated within 48 h | binomial vs a 90% target | 80% ≤ share ≤ 89% |
-| hip fracture | death rises with hours to surgery and with age | logistic regression | OR per 24 h > 1 with p < 0.05; OR for age > 1 |
+| hip fracture | death rises with hours to surgery (plausibly) and with age | logistic regression | OR per 24 h between 1.2 and 1.8 with p < 0.05 (the first draft's 2.6 was clinically implausible); OR for age > 1 |
 | hip fracture | time to surgery right-skewed | describing skewed data | skewness > 1 |
 | foot & ankle | boot better EFAS at 3 months | unpaired t | difference 2–4 points, Welch p < 0.01 |
 | foot & ankle | boot less pain at 6 weeks | Mann-Whitney | p < 0.05 |

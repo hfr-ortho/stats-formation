@@ -17,7 +17,7 @@ fails if the committed CSVs differ from what the generator produces, and
 | `proms_long.csv` | case × visit (pre-op, 6 wk, 3 mo, 1 yr): HOOS JR / KOOS JR, Oxford Hip Score (THA), VR-12, PROMIS-29+2 physical function | paired tests, repeated measures, mixed models |
 | `matched_sets.csv` | case in a matched triplet (implants A, B, C) | stratified Cox |
 | `radiographic_reliability.csv` | knee × rater × session | ICC, Bland-Altman, kappa |
-| `hip_fracture.csv` | hip-fracture patient aged 65 or over (400) | trauma examples: a proportion, a binomial test, logistic regression |
+| `hip_fracture.csv` | hip-fracture patient aged 65 or over (1,200) | trauma examples: a proportion, a binomial test, logistic regression |
 | `foot_ankle_rct.csv`, `foot_ankle_rct_long.csv` | randomized patient (120); patient × visit | foot & ankle RCT (cast vs boot, EFAS score): two-group tests, Friedman, mixed models |
 | `acl_cohort.csv` | primary ACL reconstruction (350) | sports examples: Fisher's exact test, chi-square, Cox and logistic regression |
 | `hip_preservation_imaging.csv` | hip (80) | joint preservation: a paired t test (two views), correlation vs agreement (CT vs Budin torsion) |
