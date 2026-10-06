@@ -18,6 +18,7 @@ fails if the committed CSVs differ from what the generator produces, and
 | `matched_sets.csv` | case in a matched triplet (implants A, B, C) | stratified Cox |
 | `radiographic_reliability.csv` | knee × rater × session | ICC, Bland-Altman, kappa |
 | `hip_fracture.csv` | hip-fracture patient aged 65 or over (400) | trauma examples: a proportion, a binomial test, logistic regression |
+| `foot_ankle_rct.csv`, `foot_ankle_rct_long.csv` | randomized patient (120); patient × visit | foot & ankle RCT (cast vs boot, EFAS score): two-group tests, Friedman, mixed models |
 
 ## Messy files (for the tidy-data lesson)
 

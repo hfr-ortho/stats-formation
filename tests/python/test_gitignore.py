@@ -80,6 +80,10 @@ def test_risky_or_generated_files_are_ignored(path):
         "data/messy_survey_export.csv",
         "data/hip_fracture.csv",
         "data/codebooks/hip_fracture.csv",
+        "data/foot_ankle_rct.csv",
+        "data/foot_ankle_rct_long.csv",
+        "data/codebooks/foot_ankle_rct.csv",
+        "data/codebooks/foot_ankle_rct_long.csv",
     ],
 )
 def test_project_files_are_not_ignored(path):

@@ -10,6 +10,7 @@ test_that("regenerating reproduces every committed CSV byte for byte", {
   cohort <- env$make_cohort()
   proms  <- env$make_proms_long(cohort)
   items  <- env$make_survey_items(cohort, proms)
+  fa     <- env$make_foot_ankle_rct()
   fresh <- list(
     "cohort.csv"                                = cohort,
     "proms_long.csv"                            = proms,
@@ -17,7 +18,9 @@ test_that("regenerating reproduces every committed CSV byte for byte", {
     "radiographic_reliability.csv"              = env$make_reliability(),
     "answer-keys/abstraction_workbook_tidy.csv" = env$make_abstraction_truth(cohort, proms),
     "answer-keys/survey_items_long.csv"         = items,
-    "hip_fracture.csv"                          = env$make_hip_fracture()
+    "hip_fracture.csv"                          = env$make_hip_fracture(),
+    "foot_ankle_rct.csv"                        = fa$wide,
+    "foot_ankle_rct_long.csv"                   = fa$long
   )
   out <- withr::local_tempdir()
   for (name in names(fresh)) {

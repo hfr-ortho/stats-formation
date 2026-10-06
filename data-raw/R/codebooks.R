@@ -117,6 +117,21 @@ codebooks <- function() {
       "death_30d", "Died within 30 days", "binary", "", "0|1", "1 = yes; rates are tuned for teaching",
       "followup_days", "Follow-up to death or 1 year", "integer", "days", "1..365", "",
       "died", "Died during follow-up", "binary", "", "0|1", "1 = yes; 0 = alive at 1 year"
+    ),
+    foot_ankle_rct = cb(
+      "patient_id", "Patient ID", "id", "", "", "One row per randomized patient (cast vs boot after a midfoot injury)",
+      "arm", "Randomized arm", "categorical", "", "cast|boot", "1:1",
+      "age", "Age at injury", "integer", "years", "18..80", "",
+      "sex", "Sex", "categorical", "", "Female|Male", "",
+      "union_3mo", "Radiographic union at 3 months", "binary", "", "0|1", "1 = yes"
+    ),
+    foot_ankle_rct_long = cb(
+      "patient_id", "Patient ID", "id", "", "", "One row per patient x visit; links to foot_ankle_rct.csv",
+      "arm", "Randomized arm", "categorical", "", "cast|boot", "",
+      "visit", "Scheduled visit", "categorical", "", "6wk|3mo|6mo|12mo", "",
+      "visit_days", "Days from injury to the visit", "integer", "days", "30..400", "Blank = visit missed",
+      "efas", "EFAS score", "integer", "points", "0..24", "European Foot and Ankle Society score; higher = better",
+      "pain_nrs", "Pain, numeric rating scale", "integer", "points", "0..10", "0 = no pain"
     )
   )
   # Every codebook can be read on its own, so each one says it is synthetic.
