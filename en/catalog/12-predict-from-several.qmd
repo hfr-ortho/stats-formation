@@ -628,8 +628,8 @@ adjusted_p <- summary(adjusted_cox)$coefficients[, "Pr(>|z|)"]
 unadjusted_hr <- exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))
 ex_surgeon <- lm(op_time_min ~ bmi + age + sex + procedure + surgeon, data = cohort)
 ex_surgeon_test <- anova(time_model, ex_surgeon)
-ex_facility <- glm(I(discharge == "facility") ~ age_10 + sex + asa, family = binomial, data = cohort)
-ex_facility_ci <- exp(confint(ex_facility))
+ex_rehab <- glm(I(discharge == "rehabilitation clinic") ~ age_10 + sex + asa, family = binomial, data = cohort)
+ex_rehab_ci <- exp(confint(ex_rehab))
 ex_line <- glm(complication_90d ~ age, family = binomial, data = cohort)
 ex_bend <- glm(complication_90d ~ ns(age, df = 3), family = binomial, data = cohort)
 ex_bend_test <- anova(ex_line, ex_bend, test = "LRT")
@@ -678,10 +678,10 @@ stopifnot(
   round(coef(ex_surgeon)[["bmi"]], 2) == 1.27, round(confint(ex_surgeon)["bmi", ], 2) == c(1.06, 1.49),
   round(coef(ex_surgeon)[c("surgeonS2", "surgeonS3")], 2) == c(0.07, 0.60),
   round(confint(ex_surgeon)["surgeonS2", ], 2) == c(-2.57, 2.72), round(confint(ex_surgeon)["surgeonS3", ], 2) == c(-2.28, 3.48),
-  sum(cohort$discharge == "facility") == 30,
-  round(exp(coef(ex_facility))[c("age_10", "sexMale", "asa")], 2) == c(2.08, 1.36, 1.06),
-  round(ex_facility_ci["age_10", ], 2) == c(1.34, 3.31), round(ex_facility_ci["sexMale", ], 2) == c(0.63, 2.89),
-  round(ex_facility_ci["asa", ], 2) == c(0.58, 1.94),
+  sum(cohort$discharge == "rehabilitation clinic") == 30,
+  round(exp(coef(ex_rehab))[c("age_10", "sexMale", "asa")], 2) == c(2.08, 1.36, 1.06),
+  round(ex_rehab_ci["age_10", ], 2) == c(1.34, 3.31), round(ex_rehab_ci["sexMale", ], 2) == c(0.63, 2.89),
+  round(ex_rehab_ci["asa", ], 2) == c(0.58, 1.94),
   round(ex_bend_test$Deviance[2], 2) == 3.49, ex_bend_test$Df[2] == 2, round(ex_bend_test$`Pr(>Chi)`[2], 3) == 0.175,
   round(exp(10 * coef(ex_line)[["age"]]), 2) == 2.12, round(exp(10 * confint(ex_line)["age", ]), 2) == c(1.53, 2.98),
   sum(cohort$age >= 80) == 53, sum(cohort$complication_90d[cohort$age >= 80]) == 14
@@ -725,7 +725,7 @@ print(surgeon_table.loc[["bmi", "surgeon[T.S2]", "surgeon[T.S3]"]])
 There's no clear evidence that adding surgeon improves the model, and BMI's coefficient doesn't change.
 :::
 
-**2.** A colleague wants to know which patient factors predict discharge to a facility rather than home. Only 30 patients went to a facility. Which model would you use, how many predictors can it take, and what do you find with age, sex and ASA class?
+**2.** A colleague wants to know which patient factors predict discharge to a rehabilitation clinic rather than home. Only 30 patients went to a rehabilitation clinic. Which model would you use, how many predictors can it take, and what do you find with age, sex and ASA class?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -735,22 +735,22 @@ The outcome is yes/no: **multiple logistic regression**. With 30 events, the rul
 ## R
 
 ```{r}
-facility_model <- glm(I(discharge == "facility") ~ age_10 + sex + asa, family = binomial, data = cohort)
-exp(cbind(odds_ratio = coef(facility_model), confint(facility_model)))
+rehab_model <- glm(I(discharge == "rehabilitation clinic") ~ age_10 + sex + asa, family = binomial, data = cohort)
+exp(cbind(odds_ratio = coef(rehab_model), confint(rehab_model)))
 ```
 
 ## Python
 
 ```{python}
-cohort["facility"] = (cohort["discharge"] == "facility").astype(int)
-facility_model = smf.logit("facility ~ age_10 + sex + asa", data=cohort).fit(disp=False)
-facility_ors = np.exp(pd.concat([facility_model.params, facility_model.conf_int()], axis=1))
-facility_ors.columns = ["odds_ratio", "low", "high"]
-print(facility_ors)
+cohort["rehab"] = (cohort["discharge"] == "rehabilitation clinic").astype(int)
+rehab_model = smf.logit("rehab ~ age_10 + sex + asa", data=cohort).fit(disp=False)
+rehab_ors = np.exp(pd.concat([rehab_model.params, rehab_model.conf_int()], axis=1))
+rehab_ors.columns = ["odds_ratio", "low", "high"]
+print(rehab_ors)
 ```
 :::
 
-> **Results:** The odds ratios for discharge to a facility were 2.08 per 10 years of age (95% CI 1.34 to 3.31), 1.36 for male sex (95% CI 0.63 to 2.89) and 1.06 per ASA class (95% CI 0.58 to 1.94).
+> **Results:** The odds ratios for discharge to a rehabilitation clinic were 2.08 per 10 years of age (95% CI 1.34 to 3.31), 1.36 for male sex (95% CI 0.63 to 2.89) and 1.06 per ASA class (95% CI 0.58 to 1.94).
 
 The CIs are R's profile CIs. Only age's CI excludes 1.
 :::

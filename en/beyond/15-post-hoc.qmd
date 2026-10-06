@@ -597,7 +597,7 @@ age_f <- summary(age_anova)[[1]]
 tukey_bmi <- TukeyHSD(aov(bmi ~ factor(asa), data = cohort))$`factor(asa)`
 sex_vars <- c("diabetes", "hypertension", "sleep_apnea", "readmit_90d", "complication_90d")
 sex_p <- c(sapply(sex_vars, function(v) fisher.test(table(cohort$sex, cohort[[v]]))$p.value),
-           facility = fisher.test(table(cohort$sex, cohort$discharge))$p.value)
+           rehab = fisher.test(table(cohort$sex, cohort$discharge))$p.value)
 aid3 <- proms |> filter(visit != "preop") |> select(case_id, visit, walking_aid) |> group_by(case_id) |>
   filter(all(!is.na(walking_aid))) |> ungroup() |> pivot_wider(names_from = visit, values_from = walking_aid)
 aid3_p <- sapply(list(c("6wk", "3mo"), c("6wk", "1yr"), c("3mo", "1yr")),
@@ -670,7 +670,7 @@ print(pairwise_tukeyhsd(cohort["bmi"], cohort["asa"]).summary())
 Every pair differs, and mean BMI rises with each step in ASA class. The least certain differences involve the two small classes, ASA 1 and ASA 4.
 :::
 
-**2.** A colleague compares men and women on six yes/no characteristics (diabetes, hypertension, sleep apnea, readmission, complications and discharge to a facility) with Fisher's exact test. Which adjustment fits, and which differences survive it?
+**2.** A colleague compares men and women on six yes/no characteristics (diabetes, hypertension, sleep apnea, readmission, complications and discharge to a rehabilitation clinic) with Fisher's exact test. Which adjustment fits, and which differences survive it?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -680,8 +680,8 @@ This is a screen across several outcomes with no single planned comparison, so t
 ## R
 
 ```{r}
-yes_no <- cohort |> mutate(facility = as.integer(discharge == "facility"))
-characteristics <- c("diabetes", "hypertension", "sleep_apnea", "readmit_90d", "complication_90d", "facility")
+yes_no <- cohort |> mutate(rehab = as.integer(discharge == "rehabilitation clinic"))
+characteristics <- c("diabetes", "hypertension", "sleep_apnea", "readmit_90d", "complication_90d", "rehab")
 by_sex_p <- sapply(characteristics, function(v) fisher.test(table(yes_no$sex, yes_no[[v]]))$p.value)
 round(cbind(unadjusted = by_sex_p, holm = p.adjust(by_sex_p, "holm"), bh = p.adjust(by_sex_p, "BH")), 4)
 ```
@@ -689,8 +689,8 @@ round(cbind(unadjusted = by_sex_p, holm = p.adjust(by_sex_p, "holm"), bh = p.adj
 ## Python
 
 ```{python}
-cohort["facility"] = (cohort["discharge"] == "facility").astype(int)
-characteristics = ["diabetes", "hypertension", "sleep_apnea", "readmit_90d", "complication_90d", "facility"]
+cohort["rehab"] = (cohort["discharge"] == "rehabilitation clinic").astype(int)
+characteristics = ["diabetes", "hypertension", "sleep_apnea", "readmit_90d", "complication_90d", "rehab"]
 by_sex_p = [stats.fisher_exact(pd.crosstab(cohort["sex"], cohort[v])).pvalue for v in characteristics]
 print(pd.DataFrame({"unadjusted": by_sex_p, "holm": multipletests(by_sex_p, method="holm")[1],
                     "bh": multipletests(by_sex_p, method="fdr_bh")[1]}, index=characteristics).round(4))

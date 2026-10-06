@@ -749,7 +749,7 @@ age_ci <- exp(confint(age_model))
 age_wald <- exp(confint.default(age_model))
 koos_ls <- coef(lm(one_year ~ preop, data = koos_wide))
 ex_age <- lm(op_time_min ~ age, data = cohort)
-ex_facility <- glm(I(discharge == "facility") ~ age_10, family = binomial, data = cohort)
+ex_rehab <- glm(I(discharge == "rehabilitation clinic") ~ age_10, family = binomial, data = cohort)
 ex_hoos <- proms |> filter(instrument == "HOOS JR", !is.na(prom_score)) |> mutate(days = pmax(visit_days, 0))
 ex_hoos_fit <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau), data = ex_hoos,
                    start = list(plateau = 85, start = 50, tau = 100))
@@ -789,9 +789,9 @@ stopifnot(
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(coef(ex_age)[["age"]], 2) == 0.24, round(confint(ex_age)["age", ], 2) == c(0.11, 0.38),
   summary(ex_age)$coefficients["age", "Pr(>|t|)"] < 0.001, round(summary(ex_age)$r.squared, 2) == 0.02,
-  sum(cohort$discharge == "facility") == 30,
-  round(exp(coef(ex_facility))[["age_10"]], 2) == 2.06, round(exp(confint(ex_facility))["age_10", ], 2) == c(1.37, 3.17),
-  summary(ex_facility)$coefficients["age_10", "Pr(>|z|)"] < 0.001,
+  sum(cohort$discharge == "rehabilitation clinic") == 30,
+  round(exp(coef(ex_rehab))[["age_10"]], 2) == 2.06, round(exp(confint(ex_rehab))["age_10", ], 2) == c(1.37, 3.17),
+  summary(ex_rehab)$coefficients["age_10", "Pr(>|z|)"] < 0.001,
   nrow(ex_hoos) == 906, n_distinct(ex_hoos$case_id) == 270,
   round(coef(ex_hoos_fit), 1) == c(87.9, 45.6, 53.4),
   round(ex_hoos_ci["plateau", ], 1) == c(86.3, 89.4), round(ex_hoos_ci["start", ], 1) == c(44.2, 46.9),
@@ -831,33 +831,33 @@ print(age_time.params, age_time.conf_int(), age_time.rsquared, sep="\n")
 That's about 2.4 minutes per decade, and age explains only 2% of the variation, against 20% for BMI.
 :::
 
-**2.** A colleague asks whether older patients are more likely to be discharged to a facility rather than home. Which regression would you use, and what do you find?
+**2.** A colleague asks whether older patients are more likely to be discharged to a rehabilitation clinic rather than home. Which regression would you use, and what do you find?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The outcome is yes/no (facility or home) and the predictor is a measurement: **simple logistic regression**. Only 30 patients went to a facility, enough for one predictor.
+The outcome is yes/no (rehabilitation clinic or home) and the predictor is a measurement: **simple logistic regression**. Only 30 patients went to a rehabilitation clinic, enough for one predictor.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-facility_model <- glm(I(discharge == "facility") ~ age_10, family = binomial, data = cohort)
-exp(cbind(odds_ratio = coef(facility_model), confint(facility_model)))
-summary(facility_model)$coefficients
+rehab_model <- glm(I(discharge == "rehabilitation clinic") ~ age_10, family = binomial, data = cohort)
+exp(cbind(odds_ratio = coef(rehab_model), confint(rehab_model)))
+summary(rehab_model)$coefficients
 ```
 
 ## Python
 
 ```{python}
-cohort["facility"] = (cohort["discharge"] == "facility").astype(int)
-facility_model = smf.logit("facility ~ age_10", data=cohort).fit(disp=False)
-facility_ors = np.exp(pd.concat([facility_model.params, facility_model.conf_int()], axis=1))
-facility_ors.columns = ["odds_ratio", "low", "high"]
-print(facility_ors, facility_model.pvalues, sep="\n")
+cohort["rehab"] = (cohort["discharge"] == "rehabilitation clinic").astype(int)
+rehab_model = smf.logit("rehab ~ age_10", data=cohort).fit(disp=False)
+rehab_ors = np.exp(pd.concat([rehab_model.params, rehab_model.conf_int()], axis=1))
+rehab_ors.columns = ["odds_ratio", "low", "high"]
+print(rehab_ors, rehab_model.pvalues, sep="\n")
 ```
 :::
 
-> **Results:** The odds ratio for discharge to a facility per 10 years of age was 2.06 (95% CI 1.37 to 3.17; p < 0.001).
+> **Results:** The odds ratio for discharge to a rehabilitation clinic per 10 years of age was 2.06 (95% CI 1.37 to 3.17; p < 0.001).
 
 The CI is R's profile CI.
 :::

@@ -105,7 +105,7 @@ make_cohort <- function(seed = 20261008, hr_c = 2.5, base_rate = 0.015,
     -0.25 + 0.25 * (cases$asa - 2) + 0.02 * (cases$age - 66)))
   cases$discharge <- ifelse(stats::rbinom(n, 1, stats::plogis(
     -3.4 + 0.08 * (cases$age - 66) + 0.4 * (cases$asa - 2))) == 1,
-    "facility", "home")
+    "rehabilitation clinic", "home")
   # Readmission deliberately does not depend on sex (a true null result).
   cases$readmit_90d <- stats::rbinom(n, 1, stats::plogis(
     -3.2 + 0.03 * (cases$age - 66) + 0.3 * (cases$asa - 2)))

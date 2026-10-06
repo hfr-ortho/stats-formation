@@ -96,3 +96,7 @@ test_that("no 1-year satisfaction for cases whose follow-up ended before 1 year"
   expect_gt(sum(early), 0)
   expect_true(all(is.na(cohort$satisfaction_1yr[early])))
 })
+
+test_that("discharge is home or to a rehabilitation clinic", {
+  expect_setequal(unique(cohort$discharge), c("home", "rehabilitation clinic"))
+})

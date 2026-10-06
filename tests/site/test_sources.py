@@ -439,3 +439,9 @@ def test_messages_are_hidden_by_knitr_for_every_page():
     assert re.search(r"^knitr:\n  opts_chunk:\n    message: false$", config, re.MULTILINE)
     offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if PAGE_EXECUTE_MESSAGE.search(f.read_text(encoding="utf-8"))]
     assert offenders == [], "Quarto ignores `execute: message`; remove it from: " + ", ".join(offenders)
+
+
+def test_pages_use_the_swiss_discharge_labels():
+    """cohort.csv says "rehabilitation clinic"; code still selecting "facility" would silently match nothing."""
+    offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"facilit", f.read_text(encoding="utf-8"))]
+    assert offenders == [], "Use the discharge label 'rehabilitation clinic' in: " + ", ".join(offenders)
