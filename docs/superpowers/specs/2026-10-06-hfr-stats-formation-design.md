@@ -83,8 +83,8 @@ created (§4.7).
 | `data/README.md` | HFR site URLs |
 
 **Licenses.** `LICENSE` and `LICENSE-CONTENT` keep "Copyright (c) 2026 Total
-Joint Specialists" and add a line "HFR adaptations Copyright (c) 2026 HFR
-Hôpital fribourgeois". CC BY 4.0 requires indicating changes, so
+Joint Specialists" and add a line "HFR adaptations Copyright (c) 2026 Joseph
+M. Schwab" (Doc's decision at review: the adaptations are his, not HFR's). CC BY 4.0 requires indicating changes, so
 `LICENSE-CONTENT` also says the material was adapted from the TJS Statistics
 Tutorials.
 
@@ -353,12 +353,17 @@ site locally (`just preview`):
 Doc decides whether HFR communications should approve public use of the logo
 before step 1.
 
-### 4.8 Inputs needed from Doc
+### 4.8 Inputs from Doc (answered at review, 2026-10-06)
 
-- Where HFR study data are stored (one line on the real-data page, §4.5.1).
-- Review of the real-data page, possibly with HFR's data protection officer.
-- Any correction to the copyright wording "HFR Hôpital fribourgeois" or to the
-  audience line.
+- Study data: HFR Ortho encourages every project to keep its data in REDCap;
+  the real-data page says so (§4.5.1).
+- The real-data page's Swiss rules (cantonal data protection law, code key kept
+  by the person the ethics application names, general consent for
+  retrospective studies) are right; no review by the data protection officer
+  is needed.
+- The German and French home pages and labels are fine; the logo needs no
+  approval from HFR communications.
+- Copyright of the HFR adaptations: Joseph M. Schwab. The audience line stands.
 
 ### 4.9 Done when
 

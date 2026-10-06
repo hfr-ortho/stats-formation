@@ -2,7 +2,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SITE_URL = "https://hfr-ortho.github.io/stats-formation/"
-HFR_COPYRIGHT = "HFR adaptations Copyright (c) 2026 HFR Hôpital fribourgeois"
+HFR_COPYRIGHT = "HFR adaptations Copyright (c) 2026 Joseph M. Schwab"
 CREDIT = "Adapted from the TJS Statistics Tutorials"
 
 
@@ -24,6 +24,7 @@ def test_licenses():
     assert HFR_COPYRIGHT in read("LICENSE")
     content = read("LICENSE-CONTENT")
     assert "Total Joint Specialists" in content and HFR_COPYRIGHT in content
+    assert "Copyright (c) 2026 HFR" not in read("LICENSE") + content   # the HFR adaptations are Doc's, not HFR's
     assert "adapted from the TJS Statistics Tutorials" in content
     assert "CC BY 4.0" in content
     assert "https://creativecommons.org/licenses/by/4.0/legalcode" in content

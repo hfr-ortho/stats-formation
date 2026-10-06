@@ -107,3 +107,8 @@ def test_real_data_page_says_which_studies_general_consent_covers(site):
     text = text_of(load(REAL))
     assert "In a retrospective study" in text
     assert "A prospective study asks each patient for consent to that study" in text
+
+
+def test_real_data_page_recommends_redcap(site):
+    text = text_of(load(REAL))
+    assert "Keep study data in the project's REDCap database" in text
