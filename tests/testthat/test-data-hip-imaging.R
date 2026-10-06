@@ -6,8 +6,8 @@ test_that("one row per hip: 80 hips in young adults", {
   expect_true(all(img$age >= 18 & img$age <= 45))
 })
 
-test_that("the frog-leg view reads the alpha angle about 4 degrees higher than Dunn 45", {
-  d <- img$alpha_frogleg_deg - img$alpha_dunn45_deg
+test_that("the Dunn 45-degree view reads the alpha angle about 4 degrees higher than the frog-leg", {
+  d <- img$alpha_dunn45_deg - img$alpha_frogleg_deg
   expect_gt(mean(d), 3)
   expect_lt(mean(d), 5)
   expect_lt(stats::t.test(img$alpha_frogleg_deg, img$alpha_dunn45_deg, paired = TRUE)$p.value, 0.001)

@@ -122,7 +122,7 @@ on the modified Budin view), `crossover_sign` (0/1).
 | ACL | failure hazard rises with tibial slope | Cox | HR per degree 1.10–1.35, p < 0.05 |
 | ACL | return to sport differs by graft | chi-square | p < 0.05 |
 | ACL | return to sport rises with Tegner, falls with age | multiple logistic | Tegner OR > 1 and age OR < 1, both p < 0.05 |
-| imaging | frog-leg alpha angle about 4° above Dunn 45° | paired t | mean difference 3–5°, p < 0.001 |
+| imaging | Dunn 45° alpha angle about 4° above the frog-leg view (the Dunn view profiles the anterosuperior head-neck junction; corrected at the phase 2a review) | paired t | mean difference 3–5°, p < 0.001 |
 | imaging | CT and Budin torsion correlate but disagree, more so at high torsion | Pearson; correlation is not agreement | r 0.80–0.92; slope of difference on mean p < 0.05 |
 | arthroplasty | PROMIS PF improves before surgery → 1 year | paired tests, mixed models | paired p < 0.001 (inherited from the VR-12 draws) |
 | arthroplasty | Oxford Hip Score ceiling at 1 year; tracks HOOS JR | median (IQR), ceilings | ≥ 10% at 48; Spearman ρ with HOOS JR > 0.7 |

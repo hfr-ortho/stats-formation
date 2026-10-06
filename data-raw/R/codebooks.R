@@ -149,7 +149,7 @@ codebooks <- function() {
       "hip_id", "Hip ID", "id", "", "", "One row per hip (one hip per patient) assessed for hip-preservation surgery. Effects are invented for teaching",
       "age", "Age", "integer", "years", "18..45", "",
       "sex", "Sex", "categorical", "", "Female|Male", "",
-      "alpha_dunn45_deg", "Alpha angle, Dunn 45-degree view", "numeric", "degrees", "20..100", "",
+      "alpha_dunn45_deg", "Alpha angle, Dunn 45-degree view", "numeric", "degrees", "20..100", "Profiles the anterosuperior head-neck junction",
       "alpha_frogleg_deg", "Alpha angle, frog-leg lateral view", "numeric", "degrees", "20..100", "Same hip as the Dunn view",
       "torsion_ct_deg", "Femoral torsion on CT", "numeric", "degrees", "-25..55", "",
       "torsion_budin_deg", "Femoral torsion on the modified Budin view", "numeric", "degrees", "-25..55", "",
