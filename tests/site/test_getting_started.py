@@ -1,4 +1,4 @@
-from sitelib import load
+from sitelib import load, text_of
 
 SETUP_COMMANDS = [
     "uv python install 3.13",
@@ -22,16 +22,6 @@ def test_setup_page_is_no_longer_a_stub(site):
     assert load("getting-started/setup.html").select_one(".coming-soon") is None
 
 
-def test_real_data_page_lists_all_18_safe_harbor_identifiers(site):
-    items = load("getting-started/real-data.html").select(".phi-identifiers ol > li")
-    assert len(items) == 18
-
-
-def test_real_data_page_covers_tjs_traps(site):
-    text = load("getting-started/real-data.html").get_text()  # no separator: keeps highlighted code intact
-    for phrase in ["MRN", "older than 89", "implant", "DICOM", "AI", "git status",
-                   "git diff --staged"]:
-        assert phrase in text, phrase
 
 
 def test_real_data_page_is_no_longer_a_stub(site):
@@ -44,17 +34,6 @@ def test_setup_page_shows_how_to_read_data_without_cloning(site):
     assert url in text
 
 
-def test_real_data_page_states_the_full_age_over_89_rule(site):
-    text = load("getting-started/real-data.html").get_text(" ")
-    assert "including the year" in text
-    assert "birth year" in text
-
-
-def test_real_data_page_warns_about_derived_study_ids(site):
-    text = load("getting-started/real-data.html").get_text(" ")
-    assert "study ID" in text and "initials" in text
-    assert "relatives, employers, or household members" in text
-    assert "actual knowledge" in text
 
 
 def test_real_data_page_keeps_real_data_out_of_this_folder(site):
@@ -80,3 +59,39 @@ def test_no_clone_instructions_install_packages_and_handle_excel(site):
 def test_reporting_conventions_cap_large_p_values(site):
     text = load("getting-started/using-this-site.html").get_text(" ")
     assert "p > 0.999" in text and "p = 1.000" in text
+
+
+REAL = "getting-started/real-data.html"
+
+
+def test_real_data_page_states_the_swiss_rules(site):
+    text = text_of(load(REAL))
+    for phrase in ["Human Research Act", "CER-VD", "BASEC", "Federal Act on Data Protection",
+                   "coded", "code key", "general consent", "refused"]:
+        assert phrase in text, phrase
+
+
+def test_real_data_page_says_coded_data_are_never_anonymous(site):
+    assert "with a code key are never anonymous" in text_of(load(REAL))
+
+
+def test_real_data_page_covers_hfr_traps(site):
+    text = load(REAL).get_text()  # no separator: keeps highlighted code intact
+    for phrase in ["AHV", "patient number", "90 or older", "Quasi-identifiers", "implant", "DICOM", "AI",
+                   "git status", "git diff --staged"]:
+        assert phrase in text, phrase
+
+
+def test_real_data_page_warns_about_derived_study_ids(site):
+    text = load(REAL).get_text(" ")
+    assert "study ID" in text and "initials" in text
+
+
+def test_real_data_page_names_who_to_tell(site):
+    assert "data protection officer" in text_of(load(REAL))
+
+
+def test_real_data_page_has_no_us_law(site):
+    text = text_of(load(REAL))
+    for us in ["HIPAA", "Safe Harbor", "IRB", "ZIP", "Social Security", "PHI"]:
+        assert us not in text, us

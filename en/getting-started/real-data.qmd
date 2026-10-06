@@ -1,73 +1,80 @@
 ---
-title: "Working with real TJS data"
-description: "Keeping patient data safe: what counts as PHI, where TJS data lives, and the checks to run before every commit."
+title: "Working with real HFR data"
+description: "Keeping patient data safe: the Swiss rules, what identifies a patient, where HFR data lives, and the checks to run before every commit."
 ---
 
-Everything on this site uses invented data. Your real project won't. This page covers the rules that keep patients and TJS safe. Read it before you open any real dataset.
+Everything on this site uses invented data. Your real project won't. This page covers the rules that keep patients and HFR safe. Read it before you open any real dataset.
 
 ::: {.callout-warning}
 ## ⚠️ The one rule
 **Patient data never goes into a git repository.** That includes private repositories, commits, GitHub issues, screenshots and chat messages. This site's repository is **public**: anything committed here can be read by anyone on the internet, forever. Never copy real data anywhere inside this tutorial folder, including `data/` and `scratch/`.
 :::
 
-## What counts as protected health information (PHI)
+## The Swiss rules {#swiss-rules}
 
-US law (HIPAA) lists 18 kinds of identifiers. A dataset is only "de-identified" under the Safe Harbor method when **all 18** are removed:
+Two laws apply to every HFR research project that uses patient data:
 
-::: {.phi-identifiers}
-1. Names
-2. Geographic units smaller than a state: street address, city, county, and ZIP code. The first three digits of a ZIP code may stay if that area holds more than 20,000 people.
-3. All parts of dates except the year, when they relate to the patient: birth, admission, discharge, **surgery**, and death dates. For patients older than 89, remove every part of every date that reveals their age, **including the year** (so no birth year), and group their ages as "90 or older".
-4. Telephone numbers
-5. Fax numbers
-6. Email addresses
-7. Social Security numbers
-8. Medical record numbers (MRNs)
-9. Health plan beneficiary numbers
-10. Account numbers
-11. Certificate or license numbers
-12. Vehicle identifiers and serial numbers, including license plates
-13. Device identifiers and serial numbers, including **implant serial and lot numbers**
-14. Web addresses (URLs)
-15. IP addresses
-16. Biometric identifiers, such as fingerprints and voice prints
-17. Full-face photographs and comparable images
-18. Any other unique identifying number, characteristic, or code
-:::
+- **The Human Research Act** (HRA; in German HFG, in French LRH) and its ordinances. Research with health data needs approval from the cantonal ethics committee before anyone touches the data. For HFR that is the CER-VD, and every project gets a BASEC number when it is submitted. Clinical trials, such as randomized trials, also fall under the Clinical Trials Ordinance (ClinO; in German KlinV, in French OClin).
+- **The Federal Act on Data Protection** (FADP; in German DSG, in French LPD), revised in 2023. Health data are sensitive personal data under this law.
 
-These identifiers must also be removed for the patient's relatives, employers, or household members. And Safe Harbor only counts if you have no actual knowledge that what's left could still identify someone.
+Your project lead has the approval and the protocol. Read them before you start: they say which data you may use and how.
 
-## TJS-specific traps
+### Coded, not anonymous {#coded}
+
+HFR studies work with **coded** data. Each patient gets a study code (for example `C0001`), and a separate **code key** links the codes back to the patients. The project lead keeps the code key, apart from the study data and never in a repository.
+
+"Coded" and "anonymous" mean different things in Swiss law. Data are anonymous only when they can no longer be linked back to a person, so data with a code key are never anonymous. Use the word "coded" in everything you write, including emails, protocols and Methods sections.
+
+### General consent {#general-consent}
+
+HFR asks patients for a **general consent** to the use of their data for research. Only patients with a signed general consent go into a study, unless the ethics committee approved something else for your project. Patients who **refused** are never included and never contacted.
+
+## What identifies a patient {#identifiers}
+
+**Direct identifiers** never leave the clinical systems:
+
+- names, initials, date of birth, address, phone numbers, email addresses
+- the AHV/AVS number (`756.…`), HFR patient numbers and case numbers
+- implant serial and lot numbers
+- photographs of patients, and images with names burned in
+
+**Quasi-identifiers** identify patients in combination. In a small cohort, age + sex + surgery date + hospital can point to one person. Coarsen them before data leave the secure environment:
+
+- age in bands, with "90 or older" for the very old
+- the surgery month or year, or "days from surgery", instead of the date
+- "a Swiss regional hospital" instead of the hospital's name, where the protocol allows it
+
+## HFR traps {#traps}
 
 - **Surgery dates are dates.** Use "days from surgery" or the surgery year instead.
-- **Ages over 89.** Report them as "90 or older", and drop the birth year and any other date that reveals their age.
-- **Study IDs built from patient details.** A study ID made from initials, an MRN, or a birth date (like `JS-0412`) is still an identifier. Use arbitrary codes such as `C0001`.
-- **MRNs hide in file names.** Watch for names like `12345678_xray.png` or `chart_pull_MRN.xlsx`.
+- **Very old patients.** In a small cohort an age of 97 can identify someone. Group them as "90 or older".
+- **Study IDs built from patient details.** A study ID made from initials, a patient number or a birth date (like `JS-0412`) is still an identifier. Use arbitrary codes such as `C0001`.
+- **Patient numbers hide in file names.** Watch for names like `12345678_xray.png` or `extraction_AHV.xlsx`.
 - **Implant stickers.** Lot and serial numbers are device identifiers.
-- **Radiographs.** DICOM files carry the patient's name, MRN and dates in their headers, and some images have them burned into the pixels.
+- **Radiographs.** DICOM files carry the patient's name, patient number and dates in their headers, and some images have them burned into the pixels.
 - **Free-text "notes" columns.** They collect names, phone numbers and dates.
-- **Screenshots of the chart.** They're PHI too.
+- **Screenshots of the patient record.** They're patient data too.
 
-## Where TJS data lives
+## Where HFR data lives {#where}
 
-- Study data lives in TJS-controlled Google Sheets and Google Drive folders that your project lead shares with your TJS account.
-- Project repositories read data at run time, either straight from the Google Sheet or from a local `data/` folder that is listed in `.gitignore` *before the first commit*.
-- The crosswalk that links MRNs to study IDs lives only with the data, never in a repository.
-- What leaves the secure environment is aggregate: tables, figures and model results. Your IRB protocol may require hiding small counts (for example, cells with fewer than 11 patients).
+- Study data stay where your project lead keeps them for the project, for example the project's REDCap database. Don't copy them anywhere else.
+- Analysis code lives in a project repository in HFR Ortho's private GitHub organization. The repository reads the data at run time from git-ignored folders (`data/raw/`, `db/`, `exports/`) that are listed in `.gitignore` *before the first commit*.
+- The code key lives only with the project lead, never in a repository.
+- What leaves the secure environment is aggregate: tables, figures and model results. Your protocol may require hiding small counts.
 
-## How TJS projects handle data in code
+## How HFR projects handle data in code {#in-code}
 
-These rules come from TJS project repositories. [Tidy data](../foundations/01-tidy-data.qmd) practices each one.
+These rules come from HFR Ortho project repositories. [Tidy data](../foundations/01-tidy-data.qmd) practices each one.
 
 1. **Read everything as text at first.** Dates arrive in several formats, numbers contain stray text, and lists sit inside single cells. Convert types as a deliberate, recorded step, never silently while reading.
 2. **Match columns by name, not position.** Two tabs of the same sheet can have different columns.
 3. **Check what you changed.** After every cleaning step, compare row counts and summaries before and after.
 
-## AI tools
+## AI tools {#ai}
 
-**Never paste real patient data into an AI chatbot or any website.** That includes ChatGPT, Claude, Copilot and online "data cleaners". The only exception is a tool your project lead confirms is approved for PHI. The synthetic data on this site is fine to paste anywhere.
+**Never paste real patient data into an AI chatbot or any website.** That includes ChatGPT, Claude, Copilot and online "data cleaners". The only exception is a tool HFR has approved for patient data; ask your project lead. The synthetic data on this site is fine to paste anywhere.
 
-## Before every commit
+## Before every commit {#before-commit}
 
 Run these two commands and read the output:
 
@@ -78,11 +85,11 @@ git diff --staged
 
 Check that no data file, export or screenshot is listed. If you see one, unstage it with `git restore --staged <file>`.
 
-## If something goes wrong
+## If something goes wrong {#incident}
 
-If PHI reaches a commit, a push or an issue:
+If patient data reaches a commit, a push or an issue:
 
 1. **Stop.** Don't try to fix it with another commit. Git keeps the history.
-2. **Tell your project lead right away.** The data has to be purged from history, and the incident may need to be reported under TJS policy.
+2. **Tell your project lead right away.** The data has to be purged from history, and the incident may have to be reported to HFR's data protection officer.
 
 Reporting quickly is always the right call, and nobody will be upset that you did.
