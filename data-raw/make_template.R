@@ -22,14 +22,14 @@ fields <- tibble::tribble(
 limits <- list(age = c(18, 110), bmi = c(10, 80), los_days = c(0, 60))
 list_values <- function(allowed) paste0('"', gsub(", ", ",", allowed), '"')
 
-wb <- openxlsx2::wb_workbook(creator = "TJS stats tutorials")
+wb <- openxlsx2::wb_workbook(creator = "HFR Ortho stats tutorials")
 
 wb$add_worksheet("README")
 readme <- c(
-  "TJS data-collection template",
+  "HFR Ortho data-collection template",
   "",
   "1. One row per procedure. One column per variable. One value per cell.",
-  "2. Never type patient names or MRNs here. Use the study ID; keep the MRN-to-study-ID crosswalk in a separate, secured file.",
+  "2. Never type patient names or patient numbers here. Use the study code; the project lead keeps the code key (patient number to study code) in a separate, secured file.",
   "3. Pick categorical values from the dropdowns. Do not type variants (no 'F' vs 'female').",
   "4. Numbers only in number columns: 32.1, not '32.1 kg/m2'. Units are in the dictionary sheet.",
   "5. Dates as real dates (the cell checks the range).",

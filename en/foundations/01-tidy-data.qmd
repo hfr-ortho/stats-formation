@@ -378,14 +378,17 @@ Now convert each text column into what it really is. One small function handles 
 ## R
 
 ```{r}
-# Dates arrive as Excel serial numbers ("42010"), "1/13/15", "2015-04-21",
-# or "February 10 2015". Handle the serial numbers, then let lubridate try
-# month-day-year and year-month-day for the rest.
-parse_messy_date <- function(x, orders = c("mdy", "ymd")) {
+# Dates arrive as Excel serial numbers ("42010"), ISO dates ("2015-04-21"),
+# or Swiss day-first text ("13.01.15", "13.1.2015"). Handle the serial
+# numbers, then the ISO dates, then read the rest day-first.
+parse_messy_date <- function(x, day_first = TRUE) {
   serial <- !is.na(x) & str_detect(x, "^\\d{5}$")
+  iso    <- !is.na(x) & str_detect(x, "^\\d{4}-\\d{2}-\\d{2}$")
+  rest   <- !is.na(x) & !serial & !iso
   out <- as.Date(rep(NA, length(x)))
-  out[serial]  <- janitor::excel_numeric_to_date(as.numeric(x[serial]))
-  out[!serial] <- as.Date(parse_date_time(x[!serial], orders = orders, quiet = TRUE))
+  out[serial] <- janitor::excel_numeric_to_date(as.numeric(x[serial]))
+  out[iso]    <- ymd(x[iso])
+  out[rest]   <- if (day_first) dmy(x[rest], quiet = TRUE) else mdy(x[rest], quiet = TRUE)
   out
 }
 
@@ -431,10 +434,20 @@ def number(text):
 asa_roman = {"I": "1", "II": "2", "III": "3", "IV": "4"}
 procedure_text = step3["procedure"]   # keep the raw text until we've split it
 
+def parse_messy_date(col, dayfirst=True):
+    """Every cell arrives as text: ISO dates ("2015-04-21", and real Excel dates as
+    "2015-01-06 00:00:00") or Swiss day-first dates ("13.01.15", "13.1.2015").
+    dayfirst=True would also flip ISO dates, so they're read on their own."""
+    iso = col.str.match(r"\d{4}-\d{2}-\d{2}", na=False)
+    swiss = col.notna() & ~iso
+    dates = pd.concat([pd.to_datetime(col[iso], format="ISO8601"),
+                       pd.to_datetime(col[swiss], format="mixed", dayfirst=dayfirst)])
+    return dates.reindex(col.index)   # back in row order; empty cells stay missing (NaT)
+
 tidy = pd.DataFrame({
     "case_id":      step3["study_id"].str.strip(),
     "site":         step3["site"],
-    "surgery_date": pd.to_datetime(step3["dos"], format="mixed"),
+    "surgery_date": parse_messy_date(step3["dos"]),
     "age":          number(step3["age"]),
     "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
     "bmi":          number(step3["bmi"]),
@@ -450,9 +463,9 @@ tidy = pd.DataFrame({
                               ["L", "R"], default=None),
     "los_days":     number(step3["los"]),
     "revised":      step3["study_id"].str.strip().isin(revised_ids).astype(int),
-    "prom_preop_date": pd.to_datetime(step3["prom_preop_date"], format="mixed"),
+    "prom_preop_date": parse_messy_date(step3["prom_preop_date"]),
     "prom_preop":      number(step3["prom_preop"]),
-    "prom_1yr_date":   pd.to_datetime(step3["prom_1yr_date"], format="mixed"),
+    "prom_1yr_date":   parse_messy_date(step3["prom_1yr_date"]),
     "prom_1yr":        number(step3["prom_1yr"]),
 }).sort_values(["site", "case_id"]).reset_index(drop=True)
 
@@ -488,7 +501,7 @@ pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: dates
-R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_date()`). pandas already turned those cells into date-times, so `pd.to_datetime(..., format="mixed")` handles every format in one go. `"1/13/15"` is read month-first in both: US style, which is what TJS sheets use.
+R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_date()`). pandas already turned those cells into date-time text (`2015-01-06 00:00:00`), which its `parse_messy_date()` reads with the other ISO dates. Both read `"13.01.15"` day-first: Swiss style, which is what HFR sheets use. Both read ISO dates on their own, because pandas' `dayfirst=True` would also flip them (`2015-11-02` would become 11 February).
 :::
 
 ## Reshaping a survey export {#reshaping}
@@ -682,30 +695,30 @@ print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age"
 
 ### What a failing check looks like
 
-Suppose we had parsed the surgery dates day-first (European style) by mistake. Nothing crashes. Two checks catch it: a missing count (check 2, applied to the dates) and a new logic check that every pre-op PROM falls within a month before surgery.
+Suppose we had parsed the surgery dates month-first (US style, as many online examples do) by mistake. Nothing crashes. Two checks catch it: a missing count (check 2, applied to the dates) and a new logic check that every pre-op PROM falls within a month before surgery.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-wrong <- parse_messy_date(step3$dos, orders = c("dmy", "ymd"))   # the mistake
+wrong <- parse_messy_date(step3$dos, day_first = FALSE)   # the mistake
 preop <- parse_messy_date(step3$prom_preop_date)
 
 outside_window <- function(surgery) {
   days_before <- as.numeric(surgery - preop)
   sum(days_before < 0 | days_before > 31, na.rm = TRUE)
 }
-c(missing_correct   = sum(is.na(tidy$surgery_date)),
-  missing_day_first = sum(is.na(wrong)),
-  window_correct    = outside_window(parse_messy_date(step3$dos)),
-  window_day_first  = outside_window(wrong))
+c(missing_correct     = sum(is.na(tidy$surgery_date)),
+  missing_month_first = sum(is.na(wrong)),
+  window_correct      = outside_window(parse_messy_date(step3$dos)),
+  window_month_first  = outside_window(wrong))
 ```
 
 ## Python
 
 ```{python}
-wrong = pd.to_datetime(step3["dos"], format="mixed", dayfirst=True)   # the mistake
-preop = pd.to_datetime(step3["prom_preop_date"], format="mixed")
+wrong = parse_messy_date(step3["dos"], dayfirst=False)   # the mistake
+preop = parse_messy_date(step3["prom_preop_date"])
 
 def outside_window(surgery):
     days_before = (surgery - preop).dt.days
@@ -713,9 +726,9 @@ def outside_window(surgery):
 
 print(pd.Series({
     "missing_correct": tidy["surgery_date"].isna().sum(),
-    "missing_day_first": wrong.isna().sum(),
-    "window_correct": outside_window(pd.to_datetime(step3["dos"], format="mixed")),
-    "window_day_first": outside_window(wrong),
+    "missing_month_first": wrong.isna().sum(),
+    "window_correct": outside_window(parse_messy_date(step3["dos"])),
+    "window_month_first": outside_window(wrong),
 }))
 ```
 :::
@@ -723,17 +736,17 @@ print(pd.Series({
 ```{python}
 #| include: false
 # Prose guard (Python side) for the numbers quoted below.
-assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 36
+assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 ```
 
-With the correct parse, nothing is missing and every pre-op PROM falls in its window. The day-first versions go wrong in different ways:
+With the correct parse, nothing is missing and every pre-op PROM falls in its window. The month-first versions go wrong in different ways:
 
-- **R** can't read dates like `"1/13/15"` day-first (there's no 13th month), so 37 surgery dates go missing. Others, like `"3/4/24"`, parse "successfully" as 3 April instead of 4 March, and the window check flags 7 of them.
-- **pandas** never returns a missing date here: when day-first is impossible it quietly switches to month-first. Worse, `dayfirst=True` also flips *ISO* dates, so `2015-11-02` becomes 11 February. Only the window check notices: it flags 36 dates.
+- **R** can't read dates like `"13.01.15"` month-first (there's no 13th month), so 30 surgery dates go missing. Others, like `"04.03.24"`, parse "successfully" as 3 April instead of 4 March, and the window check flags 12 of them.
+- **pandas** never returns a missing date here: when month-first is impossible it quietly switches to day-first, so `"13.01.15"` comes out right by luck while `"04.03.24"` becomes 3 April. Only the window check notices: it flags 12 dates.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: one check is never enough
-Never use `dayfirst=True` (or day-first parsing in any tool) on a column that mixes formats. And notice that the missing count caught this bug in R but not in Python, while the logic check caught it in both. Run all the checks every time; they catch different mistakes.
+Never parse a column that mixes formats with one setting: read each format on its own, as `parse_messy_date()` does. And notice that the missing count caught this bug in R but not in Python, while the logic check caught it in both. Run all the checks every time; they catch different mistakes.
 :::
 
 ### Finally: compare with the answer key
@@ -767,8 +780,8 @@ stopifnot(
   nrow(tidy) == 120,
   all(table(tidy$site) == 60),
   sum(items$case_id == koos_case) == 28,
-  sum(is.na(wrong)) == 37,
-  outside_window(wrong) == 7,
+  sum(is.na(wrong)) == 30,
+  outside_window(wrong) == 12,
   outside_window(parse_messy_date(step3$dos)) == 0
 )
 ```

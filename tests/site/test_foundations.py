@@ -66,9 +66,11 @@ def test_outputs_never_dump_raw_arrays_or_run_long(site, page):
         assert len(text.splitlines()) <= 60, f"{page}: {len(text.splitlines())}-line output"
 
 
-def test_tidy_page_explains_the_day_first_bug_correctly(site):
-    text = text_of("foundations/01-tidy-data.html")
-    assert "2015-11-02" in text and "Never use dayfirst=True" in text.replace("`", "")
+def test_tidy_page_explains_the_month_first_bug_correctly(site):
+    text = text_of("foundations/01-tidy-data.html").replace("`", "")
+    assert "month-first (US style" in text
+    assert "2015-11-02" in text   # why ISO dates are read on their own
+    assert "Never parse a column that mixes formats with one setting" in text
     assert "would quietly change results" not in text
 
 

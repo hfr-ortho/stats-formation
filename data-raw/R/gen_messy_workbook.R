@@ -59,14 +59,15 @@ missing_code <- function(k, numeric = FALSE) {
 }
 
 fmt_date_text <- function(d) {
-  style <- sample(c("mdy", "iso", "long"), length(d), TRUE)
+  # Swiss sheets write the day first: "04.03.24" or "4.3.2024"; some cells are ISO dates.
+  # The same three-way draw as before, so every other random number in data/ stays the same.
+  style <- sample(c("dmy_short", "iso", "dmy_long"), length(d), TRUE)
   month <- as.integer(format(d, "%m"))
   day   <- as.integer(format(d, "%d"))
-  # month.name is always English; format("%B") would follow the computer's locale.
-  ifelse(style == "mdy",
-         sprintf("%d/%d/%s", month, day, format(d, "%y")),
+  ifelse(style == "dmy_short",
+         sprintf("%02d.%02d.%s", day, month, format(d, "%y")),
          ifelse(style == "iso", format(d, "%Y-%m-%d"),
-                sprintf("%s %d %s", month.name[month], day, format(d, "%Y"))))
+                sprintf("%d.%d.%s", day, month, format(d, "%Y"))))
 }
 
 # A cell is either a real Excel date, a number, or text. Encode each cell as a
@@ -162,10 +163,10 @@ write_one_sheet <- function(wb, sheet, t, extra_mua = FALSE) {
   order <- seq_len(nrow(t))
   order <- append(order, sample(order, 2), after = length(order) - 5)
 
-  wb$add_data(sheet, sprintf("TJS Outcomes Abstraction - %s (SYNTHETIC DATA - NOT REAL PATIENTS)", sheet),
+  wb$add_data(sheet, sprintf("HFR Ortho Outcomes Abstraction - %s (SYNTHETIC DATA - NOT REAL PATIENTS)", sheet),
               start_row = 1, start_col = 1)
   wb$merge_cells(sheet, dims = openxlsx2::wb_dims(rows = 1, cols = 1:ncols))
-  wb$add_data(sheet, "Abstractor: RA | Last updated: 1/15/2026 | DO NOT SORT",
+  wb$add_data(sheet, "Abstractor: RA | Last updated: 15.01.2026 | DO NOT SORT",
               start_row = 2, start_col = 1)
   wb$merge_cells(sheet, dims = openxlsx2::wb_dims(rows = 2, cols = 1:ncols))
 
@@ -204,7 +205,7 @@ write_one_sheet <- function(wb, sheet, t, extra_mua = FALSE) {
 
 write_messy_workbook <- function(truth, path, seed = 20261012) {
   set.seed(seed)
-  wb <- openxlsx2::wb_workbook(creator = "TJS synthetic data generator")
+  wb <- openxlsx2::wb_workbook(creator = "HFR Ortho synthetic data generator")
   write_one_sheet(wb, "Site A", dplyr::filter(truth, site == "Site A"))
   write_one_sheet(wb, "Site B", dplyr::filter(truth, site == "Site B"), extra_mua = TRUE)
   wb$save(path, overwrite = TRUE)

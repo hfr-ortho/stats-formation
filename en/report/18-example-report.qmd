@@ -95,11 +95,14 @@ revised_ids <- cells |>
   unique()
 
 # Step 5: give every column its real type
-parse_messy_date <- function(x, orders = c("mdy", "ymd")) {
+parse_messy_date <- function(x, day_first = TRUE) {
   serial <- !is.na(x) & str_detect(x, "^\\d{5}$")
+  iso    <- !is.na(x) & str_detect(x, "^\\d{4}-\\d{2}-\\d{2}$")
+  rest   <- !is.na(x) & !serial & !iso
   out <- as.Date(rep(NA, length(x)))
-  out[serial]  <- janitor::excel_numeric_to_date(as.numeric(x[serial]))
-  out[!serial] <- as.Date(parse_date_time(x[!serial], orders = orders, quiet = TRUE))
+  out[serial] <- janitor::excel_numeric_to_date(as.numeric(x[serial]))
+  out[iso]    <- ymd(x[iso])
+  out[rest]   <- if (day_first) dmy(x[rest], quiet = TRUE) else mdy(x[rest], quiet = TRUE)
   out
 }
 
@@ -186,13 +189,20 @@ for sheet in openpyxl.load_workbook(path).worksheets:
 def number(text):
     return pd.to_numeric(text.str.extract(r"(\d+\.?\d*)")[0])
 
+def parse_messy_date(col, dayfirst=True):
+    iso = col.str.match(r"\d{4}-\d{2}-\d{2}", na=False)
+    swiss = col.notna() & ~iso
+    dates = pd.concat([pd.to_datetime(col[iso], format="ISO8601"),
+                       pd.to_datetime(col[swiss], format="mixed", dayfirst=dayfirst)])
+    return dates.reindex(col.index)
+
 asa_roman = {"I": "1", "II": "2", "III": "3", "IV": "4"}
 procedure_text = step3["procedure"]
 
 tidy = pd.DataFrame({
     "case_id":      step3["study_id"].str.strip(),
     "site":         step3["site"],
-    "surgery_date": pd.to_datetime(step3["dos"], format="mixed"),
+    "surgery_date": parse_messy_date(step3["dos"]),
     "age":          number(step3["age"]),
     "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
     "bmi":          number(step3["bmi"]),
@@ -208,9 +218,9 @@ tidy = pd.DataFrame({
                               ["L", "R"], default=None),
     "los_days":     number(step3["los"]),
     "revised":      step3["study_id"].str.strip().isin(revised_ids).astype(int),
-    "prom_preop_date": pd.to_datetime(step3["prom_preop_date"], format="mixed"),
+    "prom_preop_date": parse_messy_date(step3["prom_preop_date"]),
     "prom_preop":      number(step3["prom_preop"]),
-    "prom_1yr_date":   pd.to_datetime(step3["prom_1yr_date"], format="mixed"),
+    "prom_1yr_date":   parse_messy_date(step3["prom_1yr_date"]),
     "prom_1yr":        number(step3["prom_1yr"]),
 }).sort_values(["site", "case_id"]).reset_index(drop=True)
 
