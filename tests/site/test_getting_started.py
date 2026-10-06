@@ -2,12 +2,12 @@ from sitelib import load
 
 SETUP_COMMANDS = [
     "uv python install 3.13",
-    "git clone https://github.com/Total-Joint-Specialists/example-stats-analysis.git",
+    "git clone https://github.com/hfr-ortho/stats-formation.git",
     "renv::restore()",
     "uv sync",
-    "Rscript getting-started/check_setup.R",
-    "uv run python getting-started/check_setup.py",
-    'source("getting-started/check_setup.R")',
+    "Rscript scripts/check_setup.R",
+    "uv run python scripts/check_setup.py",
+    'source("scripts/check_setup.R")',
     "sudo xcodebuild -license accept",
 ]
 
@@ -40,8 +40,7 @@ def test_real_data_page_is_no_longer_a_stub(site):
 
 def test_setup_page_shows_how_to_read_data_without_cloning(site):
     text = load("getting-started/setup.html").get_text()
-    url = ("https://raw.githubusercontent.com/Total-Joint-Specialists/"
-           "example-stats-analysis/main/data/cohort.csv")
+    url = "https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/cohort.csv"
     assert url in text
 
 

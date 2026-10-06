@@ -1,6 +1,6 @@
 """Checks that Python is ready for the tutorials.
 
-Run from the repository folder:  uv run python getting-started/check_setup.py
+Run from the repository folder:  uv run python scripts/check_setup.py
 """
 
 import importlib.util
@@ -28,7 +28,7 @@ for name in ["pandas", "numpy", "matplotlib", "scipy", "openpyxl", "tableone", "
 cohort = Path("data/cohort.csv")
 report("practice data readable (data/cohort.csv)",
        cohort.exists() and len(cohort.read_text(encoding="utf-8").splitlines()) > 1,
-       "run this from the example-stats-analysis folder")
+       "run this from the stats-formation folder")
 
 print("\nAll good - you are ready." if ok else "\nFix the problems above, then run this again.")
 sys.exit(0 if ok else 1)
