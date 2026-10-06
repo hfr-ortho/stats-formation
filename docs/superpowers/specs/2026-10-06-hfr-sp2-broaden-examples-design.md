@@ -152,7 +152,7 @@ section does now.
 | 2c | 11 · `#cox` | revision hazard vs age | Does the hazard of ACL graft failure rise with posterior tibial slope? |
 | 2c | 12 · `#multiple-logistic-regression` | complication predictors | Which factors predict return to sport at 12 months? |
 | 2c | 15, 16 (VR-12 passages) | VR-12 PCS | PROMIS-29+2 physical function |
-| 2c | 16 · `#group-by-time` | arthroplasty | Does the boot's advantage in EFAS score change over the year (boot vs cast × time)? |
+| 2c | 16 · `#group-by-time` | KOOS JR in knees, men vs women × visit (an interaction with no clear evidence) | Does the boot's advantage in EFAS score change over the year (boot vs cast × visit)? A clear interaction; the section's warning about reading interactions stays, now illustrated by the arms converging at 12 months |
 | 2c | 17 | knee alignment | Same `radiographic_reliability.csv`, reframed as osteotomy planning (HKA, MPTA, LDFA) |
 
 Coverage: trauma on pages 4, 5, 11; foot & ankle on 6, 9, 16; sports on 6, 8, 11, 12;
