@@ -28,3 +28,11 @@ def test_template_has_no_patient_identifier_columns():
     header = [c.value.lower() for c in wb["data"][1]]
     for banned in ["name", "mrn", "dob", "birth"]:
         assert not any(banned in h for h in header), banned
+
+
+def test_template_readme_leaves_the_code_key_to_the_named_person():
+    """HRO: the code key is kept by the person the ethics application names, not by default the project lead."""
+    wb = openpyxl.load_workbook(ROOT / "templates" / "data-collection-template.xlsx")
+    readme = " ".join(str(c.value) for row in wb["README"].iter_rows() for c in row if c.value)
+    assert "the person the ethics application names" in readme
+    assert "project lead keeps the code key" not in readme

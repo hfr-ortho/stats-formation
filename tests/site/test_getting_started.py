@@ -66,7 +66,7 @@ REAL = "getting-started/real-data.html"
 
 def test_real_data_page_states_the_swiss_rules(site):
     text = text_of(load(REAL))
-    for phrase in ["Human Research Act", "CER-VD", "BASEC", "Federal Act on Data Protection",
+    for phrase in ["Human Research Act", "CER-VD", "BASEC", "cantonal data protection law",
                    "coded", "code key", "general consent", "refused"]:
         assert phrase in text, phrase
 
@@ -95,3 +95,15 @@ def test_real_data_page_has_no_us_law(site):
     text = text_of(load(REAL))
     for us in ["HIPAA", "Safe Harbor", "IRB", "ZIP", "Social Security", "PHI"]:
         assert us not in text, us
+
+
+def test_real_data_page_leaves_the_code_key_to_the_named_person(site):
+    text = text_of(load(REAL))
+    assert "the person the ethics application names for it" in text
+    assert "project lead keeps the code key" not in text and "code key lives only with the project lead" not in text
+
+
+def test_real_data_page_says_which_studies_general_consent_covers(site):
+    text = text_of(load(REAL))
+    assert "In a retrospective study" in text
+    assert "A prospective study asks each patient for consent to that study" in text

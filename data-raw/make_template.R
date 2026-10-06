@@ -29,7 +29,7 @@ readme <- c(
   "HFR Ortho data-collection template",
   "",
   "1. One row per procedure. One column per variable. One value per cell.",
-  "2. Never type patient names or patient numbers here. Use the study code; the project lead keeps the code key (patient number to study code) in a separate, secured file.",
+  "2. Never type patient names or patient numbers here. Use the study code; the code key (patient number to study code) is kept in a separate, secured file by the person the ethics application names for it.",
   "3. Pick categorical values from the dropdowns. Do not type variants (no 'F' vs 'female').",
   "4. Numbers only in number columns: 32.1, not '32.1 kg/m2'. Units are in the dictionary sheet.",
   "5. Dates as real dates (the cell checks the range).",
