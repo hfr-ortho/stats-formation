@@ -379,7 +379,8 @@ before step 1.
 
 ## 5. Sub-project 2 outline: broaden the examples (English)
 
-Gets its own design addendum before its plan.
+Designed in full in `docs/superpowers/specs/2026-10-06-hfr-sp2-broaden-examples-design.md`,
+which replaces this outline where they differ.
 
 - **New synthetic datasets**, each with a generator in `data-raw/R/`, a seed, a
   codebook, R and Python tests and the TJS privacy rules:
@@ -391,11 +392,11 @@ Gets its own design addendum before its plan.
     return to sport, graft failure);
   - *joint preservation:* radiographic readings by 2 raters × 2 sessions
     (alpha angle, tibial slope, femoral torsion), for the agreement page.
-- **Arthroplasty moves to instruments used in Switzerland**: for example
-  Oxford scores and EQ-5D-5L instead of HOOS JR/KOOS JR and VR-12; discharge
-  home or to a rehabilitation clinic. The instrument list is confirmed against
-  what HFR collects, read from the PROM databank repository's code (never its
-  data).
+- **Arthroplasty instruments follow HFR's PROM databank**: it already uses
+  HOOS JR and KOOS JR, so they stay; VR-12 becomes PROMIS-29+2 physical
+  function and THA cases gain the Oxford Hip Score; discharge is home or to a
+  rehabilitation clinic. (The earlier assumption of Oxford scores and EQ-5D-5L
+  replacing HOOS JR/KOOS JR is withdrawn; see the addendum.)
 - **Each catalog section uses the dataset that fits its question best**; every
   area appears on at least three pages. Table 1 and the example report each
   stay one coherent study.
