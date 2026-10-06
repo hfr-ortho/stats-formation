@@ -1,13 +1,16 @@
-# CLAUDE.md: TJS Statistics Tutorials
+# CLAUDE.md: HFR Ortho Statistics Tutorials
 
-Public Quarto website and repository. It teaches TJS research assistants (beginners in both statistics and code) tidy data, Table 1, distribution checks, every test in the Motulsky decision table, survival analysis, and selected extras, in R and Python side by side.
+Public Quarto website and repository, in English, German and French. It teaches HFR Ortho residents, research assistants and medical students doing their master's thesis (beginners in both statistics and code) tidy data, Table 1, distribution checks, every test in the Motulsky decision table, survival analysis, and selected extras, in R and Python side by side.
 
-- Design spec: `docs/superpowers/specs/2026-10-05-tjs-stats-tutorials-design.md`
+It is an independent copy of the TJS Statistics Tutorials that keeps TJS's git history. The TJS repository is the `tjs` remote, fetch-only (its push URL is `DISABLED`). Carry a TJS fix over with `git fetch tjs` and `git cherry-pick <commit>`; nothing syncs automatically.
+
+- HFR design spec (what HFR changes): `docs/superpowers/specs/2026-10-06-hfr-stats-formation-design.md`
+- TJS design spec (the tutorial conventions; "spec section N" below means this one): `docs/superpowers/specs/2026-10-05-tjs-stats-tutorials-design.md`
 - Plans: `docs/superpowers/plans/`
 
 ## Golden rules
 
-1. **Synthetic data only. This repo is public.** Never add real patient data, real names, MRNs, real surgery dates, or screenshots of clinical systems. `.gitignore` blocks data-file extensions outside `data/` and `templates/`. Never `git add -f`.
+1. **Synthetic data only. This repo is public**, a deliberate public exception to the `hfr-ortho` rule that every repo is private. Never add real patient data, real names, MRNs, real surgery dates, or screenshots of clinical systems. `.gitignore` blocks data-file extensions outside `data/` and `templates/`. Never `git add -f`.
 2. **Every page with executable code declares `engine: knitr` in its own front matter.** Quarto ignores `engine` in `_quarto.yml` and `_metadata.yml`. Without it, a Python-only page silently runs in Jupyter on the system Python. `tests/site/test_sources.py` enforces this.
 3. **Language tabsets are `::: {.panel-tabset group="language"}`** with `## R` first and `## Python` second. Each language block stands alone: it loads its own packages and data.
 4. **Every R/Python pair ends with a hidden agreement check.** At the top of the page, a hidden chunk runs `source("R/check_agree.R")`. After each pair, a hidden Python chunk stores plain numbers, `chk = {"p": float(result.pvalue), ...}`, and a hidden R chunk compares them: `check_agree(list(p = r_result$p.value, ...), reticulate::py$chk)`. Never pull DataFrames, sets or `pd.NA` through `reticulate::py`; they don't convert cleanly. Where defaults differ (Welch vs Student, continuity corrections, exact vs asymptotic), set them explicitly in both languages and explain the difference in a 🔀 callout. Where two libraries genuinely use different formulas (for example the SMD variance divisor), document it in the callout and pass a looser `tol` with a comment.

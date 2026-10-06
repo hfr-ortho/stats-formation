@@ -28,5 +28,5 @@ fails if the committed CSVs differ from what the generator produces, and
 ## Answer keys (`answer-keys/`)
 
 The exact tidy result each messy file should become. Try the exercises in
-[Tidy data](https://total-joint-specialists.github.io/example-stats-analysis/foundations/01-tidy-data.html)
+[Tidy data](https://hfr-ortho.github.io/stats-formation/en/foundations/01-tidy-data.html)
 before you look.
