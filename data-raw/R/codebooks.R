@@ -132,6 +132,18 @@ codebooks <- function() {
       "visit_days", "Days from injury to the visit", "integer", "days", "30..400", "Blank = visit missed",
       "efas", "EFAS score", "integer", "points", "0..24", "European Foot and Ankle Society score; higher = better",
       "pain_nrs", "Pain, numeric rating scale", "integer", "points", "0..10", "0 = no pain"
+    ),
+    acl_cohort = cb(
+      "case_id", "Reconstruction (case) ID", "id", "", "", "One row per primary ACL reconstruction",
+      "age", "Age at surgery", "integer", "years", "15..50", "",
+      "sex", "Sex", "categorical", "", "Female|Male", "",
+      "graft", "Graft", "categorical", "", "BPTB|hamstring|quadriceps", "BPTB = bone-patellar tendon-bone",
+      "tibial_slope_deg", "Posterior tibial slope", "numeric", "degrees", "4..18", "",
+      "tegner_preinjury", "Tegner activity level before the injury", "integer", "", "1..10", "Ordinal; higher = more demanding sport",
+      "rts_12mo", "Returned to pre-injury sport at 12 months", "binary", "", "0|1", "1 = yes",
+      "followup_years", "Follow-up to graft failure or censoring", "numeric", "years", "0.01..6", "At least 2 years unless the graft failed",
+      "graft_failure", "Graft failure during follow-up", "binary", "", "0|1", "1 = failed; rates are tuned for teaching",
+      "failure_2y", "Graft failure within 2 years", "binary", "", "0|1", "1 = yes; known for everyone"
     )
   )
   # Every codebook can be read on its own, so each one says it is synthetic.

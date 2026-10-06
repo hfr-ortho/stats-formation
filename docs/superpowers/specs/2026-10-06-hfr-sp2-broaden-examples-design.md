@@ -84,6 +84,7 @@ One row per primary ACL reconstruction, about 350.
 | `tegner_preinjury` | 0–10 |
 | `rts_12mo` | returned to pre-injury sport at 12 months, 0/1 |
 | `followup_years`, `graft_failure` | follow-up to graft failure or censoring (up to about 6 years) |
+| `failure_2y` | graft failure within 2 years, 0/1 (everyone is followed at least 2 years unless the graft fails), for page 6's Fisher test |
 
 ### 3.4 `hip_preservation_imaging.csv` (joint preservation)
 

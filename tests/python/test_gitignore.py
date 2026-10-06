@@ -84,6 +84,8 @@ def test_risky_or_generated_files_are_ignored(path):
         "data/foot_ankle_rct_long.csv",
         "data/codebooks/foot_ankle_rct.csv",
         "data/codebooks/foot_ankle_rct_long.csv",
+        "data/acl_cohort.csv",
+        "data/codebooks/acl_cohort.csv",
     ],
 )
 def test_project_files_are_not_ignored(path):
