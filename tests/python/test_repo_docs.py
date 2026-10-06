@@ -41,5 +41,6 @@ def test_claude_md_states_the_golden_rules():
                  'a ceiling of "p > 0.999"', "Bootstrap CIs are seeded", "opts_chunk",
                  "Regression CIs", "CumIncidenceRight", "Mixed models", "Multiple comparisons", "Word output",
                  "report numbers, not interpretation",
-                 "deliberate public exception", "fetch-only", "2026-10-06-hfr-stats-formation-design.md"]:
+                 "deliberate public exception", "fetch-only", "2026-10-06-hfr-stats-formation-design.md",
+                 "Three languages", "(in Vorbereitung)"]:
         assert rule in text, rule

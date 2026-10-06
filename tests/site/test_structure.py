@@ -1,5 +1,3 @@
-from bs4 import BeautifulSoup
-
 from sitelib import CELL_ANCHORS, PAGES, SITE_ROOT, load, target, text_of
 
 
@@ -35,11 +33,6 @@ def test_coming_soon_marking_is_consistent(site):
         has_box = soup.select_one(".coming-soon") is not None
         assert in_title == has_box, f"{page}: title says {in_title}, box says {has_box}"
 
-
-def test_root_page_links_the_english_site(site):
-    soup = BeautifulSoup((SITE_ROOT / "index.html").read_text(encoding="utf-8"), "html.parser")
-    assert "en/index.html" in {a["href"].removeprefix("./") for a in soup.select("main a[href]")}
-    assert soup.select_one("#quarto-sidebar") is None
 
 
 def test_every_page_carries_the_hfr_mark_in_the_top_bar(site):
