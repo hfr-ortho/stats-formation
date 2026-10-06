@@ -144,6 +144,16 @@ codebooks <- function() {
       "followup_years", "Follow-up to graft failure or censoring", "numeric", "years", "0.01..6", "At least 2 years unless the graft failed",
       "graft_failure", "Graft failure during follow-up", "binary", "", "0|1", "1 = failed; rates are tuned for teaching",
       "failure_2y", "Graft failure within 2 years", "binary", "", "0|1", "1 = yes; known for everyone"
+    ),
+    hip_preservation_imaging = cb(
+      "hip_id", "Hip ID", "id", "", "", "One row per hip assessed for hip-preservation surgery",
+      "age", "Age", "integer", "years", "18..45", "",
+      "sex", "Sex", "categorical", "", "Female|Male", "",
+      "alpha_dunn45_deg", "Alpha angle, Dunn 45-degree view", "numeric", "degrees", "20..100", "",
+      "alpha_frogleg_deg", "Alpha angle, frog-leg lateral view", "numeric", "degrees", "20..100", "Same hip as the Dunn view",
+      "torsion_ct_deg", "Femoral torsion on CT", "numeric", "degrees", "-25..55", "",
+      "torsion_budin_deg", "Femoral torsion on the modified Budin view", "numeric", "degrees", "-25..55", "",
+      "crossover_sign", "Crossover sign on the AP pelvis", "binary", "", "0|1", "1 = present"
     )
   )
   # Every codebook can be read on its own, so each one says it is synthetic.

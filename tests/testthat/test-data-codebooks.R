@@ -35,7 +35,7 @@ test_that("each tidy dataset and answer key has a codebook", {
                            "radiographic_reliability.csv",
                            "abstraction_workbook_tidy.csv", "survey_items_long.csv",
                            "hip_fracture.csv", "foot_ankle_rct.csv", "foot_ankle_rct_long.csv",
-                           "acl_cohort.csv"))
+                           "acl_cohort.csv", "hip_preservation_imaging.csv"))
 })
 
 test_that("every codebook says the data are synthetic", {

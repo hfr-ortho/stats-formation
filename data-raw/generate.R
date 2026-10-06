@@ -28,6 +28,7 @@ fa <- make_foot_ankle_rct()
 write_tidy(fa$wide, "data/foot_ankle_rct.csv")
 write_tidy(fa$long, "data/foot_ankle_rct_long.csv")
 write_tidy(make_acl_cohort(), "data/acl_cohort.csv")
+write_tidy(make_hip_imaging(), "data/hip_preservation_imaging.csv")
 
 write_codebooks(codebooks(), "data/codebooks")
 write_checksums("data")

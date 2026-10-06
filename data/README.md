@@ -20,6 +20,7 @@ fails if the committed CSVs differ from what the generator produces, and
 | `hip_fracture.csv` | hip-fracture patient aged 65 or over (400) | trauma examples: a proportion, a binomial test, logistic regression |
 | `foot_ankle_rct.csv`, `foot_ankle_rct_long.csv` | randomized patient (120); patient × visit | foot & ankle RCT (cast vs boot, EFAS score): two-group tests, Friedman, mixed models |
 | `acl_cohort.csv` | primary ACL reconstruction (350) | sports examples: Fisher's exact test, chi-square, Cox and logistic regression |
+| `hip_preservation_imaging.csv` | hip (80) | joint preservation: a paired t test (two views), correlation vs agreement (CT vs Budin torsion) |
 
 ## Messy files (for the tidy-data lesson)
 
