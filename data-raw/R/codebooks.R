@@ -103,7 +103,7 @@ codebooks <- function() {
       "response", "Item response", "integer", "", "0|1|2|3|4", "0 = none ... 4 = extreme; blank = not answered"
     ),
     hip_fracture = cb(
-      "patient_id", "Patient ID", "id", "", "", "One row per patient aged 65 or over with a hip fracture",
+      "patient_id", "Patient ID", "id", "", "", "One row per patient aged 65 or over with a hip fracture. Effects are invented for teaching",
       "age", "Age at fracture", "integer", "years", "65..100", "Real ages, because the data are invented; with real data, group ages of 90 or older (see Working with real HFR data)",
       "sex", "Sex", "categorical", "", "Female|Male", "",
       "asa", "ASA physical status class", "integer", "", "1|2|3|4", "Ordinal",
@@ -119,14 +119,14 @@ codebooks <- function() {
       "died", "Died during follow-up", "binary", "", "0|1", "1 = yes; 0 = alive at 1 year"
     ),
     foot_ankle_rct = cb(
-      "patient_id", "Patient ID", "id", "", "", "One row per randomized patient (cast vs boot after a midfoot injury)",
+      "patient_id", "Patient ID", "id", "", "", "One row per randomized patient (cast vs boot after a midfoot injury). Effects are invented for teaching and say nothing about any HFR trial",
       "arm", "Randomized arm", "categorical", "", "cast|boot", "1:1",
       "age", "Age at injury", "integer", "years", "18..80", "",
       "sex", "Sex", "categorical", "", "Female|Male", "",
       "union_3mo", "Radiographic union at 3 months", "binary", "", "0|1", "1 = yes"
     ),
     foot_ankle_rct_long = cb(
-      "patient_id", "Patient ID", "id", "", "", "One row per patient x visit; links to foot_ankle_rct.csv",
+      "patient_id", "Patient ID", "id", "", "", "One row per patient x visit; links to foot_ankle_rct.csv. Effects are invented for teaching and say nothing about any HFR trial",
       "arm", "Randomized arm", "categorical", "", "cast|boot", "",
       "visit", "Scheduled visit", "categorical", "", "6wk|3mo|6mo|12mo", "",
       "visit_days", "Days from injury to the visit", "integer", "days", "30..400", "Blank = visit missed",
@@ -134,7 +134,7 @@ codebooks <- function() {
       "pain_nrs", "Pain, numeric rating scale", "integer", "points", "0..10", "0 = no pain"
     ),
     acl_cohort = cb(
-      "case_id", "Reconstruction (case) ID", "id", "", "", "One row per primary ACL reconstruction",
+      "case_id", "Reconstruction (case) ID", "id", "", "", "One row per primary ACL reconstruction. Effects are invented for teaching",
       "age", "Age at surgery", "integer", "years", "15..50", "",
       "sex", "Sex", "categorical", "", "Female|Male", "",
       "graft", "Graft", "categorical", "", "BPTB|hamstring|quadriceps", "BPTB = bone-patellar tendon-bone",
@@ -146,7 +146,7 @@ codebooks <- function() {
       "failure_2y", "Graft failure within 2 years", "binary", "", "0|1", "1 = yes; known for everyone"
     ),
     hip_preservation_imaging = cb(
-      "hip_id", "Hip ID", "id", "", "", "One row per hip assessed for hip-preservation surgery",
+      "hip_id", "Hip ID", "id", "", "", "One row per hip (one hip per patient) assessed for hip-preservation surgery. Effects are invented for teaching",
       "age", "Age", "integer", "years", "18..45", "",
       "sex", "Sex", "categorical", "", "Female|Male", "",
       "alpha_dunn45_deg", "Alpha angle, Dunn 45-degree view", "numeric", "degrees", "20..100", "",

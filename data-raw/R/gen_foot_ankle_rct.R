@@ -1,9 +1,10 @@
-# Foot & ankle RCT: cast vs removable boot after a midfoot (Chopart) injury,
-# randomized 1:1. EFAS score (European Foot and Ankle Society; 6 items scored
-# 0-4, total 0-24, higher is better) and pain (NRS 0-10) at 6 weeks, 3 months,
-# 6 months and 12 months. The boot leads early and the arms converge by 12
-# months (the group x time interaction on page 16). A missed visit keeps its
-# row with every measure missing.
+# Foot & ankle RCT: cast vs removable boot after a midfoot injury, randomized
+# 1:1. The effects are invented for teaching and say nothing about any HFR
+# trial. EFAS score (European Foot and Ankle Society; 6 items scored 0-4, total
+# 0-24, higher is better) and pain (NRS 0-10) at 6 weeks, 3 months, 6 months
+# and 12 months. The boot leads early and the arms converge by 12 months (the
+# group x time interaction on page 16). A missed visit keeps its row with every
+# measure missing.
 
 make_foot_ankle_rct <- function(seed = 20261102, n = 120) {
   set.seed(seed)

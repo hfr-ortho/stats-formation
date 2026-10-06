@@ -45,3 +45,17 @@ test_that("every codebook says the data are synthetic", {
     expect_match(cb$notes[1], "^SYNTHETIC DATA - not real patients", label = book)
   }
 })
+
+test_that("codebooks of the sub-project 2 datasets say their effects are invented for teaching", {
+  for (book in c("hip_fracture.csv", "foot_ankle_rct.csv", "foot_ankle_rct_long.csv",
+                 "acl_cohort.csv", "hip_preservation_imaging.csv")) {
+    cb <- readr::read_csv(data_path("codebooks", book), show_col_types = FALSE,
+                          col_types = readr::cols(.default = "c"))
+    expect_match(cb$notes[1], "invented for teaching", label = book)
+  }
+  for (book in c("foot_ankle_rct.csv", "foot_ankle_rct_long.csv")) {
+    cb <- readr::read_csv(data_path("codebooks", book), show_col_types = FALSE,
+                          col_types = readr::cols(.default = "c"))
+    expect_match(cb$notes[1], "say nothing about any HFR trial", label = book)
+  }
+})
