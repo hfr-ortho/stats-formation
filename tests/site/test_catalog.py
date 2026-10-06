@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from sitelib import CELL_ANCHORS, NO_EVIDENCE_AS_NO_DIFFERENCE, ROOT, load, section, text_of, unreported
+from sitelib import CELL_ANCHORS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, load, section, target, text_of, unreported
 
 # Catalog pages written so far. Later phases add pages 8-12 here.
 WRITTEN = [
@@ -43,7 +43,7 @@ SURVIVAL_LINKS = {cell: target for cell, target in {
 @pytest.mark.parametrize("page", WRITTEN)
 def test_page_is_written_and_frozen(site, page):
     assert load(page).select_one(".coming-soon") is None, f"{page} is still a stub"
-    assert (ROOT / "_freeze" / page.removesuffix(".html")).is_dir()
+    assert (FREEZE / page.removesuffix(".html")).is_dir()
 
 
 @pytest.mark.parametrize("page,anchor", SECTIONS)
@@ -236,5 +236,5 @@ SECTION_LINKS = {
 
 @pytest.mark.parametrize("page,targets", SECTION_LINKS.items())
 def test_links_into_the_survival_pages_land_on_the_section_they_promise(site, page, targets):
-    hrefs = {a["href"].removeprefix("../") for a in load(page).select("main a[href]")}
+    hrefs = {target(page, a["href"]) for a in load(page).select("main a[href]")}
     assert [target for target in targets if target not in hrefs] == []

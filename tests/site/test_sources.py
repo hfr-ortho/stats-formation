@@ -4,7 +4,7 @@ import ast
 import builtins
 import re
 
-from sitelib import CELL_ANCHORS, ROOT
+from sitelib import CELL_ANCHORS, LANGS, ROOT, SRC
 
 CONTENT_DIRS = ["getting-started", "foundations", "catalog", "survival", "beyond", "report"]
 EXECUTABLE_CHUNK = re.compile(r"^```\{(r|python)[ ,}]", re.MULTILINE)
@@ -12,9 +12,11 @@ KNITR = re.compile(r"^engine:\s*knitr\s*$", re.MULTILINE)
 
 
 def qmd_files():
-    files = sorted(ROOT.glob("*.qmd"))   # the home page, the test chooser and the A–Z index
-    for d in CONTENT_DIRS:
-        files += sorted((ROOT / d).glob("*.qmd"))
+    files = sorted(ROOT.glob("*.qmd"))   # the site root's language picker
+    for lang in LANGS:
+        files += sorted((ROOT / lang).glob("*.qmd"))   # each language's home page, test chooser and A–Z index
+        for d in CONTENT_DIRS:
+            files += sorted((ROOT / lang / d).glob("*.qmd"))
     return files
 
 
@@ -79,7 +81,7 @@ def test_chunk_options_can_come_in_any_order():
 
 def test_tidy_page_checks_both_answer_keys_in_both_languages():
     """Spec 8.4: page 1's reference solutions must reproduce the answer keys exactly."""
-    chunks = hidden_chunks((ROOT / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8"))
+    chunks = hidden_chunks((SRC / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8"))
     for key in ["abstraction_workbook_tidy.csv", "survey_items_long.csv"]:
         assert any(lang == "r" and key in code and "stopifnot(isTRUE(all.equal(" in code
                    for lang, code in chunks), f"no hidden R check against {key}"
@@ -90,7 +92,7 @@ def test_tidy_page_checks_both_answer_keys_in_both_languages():
 def written_pages(*dirs):
     """Pages in these folders that are no longer "(coming soon)" stubs."""
     for d in dirs:
-        for path in sorted((ROOT / d).glob("*.qmd")):
+        for path in sorted((SRC / d).glob("*.qmd")):
             text = path.read_text(encoding="utf-8")
             if "(coming soon)" not in front_matter(text):
                 yield f"{d}/{path.name}", text
@@ -117,20 +119,20 @@ def section(text, start, end):
 
 
 def test_recode_cross_tabs_compare_raw_values_with_the_result():
-    text = (ROOT / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8")
+    text = (SRC / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8")
     check = section(text, "**3. Cross-tab every recode.**", "**4. Range and logic checks.**")
     assert "left_join(" in check and "merge(" in check
 
 
 def test_tidy_recodes_send_unexpected_codes_to_missing():
-    text = (ROOT / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8")
+    text = (SRC / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8")
     step5 = section(text, "### Step 5: give every column its real type", "## Reshaping a survey export")
     assert step5.count("case_when(") >= 3      # sex, procedure, side
     assert step5.count("np.select(") >= 2      # procedure, side
 
 
 def test_quartile_guard_reads_what_the_libraries_display():
-    text = (ROOT / "foundations" / "02-demographics.qmd").read_text(encoding="utf-8")
+    text = (SRC / "foundations" / "02-demographics.qmd").read_text(encoding="utf-8")
     chunks = hidden_chunks(text)
     assert any(lang == "r" and "table_body" in code and "1 (0–2)" in code for lang, code in chunks)
     assert any(lang == "python" and "1.0 [0.0,1.8]" in code for lang, code in chunks)

@@ -3,7 +3,7 @@ have no fixed section anatomy. Every page in FREE_FORM_SECTIONS gets these check
 
 import pytest
 
-from sitelib import FREE_FORM_SECTIONS, NO_EVIDENCE_AS_NO_DIFFERENCE, ROOT, load, section, text_of, unreported
+from sitelib import FREE_FORM_SECTIONS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, load, section, text_of, unreported
 
 
 @pytest.mark.parametrize("page,sections", FREE_FORM_SECTIONS.items())
@@ -19,7 +19,7 @@ def test_page_runs_both_languages_and_is_frozen(site, page):
     ran = [tabset for tabset in load(page).select("div.panel-tabset")
            if all(pane.select(".cell-output, .cell-output-display") for pane in tabset.select("div.tab-pane"))]
     assert len(ran) >= 5, f"{page}: only {len(ran)} tabsets show output in both R and Python"
-    assert (ROOT / "_freeze" / page.removesuffix(".html")).is_dir()
+    assert (FREEZE / page.removesuffix(".html")).is_dir()
 
 
 @pytest.mark.parametrize("page", FREE_FORM_SECTIONS)

@@ -6,7 +6,7 @@ import re
 
 import pytest
 
-from sitelib import ROOT, SITE, code_of, docx_text, docx_xml, load, section, text_of
+from sitelib import FREEZE, ROOT, SITE, SRC, code_of, docx_text, docx_xml, load, section, target, text_of
 
 REPORT = "report/18-example-report.html"
 WORD = SITE / "report" / "18-example-report.docx"
@@ -20,7 +20,7 @@ def test_the_page_offers_the_word_version(site):
 
 
 def test_the_word_version_is_frozen_so_ci_can_rebuild_it_without_r():
-    frozen = ROOT / "_freeze" / "report" / "18-example-report"
+    frozen = FREEZE / "report" / "18-example-report"
     assert (frozen / "execute-results" / "docx.json").exists() and (frozen / "figure-docx").is_dir()
 
 
@@ -58,10 +58,10 @@ STEP_LINKS = {
 }
 
 
-@pytest.mark.parametrize("anchor,target", STEP_LINKS.items())
-def test_each_step_links_to_the_page_that_explains_it(site, anchor, target):
-    hrefs = [a["href"].removeprefix("../") for a in section(REPORT, anchor).select("a[href]")]
-    assert target in hrefs, hrefs
+@pytest.mark.parametrize("anchor,expected", STEP_LINKS.items())
+def test_each_step_links_to_the_page_that_explains_it(site, anchor, expected):
+    hrefs = [target(REPORT, a["href"]) for a in section(REPORT, anchor).select("a[href]")]
+    assert expected in hrefs, hrefs
 
 
 def test_failed_integrity_checks_stop_the_script(site):
@@ -147,13 +147,13 @@ def test_the_registry_link_is_checked_on_more_than_revisions(site):
 
 
 def test_the_prose_guard_reads_the_missing_counts_from_the_data():
-    page = (ROOT / "report" / "18-example-report.qmd").read_text(encoding="utf-8")
+    page = (SRC / "report" / "18-example-report.qmd").read_text(encoding="utf-8")
     guard = page[page.index("# Prose guard"):page.index("## Exercises {#exercises}")]
     assert "20 + 47 == 67" not in guard and "is.na(study$prom_1yr)" in guard
 
 
 def test_the_frozen_word_version_matches_the_current_data_and_ships_flextables_files():
     current = hashlib.md5((ROOT / "data" / "CHECKSUMS.md5").read_bytes()).hexdigest()
-    frozen = ROOT / "_freeze" / "report" / "18-example-report" / "execute-results" / "docx.json"
+    frozen = FREEZE / "report" / "18-example-report" / "execute-results" / "docx.json"
     assert f"data-checksum: {current}" in frozen.read_text(encoding="utf-8")
     assert (ROOT / "_freeze" / "site_libs" / "tabwid-1.1.3").is_dir()

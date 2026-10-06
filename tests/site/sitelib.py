@@ -1,6 +1,7 @@
 """Shared constants and helpers for the built-site tests."""
 
 import html
+import posixpath
 import re
 import zipfile
 from pathlib import Path
@@ -8,7 +9,13 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parents[2]
-SITE = ROOT / "_site"
+SITE_ROOT = ROOT / "_site"
+LANGS = ["en", "de", "fr"]
+
+# The English pages. Every content test reads these; test_languages.py checks German and French.
+SITE = SITE_ROOT / "en"
+SRC = ROOT / "en"
+FREEZE = ROOT / "_freeze" / "en"
 
 PAGES = [
     "index.html",
@@ -89,8 +96,18 @@ def load(page: str) -> BeautifulSoup:
     return BeautifulSoup((SITE / page).read_text(encoding="utf-8"), "html.parser")
 
 
-def strip_dot(href: str) -> str:
-    return href.removeprefix("./")
+def target(page: str, href: str, lang: str = "en") -> str:
+    """Where a link on the built page <lang>/<page> points, as a path inside <lang>/ ("catalog/x.html#id").
+
+    Quarto writes sidebar links as "../en/catalog/x.html" and body links as "catalog/x.html"; both give the
+    same answer. A link that leaves the language folder comes back from the site root ("/de/index.html");
+    web links come back unchanged."""
+    if "://" in href or href.startswith("mailto:"):
+        return href
+    if href.startswith("#"):
+        return page + href
+    resolved = posixpath.normpath(posixpath.join(lang, posixpath.dirname(page), href))
+    return resolved.removeprefix(f"{lang}/") if resolved.startswith(f"{lang}/") else "/" + resolved
 
 
 def text_of(element):

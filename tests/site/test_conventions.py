@@ -1,6 +1,6 @@
 """Site-wide page conventions (spec section 6)."""
 
-from sitelib import INTERPRETATION, PAGES, ROOT, SITE, load, results_of, text_of
+from sitelib import FREEZE, INTERPRETATION, PAGES, SITE, load, results_of, text_of
 
 
 def test_rule_flags_interpretation_in_results_sentences():
@@ -57,7 +57,7 @@ def test_using_this_site_runs_both_languages(site):
     first = soup.select_one("div.panel-tabset")
     assert first is not None
     assert len(first.select(".cell-output")) >= 2, "R and Python should each print a result"
-    assert (ROOT / "_freeze" / "getting-started" / "using-this-site").is_dir()
+    assert (FREEZE / "getting-started" / "using-this-site").is_dir()
 
 
 def test_callout_legend_shows_all_four_kinds(site):

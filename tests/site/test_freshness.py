@@ -8,18 +8,20 @@ the data change and nobody re-renders, this test fails (locally and in CI).
 import hashlib
 import re
 
-from sitelib import ROOT, SITE
+from sitelib import LANGS, ROOT, SITE_ROOT
 
 CONTENT_DIRS = ["getting-started", "foundations", "catalog", "survival", "beyond", "report"]
 READS_DATA = re.compile(r"""["']data/""")
 
 
 def data_pages():
-    for d in CONTENT_DIRS:
-        for qmd in sorted((ROOT / d).glob("*.qmd")):
-            text = qmd.read_text(encoding="utf-8")
-            if "```{r" in text and READS_DATA.search(text):
-                yield qmd.relative_to(ROOT).with_suffix(".html")
+    """Every built page, in any language, whose code reads data/ (as paths from the site root)."""
+    for lang in LANGS:
+        for d in CONTENT_DIRS:
+            for qmd in sorted((ROOT / lang / d).glob("*.qmd")):
+                text = qmd.read_text(encoding="utf-8")
+                if "```{r" in text and READS_DATA.search(text):
+                    yield qmd.relative_to(ROOT).with_suffix(".html")
 
 
 def test_pages_that_read_data_were_rendered_from_the_current_data(site):
@@ -27,13 +29,13 @@ def test_pages_that_read_data_were_rendered_from_the_current_data(site):
     pages = list(data_pages())
     assert pages, "expected at least one page that reads data/"
     for page in pages:
-        html = (SITE / page).read_text(encoding="utf-8")
+        html = (SITE_ROOT / page).read_text(encoding="utf-8")
         assert f"<!-- data-checksum: {current} -->" in html, f"{page} was rendered from other data; re-render it"
 
 
 def test_just_data_re_renders_the_pages_that_read_data():
     justfile = (ROOT / "Justfile").read_text(encoding="utf-8")
     recipe = justfile[justfile.index("\ndata:"):]
-    folders = sorted({page.parts[0] for page in data_pages()})
-    missing = [f for f in folders if not re.search(rf"^\s*quarto render {f}\s*$", recipe, re.MULTILINE)]
+    folders = sorted({"/".join(page.parts[:2]) for page in data_pages()})   # e.g. "en/foundations"
+    missing = [f for f in folders if not re.search(rf"^\s*quarto render {re.escape(f)}\s*$", recipe, re.MULTILINE)]
     assert missing == [], f"`just data` must re-render: {missing}"

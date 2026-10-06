@@ -31,8 +31,8 @@ data:
     uv run pytest tests/python -q
     # Freeze only notices .qmd changes, so re-render every folder whose pages read data/.
     # (Rendering a folder always re-runs its code.)
-    quarto render foundations
-    quarto render catalog
-    quarto render survival
-    quarto render beyond
-    quarto render report
+    quarto render en/foundations
+    quarto render en/catalog
+    quarto render en/survival
+    quarto render en/beyond
+    quarto render en/report

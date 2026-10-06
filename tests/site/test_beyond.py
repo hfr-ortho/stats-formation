@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from sitelib import code_of, load, section, text_of
+from sitelib import code_of, load, section, target, text_of
 
 POST_HOC = "beyond/15-post-hoc.html"
 MIXED = "beyond/16-mixed-models.html"
@@ -136,7 +136,7 @@ SECTION_LINKS = {
 
 
 def beyond_links(page):
-    return [a["href"].replace("../", "") for a in load(page).select("main a[href]") if "beyond/1" in a["href"]]
+    return [target(page, a["href"]) for a in load(page).select("main a[href]") if "beyond/1" in a["href"]]
 
 
 @pytest.mark.parametrize("page,targets", SECTION_LINKS.items())

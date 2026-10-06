@@ -1,7 +1,7 @@
 """The ways into the site (spec section 3): the welcome page, the test chooser (the decision table)
 and the A–Z index of tests and methods."""
 
-from sitelib import CELL_ANCHORS, load, strip_dot, text_of
+from sitelib import CELL_ANCHORS, load, target, text_of
 
 HOME = "index.html"
 CHOOSE = "choose-a-test.html"
@@ -18,7 +18,7 @@ BEYOND_LINKS = [
 
 
 def hrefs(page):
-    return {strip_dot(a["href"]) for a in load(page).select("main a[href]")}
+    return {target(page, a["href"]) for a in load(page).select("main a[href]")}
 
 
 def main_text(page):
@@ -91,7 +91,7 @@ def index_rows():
     """(name, row text, links) for each row of the A–Z table."""
     rows = []
     for tr in load(A_TO_Z).select("main table tbody tr"):
-        rows.append((text_of(tr.select_one("td")), text_of(tr), {strip_dot(a["href"]) for a in tr.select("a[href]")}))
+        rows.append((text_of(tr.select_one("td")), text_of(tr), {target(A_TO_Z, a["href"]) for a in tr.select("a[href]")}))
     return rows
 
 

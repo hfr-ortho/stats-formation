@@ -70,7 +70,7 @@ def test_risky_or_generated_files_are_ignored(path):
         "data/messy_abstraction_workbook.xlsx",
         "templates/data-collection-template.xlsx",
         "scratch/README.md",
-        "_freeze/getting-started/using-this-site/execute-results/html.json",
+        "_freeze/en/getting-started/using-this-site/execute-results/html.json",
         "renv.lock",
         "renv/settings.json",
         "data/README.md",

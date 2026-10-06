@@ -47,7 +47,9 @@ It is an independent copy of the TJS Statistics Tutorials that keeps TJS's git h
 
 ## Layout
 
-- Pages: `index.qmd` (the welcome page), `choose-a-test.qmd` ("Which statistical test should I use?": the decision table), `tests-a-z.qmd` (every test and method, with aliases; `tests/site/test_home.py` fails if a test section is missing from it), `getting-started/`, `foundations/`, `catalog/` (pages 4–12, one per table row), `survival/`, `beyond/`, `report/`
+- Pages: `en/`, `de/`, `fr/`, one folder per language with the same file names (HFR spec §4.3). In each: `index.qmd` (the welcome page), `choose-a-test.qmd` (the decision table), `tests-a-z.qmd` (every test and method, with aliases; `tests/site/test_home.py` fails if a test section is missing from it), `getting-started/`, `foundations/`, `catalog/` (pages 4–12, one per table row), `survival/`, `beyond/`, `report/`. The root `index.qmd` only sends visitors to a language.
+- `scripts/`: `check_setup.R` and `check_setup.py`, the setup checks readers run
+- Code on every page runs from the repo root (`execute-dir: project`), so pages read `data/…` and `source("R/check_agree.R")` whatever their folder.
 - `R/check_agree.R`: the agreement guard
 - `tests/testthat/` (R), `tests/python/` (Python, data and repo), `tests/site/` (built site and sources)
 - `data/`, `data-raw/`, `templates/`: synthetic data and its generator (Phase 1)

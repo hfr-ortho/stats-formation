@@ -2,7 +2,7 @@
 
 import pytest
 
-from sitelib import ROOT, load
+from sitelib import FREEZE, load
 
 SECTIONS = {
     "foundations/01-tidy-data.html": [
@@ -34,7 +34,7 @@ def test_page_runs_code_in_both_languages_and_is_frozen(site, page):
     tabsets = load(page).select("div.panel-tabset")
     executed = [t for t in tabsets if t.select(".cell-output, .cell-output-display")]
     assert len(executed) >= 3
-    assert (ROOT / "_freeze" / page.removesuffix(".html")).is_dir()
+    assert (FREEZE / page.removesuffix(".html")).is_dir()
 
 
 @pytest.mark.parametrize("page", SECTIONS)
