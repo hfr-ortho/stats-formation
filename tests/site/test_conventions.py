@@ -73,3 +73,8 @@ def test_every_python_print_shows_its_output(site):
             code = cell.select_one("pre.sourceCode.python")
             if code is not None and "print(" in code.get_text():
                 assert cell.select(".cell-output-stdout"), f"{page}: no output for {code.get_text()[:60]!r}"
+
+
+def test_reporting_rules_name_the_journals(site):
+    text = text_of(load("getting-started/using-this-site.html"))
+    assert "JBJS, The Bone & Joint Journal and CORR" in text

@@ -37,6 +37,13 @@ def test_home_page_offers_three_ways_in(site):
     assert load(HOME).select_one("div.decision-table") is None                   # the table has its own page
 
 
+def test_home_page_names_hfr_readers_and_journals(site):
+    text = main_text(HOME)
+    assert "HFR Ortho residents, research assistants and medical students doing their master's thesis" in text
+    assert "The Bone & Joint Journal" in text and "CORR" in text
+    assert text_of(load(HOME).select_one("h1.title")) == "HFR Ortho Statistics Tutorials"
+
+
 def test_synthetic_data_warning(site):
     assert "SYNTHETIC DATA" in main_text(HOME)
 
