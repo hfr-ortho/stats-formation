@@ -101,6 +101,22 @@ codebooks <- function() {
       "visit", "Visit", "categorical", "", "preop|6wk|3mo|1yr", "",
       "item", "Item number", "integer", "", "1..7", "KOOS JR has 7 items, HOOS JR 6",
       "response", "Item response", "integer", "", "0|1|2|3|4", "0 = none ... 4 = extreme; blank = not answered"
+    ),
+    hip_fracture = cb(
+      "patient_id", "Patient ID", "id", "", "", "One row per patient aged 65 or over with a hip fracture",
+      "age", "Age at fracture", "integer", "years", "65..100", "Real ages, because the data are invented; with real data, group ages of 90 or older (see Working with real HFR data)",
+      "sex", "Sex", "categorical", "", "Female|Male", "",
+      "asa", "ASA physical status class", "integer", "", "1|2|3|4", "Ordinal",
+      "dementia", "Dementia", "binary", "", "0|1", "1 = yes",
+      "residence", "Residence before the fracture", "categorical", "", "home|nursing home", "",
+      "fracture_type", "Fracture type", "categorical", "", "femoral neck|trochanteric", "",
+      "treatment", "Treatment", "categorical", "", "hemiarthroplasty|nail|screws", "Trochanteric fractures are nailed",
+      "hours_to_surgery", "Time from admission to surgery", "numeric", "hours", "0..400", "Right-skewed",
+      "surgery_within_48h", "Operated within 48 hours", "binary", "", "0|1", "1 = yes; from hours_to_surgery",
+      "los_days", "Length of hospital stay", "integer", "days", "1..60", "",
+      "death_30d", "Died within 30 days", "binary", "", "0|1", "1 = yes; rates are tuned for teaching",
+      "followup_days", "Follow-up to death or 1 year", "integer", "days", "1..365", "",
+      "died", "Died during follow-up", "binary", "", "0|1", "1 = yes; 0 = alive at 1 year"
     )
   )
   # Every codebook can be read on its own, so each one says it is synthetic.

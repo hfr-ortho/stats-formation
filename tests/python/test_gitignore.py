@@ -78,6 +78,8 @@ def test_risky_or_generated_files_are_ignored(path):
         "data/proms_long.csv",
         "data/answer-keys/abstraction_workbook_tidy.csv",
         "data/messy_survey_export.csv",
+        "data/hip_fracture.csv",
+        "data/codebooks/hip_fracture.csv",
     ],
 )
 def test_project_files_are_not_ignored(path):

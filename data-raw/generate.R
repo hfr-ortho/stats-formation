@@ -23,6 +23,7 @@ write_messy_workbook(truth, "data/messy_abstraction_workbook.xlsx")
 write_messy_survey(items, "data/messy_survey_export.csv")
 write_tidy(truth, "data/answer-keys/abstraction_workbook_tidy.csv")
 write_tidy(items, "data/answer-keys/survey_items_long.csv")
+write_tidy(make_hip_fracture(), "data/hip_fracture.csv")
 
 write_codebooks(codebooks(), "data/codebooks")
 write_checksums("data")

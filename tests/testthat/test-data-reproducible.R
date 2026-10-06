@@ -16,7 +16,8 @@ test_that("regenerating reproduces every committed CSV byte for byte", {
     "matched_sets.csv"                          = env$make_matched_sets(cohort),
     "radiographic_reliability.csv"              = env$make_reliability(),
     "answer-keys/abstraction_workbook_tidy.csv" = env$make_abstraction_truth(cohort, proms),
-    "answer-keys/survey_items_long.csv"         = items
+    "answer-keys/survey_items_long.csv"         = items,
+    "hip_fracture.csv"                          = env$make_hip_fracture()
   )
   out <- withr::local_tempdir()
   for (name in names(fresh)) {

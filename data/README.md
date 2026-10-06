@@ -17,6 +17,7 @@ fails if the committed CSVs differ from what the generator produces, and
 | `proms_long.csv` | case × visit (pre-op, 6 wk, 3 mo, 1 yr) | paired tests, repeated measures, mixed models |
 | `matched_sets.csv` | case in a matched triplet (implants A, B, C) | stratified Cox |
 | `radiographic_reliability.csv` | knee × rater × session | ICC, Bland-Altman, kappa |
+| `hip_fracture.csv` | hip-fracture patient aged 65 or over (400) | trauma examples: a proportion, a binomial test, logistic regression |
 
 ## Messy files (for the tidy-data lesson)
 
