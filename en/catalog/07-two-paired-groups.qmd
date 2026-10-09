@@ -676,6 +676,7 @@ stopifnot(
   round(unname(ex_torsion$estimate), 1) == -1.2, round(ex_torsion$conf.int, 1) == c(-2.2, -0.2),
   round(ex_torsion$p.value, 3) == 0.023,
   round(mean(ex_torsion_diff) / sd(ex_torsion_diff), 2) == -0.26,
+  round(c(mean(imaging$torsion_ct_deg), sd(imaging$torsion_ct_deg), mean(imaging$torsion_budin_deg), sd(imaging$torsion_budin_deg)), 1) == c(14.5, 8.9, 13.3, 7.6),
   round(c(ex_torsion_d$CI_low, ex_torsion_d$CI_high), 2) == c(-0.48, -0.04),
   mean(ex_torsion_diff[imaging$torsion_ct_deg < 5]) > 0, mean(ex_torsion_diff[imaging$torsion_ct_deg > 25]) < 0,
   nrow(ex_hka) == 60, round(unname(ex_hka_test$estimate), 2) == 0.50,
@@ -705,6 +706,7 @@ The solutions use the packages and data loaded in the sections above, so run the
 ```{r}
 t.test(imaging$torsion_budin_deg, imaging$torsion_ct_deg, paired = TRUE)   # Budin minus CT
 effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_deg, method = "z", adjust = FALSE)
+imaging |> summarise(n = n(), across(c(torsion_ct_deg, torsion_budin_deg), list(mean = mean, sd = sd)))
 ```
 
 ## Python
@@ -713,10 +715,11 @@ effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_de
 torsion_test = stats.ttest_rel(imaging["torsion_budin_deg"], imaging["torsion_ct_deg"])   # Budin minus CT
 torsion_diff = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]
 print(torsion_test, torsion_diff.mean(), torsion_test.confidence_interval(), torsion_diff.mean() / torsion_diff.std())
+print(imaging[["torsion_ct_deg", "torsion_budin_deg"]].agg(["count", "mean", "std"]))
 ```
 :::
 
-> **Results:** The mean difference between Budin and CT torsion was −1.2° (95% CI −2.2 to −0.2; d~z~ = −0.26, 95% CI −0.48 to −0.04; p = 0.023).
+> **Results:** In 80 hips, the mean femoral torsion was 14.5° (SD 8.9) on CT and 13.3° (SD 7.6) on the Budin view (mean difference, Budin minus CT, −1.2°, 95% CI −2.2 to −0.2; d~z~ = −0.26, 95% CI −0.48 to −0.04; p = 0.023).
 
 A mean difference of about 1° looks reassuring, but it hides how the two methods disagree: the Budin view reads high in hips with little torsion and low in hips with a lot, and the two errors cancel in the mean. A paired t test only asks about the average difference; [page 17](../beyond/17-agreement.qmd#bland-altman) shows how to judge agreement.
 :::

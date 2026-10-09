@@ -255,7 +255,7 @@ print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75
 ```
 :::
 
-Most scores sit between 2 and 6, and many patients share a score (ties). With whole numbers on an ordinal scale, medians are the fair summary: 4 points with a boot and 5 with a cast.
+Four patients missed the 6-week visit (2 in each arm), so 116 of the 120 randomized patients are analyzed. Most scores sit between 2 and 6, and many patients share a score (ties). With whole numbers on an ordinal scale, medians are the fair summary: 4 points with a boot and 5 with a cast.
 
 ### Run it
 
@@ -345,9 +345,9 @@ With a boot, pain was typically 1 point lower (95% CI 2 points to 1 point lower)
 
 ### How to report it
 
-> **Methods:** Pain at 6 weeks (NRS 0 to 10, an ordinal scale) was compared between the arms with the Mann-Whitney test, with the Hodges-Lehmann estimate of the difference and its 95% CI as the effect size.
+> **Methods:** Pain at 6 weeks (NRS 0 to 10, an ordinal scale) was compared between the arms with the Mann-Whitney test, in the patients seen at that visit, with the Hodges-Lehmann estimate of the difference and its 95% CI as the effect size.
 >
-> **Results:** At 6 weeks, pain was a median of 4 points (IQR 3 to 4.75) with a boot and 5 (IQR 4 to 6) with a cast (Hodges-Lehmann difference −1 point, 95% CI −2 to −1; rank-biserial r = −0.36, 95% CI −0.53 to −0.17; p < 0.001).
+> **Results:** At 6 weeks, pain was a median of 4 points (IQR 3 to 4.75; n = 58) with a boot and 5 (IQR 4 to 6; n = 58) with a cast (Hodges-Lehmann difference −1 point, 95% CI −2 to −1; rank-biserial r = −0.36, 95% CI −0.53 to −0.17; p < 0.001).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: it isn't a test of medians
@@ -358,7 +358,7 @@ The Mann-Whitney test asks whether one group's values **tend to be larger**, not
 ## 🔀 R vs Python: Mann-Whitney defaults
 - **Exact or approximate.** With ties (as here) both programs use a normal approximation. Without ties, R computes an exact p-value for groups under 50, scipy only for very small groups. We set `exact = FALSE` in R and `method="asymptotic"` in Python so they always match.
 - **Continuity correction.** Both programs apply it by default for the approximation; we set it explicitly anyway.
-- **The Hodges-Lehmann CI.** R computes it by inverting the test; the Python code uses a bootstrap, a different method. With whole-number scores most resampled estimates are the same whole number (79% are exactly −1 here), and scipy's default bootstrap method (BCa) can't build an interval from them: it returns `nan` with a warning. The percentile method (`method="percentile"`) can. Here the two CIs agree (−2.00 to −1.00); on other data they can differ a little.
+- **The Hodges-Lehmann CI.** R computes it by inverting the test; the Python code uses a bootstrap, a different method. With whole-number scores the estimate barely moves: leaving out any one patient still gives −1. scipy's default bootstrap method (BCa) needs those leave-one-out estimates to vary, so here it returns `nan` with a warning. The percentile method (`method="percentile"`) doesn't need them. Here the two CIs agree (−2.00 to −1.00); on other data they can differ a little.
 :::
 
 ## Fisher's exact test and chi-square {#fisher-chi-square}
@@ -461,7 +461,7 @@ check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: Yates' continuity correction
-The chi-square test treats counts as if they could take any value, but counts are whole numbers. For a 2 × 2 table, **Yates' correction** subtracts 0.5 from each |observed − expected| difference before squaring, which makes the p-value a little larger (more cautious) and closer to Fisher's. Here each observed count is only about half a count from its expected count (6 failures against 6.5 and 5.5 expected), so the corrected statistic is almost 0. Both R's `chisq.test()` and scipy's `chi2_contingency()` apply it to 2 × 2 tables by default; without it (`correct = FALSE`, `correction=False`) p = 0.754. Either is acceptable if you say which you used; with small counts, prefer Fisher's test.
+The chi-square test treats counts as if they could take any value, but counts are whole numbers. For a 2 × 2 table, **Yates' correction** subtracts 0.5 from each |observed − expected| difference before squaring, which makes the p-value larger (more cautious). It's meant to bring the p-value closer to Fisher's, but it can overshoot, as here: each observed count is only about half a count from its expected count (6 failures against 6.5 and 5.5 expected), so the corrected statistic is almost 0 and p = 0.986, against Fisher's 0.775. Both R's `chisq.test()` and scipy's `chi2_contingency()` apply it to 2 × 2 tables by default; without it (`correct = FALSE`, `correction=False`) p = 0.754. Either is acceptable if you say which you used; with small counts, prefer Fisher's test.
 :::
 
 ### Effect size and 95% CI
@@ -726,6 +726,11 @@ R's `survdiff()` takes a formula with a grouping variable. lifelines' `logrank_t
 efas_means <- tapply(efas_3mo$efas, efas_3mo$arm, mean)
 efas_sds <- tapply(efas_3mo$efas, efas_3mo$arm, sd)
 missed_3mo <- trial |> filter(visit == "3mo", is.na(efas))
+missed_6wk <- trial |> filter(visit == "6wk", is.na(pain_nrs))
+pain_b <- pain_6wk$pain_nrs[pain_6wk$arm == "boot"]
+pain_c <- pain_6wk$pain_nrs[pain_6wk$arm == "cast"]
+jackknife_hl <- c(sapply(seq_along(pain_b), function(i) median(outer(pain_b[-i], pain_c, "-"))),   # leave one patient out
+                  sapply(seq_along(pain_c), function(i) median(outer(pain_b, pain_c[-i], "-"))))
 pain_diffs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], pain_6wk$pain_nrs[pain_6wk$arm == "cast"], "-")
 expected_counts <- chisq.test(failure_table)$expected
 km5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = 5)
@@ -749,7 +754,8 @@ stopifnot(
   unname(pain_test$statistic) == 1074.5, pain_test$p.value < 0.001,
   round(unname(pain_test$estimate), 2) == -1.00, round(pain_test$conf.int, 2) == c(-2.00, -1.00),
   round(reticulate::py_eval("[float(hl_boot.confidence_interval.low), float(hl_boot.confidence_interval.high)]"), 2) == c(-2.00, -1.00),
-  round(100 * reticulate::py_eval("float((hl_boot.bootstrap_distribution == -1).mean())")) == 79,
+  all(jackknife_hl == -1), length(jackknife_hl) == 116,
+  as.vector(table(factor(missed_6wk$arm, levels = c("boot", "cast")))) == c(2, 2), nrow(pain_6wk) == 116,
   round(pain_rb$r_rank_biserial, 3) == -0.361, round(pain_rb$r_rank_biserial, 2) == -0.36,
   round(c(pain_rb$CI_low, pain_rb$CI_high), 2) == c(-0.53, -0.17),
   tapply(pain_6wk$pain_nrs, pain_6wk$arm, median) == c(4, 5),
@@ -778,7 +784,8 @@ stopifnot(
   round(tapply(ex_6wk$efas, ex_6wk$arm, mean), 1) == c(12.4, 9.5), round(tapply(ex_6wk$efas, ex_6wk$arm, sd), 1) == c(2.7, 2.9),
   round(diff(rev(tapply(ex_6wk$efas, ex_6wk$arm, mean))), 1) == 2.9,
   round(t.test(efas ~ arm, data = ex_6wk)$conf.int, 1) == c(1.9, 4.0), t.test(efas ~ arm, data = ex_6wk)$p.value < 0.001,
-  nrow(ex_12mo) == 102, 120 - nrow(ex_12mo) == 18,
+  nrow(ex_12mo) == 102, 120 - nrow(ex_12mo) == 18, as.vector(table(ex_12mo$arm)) == c(55, 47),
+  as.vector(table(ex_6wk$arm)) == c(58, 58),
   round(100 * tapply(ex_12mo$efas == 24, ex_12mo$arm, mean)) == c(13, 17),
   tapply(ex_12mo$efas, ex_12mo$arm, median) == c(20, 21),
   quantile(ex_12mo$efas[ex_12mo$arm == "boot"], c(0.25, 0.75)) == c(18, 22),
@@ -825,7 +832,7 @@ print(efas_6wk.groupby("arm")["efas"].agg(["count", "mean", "std"]))
 ```
 :::
 
-> **Results:** At 6 weeks, the mean EFAS score was 12.4 points (SD 2.7) with a boot and 9.5 (SD 2.9) with a cast (difference 2.9 points, 95% CI 1.9 to 4.0; p < 0.001).
+> **Results:** At 6 weeks, the mean EFAS score was 12.4 points (SD 2.7; n = 58) with a boot and 9.5 (SD 2.9; n = 58) with a cast (difference 2.9 points, 95% CI 1.9 to 4.0; p < 0.001).
 :::
 
 **2.** Is the **EFAS score at 12 months** different between the arms? Look at the data first, then choose the test.
@@ -861,9 +868,9 @@ print(efas_12mo.groupby("arm")["efas"].describe()[["count", "25%", "50%", "75%"]
 ```
 :::
 
-> **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22) with a boot and 21 (IQR 19 to 23) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
+> **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
 
-There's no clear evidence of a difference at 12 months, after the boot's lead of 3.6 points at 3 months. Notice too that 18 of the 120 patients missed the 12-month visit. Whether the gap between the arms really changes over time is a question for one model of every visit: [page 16](../beyond/16-mixed-models.qmd#group-by-time) shows how.
+There's no clear evidence of a difference at 12 months, after the boot's lead of 3.6 points at 3 months. Notice too that 18 of the 120 patients missed the 12-month visit, 5 in the boot arm, 13 in the cast arm: when one arm loses more patients, the patients left in it may no longer be comparable with the other arm's. Whether the gap between the arms really changes over time is a question for one model of every visit: [page 16](../beyond/16-mixed-models.qmd#group-by-time) shows how.
 :::
 
 **3.** Is return to sport 12 months after ACL reconstruction different for women and men? Choose the test, run it, and write the Results sentence with the risk difference and odds ratio.

@@ -168,10 +168,46 @@ def test_tied_pain_scores_are_counted_correctly(site):
 
 def test_trial_results_say_how_many_were_analyzed(site):
     """Patients miss trial visits: the reader needs the number analyzed in each arm and the number randomized."""
-    found = section("catalog/06-two-unpaired-groups.html", "unpaired-t")
-    report = " ".join(text_of(q) for q in found.select("blockquote"))
-    assert "n = 57" in report and "n = 55" in report
-    assert "112 of the 120 randomized patients" in text_of(found)
+    page = "catalog/06-two-unpaired-groups.html"
+    for anchor, counts, analyzed in [("unpaired-t", ["n = 57", "n = 55"], "112 of the 120 randomized patients"),
+                                     ("mann-whitney", ["n = 58"], "116 of the 120 randomized patients")]:
+        found = section(page, anchor)
+        report = " ".join(text_of(q) for q in found.select("blockquote"))
+        assert all(n in report for n in counts) and analyzed in text_of(found), anchor
+        assert "in the patients seen at that visit" in report, anchor
+    answers = text_of(section(page, "exercises"))
+    for phrase in ["(SD 2.7; n = 58)", "(SD 2.9; n = 58)", "(IQR 18 to 22; n = 55)", "(IQR 19 to 23; n = 47)",
+                   "5 in the boot arm, 13 in the cast arm"]:
+        assert phrase in answers, phrase
+
+
+def test_yates_box_matches_its_own_numbers(site):
+    """Yates' correction is meant to move p toward Fisher's, but here it overshoots (0.986 vs Fisher's 0.775)."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "fisher-chi-square"))
+    assert "a little larger (more cautious) and closer to Fisher's" not in text
+    assert "it can overshoot" in text
+
+
+def test_bootstrap_box_gives_the_real_reason_bca_fails(site):
+    """BCa fails because every leave-one-out estimate is -1 (its acceleration is 0/0), not because resamples tie."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "mann-whitney"))
+    assert "leaving out any one patient still gives −1" in text
+
+
+def test_quartile_reading_allows_for_ties(site):
+    """62 of 194 Oxford Hip Scores are 39 or less: with ties, "a quarter" is "at least a quarter"."""
+    assert "At least a quarter scored 39 or less" in text_of(section("catalog/04-describe-one-group.html", "median-iqr"))
+
+
+def test_exact_ci_box_does_not_send_readers_to_a_missing_number(site):
+    """Page 4 no longer shows the Wilson interval for these 1,034 patients, so page 5 gives it itself."""
+    text = text_of(section("catalog/05-one-group-vs-hypothetical.html", "binomial-test"))
+    assert "the Wilson interval that page 4 uses" in text
+
+
+def test_torsion_answer_gives_each_methods_value(site):
+    answers = text_of(section("catalog/07-two-paired-groups.html", "exercises"))
+    assert "14.5° (SD 8.9) on CT and 13.3° (SD 7.6) on the Budin view" in answers
 
 
 def test_wilcoxon_box_describes_page_6s_cis_correctly(site):
