@@ -107,6 +107,7 @@ MOVED_SECTIONS = {
     ("catalog/06-two-unpaired-groups.html", "mann-whitney"): ("data/foot_ankle_rct_long.csv", "pain_nrs"),
     ("catalog/06-two-unpaired-groups.html", "fisher-chi-square"): ("data/acl_cohort.csv", "failure_2y"),
     ("catalog/07-two-paired-groups.html", "paired-t"): ("data/hip_preservation_imaging.csv", "alpha_dunn45_deg"),
+    ("catalog/08-three-plus-unmatched.html", "chi-square"): ("data/acl_cohort.csv", "rts_12mo"),
 }
 
 
@@ -209,11 +210,11 @@ def test_reports_never_turn_no_evidence_into_no_difference(site, page):
 
 
 def test_unmatched_page_counts_procedures_not_patients(site):
-    """Cohort rows are procedures (80 patients had both sides operated on), as on pages 4 and 5."""
+    """Cohort rows are procedures (80 patients had both sides operated on) and ACL rows are reconstructions."""
     page = "catalog/08-three-plus-unmatched.html"
     assert re.findall(r"(?<!–)\b\d+ patients\b", text_of(load(page))) == ["80 patients"]   # not "ASA 3–4 patients"
     assert "Of 600 procedures" in text_of(section(page, "kruskal-wallis"))
-    assert "30 of 264 procedures" in text_of(section(page, "exercises"))
+    assert "3 of 67 quadriceps reconstructions" in text_of(section(page, "exercises"))
 
 
 def test_fisher_note_describes_scipys_larger_tables(site):

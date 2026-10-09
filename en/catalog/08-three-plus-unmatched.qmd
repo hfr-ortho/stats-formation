@@ -17,13 +17,13 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Three or more groups of **different** patients: the four ASA classes, the three surgeons, implants A, B and C. You could compare every pair of groups with the tests on [page 6](06-two-unpaired-groups.qmd), but each extra test is another chance of a false positive. The tests on this page ask one question first: **is there any difference among the groups at all?** If the answer is yes, [Which groups differ?](#which-groups-differ) explains the next step.
+Three or more groups of **different** patients: the four ASA classes, the three surgeons, three kinds of ACL graft, implants A, B and C. You could compare every pair of groups with the tests on [page 6](06-two-unpaired-groups.qmd), but each extra test is another chance of a false positive. The tests on this page ask one question first: **is there any difference among the groups at all?** If the answer is yes, [Which groups differ?](#which-groups-differ) explains the next step.
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: the joint replacement cohort, or (for the chi-square test) the ACL reconstructions. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ## One-way ANOVA {#one-way-anova}
@@ -320,15 +320,17 @@ Both `kruskal.test()` and `stats.kruskal()` correct H for ties, so they agree ev
 
 ## Chi-square test {#chi-square}
 
-**The question:** Do 90-day complication rates differ between surgeons S1, S2 and S3?
+**The question:** Does return to sport 12 months after ACL reconstruction differ between bone-patellar tendon-bone (BPTB), hamstring and quadriceps tendon grafts?
 
 ### When to use it
 
 - The outcome is **categorical** (here yes/no), compared across **three or more independent groups**: an r × c table.
-- Every **expected** count should be at least 5. If not, combine categories that make sense together, or use Fisher's exact test, which R's `fisher.test()` runs exactly on larger tables too. scipy's `stats.fisher_exact()` accepts larger tables but estimates their p-value by random resampling, so it changes a little from run to run.
+- Every **expected** count should be at least 5. If not, combine categories that make sense together, or use Fisher's exact test, which R's `fisher.test()` runs exactly on larger tables too. scipy's `stats.fisher_exact()` accepts larger tables but estimates their p-value by random resampling, so it changes a little from run to run unless you give it a seed.
 - With two groups and a yes/no outcome → [Fisher's exact test](06-two-unpaired-groups.qmd#fisher-chi-square).
 
 ### Look at the data first
+
+The ACL data hold one row per primary reconstruction; `rts_12mo` is 1 if the patient was back at their pre-injury sport 12 months after surgery.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -337,14 +339,14 @@ Both `kruskal.test()` and `stats.kruskal()` correct H for ties, so they agree ev
 #| warning: false
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE)
 
-complication_table <- table(
-  surgeon      = cohort$surgeon,
-  complication = factor(cohort$complication_90d, levels = c(1, 0), labels = c("yes", "no"))
+rts_table <- table(
+  graft    = factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+  returned = factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no"))
 )
-complication_table
-prop.table(complication_table, margin = 1)   # row percentages: complications per surgeon
+rts_table
+prop.table(rts_table, margin = 1)   # row percentages: return to sport with each graft
 ```
 
 ## Python
@@ -354,15 +356,15 @@ import pandas as pd
 from scipy import stats
 from scipy.stats.contingency import association
 
-cohort = pd.read_csv("data/cohort.csv")
+acl = pd.read_csv("data/acl_cohort.csv")
 
-complication_table = pd.crosstab(cohort["surgeon"], cohort["complication_90d"]).loc[:, [1, 0]]   # "yes" first
-print(complication_table)
-print(pd.crosstab(cohort["surgeon"], cohort["complication_90d"], normalize="index"))   # row percentages
+rts_table = pd.crosstab(acl["graft"], acl["rts_12mo"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]   # "yes" first
+print(rts_table)
+print(pd.crosstab(acl["graft"], acl["rts_12mo"], normalize="index"))   # row percentages
 ```
 :::
 
-Complications followed 6.5% of S1's procedures, 11.4% of S2's and 7.6% of S3's.
+At 12 months, 65.1% of the BPTB reconstructions, 43.5% of the hamstring and 32.8% of the quadriceps reconstructions were back at their sport.
 
 ### Run it
 
@@ -370,37 +372,36 @@ Complications followed 6.5% of S1's procedures, 11.4% of S2's and 7.6% of S3's.
 ## R
 
 ```{r}
-complication_test <- chisq.test(complication_table)
-complication_test$expected      # all at least 5, so the chi-square test is valid
-complication_test
+rts_test <- chisq.test(rts_table)
+rts_test$expected      # all at least 5, so the chi-square test is valid
+rts_test
 ```
 
 ## Python
 
 ```{python}
-complication_test = stats.chi2_contingency(complication_table)
-print(complication_test.expected_freq)   # all at least 5, so the chi-square test is valid
-print(complication_test.statistic, complication_test.dof, complication_test.pvalue)
+rts_test = stats.chi2_contingency(rts_table)
+print(rts_test.expected_freq)   # all at least 5, so the chi-square test is valid
+print(rts_test.statistic, rts_test.dof, rts_test.pvalue)
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"chisq": float(complication_test.statistic), "df": float(complication_test.dof),
-       "p": float(complication_test.pvalue)}
+chk = {"chisq": float(rts_test.statistic), "df": float(rts_test.dof), "p": float(rts_test.pvalue)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(chisq = unname(complication_test$statistic), df = unname(complication_test$parameter),
-                 p = complication_test$p.value), reticulate::py$chk)
+check_agree(list(chisq = unname(rts_test$statistic), df = unname(rts_test$parameter),
+                 p = rts_test$p.value), reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **Expected counts:** what each cell would hold if complication rates were the same for every surgeon. The smallest is 13.3, so the test is valid.
-- **X-squared = 3.62, df = 2:** the chi-square statistic, with (3 surgeons − 1) × (2 outcomes − 1) = 2 degrees of freedom.
-- **p = 0.163:** differences like these would be fairly common if the three surgeons had the same complication rate.
+- **Expected counts:** what each cell would hold if return to sport were the same with every graft. The smallest is 33.1, so the test is valid.
+- **X-squared = 22.24, df = 2:** the chi-square statistic, with (3 grafts − 1) × (2 outcomes − 1) = 2 degrees of freedom.
+- **p < 0.001:** differences this large would be very unlikely if all three grafts had the same rate of return to sport.
 
 ### Effect size and 95% CI
 
@@ -410,34 +411,34 @@ check_agree(list(chisq = unname(complication_test$statistic), df = unname(compli
 ## R
 
 ```{r}
-effectsize::cramers_v(complication_table, adjust = FALSE)   # see the R vs Python box
+effectsize::cramers_v(rts_table, adjust = FALSE)   # see the R vs Python box
 ```
 
 ## Python
 
 ```{python}
-print(association(complication_table, method="cramer"))
+print(association(rts_table, method="cramer"))
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"v": float(association(complication_table, method="cramer"))}
+chk = {"v": float(association(rts_table, method="cramer"))}
 ```
 
 ```{r}
 #| include: false
-complication_v <- effectsize::cramers_v(complication_table, adjust = FALSE)
-check_agree(list(v = complication_v$Cramers_v), reticulate::py$chk)
+rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
+check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.08, a small association. For yes/no outcomes, the complication rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V.
+V = 0.25, between a small and a medium association. For yes/no outcomes, the rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V. And remember what the test doesn't tell you: which grafts differ ([Which groups differ?](#which-groups-differ) below), or why. The grafts weren't assigned at random, so a difference could come from the patients rather than the graft; [page 12](12-predict-from-several.qmd#multiple-logistic-regression) shows how to adjust for other factors.
 
 ### How to report it
 
-> **Methods:** Complication rates were compared across surgeons with the chi-square test, with Cramér's V as the effect size.
+> **Methods:** Return to sport at 12 months was compared across graft types with the chi-square test, with Cramér's V as the effect size.
 >
-> **Results:** Complications within 90 days followed 15 of 232 procedures by surgeon S1 (6.5%), 24 of 211 by S2 (11.4%) and 12 of 157 by S3 (7.6%) (χ² = 3.62, df = 2, p = 0.163; Cramér's V = 0.08, one-sided 95% CI 0.00 to 1.00).
+> **Results:** Return to sport at 12 months followed 84 of 129 BPTB reconstructions (65.1%), 67 of 154 hamstring reconstructions (43.5%) and 22 of 67 quadriceps reconstructions (32.8%) (χ² = 22.24, df = 2, p < 0.001; Cramér's V = 0.25, one-sided 95% CI 0.16 to 1.00).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: no Yates' correction here, and check the expected counts
@@ -446,7 +447,7 @@ Yates' continuity correction ([page 6](06-two-unpaired-groups.qmd#fisher-chi-squ
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two versions of Cramér's V
-effectsize's `cramers_v()` applies a small-sample **bias correction** by default (0.05 here). scipy's `association()` doesn't (0.08). We set `adjust = FALSE` in R so the two match. Either is acceptable; say which you report.
+effectsize's `cramers_v()` applies a small-sample **bias correction** by default (0.24 here). scipy's `association()` doesn't (0.25). We set `adjust = FALSE` in R so the two match. Either is acceptable; say which you report.
 :::
 
 ## Cox regression {#cox}
@@ -600,8 +601,9 @@ Tukey's HSD controls false positives on its own, and so do Dunn's test and other
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 age_by_asa <- cohort |> group_by(asa) |> summarise(n = n(), mean = mean(age), sd = sd(age))
 satisfied_n <- sum(!is.na(cohort$satisfaction_1yr))
-asa_grouped <- table(factor(ifelse(cohort$asa >= 3, "ASA 3-4", "ASA 1-2"), levels = c("ASA 3-4", "ASA 1-2")),
-                     factor(cohort$complication_90d, levels = c(1, 0), labels = c("yes", "no")))
+ex_failure <- table(factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+                    factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no")))
+ex_expected <- suppressWarnings(chisq.test(ex_failure))$expected
 set.seed(2026)
 los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)   # as in exercise 2's solution
 sat_quartiles <- satisfied |> group_by(surgeon) |>
@@ -621,18 +623,17 @@ stopifnot(
   round(satisfaction_test$p.value, 3) == 0.713,
   round(satisfaction_eps$rank_epsilon_squared, 3) == 0.001,
   sat_quartiles$median == c(4, 5, 5), sat_quartiles$q1 == c(4, 4, 4), sat_quartiles$q3 == c(5, 5, 5),
-  complication_table[, "yes"] == c(15, 24, 12), rowSums(complication_table) == c(232, 211, 157),
-  round(100 * prop.table(complication_table, 1)[, "yes"], 1) == c(6.5, 11.4, 7.6),
-  round(min(complication_test$expected), 1) == 13.3,
-  round(unname(complication_test$statistic), 2) == 3.62, unname(complication_test$parameter) == 2,
-  round(complication_test$p.value, 3) == 0.163,
-  round(complication_v$Cramers_v, 2) == 0.08,
-  round(effectsize::cramers_v(complication_table)$Cramers_v, 2) == 0.05,
+  rts_table[, "yes"] == c(84, 67, 22), rowSums(rts_table) == c(129, 154, 67),
+  round(100 * prop.table(rts_table, 1)[, "yes"], 1) == c(65.1, 43.5, 32.8),
+  round(min(rts_test$expected), 1) == 33.1,
+  round(unname(rts_test$statistic), 2) == 22.24, unname(rts_test$parameter) == 2, rts_test$p.value < 0.001,
+  round(rts_v$Cramers_v, 2) == 0.25, round(rts_v$CI_low, 2) == 0.16, rts_v$CI_high == 1,
+  round(effectsize::cramers_v(rts_table)$Cramers_v, 2) == 0.24,
   round(implant_hr[, "exp(coef)"], 2) == c(0.82, 3.07),
   round(implant_hr["implantB", c("lower .95", "upper .95")], 2) == c(0.45, 1.50),
   round(implant_hr["implantC", c("lower .95", "upper .95")], 2) == c(1.85, 5.09),
   round(summary(implant_cox)$coefficients[, "Pr(>|z|)"], 3)[1] == 0.514, round(implant_logrank$chisq, 1) == 33.5,
-  round(satisfaction_eps$CI_low, 2) == 0, round(complication_v$CI_low, 2) == 0,
+  round(satisfaction_eps$CI_low, 2) == 0,
   summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
   round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
   round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,
@@ -649,13 +650,11 @@ stopifnot(
   round(unname(kruskal.test(los_days ~ surgeon, data = cohort)$statistic), 2) == 0.73,
   round(los_eps$CI_low, 2) == 0,
   round(effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, ci = NULL)$rank_epsilon_squared, 3) == 0.001,
-  min(chisq.test(table(cohort$asa, cohort$complication_90d))$expected) < 5,
-  asa_grouped[, "yes"] == c(30, 21), rowSums(asa_grouped) == c(264, 336),
-  round(100 * prop.table(asa_grouped, 1)[, "yes"], 1) == c(11.4, 6.2), round(100 * diff(rev(prop.table(asa_grouped, 1)[, "yes"])), 1) == 5.1,
-  round(sort(chisq.test(table(cohort$asa, cohort$complication_90d))$expected[, "1"])[1:2], 1) == c(1.5, 3.1),
-  round(unname(fisher.test(asa_grouped)$estimate), 2) == 1.92, round(fisher.test(asa_grouped)$conf.int, 2) == c(1.03, 3.63),
-  round(fisher.test(asa_grouped)$p.value, 3) == 0.028,
-  round(100 * prop.test(asa_grouped, correct = FALSE)$conf.int, 1) == c(0.5, 9.7)
+  ex_failure[, "yes"] == c(6, 6, 3), rowSums(ex_failure) == c(129, 154, 67),
+  round(100 * prop.table(ex_failure, 1)[, "yes"], 1) == c(4.7, 3.9, 4.5),
+  round(ex_expected[3, "yes"], 1) == 2.9, sum(ex_expected < 5) == 1,
+  round(fisher.test(ex_failure)$p.value, 3) == 0.943,
+  round(reticulate::py_eval("float(stats.fisher_exact(pd.crosstab(acl['graft'], acl['failure_2y']).loc[['BPTB', 'hamstring', 'quadriceps'], [1, 0]].to_numpy(), method=stats.PermutationMethod(rng=np.random.default_rng(2026))).pvalue)"), 4) == 0.9405
 )
 ```
 
@@ -724,7 +723,7 @@ print(los_test, los_test.statistic / (len(cohort) - 1))
 There's no clear evidence that length of stay differs between the surgeons.
 :::
 
-**3.** Test whether 90-day complications differ across the four **ASA classes**. Check the expected counts first. What do you do, and what do you find?
+**3.** Does graft failure within 2 years differ across the three grafts? Check the expected counts first. What do you do, and what do you find?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -734,40 +733,35 @@ There's no clear evidence that length of stay differs between the surgeons.
 
 ```{r}
 #| warning: false
-# R also warns here: "Chi-squared approximation may be incorrect"
-chisq.test(table(cohort$asa, cohort$complication_90d))$expected   # two expected counts are below 5
-
-asa_grouped <- table(
-  asa          = factor(ifelse(cohort$asa >= 3, "ASA 3-4", "ASA 1-2"), levels = c("ASA 3-4", "ASA 1-2")),
-  complication = factor(cohort$complication_90d, levels = c(1, 0), labels = c("yes", "no"))
+failure_table <- table(
+  graft  = factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+  failed = factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no"))
 )
-asa_grouped
-fisher.test(asa_grouped)
-prop.test(asa_grouped, correct = FALSE)$conf.int   # risk difference, ASA 3-4 minus ASA 1-2
+failure_table
+# R also warns here: "Chi-squared approximation may be incorrect"
+chisq.test(failure_table)$expected   # one expected count is below 5
+fisher.test(failure_table)           # exact, even for a 3 x 2 table
 ```
 
 ## Python
 
 ```{python}
-from scipy.stats.contingency import odds_ratio
-from statsmodels.stats.proportion import confint_proportions_2indep
+import numpy as np
 
-print(stats.chi2_contingency(pd.crosstab(cohort["asa"], cohort["complication_90d"])).expected_freq)
+failure_table = pd.crosstab(acl["graft"], acl["failure_2y"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]
+print(failure_table)
+print(stats.chi2_contingency(failure_table).expected_freq)   # one expected count is below 5
 
-cohort["asa_group"] = cohort["asa"].map(lambda asa: "ASA 3-4" if asa >= 3 else "ASA 1-2")
-asa_grouped = pd.crosstab(cohort["asa_group"], cohort["complication_90d"]).loc[["ASA 3-4", "ASA 1-2"], [1, 0]]
-print(asa_grouped)
-print(stats.fisher_exact(asa_grouped).pvalue)
-print(odds_ratio(asa_grouped.to_numpy(), kind="conditional").confidence_interval())
-high_yes, high_no = asa_grouped.loc["ASA 3-4"]
-low_yes, low_no = asa_grouped.loc["ASA 1-2"]
-print(confint_proportions_2indep(high_yes, high_yes + high_no, low_yes, low_yes + low_no, method="wald", compare="diff"))
+# For tables larger than 2 x 2, scipy estimates Fisher's p-value by random resampling; a seed makes it repeatable
+failure_fisher = stats.fisher_exact(failure_table.to_numpy(),
+                                    method=stats.PermutationMethod(rng=np.random.default_rng(2026)))
+print(failure_fisher.pvalue)
 ```
 :::
 
-ASA 1 and ASA 4 each have an expected count of complications below 5 (3.1 and 1.5), so the chi-square test isn't reliable; R says so itself, with the warning "Chi-squared approximation may be incorrect". Combining classes into ASA 1–2 and ASA 3–4 makes clinical sense and gives a 2 × 2 table for Fisher's exact test:
+With a quadriceps graft the expected number of failures is 2.9, below 5, so the chi-square test isn't reliable; R says so itself, with the warning "Chi-squared approximation may be incorrect". Combining grafts would change the question, so use Fisher's exact test on the whole 3 × 2 table. R's `fisher.test()` computes it exactly (p = 0.943); scipy estimates it from 9,999 random tables (0.9405 with this seed), close to R's but not identical.
 
-> **Results:** Complications within 90 days followed 30 of 264 procedures (11.4%) in ASA 3–4 patients and 21 of 336 (6.2%) in ASA 1–2 patients (risk difference 5.1 percentage points, 95% CI 0.5 to 9.7; odds ratio 1.92, 95% CI 1.03 to 3.63; p = 0.028).
+> **Results:** Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher's exact test p = 0.943).
 
-Say in your Methods that you combined the classes, and why.
+In your Methods, say which test you used for this table, and why.
 :::

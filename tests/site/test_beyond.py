@@ -253,3 +253,10 @@ def test_walking_aid_answer_gives_counts_with_percentages(site):
 def test_log_rank_box_says_lifelines_needs_a_tighter_convergence_setting(site):
     box = next(text_of(c) for c in section(POST_HOC, "after-log-rank").select(".callout") if "R vs Python" in text_of(c))
     assert "precision" in box and "stops iterating slightly early" in box
+
+
+def test_after_chi_square_no_longer_points_to_page_8s_old_exercise(site):
+    """Page 8's exercise 3 moved to the ACL data; page 15 introduces its ASA example itself."""
+    text = text_of(section("beyond/15-post-hoc.html", "after-chi-square"))
+    assert "Page 8's exercise 3" not in text
+    assert "Take 90-day complications across the four ASA classes" in text
