@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from sitelib import CELL_ANCHORS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, load, section, target, text_of, unreported
+from sitelib import CELL_ANCHORS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, code_of, load, section, target, text_of, unreported
 
 # Catalog pages written so far. Later phases add pages 8-12 here.
 WRITTEN = [
@@ -97,6 +97,22 @@ def test_log_rank_section_names_the_mantel_haenszel_test(site):
     assert "Mantel-Haenszel" in text_of(section("catalog/06-two-unpaired-groups.html", "log-rank"))
 
 
+# ---- sub-project 2: sections moved to the dataset whose question fits best (SP2 spec §4) ----
+
+MOVED_SECTIONS = {
+    ("catalog/04-describe-one-group.html", "median-iqr"): ("data/proms_long.csv", "ohs"),
+    ("catalog/04-describe-one-group.html", "proportion"): ("data/hip_fracture.csv", "death_30d"),
+}
+
+
+@pytest.mark.parametrize("cell,source", MOVED_SECTIONS.items())
+def test_moved_sections_teach_from_their_new_data(site, cell, source):
+    dataset, column = source
+    code = code_of(section(*cell))
+    assert code.count(f'read_csv("{dataset}"') >= 2, f"{cell}: R and Python should both read {dataset}"
+    assert column in code, f"{cell}: the code never uses {column}"
+
+
 # ---- review fixes ---------------------------------------------------------
 
 def test_kaplan_meier_section_shows_the_revised_case_it_describes(site):
@@ -105,13 +121,13 @@ def test_kaplan_meier_section_shows_the_revised_case_it_describes(site):
 
 
 def test_proportions_name_their_denominator(site):
-    for page, anchor, phrase in [("catalog/04-describe-one-group.html", "proportion", "51 of 600 procedures"),
+    for page, anchor, phrase in [("catalog/04-describe-one-group.html", "proportion", "74 of 1,200 patients"),
                                  ("catalog/05-one-group-vs-hypothetical.html", "binomial-test", "27 of 600 procedures")]:
         found = section(page, anchor)
         report = " ".join(text_of(q) for q in found.select("blockquote"))
         assert phrase in report, f"{page}#{anchor}"
         assert "of patients had" not in text_of(found)
-    for page, phrase in [("catalog/04-describe-one-group.html", "27 of 600 procedures"),
+    for page, phrase in [("catalog/04-describe-one-group.html", "257 of 1,200 patients"),
                          ("catalog/05-one-group-vs-hypothetical.html", "570 of our 600 procedures")]:
         exercises = text_of(section(page, "exercises"))
         assert phrase in exercises and "patients went home" not in exercises and "Twenty-seven patients" not in exercises

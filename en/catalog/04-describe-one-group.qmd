@@ -21,9 +21,9 @@ Before you compare anything, describe it. This page covers the first row of the 
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: the joint replacement cohort, its patient-reported outcomes, or (for the proportion) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ## Mean and standard deviation {#mean-sd}
@@ -145,7 +145,7 @@ R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is wh
 
 ## Median and interquartile range {#median-iqr}
 
-**The question:** What's a typical KOOS JR score 1 year after knee replacement, and how much do scores vary?
+**The question:** What's a typical Oxford Hip Score 1 year after hip replacement, and how much do scores vary?
 
 ### When to use it
 
@@ -154,6 +154,8 @@ R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is wh
 - If the variable is a roughly symmetric measurement → the [mean and SD](#mean-sd) are fine and more familiar.
 
 ### Look at the data first
+
+The Oxford Hip Score (OHS) adds up 12 questions scored 0 to 4, so it runs from 0 to 48, and 48 is the best. The practice records it for every hip replacement, before surgery and at each follow-up visit.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -164,13 +166,14 @@ R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is wh
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
-koos_1yr <- proms |>
-  filter(instrument == "KOOS JR", visit == "1yr", !is.na(prom_score)) |>
-  pull(prom_score)
+ohs_1yr <- proms |>
+  filter(visit == "1yr", !is.na(ohs)) |>   # ohs is blank for knee replacements and missed visits
+  pull(ohs)
 
-ggplot(tibble(score = koos_1yr), aes(score)) +
-  geom_histogram(binwidth = 2.5) +
-  labs(x = "KOOS JR at 1 year (100 = best)", y = "Patients")
+ggplot(tibble(score = ohs_1yr), aes(score)) +
+  geom_bar() +                             # one bar per whole score
+  coord_cartesian(xlim = c(0, 48)) +       # the whole scale
+  labs(x = "Oxford Hip Score at 1 year (48 = best)", y = "Patients")
 ```
 
 ## Python
@@ -182,18 +185,17 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 proms = pd.read_csv("data/proms_long.csv")
-koos_1yr = proms.loc[(proms["instrument"] == "KOOS JR") & (proms["visit"] == "1yr"),
-                     "prom_score"].dropna()
+ohs_1yr = proms.loc[proms["visit"] == "1yr", "ohs"].dropna()   # ohs is blank for knee replacements and missed visits
 
 fig, ax = plt.subplots(figsize=(6, 3))
-ax.hist(koos_1yr, bins=np.arange(35, 102.5, 2.5))
-ax.set_xlabel("KOOS JR at 1 year (100 = best)")
+ax.hist(ohs_1yr, bins=np.arange(-0.5, 49))   # one bar per whole score, over the whole scale
+ax.set_xlabel("Oxford Hip Score at 1 year (48 = best)")
 ax.set_ylabel("Patients")
 plt.show()
 ```
 :::
 
-Scores pile up against the maximum of 100 (a **ceiling**), with a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn't.
+Scores pile up against the maximum of 48 (a **ceiling**): 39 of the 194 scores were 48. Below the pile there's a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn't.
 
 ### Run it
 
@@ -201,61 +203,61 @@ Scores pile up against the maximum of 100 (a **ceiling**), with a long tail of p
 ## R
 
 ```{r}
-length(koos_1yr)                                # how many patients
-quantile(koos_1yr, probs = c(0.25, 0.50, 0.75)) # first quartile, median, third quartile
+length(ohs_1yr)                                # how many patients
+quantile(ohs_1yr, probs = c(0.25, 0.50, 0.75)) # first quartile, median, third quartile
 
-DescTools::MedianCI(koos_1yr, method = "exact") # the median with its 95% CI
+DescTools::MedianCI(ohs_1yr, method = "exact") # the median with its 95% CI
 ```
 
 ## Python
 
 ```{python}
-print(len(koos_1yr))                                     # how many patients
-print(np.quantile(koos_1yr, [0.25, 0.50, 0.75]))         # first quartile, median, third quartile
+print(len(ohs_1yr))                                      # how many patients
+print(np.quantile(ohs_1yr, [0.25, 0.50, 0.75]))          # first quartile, median, third quartile
 
 # scipy has no "median CI" function, but quantile_test() reports one.
 # Its q argument is the value it would test against; it doesn't change the CI.
-median_ci = stats.quantile_test(koos_1yr, q=koos_1yr.median(), p=0.5).confidence_interval()
+median_ci = stats.quantile_test(ohs_1yr, q=ohs_1yr.median(), p=0.5).confidence_interval()
 print(median_ci)
 ```
 :::
 
 ```{python}
 #| include: false
-q = np.quantile(koos_1yr, [0.25, 0.50, 0.75])
-chk = {"n": float(len(koos_1yr)), "q1": float(q[0]), "median": float(q[1]), "q3": float(q[2]),
+q = np.quantile(ohs_1yr, [0.25, 0.50, 0.75])
+chk = {"n": float(len(ohs_1yr)), "q1": float(q[0]), "median": float(q[1]), "q3": float(q[2]),
        "ci_low": float(median_ci.low), "ci_high": float(median_ci.high)}
 ```
 
 ```{r}
 #| include: false
-q <- quantile(koos_1yr, probs = c(0.25, 0.50, 0.75))
-m_ci <- DescTools::MedianCI(koos_1yr, method = "exact")
-check_agree(list(n = length(koos_1yr), q1 = q[[1]], median = q[[2]], q3 = q[[3]],
+q <- quantile(ohs_1yr, probs = c(0.25, 0.50, 0.75))
+m_ci <- DescTools::MedianCI(ohs_1yr, method = "exact")
+check_agree(list(n = length(ohs_1yr), q1 = q[[1]], median = q[[2]], q3 = q[[3]],
                  ci_low = m_ci[["lwr.ci"]], ci_high = m_ci[["upr.ci"]]), reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **n = 260:** TKA patients with a 1-year KOOS JR score.
-- **Median = 85.8:** half the patients scored above 85.8, half below.
-- **IQR 74.7 to 93.9:** the middle half of patients scored between these two values. A quarter scored below 74.7.
-- **95% CI for the median 84.0 to 88.2:** how precisely 260 patients pin down the median.
+- **n = 194:** hip replacements with an Oxford Hip Score at 1 year.
+- **Median = 42:** the middle score. With whole-number scores many patients share it (13 scored exactly 42), so "half above, half below" is only roughly true.
+- **IQR 39 to 46:** the middle half of the patients scored between these two values. A quarter scored 39 or less.
+- **95% CI for the median 41 to 43:** how precisely 194 patients pin down the median.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: where the median's CI comes from
-The CI for a median uses no formula with an SD in it. It counts instead. Sort the scores, then pick two positions such that, if the study were repeated many times, the true median would fall between the scores at those positions at least 95% of the time. The binomial distribution says which positions those are, and the CI is the pair of scores sitting there. Because positions are whole numbers, the actual confidence is a little over 95% (R reports 0.9595 here). This "exact" method needs no assumption about the shape of the data.
+The CI for a median uses no formula with an SD in it. It counts instead. Sort the scores, then pick two positions such that, if the study were repeated many times, the true median would fall between the scores at those positions at least 95% of the time. The binomial distribution says which positions those are, and the CI is the pair of scores sitting there. Because positions are whole numbers, the actual confidence is a little over 95% (R reports 0.9629 here). This "exact" method needs no assumption about the shape of the data.
 :::
 
 ### How to report it
 
 > **Methods:** Continuous variables that were skewed or bounded are reported as median (interquartile range, IQR).
 >
-> **Results:** The median 1-year KOOS JR was 85.8 points (IQR 74.7 to 93.9; 95% CI for the median 84.0 to 88.2).
+> **Results:** The median Oxford Hip Score at 1 year was 42 points (IQR 39 to 46; 95% CI for the median 41 to 43).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: report the IQR as two numbers
-Write "IQR 74.7 to 93.9", not "IQR 19.2" (the width). Readers want to know where the middle half of patients sits, not just how wide it is. And don't report a median with an SD: they belong to different summaries.
+Write "IQR 39 to 46", not "IQR 7" (the width). Readers want to know where the middle half of patients sits, not just how wide it is. And don't report a median with an SD: they belong to different summaries.
 :::
 
 ::: {.callout-tip}
@@ -265,17 +267,17 @@ R's `quantile()` and NumPy's `np.quantile()` use the same default method (R call
 
 ## Proportion {#proportion}
 
-**The question:** What proportion of procedures were followed by a complication within 90 days?
+**The question:** What proportion of hip fracture patients died within 30 days?
 
 ### When to use it
 
-- The outcome is **yes/no** (binomial): complication, readmission, discharge home.
+- The outcome is **yes/no** (binomial): death within 30 days, complication, discharge home.
 - Report the count, the percentage, and a 95% CI for the percentage.
-- If patients were followed for **different lengths of time** and the event can happen at any time (revision, death) → use a [Kaplan-Meier curve](#kaplan-meier) instead.
+- If patients were followed for **different lengths of time** and the event can happen at any time (revision, death) → use a [Kaplan-Meier curve](#kaplan-meier) instead. Here every patient was followed for at least 30 days or until death, so the 30-day proportion is complete.
 
 ### Look at the data first
 
-For a yes/no variable, "looking" means counting, including the missing values.
+The hip fracture data hold one row per patient aged 65 or over who was treated for a hip fracture. For a yes/no variable, "looking" means counting, including the missing values.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -284,9 +286,9 @@ For a yes/no variable, "looking" means counting, including the missing values.
 #| warning: false
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 
-count(cohort, complication_90d)   # 1 = yes, 0 = no
+count(hip_fracture, death_30d)   # 1 = died within 30 days, 0 = alive at 30 days
 ```
 
 ## Python
@@ -295,9 +297,9 @@ count(cohort, complication_90d)   # 1 = yes, 0 = no
 import pandas as pd
 from scipy import stats
 
-cohort = pd.read_csv("data/cohort.csv")
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
 
-print(cohort["complication_90d"].value_counts(dropna=False))   # 1 = yes, 0 = no
+print(hip_fracture["death_30d"].value_counts(dropna=False))   # 1 = died within 30 days, 0 = alive at 30 days
 ```
 :::
 
@@ -309,56 +311,56 @@ No missing values, and only the two codes the codebook allows (0 and 1).
 ## R
 
 ```{r}
-events   <- sum(cohort$complication_90d == 1)
-patients <- nrow(cohort)
+deaths   <- sum(hip_fracture$death_30d == 1)
+patients <- nrow(hip_fracture)
 
-events / patients                                           # the proportion
+deaths / patients                                           # the proportion
 
 # Wilson 95% CI: prop.test() without the continuity correction
-prop.test(events, patients, correct = FALSE)$conf.int
+prop.test(deaths, patients, correct = FALSE)$conf.int
 ```
 
 ## Python
 
 ```{python}
-events = int((cohort["complication_90d"] == 1).sum())
-patients = len(cohort)
+deaths = int((hip_fracture["death_30d"] == 1).sum())
+patients = len(hip_fracture)
 
-print(events / patients)                                    # the proportion
+print(deaths / patients)                                    # the proportion
 
 # Wilson 95% CI
-print(stats.binomtest(events, patients).proportion_ci(method="wilson"))
+print(stats.binomtest(deaths, patients).proportion_ci(method="wilson"))
 ```
 :::
 
 ```{python}
 #| include: false
-wilson = stats.binomtest(events, patients).proportion_ci(method="wilson")
-chk = {"events": float(events), "patients": float(patients),
+wilson = stats.binomtest(deaths, patients).proportion_ci(method="wilson")
+chk = {"deaths": float(deaths), "patients": float(patients),
        "ci_low": float(wilson.low), "ci_high": float(wilson.high)}
 ```
 
 ```{r}
 #| include: false
-wilson <- prop.test(events, patients, correct = FALSE)$conf.int
-check_agree(list(events = events, patients = patients, ci_low = wilson[1], ci_high = wilson[2]),
+wilson <- prop.test(deaths, patients, correct = FALSE)$conf.int
+check_agree(list(deaths = deaths, patients = patients, ci_low = wilson[1], ci_high = wilson[2]),
             reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **51 of 600 = 0.085:** a complication followed 8.5% of procedures.
-- **95% CI 0.065 to 0.110:** the true complication rate for patients like ours is plausibly anywhere from 6.5% to 11.0%.
+- **74 of 1,200 = 0.062:** 6.2% of patients died within 30 days of the fracture.
+- **95% CI 0.049 to 0.077:** the true 30-day mortality for patients like ours is plausibly anywhere from 4.9% to 7.7%.
 
 ### How to report it
 
 > **Methods:** Categorical variables are reported as number (percentage). 95% confidence intervals for proportions were calculated with the Wilson score method.
 >
-> **Results:** A complication within 90 days followed 51 of 600 procedures (8.5%; 95% CI 6.5% to 11.0%).
+> **Results:** Within 30 days of the fracture, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: percent of what?
-- **Say what the denominator is.** Here it's 600 *procedures*. Our 80 bilateral patients count twice, so it isn't a percentage of patients. If some outcomes were missing, the denominator is the patients with a known outcome; say how many were missing.
+- **Say what the denominator is.** Here it's 1,200 *patients*: the hip fracture data have one row per patient. In the joint replacement cohort, rows are *procedures*, and the 80 patients who had both sides operated on count twice, so a percentage there is a percentage of procedures. If some outcomes were missing, the denominator is the patients with a known outcome; say how many were missing.
 - **Don't use the simple "± 1.96 standard errors" CI** (the Wald interval) for proportions. For rare events it can dip below 0%. The Wilson interval doesn't.
 :::
 
@@ -500,13 +502,13 @@ stopifnot(
   round(mean(cohort$age) - 2 * sd(cohort$age)) == 47, round(mean(cohort$age) + 2 * sd(cohort$age)) == 84,
   round(age_ci[1], 1) == 64.8, round(age_ci[2], 1) == 66.3,
   round(sd(cohort$age) / sqrt(600), 2) == 0.39,
-  length(koos_1yr) == 260,
-  round(q[[1]], 1) == 74.7, round(q[[2]], 1) == 85.8, round(q[[3]], 1) == 93.9,
-  round(q[[3]] - q[[1]], 1) == 19.2,
-  round(m_ci[["lwr.ci"]], 1) == 84.0, round(m_ci[["upr.ci"]], 1) == 88.2,
-  round(attr(m_ci, "conf.level"), 4) == 0.9595,
-  events == 51, round(100 * events / patients, 1) == 8.5,
-  round(100 * wilson[1], 1) == 6.5, round(100 * wilson[2], 1) == 11.0,
+  length(ohs_1yr) == 194, sum(ohs_1yr == 48) == 39, max(ohs_1yr) == 48, sum(ohs_1yr == 42) == 13,
+  q[[1]] == 39, q[[2]] == 42, q[[3]] == 46, q[[3]] - q[[1]] == 7,
+  m_ci[["median"]] == 42, m_ci[["lwr.ci"]] == 41, m_ci[["upr.ci"]] == 43,
+  round(attr(m_ci, "conf.level"), 4) == 0.9629,
+  deaths == 74, patients == 1200, round(deaths / patients, 3) == 0.062, round(100 * deaths / patients, 1) == 6.2,
+  round(wilson, 3) == c(0.049, 0.077), round(100 * wilson, 1) == c(4.9, 7.7),
+  !anyNA(hip_fracture$death_30d), all(hip_fracture$followup_days >= 30 | hip_fracture$died == 1),
   sum(table(cohort$patient_id) == 2) == 80,
   round(100 * mean(cohort$revised), 1) == 13.5,
   cohort$followup_years[1] > 6.2, cohort$followup_years[1] < 6.25, cohort$revised[1] == 0,
@@ -518,8 +520,8 @@ stopifnot(
   round(t.test(cohort$bmi)$conf.int[1], 1) == 30.0, round(t.test(cohort$bmi)$conf.int[2], 1) == 30.9,
   round(mean(cohort$los_days), 1) == 0.9, round(sd(cohort$los_days), 1) == 1.1,
   all(quantile(cohort$los_days, c(0.25, 0.5, 0.75)) == c(0, 1, 1)),
-  round(100 * prop.test(27, 600, correct = FALSE)$conf.int, 1) == c(3.1, 6.5),
-  sum(cohort$readmit_90d) == 27
+  sum(hip_fracture$residence == "nursing home") == 257, round(100 * 257 / 1200, 1) == 21.4,
+  round(100 * prop.test(257, 1200, correct = FALSE)$conf.int, 1) == c(19.2, 23.8)
 )
 ```
 
@@ -581,7 +583,7 @@ print(np.quantile(cohort["los_days"], [0.25, 0.50, 0.75]))
 > **Results:** The median length of stay was 1 day (IQR 0 to 1).
 :::
 
-**3.** Twenty-seven of the 600 procedures were followed by a readmission within 90 days. Write the Results sentence, with a Wilson 95% CI.
+**3.** How many of the hip fracture patients lived in a nursing home before the fracture? Write the Results sentence, with a Wilson 95% CI.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -590,15 +592,19 @@ print(np.quantile(cohort["los_days"], [0.25, 0.50, 0.75]))
 ## R
 
 ```{r}
-prop.test(27, 600, correct = FALSE)$conf.int
+count(hip_fracture, residence)
+nursing_home <- sum(hip_fracture$residence == "nursing home")
+prop.test(nursing_home, nrow(hip_fracture), correct = FALSE)$conf.int
 ```
 
 ## Python
 
 ```{python}
-print(stats.binomtest(27, 600).proportion_ci(method="wilson"))
+print(hip_fracture["residence"].value_counts())
+nursing_home = int((hip_fracture["residence"] == "nursing home").sum())
+print(stats.binomtest(nursing_home, len(hip_fracture)).proportion_ci(method="wilson"))
 ```
 :::
 
-> **Results:** Readmission within 90 days followed 27 of 600 procedures (4.5%; 95% CI 3.1% to 6.5%).
+> **Results:** Before the fracture, 257 of 1,200 patients (21.4%; 95% CI 19.2% to 23.8%) lived in a nursing home.
 :::
