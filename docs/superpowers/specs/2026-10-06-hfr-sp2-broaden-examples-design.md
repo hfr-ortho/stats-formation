@@ -1,7 +1,7 @@
 # HFR Sub-project 2: Broaden the Examples — Design Addendum
 
 **Date:** 2026-10-06
-**Status:** Approved in brainstorming; awaiting written-spec review
+**Status:** Approved 2026-10-06. Phase 2a merged 2026-10-07 (PR #2); phase 2b on branch sp2b-pages-4-8.
 **Parent spec:** `docs/superpowers/specs/2026-10-06-hfr-stats-formation-design.md` (§5 outlined
 this sub-project; this addendum replaces that outline)
 **Language:** English only. Translation (sub-projects 3–4) starts after this lands.

@@ -43,5 +43,6 @@ def test_claude_md_states_the_golden_rules():
                  "Regression CIs", "CumIncidenceRight", "Mixed models", "Multiple comparisons", "Word output",
                  "report numbers, not interpretation",
                  "deliberate public exception", "fetch-only", "2026-10-06-hfr-stats-formation-design.md",
-                 "Three languages", "(in Vorbereitung)"]:
+                 "Three languages", "(in Vorbereitung)",
+                 "PermutationMethod", "position_jitter", 'method="percentile"']:
         assert rule in text, rule
