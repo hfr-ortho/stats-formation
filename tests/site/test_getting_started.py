@@ -112,3 +112,15 @@ def test_real_data_page_says_which_studies_general_consent_covers(site):
 def test_real_data_page_recommends_redcap(site):
     text = text_of(load(REAL))
     assert "Keep study data in the project's REDCap database" in text
+
+
+def test_real_data_page_puts_code_in_a_private_repository(site):
+    text = text_of(load(REAL))
+    assert "a private repository in HFR Ortho's GitHub organization" in text
+    assert "HFR Ortho's private GitHub organization" not in text
+
+
+def test_language_heading_says_it_means_r_or_python(site):
+    """The site has three human languages too, so "your language" needs saying."""
+    headings = [h.get_text(strip=True) for h in load("getting-started/using-this-site.html").select("h2")]
+    assert "Pick R or Python once" in headings and "Pick your language once" not in headings

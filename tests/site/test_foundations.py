@@ -103,3 +103,11 @@ def test_flowchart_covers_hypothetical_values_and_matches_the_guidance(site):
     chart = soup.select_one(".mermaid, pre.mermaid-js").get_text()
     assert "hypothetical value" in chart
     assert "small groups" not in chart
+
+
+def test_tidy_page_names_the_code_key_like_the_template(site):
+    """HFR studies use coded data: a study code, and a code key kept by the person the ethics application names."""
+    text = text_of("foundations/01-tidy-data.html")
+    assert ("The code key, which links study codes to patient numbers, is kept in a separate, secured file "
+            "by the person the ethics application names for it") in text
+    assert "crosswalk" not in text
