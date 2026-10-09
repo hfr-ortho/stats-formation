@@ -106,6 +106,7 @@ MOVED_SECTIONS = {
     ("catalog/06-two-unpaired-groups.html", "unpaired-t"): ("data/foot_ankle_rct_long.csv", "efas"),
     ("catalog/06-two-unpaired-groups.html", "mann-whitney"): ("data/foot_ankle_rct_long.csv", "pain_nrs"),
     ("catalog/06-two-unpaired-groups.html", "fisher-chi-square"): ("data/acl_cohort.csv", "failure_2y"),
+    ("catalog/07-two-paired-groups.html", "paired-t"): ("data/hip_preservation_imaging.csv", "alpha_dunn45_deg"),
 }
 
 
@@ -170,6 +171,13 @@ def test_trial_results_say_how_many_were_analyzed(site):
     report = " ".join(text_of(q) for q in found.select("blockquote"))
     assert "n = 57" in report and "n = 55" in report
     assert "112 of the 120 randomized patients" in text_of(found)
+
+
+def test_wilcoxon_box_describes_page_6s_cis_correctly(site):
+    """Page 6's two Hodges-Lehmann CIs agree since it moved to whole-number pain scores."""
+    text = text_of(section("catalog/07-two-paired-groups.html", "wilcoxon-signed-rank"))
+    assert "on page 6 they differ a little" not in text
+    assert "as they do on page 6" in text
 
 
 # ---- three or more groups -------------------------------------------------
