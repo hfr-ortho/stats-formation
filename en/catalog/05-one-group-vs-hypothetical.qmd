@@ -21,9 +21,9 @@ Sometimes there is only one group of patients, and the comparison is with a numb
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom. The "hypothetical" values below are made up for teaching; they aren't real registry figures.
+Each section answers one question about one of the practice's datasets: the joint replacement cohort, its patient-reported outcomes, or (for the binomial test) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom. The "hypothetical" values below are made up for teaching; they aren't real registry figures or targets.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ::: {.callout-warning}
@@ -478,7 +478,7 @@ R's `chisq.test(counts, p = ...)` takes the hypothetical **proportions** (they m
 
 ## Binomial test {#binomial-test}
 
-**The question:** Suppose a state quality report gives a 90-day readmission rate of 6% after primary joint replacement. Is our rate different?
+**The question:** Suppose the target is that 90% of hip fracture patients are operated on within 48 hours of admission. Is our proportion different?
 
 ### When to use it
 
@@ -495,9 +495,9 @@ R's `chisq.test(counts, p = ...)` takes the hypothetical **proportions** (they m
 #| warning: false
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 
-count(cohort, readmit_90d)   # 1 = readmitted within 90 days
+count(hip_fracture, surgery_within_48h)   # 1 = operated on within 48 hours of admission
 ```
 
 ## Python
@@ -506,13 +506,13 @@ count(cohort, readmit_90d)   # 1 = readmitted within 90 days
 import pandas as pd
 from scipy import stats
 
-cohort = pd.read_csv("data/cohort.csv")
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
 
-print(cohort["readmit_90d"].value_counts(dropna=False))   # 1 = readmitted within 90 days
+print(hip_fracture["surgery_within_48h"].value_counts(dropna=False))   # 1 = operated on within 48 hours of admission
 ```
 :::
 
-27 readmissions after 600 procedures, with no missing values.
+1,034 patients were operated on within 48 hours, and none is missing. (The column is worked out from `hours_to_surgery`.)
 
 ### Run it
 
@@ -520,63 +520,63 @@ print(cohort["readmit_90d"].value_counts(dropna=False))   # 1 = readmitted withi
 ## R
 
 ```{r}
-readmitted <- sum(cohort$readmit_90d == 1)
-patients   <- nrow(cohort)
+within_48h <- sum(hip_fracture$surgery_within_48h == 1)
+patients   <- nrow(hip_fracture)
 
-readmit_test <- binom.test(readmitted, patients, p = 0.06)   # p = the hypothetical proportion
-readmit_test
+surgery_test <- binom.test(within_48h, patients, p = 0.90)   # p = the hypothetical proportion
+surgery_test
 ```
 
 ## Python
 
 ```{python}
-readmitted = int((cohort["readmit_90d"] == 1).sum())
-patients = len(cohort)
+within_48h = int((hip_fracture["surgery_within_48h"] == 1).sum())
+patients = len(hip_fracture)
 
-readmit_test = stats.binomtest(readmitted, patients, p=0.06)   # p = the hypothetical proportion
-print(readmit_test)
-print(readmit_test.proportion_ci(method="exact"))
+surgery_test = stats.binomtest(within_48h, patients, p=0.90)   # p = the hypothetical proportion
+print(surgery_test)
+print(surgery_test.proportion_ci(method="exact"))
 ```
 :::
 
 ```{python}
 #| include: false
-readmit_ci = readmit_test.proportion_ci(method="exact")
-chk = {"p": float(readmit_test.pvalue), "estimate": float(readmit_test.statistic),
-       "ci_low": float(readmit_ci.low), "ci_high": float(readmit_ci.high)}
+surgery_ci = surgery_test.proportion_ci(method="exact")
+chk = {"p": float(surgery_test.pvalue), "estimate": float(surgery_test.statistic),
+       "ci_low": float(surgery_ci.low), "ci_high": float(surgery_ci.high)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(p = readmit_test$p.value, estimate = unname(readmit_test$estimate),
-                 ci_low = readmit_test$conf.int[1], ci_high = readmit_test$conf.int[2]), reticulate::py$chk)
+check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estimate),
+                 ci_low = surgery_test$conf.int[1], ci_high = surgery_test$conf.int[2]), reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **number of successes = 27, number of trials = 600:** 27 readmissions ("successes" is just the software's word for the outcome you counted).
-- **p = 0.143:** a rate this far from 6% wouldn't be unusual if our true rate were 6%.
-- **probability of success = 0.045:** our readmission rate, 4.5%.
-- **95% CI 0.030 to 0.065:** our true rate is plausibly anywhere from 3.0% to 6.5%. This is the exact (Clopper-Pearson) interval.
+- **number of successes = 1034, number of trials = 1200:** 1,034 patients operated on within 48 hours ("successes" is just the software's word for the outcome you counted).
+- **p < 0.001:** a proportion this far from 90% would be very unlikely if our true proportion were 90%.
+- **probability of success = 0.862:** our proportion, 86.2%.
+- **95% CI 0.841 to 0.881:** our true proportion is plausibly anywhere from 84.1% to 88.1%. This is the exact (Clopper-Pearson) interval.
 
 ### Effect size and 95% CI
 
-The effect size is the difference from the hypothetical rate: 4.5% − 6% = −1.5 percentage points. Its 95% CI is the CI for our rate minus 6%: −3.0 to +0.5 percentage points. It includes 0, which matches the p-value above 0.05.
+The effect size is the difference from the target: 86.2% − 90% = −3.8 percentage points. Its 95% CI is the CI for our proportion minus 90%: −5.9 to −1.9 percentage points. It excludes 0, which matches the p-value below 0.05. In patients: at 90%, 1,080 of the 1,200 would have been operated on within 48 hours, 46 more than were.
 
 ### How to report it
 
-> **Methods:** The 90-day readmission rate was compared with the state benchmark of 6% using an exact binomial test. 95% CIs for proportions are exact (Clopper-Pearson).
+> **Methods:** The proportion of patients operated on within 48 hours of admission was compared with the target of 90% using an exact binomial test. 95% CIs for proportions are exact (Clopper-Pearson).
 >
-> **Results:** Readmission within 90 days followed 27 of 600 procedures (4.5%; 95% CI 3.0% to 6.5%); the benchmark was 6% (binomial test p = 0.143).
+> **Results:** Within 48 hours of admission, 1,034 of 1,200 patients (86.2%; 95% CI 84.1% to 88.1%) were operated on; the target was 90% (binomial test p < 0.001).
 
 ::: {.callout-warning}
-## ⚠️ Watch out: "not significantly different" doesn't mean "the same"
-Our rate could be as low as 3.0% (half the benchmark) or as high as 6.5%. The data are compatible with being better than the benchmark *and* with being about the same. Don't write "our readmission rate was equivalent to the benchmark", and don't write "lower" either; report the CI and let it speak.
+## ⚠️ Watch out: decide one- or two-sided before you look
+A target invites a one-sided question: are we *below* 90%? A one-sided test roughly halves the p-value, so choosing one after seeing which side of the target you landed on makes the p-value too small. Use a one-sided test only when the protocol named it before the data came in, and a result on the other side would genuinely change nothing. Otherwise report the two-sided test, as here.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: exact CIs
-R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the Wilson interval on [page 4](04-describe-one-group.qmd#proportion) (3.1% to 6.5% for the same 27 patients). Either is fine; say which you used.
+R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the Wilson interval on [page 4](04-describe-one-group.qmd#proportion) (84.1% to 88.0% for the same 1,034 patients). Either is fine; say which you used.
 :::
 
 ```{r}
@@ -604,18 +604,21 @@ stopifnot(
   unname(asa_test$parameter) == 3, asa_test$p.value < 0.001,
   round(asa_pct, 1) == c(6.0, 50.0, 41.0, 3.0),
   round(100 * asa_ci[, "3"], 1) == c(37.1, 45.0),
-  readmitted == 27, patients == 600,
-  round(readmit_test$p.value, 3) == 0.143,
-  round(unname(readmit_test$estimate), 3) == 0.045,
-  round(readmit_test$conf.int, 3) == c(0.030, 0.065),
-  round(100 * (readmit_test$conf.int - 0.06), 1) == c(-3.0, 0.5),
-  round(100 * prop.test(27, 600, correct = FALSE)$conf.int, 1) == c(3.1, 6.5),
+  within_48h == 1034, patients == 1200, !anyNA(hip_fracture$surgery_within_48h),
+  surgery_test$p.value < 0.001,
+  round(unname(surgery_test$estimate), 3) == 0.862, round(100 * unname(surgery_test$estimate), 1) == 86.2,
+  round(surgery_test$conf.int, 3) == c(0.841, 0.881), round(100 * surgery_test$conf.int, 1) == c(84.1, 88.1),
+  round(100 * (unname(surgery_test$estimate) - 0.90), 1) == -3.8,
+  round(100 * (surgery_test$conf.int - 0.90), 1) == c(-5.9, -1.9),
+  0.90 * patients == 1080, 0.90 * patients - within_48h == 46,
+  round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
   # exercise solutions
   round(mean(cohort$age), 1) == 65.5, round(mean(cohort$age) - 66, 1) == -0.5,
   round(t.test(cohort$age, mu = 66)$conf.int - 66, 1) == c(-1.2, 0.3),
   round(t.test(cohort$age, mu = 66)$p.value, 3) == 0.213,
-  sum(cohort$discharge == "home") == 570,
-  round(100 * binom.test(570, 600)$conf.int, 1) == c(92.9, 96.6), binom.test(570, 600, p = 0.90)$p.value < 0.001,
+  sum(hip_fracture$death_30d == 1) == 74,
+  round(binom.test(74, 1200, p = 0.07)$p.value, 3) == 0.282,
+  round(100 * binom.test(74, 1200)$conf.int, 1) == c(4.9, 7.7),
   round(100 * prop.table(table(cohort$smoker))[c("never", "former", "current")], 1) == c(53.5, 38.3, 8.2),
   round(unname(chisq.test(table(cohort$smoker)[c("never", "former", "current")], p = c(0.5, 0.4, 0.1))$statistic), 1) == 3.9,
   round(chisq.test(table(cohort$smoker)[c("never", "former", "current")], p = c(0.5, 0.4, 0.1))$p.value, 3) == 0.142
@@ -655,7 +658,7 @@ print(cohort["age"].mean() - 66, ci.low - 66, ci.high - 66)
 The CI includes 0 and rules out a difference of more than about a year in either direction.
 :::
 
-**2.** Suppose a national registry reports that 90% of joint replacement patients go home rather than to a rehabilitation clinic. After 570 of our 600 procedures, the patient went home. Which test would you use, and what do you conclude?
+**2.** Suppose a national hip fracture audit reports a 30-day mortality of 7%. [Page 4](04-describe-one-group.qmd#proportion) found that 74 of our 1,200 patients died within 30 days. Which test would you use, and what do you conclude?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -665,18 +668,20 @@ A yes/no outcome compared with a hypothetical proportion: the **binomial test**.
 ## R
 
 ```{r}
-binom.test(570, 600, p = 0.90)
+binom.test(74, 1200, p = 0.07)
 ```
 
 ## Python
 
 ```{python}
-home = stats.binomtest(570, 600, p=0.90)
-print(home.pvalue, home.proportion_ci(method="exact"))
+mortality = stats.binomtest(74, 1200, p=0.07)
+print(mortality.pvalue, mortality.proportion_ci(method="exact"))
 ```
 :::
 
-> **Results:** Discharge home followed 570 of 600 procedures (95.0%; 95% CI 92.9% to 96.6%); the state report gives 90% (binomial test p < 0.001).
+> **Results:** Within 30 days, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%); the audit reports 7% (binomial test p = 0.282).
+
+The CI includes 7%, so there's no clear evidence that our mortality differs from the audit's. That isn't the same as showing it's equal: our true rate could be anywhere from 4.9% to 7.7%. Don't write "our mortality matched the audit"; report the CI and let it speak.
 :::
 
 **3.** Suppose a survey of joint replacement patients found 50% never smokers, 40% former smokers and 10% current smokers. Test whether our smoking mix differs, and write the Results sentence.

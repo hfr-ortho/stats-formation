@@ -102,6 +102,7 @@ def test_log_rank_section_names_the_mantel_haenszel_test(site):
 MOVED_SECTIONS = {
     ("catalog/04-describe-one-group.html", "median-iqr"): ("data/proms_long.csv", "ohs"),
     ("catalog/04-describe-one-group.html", "proportion"): ("data/hip_fracture.csv", "death_30d"),
+    ("catalog/05-one-group-vs-hypothetical.html", "binomial-test"): ("data/hip_fracture.csv", "surgery_within_48h"),
 }
 
 
@@ -122,15 +123,21 @@ def test_kaplan_meier_section_shows_the_revised_case_it_describes(site):
 
 def test_proportions_name_their_denominator(site):
     for page, anchor, phrase in [("catalog/04-describe-one-group.html", "proportion", "74 of 1,200 patients"),
-                                 ("catalog/05-one-group-vs-hypothetical.html", "binomial-test", "27 of 600 procedures")]:
+                                 ("catalog/05-one-group-vs-hypothetical.html", "binomial-test", "1,034 of 1,200 patients")]:
         found = section(page, anchor)
         report = " ".join(text_of(q) for q in found.select("blockquote"))
         assert phrase in report, f"{page}#{anchor}"
         assert "of patients had" not in text_of(found)
     for page, phrase in [("catalog/04-describe-one-group.html", "257 of 1,200 patients"),
-                         ("catalog/05-one-group-vs-hypothetical.html", "570 of our 600 procedures")]:
-        exercises = text_of(section(page, "exercises"))
-        assert phrase in exercises and "patients went home" not in exercises and "Twenty-seven patients" not in exercises
+                         ("catalog/05-one-group-vs-hypothetical.html", "74 of 1,200 patients")]:
+        answers = " ".join(text_of(q) for q in section(page, "exercises").select("blockquote"))
+        assert phrase in answers, page
+
+
+def test_binomial_warning_is_about_choosing_one_sided_after_the_fact(site):
+    """A target invites a one-sided test; choosing one after seeing the data makes p too small."""
+    warning = text_of(section("catalog/05-one-group-vs-hypothetical.html", "binomial-test").select_one("div.callout-warning"))
+    assert "one-sided" in warning and "before the data came in" in warning
 
 
 def test_log_rank_results_give_each_curve_with_its_ci(site):
