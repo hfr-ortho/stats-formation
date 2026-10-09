@@ -411,6 +411,34 @@ def test_bootstrap_cis_are_seeded():
     assert offenders == [], "Call set.seed() before (or pass ci = NULL to) a bootstrap CI in: " + ", ".join(offenders)
 
 
+# ---- jitter is random too ----------------------------------------------------
+# geom_jitter() moves each point by a random amount, so an unseeded jitter redraws the
+# figure differently on every render and the frozen figure changes for no reason.
+
+JITTER = re.compile(r"\b(geom_jitter|position_jitter)\(([^)]*)\)")
+
+
+def unseeded_jitter(text):
+    """geom_jitter() itself, or position_jitter() without a seed, in any R chunk."""
+    for code in R_CHUNK.findall(text):
+        for call, args in JITTER.findall(code):
+            if call == "geom_jitter" or "seed" not in args:
+                return True
+    return False
+
+
+def test_rule_catches_an_unseeded_jitter():
+    assert unseeded_jitter("```{r}\nggplot(d, aes(x, y)) + geom_jitter(width = 0.2)\n```")
+    assert unseeded_jitter("```{r}\ngeom_point(position = position_jitter(width = 0.2))\n```")
+    assert not unseeded_jitter("```{r}\ngeom_point(position = position_jitter(width = 0.2, seed = 2026))\n```")
+    assert not unseeded_jitter("```{r}\nggplot(d, aes(x)) + geom_bar()\n```")
+
+
+def test_jitter_is_seeded():
+    offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if unseeded_jitter(f.read_text(encoding="utf-8"))]
+    assert offenders == [], "Use geom_point(position = position_jitter(..., seed = 2026)) in: " + ", ".join(offenders)
+
+
 # ---- per-group CIs use each group's own count ------------------------------
 
 def test_looped_wilson_cis_take_each_groups_own_count():

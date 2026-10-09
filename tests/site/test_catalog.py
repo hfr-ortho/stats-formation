@@ -103,6 +103,9 @@ MOVED_SECTIONS = {
     ("catalog/04-describe-one-group.html", "median-iqr"): ("data/proms_long.csv", "ohs"),
     ("catalog/04-describe-one-group.html", "proportion"): ("data/hip_fracture.csv", "death_30d"),
     ("catalog/05-one-group-vs-hypothetical.html", "binomial-test"): ("data/hip_fracture.csv", "surgery_within_48h"),
+    ("catalog/06-two-unpaired-groups.html", "unpaired-t"): ("data/foot_ankle_rct_long.csv", "efas"),
+    ("catalog/06-two-unpaired-groups.html", "mann-whitney"): ("data/foot_ankle_rct_long.csv", "pain_nrs"),
+    ("catalog/06-two-unpaired-groups.html", "fisher-chi-square"): ("data/acl_cohort.csv", "failure_2y"),
 }
 
 
@@ -150,15 +153,23 @@ def test_log_rank_results_give_each_curve_with_its_ci(site):
 
 def test_results_sentences_give_medians_with_their_iqrs(site):
     report = " ".join(text_of(q) for q in section("catalog/06-two-unpaired-groups.html", "mann-whitney").select("blockquote"))
-    assert "IQR 75.5 to 93.7" in report and "IQR 72.5 to 94.0" in report
+    assert "IQR 3 to 4.75" in report and "IQR 4 to 6" in report
     answer = text_of(section("catalog/07-two-paired-groups.html", "exercises"))
     assert "IQR 65.4 to 81.5" in answer and "IQR 73.6 to 93.8" in answer
 
 
-def test_tied_los_explanation_is_accurate(site):
-    text = text_of(section("catalog/06-two-unpaired-groups.html", "exercises"))
-    assert "most of the Site A − Site B differences are exactly 0" not in text
-    assert "a third of the Site A − Site B differences are exactly 0 days" in text
+def test_tied_pain_scores_are_counted_correctly(site):
+    """Whole-number pain scores tie often; the section counts the pairs so readers see why the estimate is a whole number."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "mann-whitney"))
+    assert "less pain in 61%, more in 25%, and 14% were tied" in text
+
+
+def test_trial_results_say_how_many_were_analyzed(site):
+    """Patients miss trial visits: the reader needs the number analyzed in each arm and the number randomized."""
+    found = section("catalog/06-two-unpaired-groups.html", "unpaired-t")
+    report = " ".join(text_of(q) for q in found.select("blockquote"))
+    assert "n = 57" in report and "n = 55" in report
+    assert "112 of the 120 randomized patients" in text_of(found)
 
 
 # ---- three or more groups -------------------------------------------------
