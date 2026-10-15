@@ -600,7 +600,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <!-- data-checksum: ffc54e2ad996e1e61ad10ca520e4d588 -->
-<p>Three or more groups of <strong>different</strong> patients: the four ASA classes, the three surgeons, implants A, B and C. You could compare every pair of groups with the tests on <a href="../../en/catalog/06-two-unpaired-groups.html">page 6</a>, but each extra test is another chance of a false positive. The tests on this page ask one question first: <strong>is there any difference among the groups at all?</strong> If the answer is yes, <a href="#which-groups-differ">Which groups differ?</a> explains the next step.</p>
+<p>Three or more groups of <strong>different</strong> patients: the four ASA classes, the three surgeons, three kinds of ACL graft, implants A, B and C. You could compare every pair of groups with the tests on <a href="../../en/catalog/06-two-unpaired-groups.html">page 6</a>, but each extra test is another chance of a false positive. The tests on this page ask one question first: <strong>is there any difference among the groups at all?</strong> If the answer is yes, <a href="#which-groups-differ">Which groups differ?</a> explains the next step.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -611,8 +611,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section’s blocks in order, top to bottom.</p>
-<p>To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them (<a href="../../en/foundations/03-distributions.html#paired">page 3</a>) and say what you did.</p>
+<p>Each section answers one question about one of the practice’s datasets: the joint replacement cohort, or (for the chi-square test) the ACL reconstructions. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section’s blocks in order, top to bottom.</p>
+<p>To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them (<a href="../../en/foundations/03-distributions.html#paired">page 3</a>) and say what you did.</p>
 </div>
 </div>
 <section id="one-way-anova" class="level2">
@@ -1000,17 +1000,18 @@ Kruskal-Wallis chi-squared = 0.67685, df = 2, p-value = 0.7129</code></pre>
 </section>
 <section id="chi-square" class="level2">
 <h2 class="anchored" data-anchor-id="chi-square">Chi-square test</h2>
-<p><strong>The question:</strong> Do 90-day complication rates differ between surgeons S1, S2 and S3?</p>
+<p><strong>The question:</strong> Does return to sport 12 months after ACL reconstruction differ between bone-patellar tendon-bone (BPTB), hamstring and quadriceps tendon grafts?</p>
 <section id="when-to-use-it-2" class="level3">
 <h3 class="anchored" data-anchor-id="when-to-use-it-2">When to use it</h3>
 <ul>
 <li>The outcome is <strong>categorical</strong> (here yes/no), compared across <strong>three or more independent groups</strong>: an r × c table.</li>
-<li>Every <strong>expected</strong> count should be at least 5. If not, combine categories that make sense together, or use Fisher’s exact test, which R’s <code>fisher.test()</code> runs exactly on larger tables too. scipy’s <code>stats.fisher_exact()</code> accepts larger tables but estimates their p-value by random resampling, so it changes a little from run to run.</li>
+<li>Every <strong>expected</strong> count should be at least 5. If not, combine categories that make sense together, or use Fisher’s exact test, which R’s <code>fisher.test()</code> runs exactly on larger tables too. scipy’s <code>stats.fisher_exact()</code> accepts larger tables but estimates their p-value by random resampling, so it changes a little from run to run unless you give it a seed.</li>
 <li>With two groups and a yes/no outcome → <a href="../../en/catalog/06-two-unpaired-groups.html#fisher-chi-square">Fisher’s exact test</a>.</li>
 </ul>
 </section>
 <section id="look-at-the-data-first-2" class="level3">
 <h3 class="anchored" data-anchor-id="look-at-the-data-first-2">Look at the data first</h3>
+<p>The ACL data hold one row per primary reconstruction; <code>rts_12mo</code> is 1 if the patient was back at their pre-injury sport 12 months after surgery.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1018,27 +1019,27 @@ Kruskal-Wallis chi-squared = 0.67685, df = 2, p-value = 0.7129</code></pre>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>acl <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/acl_cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>complication_table <span class="ot">&lt;-</span> <span class="fu">table</span>(</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">surgeon      =</span> cohort<span class="sc">$</span>surgeon,</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">complication =</span> <span class="fu">factor</span>(cohort<span class="sc">$</span>complication_90d, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>))</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>rts_table <span class="ot">&lt;-</span> <span class="fu">table</span>(</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">graft    =</span> <span class="fu">factor</span>(acl<span class="sc">$</span>graft, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"BPTB"</span>, <span class="st">"hamstring"</span>, <span class="st">"quadriceps"</span>)),</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">returned =</span> <span class="fu">factor</span>(acl<span class="sc">$</span>rts_12mo, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>))</span>
 <span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>complication_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>rts_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       complication
-surgeon yes  no
-     S1  15 217
-     S2  24 187
-     S3  12 145</code></pre>
+<pre><code>            returned
+graft        yes no
+  BPTB        84 45
+  hamstring   67 87
+  quadriceps  22 45</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(complication_table, <span class="at">margin =</span> <span class="dv">1</span>)   <span class="co"># row percentages: complications per surgeon</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.table</span>(rts_table, <span class="at">margin =</span> <span class="dv">1</span>)   <span class="co"># row percentages: return to sport with each graft</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       complication
-surgeon        yes         no
-     S1 0.06465517 0.93534483
-     S2 0.11374408 0.88625592
-     S3 0.07643312 0.92356688</code></pre>
+<pre><code>            returned
+graft              yes        no
+  BPTB       0.6511628 0.3488372
+  hamstring  0.4350649 0.5649351
+  quadriceps 0.3283582 0.6716418</code></pre>
 </div>
 </div>
 </div>
@@ -1048,30 +1049,30 @@ surgeon        yes         no
 <span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
 <span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats.contingency <span class="im">import</span> association</span>
 <span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>cohort <span class="op">=</span> pd.read_csv(<span class="st">"data/cohort.csv"</span>)</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>acl <span class="op">=</span> pd.read_csv(<span class="st">"data/acl_cohort.csv"</span>)</span>
 <span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>complication_table <span class="op">=</span> pd.crosstab(cohort[<span class="st">"surgeon"</span>], cohort[<span class="st">"complication_90d"</span>]).loc[:, [<span class="dv">1</span>, <span class="dv">0</span>]]   <span class="co"># "yes" first</span></span>
-<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(complication_table)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>rts_table <span class="op">=</span> pd.crosstab(acl[<span class="st">"graft"</span>], acl[<span class="st">"rts_12mo"</span>]).loc[[<span class="st">"BPTB"</span>, <span class="st">"hamstring"</span>, <span class="st">"quadriceps"</span>], [<span class="dv">1</span>, <span class="dv">0</span>]]   <span class="co"># "yes" first</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(rts_table)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>complication_90d   1    0
-surgeon                  
-S1                15  217
-S2                24  187
-S3                12  145</code></pre>
+<pre><code>rts_12mo     1   0
+graft             
+BPTB        84  45
+hamstring   67  87
+quadriceps  22  45</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pd.crosstab(cohort[<span class="st">"surgeon"</span>], cohort[<span class="st">"complication_90d"</span>], normalize<span class="op">=</span><span class="st">"index"</span>))   <span class="co"># row percentages</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pd.crosstab(acl[<span class="st">"graft"</span>], acl[<span class="st">"rts_12mo"</span>], normalize<span class="op">=</span><span class="st">"index"</span>))   <span class="co"># row percentages</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>complication_90d         0         1
-surgeon                             
-S1                0.935345  0.064655
-S2                0.886256  0.113744
-S3                0.923567  0.076433</code></pre>
+<pre><code>rts_12mo           0         1
+graft                         
+BPTB        0.348837  0.651163
+hamstring   0.564935  0.435065
+quadriceps  0.671642  0.328358</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-<p>Complications followed 6.5% of S1’s procedures, 11.4% of S2’s and 7.6% of S3’s.</p>
+<p>At 12 months, 65.1% of the BPTB reconstructions, 43.5% of the hamstring and 32.8% of the quadriceps reconstructions were back at their sport.</p>
 </section>
 <section id="run-it-2" class="level3">
 <h3 class="anchored" data-anchor-id="run-it-2">Run it</h3>
@@ -1080,37 +1081,37 @@ S3                0.923567  0.076433</code></pre>
 <div class="tab-content" data-group="language">
 <div id="tabset-8-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-8-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>complication_test <span class="ot">&lt;-</span> <span class="fu">chisq.test</span>(complication_table)</span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>complication_test<span class="sc">$</span>expected      <span class="co"># all at least 5, so the chi-square test is valid</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>rts_test <span class="ot">&lt;-</span> <span class="fu">chisq.test</span>(rts_table)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>rts_test<span class="sc">$</span>expected      <span class="co"># all at least 5, so the chi-square test is valid</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>       complication
-surgeon    yes      no
-     S1 19.720 212.280
-     S2 17.935 193.065
-     S3 13.345 143.655</code></pre>
+<pre><code>            returned
+graft             yes       no
+  BPTB       63.76286 65.23714
+  hamstring  76.12000 77.88000
+  quadriceps 33.11714 33.88286</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>complication_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>rts_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Pearson's Chi-squared test
 
-data:  complication_table
-X-squared = 3.6243, df = 2, p-value = 0.1633</code></pre>
+data:  rts_table
+X-squared = 22.241, df = 2, p-value = 1.481e-05</code></pre>
 </div>
 </div>
 </div>
 <div id="tabset-8-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-8-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>complication_test <span class="op">=</span> stats.chi2_contingency(complication_table)</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(complication_test.expected_freq)   <span class="co"># all at least 5, so the chi-square test is valid</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>rts_test <span class="op">=</span> stats.chi2_contingency(rts_table)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(rts_test.expected_freq)   <span class="co"># all at least 5, so the chi-square test is valid</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[[ 19.72  212.28 ]
- [ 17.935 193.065]
- [ 13.345 143.655]]</code></pre>
+<pre><code>[[63.76285714 65.23714286]
+ [76.12       77.88      ]
+ [33.11714286 33.88285714]]</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(complication_test.statistic, complication_test.dof, complication_test.pvalue)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(rts_test.statistic, rts_test.dof, rts_test.pvalue)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>3.6243376193045225 2 0.16329958674594236</code></pre>
+<pre><code>22.24081329671966 2 1.4807057268816834e-05</code></pre>
 </div>
 </div>
 </div>
@@ -1120,9 +1121,9 @@ X-squared = 3.6243, df = 2, p-value = 0.1633</code></pre>
 <section id="read-the-output-2" class="level3">
 <h3 class="anchored" data-anchor-id="read-the-output-2">Read the output</h3>
 <ul>
-<li><strong>Expected counts:</strong> what each cell would hold if complication rates were the same for every surgeon. The smallest is 13.3, so the test is valid.</li>
-<li><strong>X-squared = 3.62, df = 2:</strong> the chi-square statistic, with (3 surgeons − 1) × (2 outcomes − 1) = 2 degrees of freedom.</li>
-<li><strong>p = 0.163:</strong> differences like these would be fairly common if the three surgeons had the same complication rate.</li>
+<li><strong>Expected counts:</strong> what each cell would hold if return to sport were the same with every graft. The smallest is 33.1, so the test is valid.</li>
+<li><strong>X-squared = 22.24, df = 2:</strong> the chi-square statistic, with (3 grafts − 1) × (2 outcomes − 1) = 2 degrees of freedom.</li>
+<li><strong>p &lt; 0.001:</strong> differences this large would be very unlikely if all three grafts had the same rate of return to sport.</li>
 </ul>
 </section>
 <section id="effect-size-and-95-ci-2" class="level3">
@@ -1133,11 +1134,11 @@ X-squared = 3.6243, df = 2, p-value = 0.1633</code></pre>
 <div class="tab-content" data-group="language">
 <div id="tabset-9-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-9-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>effectsize<span class="sc">::</span><span class="fu">cramers_v</span>(complication_table, <span class="at">adjust =</span> <span class="cn">FALSE</span>)   <span class="co"># see the R vs Python box</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>effectsize<span class="sc">::</span><span class="fu">cramers_v</span>(rts_table, <span class="at">adjust =</span> <span class="cn">FALSE</span>)   <span class="co"># see the R vs Python box</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Cramer's V |       95% CI
 -------------------------
-0.08       | [0.00, 1.00]
+0.25       | [0.16, 1.00]
 
 - One-sided CIs: upper bound fixed at [1.00].</code></pre>
 </div>
@@ -1145,21 +1146,21 @@ X-squared = 3.6243, df = 2, p-value = 0.1633</code></pre>
 </div>
 <div id="tabset-9-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-9-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(association(complication_table, method<span class="op">=</span><span class="st">"cramer"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(association(rts_table, method<span class="op">=</span><span class="st">"cramer"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>0.0777210569848408</code></pre>
+<pre><code>0.25208169478915055</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-<p>V = 0.08, a small association. For yes/no outcomes, the complication rate in each group (with its CI, as on <a href="../../en/catalog/04-describe-one-group.html#proportion">page 4</a>) is usually more informative than V.</p>
+<p>V = 0.25, between a small and a medium association. For yes/no outcomes, the rate in each group (with its CI, as on <a href="../../en/catalog/04-describe-one-group.html#proportion">page 4</a>) is usually more informative than V. And remember what the test doesn’t tell you: which grafts differ (<a href="#which-groups-differ">Which groups differ?</a> below), or why. The grafts weren’t assigned at random, so a difference could come from the patients rather than the graft; <a href="../../en/catalog/12-predict-from-several.html#multiple-logistic-regression">page 12</a> shows how to adjust for other factors.</p>
 </section>
 <section id="how-to-report-it-2" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-report-it-2">How to report it</h3>
 <blockquote class="blockquote">
-<p><strong>Methods:</strong> Complication rates were compared across surgeons with the chi-square test, with Cramér’s V as the effect size.</p>
-<p><strong>Results:</strong> Complications within 90 days followed 15 of 232 procedures by surgeon S1 (6.5%), 24 of 211 by S2 (11.4%) and 12 of 157 by S3 (7.6%) (χ² = 3.62, df = 2, p = 0.163; Cramér’s V = 0.08, one-sided 95% CI 0.00 to 1.00).</p>
+<p><strong>Methods:</strong> Return to sport at 12 months was compared across graft types with the chi-square test, with Cramér’s V as the effect size.</p>
+<p><strong>Results:</strong> Return to sport at 12 months followed 84 of 129 BPTB reconstructions (65.1%), 67 of 154 hamstring reconstructions (43.5%) and 22 of 67 quadriceps reconstructions (32.8%) (χ² = 22.24, df = 2, p &lt; 0.001; Cramér’s V = 0.25, one-sided 95% CI 0.16 to 1.00).</p>
 </blockquote>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -1184,7 +1185,7 @@ X-squared = 3.6243, df = 2, p-value = 0.1633</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>effectsize’s <code>cramers_v()</code> applies a small-sample <strong>bias correction</strong> by default (0.05 here). scipy’s <code>association()</code> doesn’t (0.08). We set <code>adjust = FALSE</code> in R so the two match. Either is acceptable; say which you report.</p>
+<p>effectsize’s <code>cramers_v()</code> applies a small-sample <strong>bias correction</strong> by default (0.24 here). scipy’s <code>association()</code> doesn’t (0.25). We set <code>adjust = FALSE</code> in R so the two match. Either is acceptable; say which you report.</p>
 </div>
 </div>
 </section>
@@ -1550,7 +1551,7 @@ Kruskal-Wallis chi-squared = 0.73189, df = 2, p-value = 0.6935</code></pre>
 </div>
 </div>
 </div>
-<p><strong>3.</strong> Test whether 90-day complications differ across the four <strong>ASA classes</strong>. Check the expected counts first. What do you do, and what do you find?</p>
+<p><strong>3.</strong> Does graft failure within 2 years differ across the three grafts? Check the expected counts first. What do you do, and what do you find?</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1568,93 +1569,73 @@ Kruskal-Wallis chi-squared = 0.73189, df = 2, p-value = 0.6935</code></pre>
 <div class="tab-content" data-group="language">
 <div id="tabset-14-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-14-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="co"># R also warns here: "Chi-squared approximation may be incorrect"</span></span>
-<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a><span class="fu">chisq.test</span>(<span class="fu">table</span>(cohort<span class="sc">$</span>asa, cohort<span class="sc">$</span>complication_90d))<span class="sc">$</span>expected   <span class="co"># two expected counts are below 5</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>failure_table <span class="ot">&lt;-</span> <span class="fu">table</span>(</span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">graft  =</span> <span class="fu">factor</span>(acl<span class="sc">$</span>graft, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"BPTB"</span>, <span class="st">"hamstring"</span>, <span class="st">"quadriceps"</span>)),</span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">failed =</span> <span class="fu">factor</span>(acl<span class="sc">$</span>failure_2y, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>))</span>
+<span id="cb79-4"><a href="#cb79-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb79-5"><a href="#cb79-5" aria-hidden="true" tabindex="-1"></a>failure_table</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>   
-         0     1
-  1  32.94  3.06
-  2 274.50 25.50
-  3 225.09 20.91
-  4  16.47  1.53</code></pre>
+<pre><code>            failed
+graft        yes  no
+  BPTB         6 123
+  hamstring    6 148
+  quadriceps   3  64</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>asa_grouped <span class="ot">&lt;-</span> <span class="fu">table</span>(</span>
-<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">asa          =</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(cohort<span class="sc">$</span>asa <span class="sc">&gt;=</span> <span class="dv">3</span>, <span class="st">"ASA 3-4"</span>, <span class="st">"ASA 1-2"</span>), <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"ASA 3-4"</span>, <span class="st">"ASA 1-2"</span>)),</span>
-<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">complication =</span> <span class="fu">factor</span>(cohort<span class="sc">$</span>complication_90d, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"yes"</span>, <span class="st">"no"</span>))</span>
-<span id="cb81-4"><a href="#cb81-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb81-5"><a href="#cb81-5" aria-hidden="true" tabindex="-1"></a>asa_grouped</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="co"># R also warns here: "Chi-squared approximation may be incorrect"</span></span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a><span class="fu">chisq.test</span>(failure_table)<span class="sc">$</span>expected   <span class="co"># one expected count is below 5</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>         complication
-asa       yes  no
-  ASA 3-4  30 234
-  ASA 1-2  21 315</code></pre>
+<pre><code>            failed
+graft             yes        no
+  BPTB       5.528571 123.47143
+  hamstring  6.600000 147.40000
+  quadriceps 2.871429  64.12857</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fisher.test</span>(asa_grouped)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fisher.test</span>(failure_table)           <span class="co"># exact, even for a 3 x 2 table</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Fisher's Exact Test for Count Data
 
-data:  asa_grouped
-p-value = 0.02762
-alternative hypothesis: true odds ratio is not equal to 1
-95 percent confidence interval:
- 1.034232 3.626792
-sample estimates:
-odds ratio 
-  1.920984 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(asa_grouped, <span class="at">correct =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>conf.int   <span class="co"># risk difference, ASA 3-4 minus ASA 1-2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 0.004924702 0.097348026
-attr(,"conf.level")
-[1] 0.95</code></pre>
+data:  failure_table
+p-value = 0.9427
+alternative hypothesis: two.sided</code></pre>
 </div>
 </div>
 </div>
 <div id="tabset-14-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-14-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats.contingency <span class="im">import</span> odds_ratio</span>
-<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.proportion <span class="im">import</span> confint_proportions_2indep</span>
-<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.chi2_contingency(pd.crosstab(cohort[<span class="st">"asa"</span>], cohort[<span class="st">"complication_90d"</span>])).expected_freq)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb85-2"><a href="#cb85-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb85-3"><a href="#cb85-3" aria-hidden="true" tabindex="-1"></a>failure_table <span class="op">=</span> pd.crosstab(acl[<span class="st">"graft"</span>], acl[<span class="st">"failure_2y"</span>]).loc[[<span class="st">"BPTB"</span>, <span class="st">"hamstring"</span>, <span class="st">"quadriceps"</span>], [<span class="dv">1</span>, <span class="dv">0</span>]]</span>
+<span id="cb85-4"><a href="#cb85-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(failure_table)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[[ 32.94   3.06]
- [274.5   25.5 ]
- [225.09  20.91]
- [ 16.47   1.53]]</code></pre>
+<pre><code>failure_2y  1    0
+graft             
+BPTB        6  123
+hamstring   6  148
+quadriceps  3   64</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb89"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>cohort[<span class="st">"asa_group"</span>] <span class="op">=</span> cohort[<span class="st">"asa"</span>].<span class="bu">map</span>(<span class="kw">lambda</span> asa: <span class="st">"ASA 3-4"</span> <span class="cf">if</span> asa <span class="op">&gt;=</span> <span class="dv">3</span> <span class="cf">else</span> <span class="st">"ASA 1-2"</span>)</span>
-<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a>asa_grouped <span class="op">=</span> pd.crosstab(cohort[<span class="st">"asa_group"</span>], cohort[<span class="st">"complication_90d"</span>]).loc[[<span class="st">"ASA 3-4"</span>, <span class="st">"ASA 1-2"</span>], [<span class="dv">1</span>, <span class="dv">0</span>]]</span>
-<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(asa_grouped)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.chi2_contingency(failure_table).expected_freq)   <span class="co"># one expected count is below 5</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>complication_90d   1    0
-asa_group                
-ASA 3-4           30  234
-ASA 1-2           21  315</code></pre>
+<pre><code>[[  5.52857143 123.47142857]
+ [  6.6        147.4       ]
+ [  2.87142857  64.12857143]]</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb91"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.fisher_exact(asa_grouped).pvalue)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb89"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="co"># For tables larger than 2 x 2, scipy estimates Fisher's p-value by random resampling; a seed makes it repeatable</span></span>
+<span id="cb89-2"><a href="#cb89-2" aria-hidden="true" tabindex="-1"></a>failure_fisher <span class="op">=</span> stats.fisher_exact(failure_table.to_numpy(),</span>
+<span id="cb89-3"><a href="#cb89-3" aria-hidden="true" tabindex="-1"></a>                                    method<span class="op">=</span>stats.PermutationMethod(rng<span class="op">=</span>np.random.default_rng(<span class="dv">2026</span>)))</span>
+<span id="cb89-4"><a href="#cb89-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(failure_fisher.pvalue)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>0.027624840198071487</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb93"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(odds_ratio(asa_grouped.to_numpy(), kind<span class="op">=</span><span class="st">"conditional"</span>).confidence_interval())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>ConfidenceInterval(low=1.0342268694270842, high=3.626948806900833)</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb95"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a>high_yes, high_no <span class="op">=</span> asa_grouped.loc[<span class="st">"ASA 3-4"</span>]</span>
-<span id="cb95-2"><a href="#cb95-2" aria-hidden="true" tabindex="-1"></a>low_yes, low_no <span class="op">=</span> asa_grouped.loc[<span class="st">"ASA 1-2"</span>]</span>
-<span id="cb95-3"><a href="#cb95-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(confint_proportions_2indep(high_yes, high_yes <span class="op">+</span> high_no, low_yes, low_yes <span class="op">+</span> low_no, method<span class="op">=</span><span class="st">"wald"</span>, compare<span class="op">=</span><span class="st">"diff"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>(np.float64(0.004924701725186151), np.float64(0.09734802554754111))</code></pre>
+<pre><code>0.9405</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-<p>ASA 1 and ASA 4 each have an expected count of complications below 5 (3.1 and 1.5), so the chi-square test isn’t reliable; R says so itself, with the warning “Chi-squared approximation may be incorrect”. Combining classes into ASA 1–2 and ASA 3–4 makes clinical sense and gives a 2 × 2 table for Fisher’s exact test:</p>
+<p>With a quadriceps graft the expected number of failures is 2.9, below 5, so the chi-square test isn’t reliable; R says so itself, with the warning “Chi-squared approximation may be incorrect”. Combining grafts would change the question, so use Fisher’s exact test on the whole 3 × 2 table. R’s <code>fisher.test()</code> computes it exactly (p = 0.943); scipy estimates it from 9,999 random tables (0.9405 with this seed), close to R’s but not identical.</p>
 <blockquote class="blockquote">
-<p><strong>Results:</strong> Complications within 90 days followed 30 of 264 procedures (11.4%) in ASA 3–4 patients and 21 of 336 (6.2%) in ASA 1–2 patients (risk difference 5.1 percentage points, 95% CI 0.5 to 9.7; odds ratio 1.92, 95% CI 1.03 to 3.63; p = 0.028).</p>
+<p><strong>Results:</strong> Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher’s exact test p = 0.943).</p>
 </blockquote>
-<p>Say in your Methods that you combined the classes, and why.</p>
+<p>In your Methods, say which test you used for this table, and why.</p>
 </div>
 </div>
 </div>
