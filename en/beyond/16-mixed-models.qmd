@@ -367,7 +367,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 - **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. Python's Wald test gives the undivided statistic, 77.15 on 3 degrees of freedom, also p < 0.001.
 - **The EMMs and the differences (boot minus cast)** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.
 
-These numbers differ a little from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)'s, which used only the 3-month scores: there the 95% CI for the 3-month difference was 2.4 to 4.8, and here it's 2.5 to 4.6, because the model also learns from each patient's other visits. Two cautions. EFAS scores crowd toward their maximum by 12 months (24 points for 7 of 55 patients with a boot and 8 of 47 with a cast), so the model's means are approximate there. And the cast arm missed more 12-month visits (13 against 5): the model keeps those patients' earlier scores, which helps as long as the missed visits are [missing at random](#why-mixed-models).
+These numbers differ a little from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)'s, which used only the 3-month scores: there the 95% CI for the 3-month difference was 2.4 to 4.8, and here it's 2.5 to 4.6, mostly because the model assumes the same spread at all four visits (SD 2.9), and the 3-month scores spread a little wider (SD 3.2 within each arm). Two cautions. EFAS scores crowd toward their maximum by 12 months (24 points for 7 of 55 patients with a boot and 8 of 47 with a cast), so the model's means are approximate there. And the cast arm missed more 12-month visits (13 against 5): the model keeps those patients' earlier scores, which helps as long as the missed visits are [missing at random](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: read an interaction through its means
@@ -452,6 +452,8 @@ stopifnot(
   with(filter(trial, visit == "12mo"), c(sum(efas == 24 & arm == "boot"), sum(arm == "boot"), sum(efas == 24 & arm == "cast"), sum(arm == "cast"))) == c(7, 55, 8, 47),
   all(arm_sizes == 60), arm_sizes[["cast"]] - sum(trial$visit == "12mo" & trial$arm == "cast") == 13,
   arm_sizes[["boot"]] - sum(trial$visit == "12mo" & trial$arm == "boot") == 5,
+  round(sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov)), 1) == 2.9,
+  round(sqrt(sum(tapply(trial$efas[trial$visit == "3mo"], trial$arm[trial$visit == "3mo"], function(x) (length(x) - 1) * var(x))) / (sum(trial$visit == "3mo") - 2)), 1) == 3.2,
   round(page6_t$conf.int, 1) == c(2.4, 4.8), round(unname(page6_t$estimate[1] - page6_t$estimate[2]), 1) == 3.6,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   n_distinct(hips$case_id) == 270, nrow(hips) == 906, sum(table(hips$case_id) == 4) == 136,
