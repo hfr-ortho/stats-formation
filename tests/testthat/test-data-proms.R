@@ -24,7 +24,6 @@ test_that("no PROM visit is recorded after follow-up ended", {
 test_that("a missed visit has every measure missing", {
   missed <- is.na(proms$prom_score)
   expect_true(all(is.na(proms$visit_days[missed])))
-  expect_true(all(is.na(proms$vr12_pcs[missed])))
   expect_true(all(is.na(proms$promis_pf[missed])))
   expect_true(all(is.na(proms$ohs[missed])))
   expect_true(all(is.na(proms$walking_aid[missed])))
@@ -64,9 +63,8 @@ test_that("satisfaction tracks PROM improvement", {
   expect_gt(rho, 0.3)
 })
 
-test_that("PROMIS physical function is VR-12 PCS rescaled and improves from pre-op to 1 year", {
-  expect_equal(is.na(proms$promis_pf), is.na(proms$vr12_pcs))
-  expect_gt(stats::cor(proms$promis_pf, proms$vr12_pcs, use = "complete.obs"), 0.99)
+test_that("PROMIS physical function stays on its range and improves from pre-op to 1 year", {
+  expect_false(any(c("vr12_pcs", "vr12_mcs") %in% names(proms)))
   expect_equal(range(proms$promis_pf, na.rm = TRUE), c(22.5, 57))
   expect_gte(mean(proms$promis_pf[proms$visit == "1yr"] == 57, na.rm = TRUE), 0.05)   # the form's ceiling
   w <- wide("promis_pf")

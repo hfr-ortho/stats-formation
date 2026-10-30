@@ -1,4 +1,4 @@
-# PROMs in long format: one row per case x visit (preop, 6wk, 3mo, 1yr): HOOS JR or KOOS JR, the Oxford Hip Score (THA), VR-12 and PROMIS-29+2 physical function, walking aid.
+# PROMs in long format: one row per case x visit (preop, 6wk, 3mo, 1yr): HOOS JR or KOOS JR, the Oxford Hip Score (THA), PROMIS-29+2 physical function, walking aid.
 # A missed visit keeps its row with every measure NA, so "expected but not
 # completed" stays visible. No visit is recorded after follow-up ended.
 
@@ -38,6 +38,7 @@ make_proms_long <- function(cohort, seed = 20261008, ohs_seed = 20261105) {
     grid$pre_mean + gain + 0.5 * grid$pre_dev +
       10 * grid$recovery * grid$rec_frac + stats::rnorm(m, 0, 8))
   pcs <- 31 + grid$pcs_gain + 0.15 * (score - grid$pre_mean - gain) + stats::rnorm(m, 0, 6)
+  # mcs isn't written out, but its draws stay: removing them would change every value drawn after it.
   mcs <- 50 + c(preop = 0, `6wk` = 1, `3mo` = 2, `1yr` = 3)[grid$visit] +
     stats::rnorm(m, 0, 9)
   aid <- stats::rbinom(m, 1, stats::plogis(
@@ -55,13 +56,11 @@ make_proms_long <- function(cohort, seed = 20261008, ohs_seed = 20261105) {
     visit_days  = as.integer(visit_days),
     instrument  = ifelse(grid$procedure == "THA", "HOOS JR", "KOOS JR"),
     prom_score  = round(clamp(score, 0, 100), 1),
-    vr12_pcs    = round(clamp(pcs, 0, 100), 1),
-    vr12_mcs    = round(clamp(mcs, 0, 100), 1),
-    # PROMIS-29+2 physical function 4a (T-score, 22.5 to 57.0): VR-12 PCS rescaled, no new draws.
+    # PROMIS-29+2 physical function 4a (T-score, 22.5 to 57.0), derived from pcs, no new draws.
     promis_pf   = round(clamp(0.9 * pcs + 8, 22.5, 57), 1),
     walking_aid = as.integer(aid)
   )
-  measures <- c("visit_days", "prom_score", "vr12_pcs", "vr12_mcs", "promis_pf", "walking_aid")
+  measures <- c("visit_days", "prom_score", "promis_pf", "walking_aid")
   out[missed, measures] <- NA
   # Oxford Hip Score (0-48, higher is better) for THA cases, tracking HOOS JR.
   # Its noise comes from its own seed after every other draw, so no other value

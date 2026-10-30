@@ -473,3 +473,9 @@ def test_pages_use_the_swiss_discharge_labels():
     """cohort.csv says "rehabilitation clinic"; code still selecting "facility" would silently match nothing."""
     offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"\bfacilit(?:y|ies)\b", f.read_text(encoding="utf-8"))]
     assert offenders == [], "Use the discharge label 'rehabilitation clinic' in: " + ", ".join(offenders)
+
+
+def test_no_page_reads_or_names_vr12():
+    """Phase 2c dropped vr12_pcs and vr12_mcs (SP2 spec §6); PROMIS-29+2 physical function replaced them."""
+    offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"vr12|VR-12", f.read_text(encoding="utf-8"))]
+    assert offenders == [], "Still on VR-12: " + ", ".join(offenders)

@@ -49,8 +49,6 @@ codebooks <- function() {
       "instrument", "PROM instrument", "categorical", "", "HOOS JR|KOOS JR", "HOOS JR for THA, KOOS JR for TKA",
       "prom_score", "HOOS JR / KOOS JR interval score", "numeric", "points", "0..100", "100 = best",
       "ohs", "Oxford Hip Score (THA only)", "integer", "points", "0..48", "Higher = better; blank for TKA and for missed visits",
-      "vr12_pcs", "VR-12 physical component score", "numeric", "points", "0..100", "",
-      "vr12_mcs", "VR-12 mental component score", "numeric", "points", "0..100", "",
       "promis_pf", "PROMIS-29+2 physical function", "numeric", "T-score", "22.5..57", "The four-item form's range; mean 50, SD 10 in the US general population; higher = better",
       "walking_aid", "Uses a walking aid", "binary", "", "0|1", "1 = yes"
     ),
