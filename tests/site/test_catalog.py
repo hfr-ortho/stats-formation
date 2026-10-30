@@ -124,7 +124,7 @@ def test_moved_sections_teach_from_their_new_data(site, cell, source):
 
 def test_pearson_warning_says_correlation_is_not_agreement(site):
     warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
-    assert "isn't agreement" in warning and "−10.2° and 7.8°" in warning
+    assert "isn't agreement" in warning and "−10.2° to 7.8°" in warning
 
 
 def test_friedman_says_how_many_boot_patients_were_analyzed(site):
