@@ -365,11 +365,11 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 ```
 
 - **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. Python's Wald test gives the undivided statistic, 77.15 on 3 degrees of freedom, also p < 0.001.
-- **The EMMs and the differences** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.3 vs 13.8). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the arms had converged.
+- **The EMMs and the differences (boot minus cast)** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: read an interaction through its means
-A clear interaction says the gap between the arms changes over time. It doesn't say the boot is better: it depends on when you look. At 12 months, Holm-adjusted p = 0.898 means the data can't show a difference; it doesn't show the arms are the same, and the CI still allows about 1.5 points either way. Report the EMMs with their CIs so readers can see both.
+A clear interaction says the gap between the arms changes over time. It doesn't say the boot is better: it depends on when you look. At 12 months, Holm-adjusted p = 0.898 means the data can't show a difference; it doesn't show the arms are the same, and the CI still runs from 1.5 points in the cast's favor to 0.7 in the boot's. Report the EMMs and the difference with their CIs so readers can see both.
 :::
 
 ::: {.callout-tip}
@@ -381,7 +381,7 @@ Python computes the differences from the fixed effects with z tests, so its Holm
 
 46 of the knee patients had both knees replaced, so 92 of the 330 knees come in pairs. The two knees share the same person, so their scores may be related beyond what each knee's own intercept captures. The standard fix is a second random intercept, for the patient, with knees **nested** in patients: in lme4, `(1 | patient_id/case_id)`; in statsmodels, `groups="patient_id"` with a variance component for `case_id`.
 
-In this cohort the patient-level intercept comes out at almost exactly zero (lme4 warns that the fit is "singular"), so the simpler model above is enough. In your data, fit the nested model and report it unless it is singular. [Page 3](../foundations/03-distributions.qmd#paired) explains why bilateral patients need care, and [page 14](../survival/14-cox-regression.qmd#stratified-cox) shows the survival-analysis version.
+In this cohort the patient-level intercept comes out at almost exactly zero (lme4 warns that the fit is "singular"), so the knee model above is enough. In your data, fit the nested model and report it unless it is singular. [Page 3](../foundations/03-distributions.qmd#paired) explains why bilateral patients need care, and [page 14](../survival/14-cox-regression.qmd#stratified-cox) shows the survival-analysis version.
 
 ## How to report it {#reporting}
 
@@ -411,6 +411,13 @@ pf_emm <- summary(emmeans(lmer(promis_pf ~ visit + (1 | case_id), data = pf_all)
 arm_ci <- as.data.frame(confint(arm_gaps))
 pain_anova <- anova(lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial))
 pain_emm <- summary(emmeans(lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial), ~ visit | arm, lmer.df = "satterthwaite"))
+# Python's Wald test for the pain interaction, recomputed here (the exercise solution runs later)
+reticulate::py_run_string("
+guard_fit = smf.mixedlm('pain_nrs ~ visit * arm', trial, groups='patient_id').fit(reml=True)
+guard_terms = [n for n in guard_fit.fe_params.index if ':' in n]
+guard_w = guard_fit.wald_test(' = 0, '.join(guard_terms) + ' = 0', scalar=True)
+guard_out = {'statistic': float(guard_w.statistic), 'pvalue': float(guard_w.pvalue)}")
+guard_pain <- reticulate::py$guard_out
 stopifnot(
   nrow(per_knee) == 330, sum(per_knee$n == 4) == 192, nrow(knees) == 1146, 330 - 192 == 138,
   round(100 * 138 / 330) == 42, round(100 * 192 / 330, 1) == 58.2,
@@ -429,6 +436,7 @@ stopifnot(
   round(arm_anova["visit:arm", "F value"], 2) == 25.73, round(arm_anova["visit:arm", "DenDF"]) == 310,
   arm_anova["visit:arm", "NumDF"] == 3, arm_anova["visit:arm", "Pr(>F)"] < 0.001,
   round(reticulate::py_eval("float(arm_wald.statistic)"), 2) == 77.15, reticulate::py_eval("float(arm_wald.pvalue)") < 0.001,
+  round(arm_emm$emmean[c(6, 2)], 2) == c(17.34, 13.78),
   round(arm_emm$emmean[1:4], 1) == c(9.5, 13.8, 18.6, 20.6), round(arm_emm$emmean[5:8], 1) == c(12.4, 17.3, 19.0, 20.2),
   round(c(arm_emm$lower.CL[6], arm_emm$upper.CL[6], arm_emm$lower.CL[2], arm_emm$upper.CL[2]), 1) == c(16.6, 18.1, 13.0, 14.5),
   round(c(arm_emm$lower.CL[8], arm_emm$upper.CL[8], arm_emm$lower.CL[4], arm_emm$upper.CL[4]), 1) == c(19.4, 20.9, 19.8, 21.4),
@@ -446,6 +454,7 @@ stopifnot(
   round(complete_pf$mean, 1) == c(36.1, 39.4, 44.9, 48.2),
   round(pain_anova["visit:arm", "F value"], 2) == 4.81, round(pain_anova["visit:arm", "DenDF"]) == 317,
   round(pain_anova["visit:arm", "Pr(>F)"], 3) == 0.003,
+  round(guard_pain$statistic, 2) == 14.43, round(guard_pain$pvalue, 3) == 0.002,
   round(c(pain_emm$emmean[1], pain_emm$lower.CL[1], pain_emm$upper.CL[1], pain_emm$emmean[5], pain_emm$lower.CL[5], pain_emm$upper.CL[5]), 1) == c(4.9, 4.5, 5.4, 3.7, 3.3, 4.2),
   round(c(pain_emm$emmean[4], pain_emm$lower.CL[4], pain_emm$upper.CL[4], pain_emm$emmean[8], pain_emm$lower.CL[8], pain_emm$upper.CL[8]), 1) == c(1.6, 1.2, 2.1, 1.3, 0.8, 1.7)
 )
@@ -548,6 +557,8 @@ print(marginal_means(pain_model, arm_grid).round(2))
 :::
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
+
+Python's Wald test gives 14.43 on 3 degrees of freedom, p = 0.002.
 
 Pain is a whole-number score, so a linear model is an approximation here; with four visits and 120 patients it's a reasonable one.
 :::

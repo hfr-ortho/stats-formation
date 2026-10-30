@@ -259,8 +259,8 @@ def test_dunn_controls_false_positives_only_with_holm(site):
 
 
 def test_mixed_model_exercise_counts_joint_replacements_not_patients(site):
-    exercise_2 = text_of(section(MIXED, "exercises")).split("Does pain change differently")[0]
-    assert "patients" not in exercise_2 and "600 joint replacements" in exercise_2
+    before_exercise_3 = text_of(section(MIXED, "exercises")).split("Does pain change differently")[0]
+    assert "patients" not in before_exercise_3 and "600 joint replacements" in before_exercise_3
 
 
 def test_walking_aid_answer_gives_counts_with_percentages(site):
