@@ -1,6 +1,6 @@
 ---
 title: "17 · Concordance et fiabilité"
-description: "CCI, limites de concordance de Bland-Altman et kappa pour des mesures radiographiques : dans quelle mesure deux évaluateurs, ou un évaluateur à deux jours différents, donnent le même résultat."
+description: "CCI, limites de concordance de Bland-Altman et kappa pour des mesures radiographiques : dans quelle mesure deux évaluateurs, ou un évaluateur à deux jours différents, concordent."
 engine: knitr
 ---
 
@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Avant d'intégrer une mesure dans une étude, il faut se demander : si on la refaisait, obtiendrait-on la même réponse ? Les angles d'axe sur les radiographies de longs axes en sont un bon exemple. Avant une ostéotomie autour du genou, le chirurgien calcule la correction à partir de l'angle hanche-genou-cheville (HKA), de l'angle tibial proximal médial (MPTA) et de l'angle fémoral distal latéral (LDFA) : une erreur de lecture devient donc une erreur de correction. Deux chirurgiens peuvent placer les mêmes repères un peu différemment, et un même chirurgien peut les placer autrement un autre jour. Cette page montre comment mesurer cela, avec l'étude de fiabilité des données d'exercice : 60 genoux, chacun mesuré par deux évaluateurs (R1 et R2), deux fois, à au moins deux semaines d'intervalle.
+Avant d'intégrer une mesure dans une étude, il faut se demander : si on la refaisait, obtiendrait-on la même réponse ? Les angles d'alignement sur les radiographies des longs axes (*long-leg radiographs*) en sont un bon exemple. Avant une ostéotomie autour du genou, le chirurgien calcule la correction à partir de l'angle hanche-genou-cheville (HKA), de l'angle tibial proximal médial (MPTA) et de l'angle fémoral distal latéral (LDFA) : une erreur de lecture devient donc une erreur de correction. Deux chirurgiens peuvent placer les mêmes repères un peu différemment, et un même chirurgien peut les placer autrement un autre jour. Cette page montre comment mesurer cela, avec l'étude de fiabilité des données d'exercice : 60 genoux, chacun mesuré par deux évaluateurs (R1 et R2), deux fois, à au moins deux semaines d'intervalle.
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
@@ -27,7 +27,7 @@ Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants u
 
 On emploie souvent ces deux mots comme s'ils voulaient dire la même chose. Ce n'est pas le cas :
 - **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), un nombre de 0 à 1. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une cohorte où les déformations sont plus variées.
-- **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 lit chaque genou 3° plus haut que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **limites de concordance de Bland-Altman**, en degrés.
+- **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 mesure chaque genou 3° de plus que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **limites de concordance de Bland-Altman**, en degrés.
 
 Rapportez les deux. Un chirurgien qui planifie une ostéotomie doit connaître la concordance en degrés, pas seulement savoir que le CCI valait 0.9.
 
@@ -74,11 +74,11 @@ Les données sont en format long : une ligne par genou, évaluateur et session,
 ## Le coefficient de corrélation intraclasse {#icc}
 
 Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le définissent (Koo & Li, 2016) :
-- **Le modèle :** les évaluateurs sont-ils un échantillon aléatoire de ceux qui pourraient utiliser cette mesure (**bidirectionnel aléatoire**, *two-way random*), ou les seuls évaluateurs qui vous intéressent (**bidirectionnel mixte**, *two-way mixed*) ? Pour une mesure que d'autres chirurgiens utiliseront, choisissez aléatoire.
-- **Le type :** un évaluateur qui lit toujours plus haut doit-il compter contre la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui nourrissent des décisions cliniques, il le doit : choisissez la concordance absolue.
-- **L'unité :** l'étude utilisera-t-elle la lecture d'un seul évaluateur (**simple**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? D'habitude, simple.
+- **Le modèle :** les évaluateurs sont-ils un échantillon aléatoire de ceux qui pourraient utiliser cette mesure (**à deux facteurs, à effets aléatoires**, *two-way random*), ou les seuls évaluateurs qui vous intéressent (**à effets mixtes**, *two-way mixed*) ? Pour une mesure que d'autres chirurgiens utiliseront, choisissez le modèle aléatoire.
+- **Le type :** un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
+- **L'unité :** l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
 
-Pour la fiabilité inter-observateur de l'HKA, cela donne un CCI bidirectionnel aléatoire, de concordance absolue, pour un seul évaluateur, noté ICC(A,1) (ou ICC(2,1) dans l'ancienne notation de Shrout et Fleiss). Avec les lectures de la première session de chaque évaluateur :
+Pour la fiabilité inter-observateur de l'HKA, cela donne un CCI à deux facteurs, à effets aléatoires, de concordance absolue, pour un seul évaluateur, noté ICC(A,1) (ou ICC(2,1) dans l'ancienne notation de Shrout et Fleiss). Avec les lectures de la première session de chaque évaluateur :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -116,7 +116,7 @@ check_agree(list(icc = inter_icc$value, low = round(inter_icc$lbound, 2), high =
 ```
 
 - **ICC(A,1) = 0.889** (la ligne `ICC(A,1)` de Python ; R affiche 0.889).
-- **95% CI 0.82 to 0.93.** Le guide de Koo et Li : en dessous de 0.5, faible ; de 0.5 à 0.75, modérée ; de 0.75 à 0.9, bonne ; au-dessus de 0.9, excellente. Jugez d'après l'IC, pas d'après l'estimation seule : celui-ci va de bonne à excellente.
+- **IC à 95 % de 0.82 à 0.93.** Le guide de Koo et Li : en dessous de 0.5, faible ; de 0.5 à 0.75, modérée ; de 0.75 à 0.9, bonne ; au-dessus de 0.9, excellente. Jugez d'après l'IC, pas d'après l'estimation seule : celui-ci va de bonne à excellente.
 - **Le test F** (R) teste si le CCI est supérieur à 0. Il l'est presque toujours : cela vaut rarement la peine de le rapporter.
 
 ::: {.callout-warning}
@@ -131,7 +131,7 @@ Les mêmes données donnent un CCI différent pour chaque modèle, type et unit�
 
 ## Fiabilité inter-observateur et intra-observateur {#inter-intra-rater}
 
-Le CCI ci-dessus mesure la fiabilité **inter-observateur** : deux évaluateurs, les mêmes radiographies. La fiabilité **intra-observateur** (test-retest) fait lire les mêmes radiographies deux fois par un seul évaluateur, assez longtemps après pour qu'il ne se souvienne pas de ses premières réponses. La même forme de CCI s'applique, avec les deux sessions à la place des deux évaluateurs :
+Le CCI ci-dessus mesure la fiabilité **inter-observateur** : deux évaluateurs, les mêmes radiographies. La fiabilité **intra-observateur** (test-retest) fait lire les mêmes radiographies deux fois par un seul évaluateur, à un intervalle assez long pour qu'il ne se souvienne pas de ses premières réponses. La même forme de CCI s'applique, avec les deux sessions à la place des deux évaluateurs :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -168,13 +168,13 @@ check_agree(list(icc = intra_icc$value, low = round(intra_icc$lbound, 2), high =
             reticulate::py$chk)
 ```
 
-L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : CCI intra-observateur ICC(A,1) = 0.915 (95% CI 0.86 to 0.95), excellent selon l'estimation seule et bon à excellent sur l'ensemble de l'IC.
+L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : CCI intra-observateur ICC(A,1) = 0.915 (IC à 95 % de 0.86 à 0.95), excellent selon l'estimation seule et bon à excellent sur l'ensemble de l'IC.
 
-## Bland-Altman : à quelle distance sont les lectures ? {#bland-altman}
+## Bland-Altman : quel écart entre les lectures ? {#bland-altman}
 
 Le CCI est un rapport et n'a pas d'unité. Pour voir à quelle distance peuvent se trouver deux lectures, en degrés, tracez la **différence** entre elles en fonction de leur **moyenne**, un point par genou. Ajoutez ensuite trois lignes :
-- **Le biais :** la différence moyenne, qui montre si un évaluateur lit systématiquement plus haut.
-- **Les limites de concordance à 95 % :** biais ± 1.96 × écart-type (ET) des différences. Pour 95 % des genoux, la lecture de l'évaluateur 2 se situera entre ces limites par rapport à celle de l'évaluateur 1.
+- **Le biais :** la différence moyenne, qui montre si un évaluateur mesure systématiquement des angles plus grands.
+- **Les limites de concordance à 95 % :** biais ± 1.96 × écart-type (ET) des différences. Pour 95 % des genoux, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -244,8 +244,8 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
             reticulate::py$chk)
 ```
 
-- **Bias = 0.50°** (95% CI 0.08° to 0.93°) : l'évaluateur 2 lit en moyenne un demi-degré plus haut que l'évaluateur 1, la même différence que celle trouvée avec un test t pour échantillons appariés à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
-- **Limits of agreement, −2.74° to 3.74° :** pour 95 % des genoux, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1.
+- **Bias = 0.50°** (IC à 95 % de 0.08° à 0.93°) : l'évaluateur 2 mesure en moyenne un demi-degré de plus que l'évaluateur 1, la même différence que celle trouvée avec un test t pour échantillons appariés à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
+- **Limites de concordance, −2.74° à 3.74° :** pour 95 % des genoux, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1.
 - **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48°) montrent avec quelle précision 60 genoux fixent les limites.
 - **Le graphique :** les points se répartissent régulièrement autour de la ligne du biais, sans tendance à la hausse ni à la baisse quand l'angle moyen change. Une tendance voudrait dire que les évaluateurs sont plus en désaccord pour certains genoux (plus en varus, par exemple) que pour d'autres, et une seule paire de limites ne les décrirait pas.
 
@@ -298,9 +298,9 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 %), mais une part de cet accord se produirait par hasard. Kappa = 0.58 (95% CI 0.44 to 0.73) : concordance modérée selon l'estimation seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le CCI, jugez-la d'après l'IC : modérée à substantielle.
+Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 %), mais une part de cette concordance s'observerait par hasard. Kappa = 0.58 (IC à 95 % de 0.44 à 0.73) : concordance modérée selon l'estimation seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le CCI, jugez-la d'après l'IC : modérée à substantielle.
 
-**Le kappa pondéré pour des catégories ordonnées.** Le kappa simple traite tout désaccord comme également grave. Quand les catégories ont un ordre, un écart d'une catégorie doit compter moins qu'un grand écart. La classe CPAK n'a pas d'ordre unique (c'est une grille de 3 × 3 pour deux angles), mais chaque axe en a un. Le groupe HKA arithmétique va de varus à neutre puis à valgus. Un **kappa pondéré** pénalise de moitié un désaccord entre varus et neutre par rapport à un désaccord entre varus et valgus (pondération linéaire) :
+**Le kappa pondéré pour des catégories ordonnées.** Le kappa non pondéré traite tout désaccord comme également grave. Quand les catégories ont un ordre, un écart d'une catégorie doit compter moins qu'un grand écart. La classe CPAK n'a pas d'ordre unique (c'est une grille de 3 × 3 pour deux angles), mais chaque axe en a un. Le groupe HKA arithmétique va de varus à neutre puis à valgus. Un **kappa pondéré** pénalise de moitié un désaccord entre varus et neutre par rapport à un désaccord entre varus et valgus (pondération linéaire) :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -346,7 +346,7 @@ check_agree(list(unweighted = unweighted_kappa[["kappa"]], weighted = weighted_k
             reticulate::py$chk)
 ```
 
-Les évaluateurs sont d'accord sur le groupe HKA pour 48 des 60 genoux, et chaque désaccord est un écart d'une seule catégorie : aucun genou n'a été classé varus par un évaluateur et valgus par l'autre. Le kappa non pondéré vaut 0.68 ; le kappa pondéré, qui accorde un crédit partiel aux écarts d'une catégorie, vaut 0.73 (95% CI 0.58 to 0.87) : substantiel selon l'estimation seule, modéré à quasi parfait sur l'ensemble de l'IC.
+Les évaluateurs sont d'accord sur le groupe HKA pour 48 des 60 genoux, et chaque désaccord est un écart d'une seule catégorie : aucun genou n'a été classé varus par un évaluateur et valgus par l'autre. Le kappa non pondéré vaut 0.68 ; le kappa pondéré, qui accorde un crédit partiel aux écarts d'une catégorie, vaut 0.73 (IC à 95 % de 0.58 à 0.87) : substantiel selon l'estimation seule, modéré à quasi parfait sur l'ensemble de l'IC.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le kappa pondéré exige des catégories ordonnées
@@ -465,7 +465,7 @@ print(retest.mean(), retest_ci.low, retest_ci.high, retest.mean() + np.array([-1
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-La corrélation mesure si deux lectures montent et descendent ensemble, pas si elles sont égales. Un évaluateur qui lit chaque genou 5° trop haut est parfaitement corrélé avec un évaluateur exact.
+La corrélation mesure si deux lectures montent et descendent ensemble, pas si elles sont égales. Un évaluateur qui lit chaque genou 5° trop haut est tout aussi bien corrélé avec un évaluateur exact.
 
 ::: {.panel-tabset group="language"}
 ## R
