@@ -36,3 +36,8 @@ data:
     quarto render en/survival
     quarto render en/beyond
     quarto render en/report
+    quarto render fr/foundations
+    quarto render fr/catalog
+    quarto render fr/survival
+    quarto render fr/beyond
+    quarto render fr/report
