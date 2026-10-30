@@ -92,3 +92,9 @@ def test_risky_or_generated_files_are_ignored(path):
 )
 def test_project_files_are_not_ignored(path):
     assert not ignored(path), f"{path} is wrongly ignored"
+
+
+def test_only_the_glossary_is_allowed_among_csv_files_in_docs():
+    assert not ignored("docs/glossary.csv")
+    assert ignored("docs/other.csv")
+    assert ignored("docs/real_patients.csv")
