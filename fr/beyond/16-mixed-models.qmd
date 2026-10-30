@@ -18,7 +18,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Les PROM (mesures des résultats rapportés par le patient) sont recueillis à plusieurs visites, et les patients en manquent certaines. La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé des scores répétés avec l'ANOVA à mesures répétées, qui n'utilise que les patients mesurés à chaque visite. Un **modèle linéaire mixte** utilise tous les scores de tous les patients, et répond aux questions qu'une étude de PROM pose d'habitude : de combien les patients s'améliorent-ils, à quelle échéance, et la récupération diffère-t-elle entre les groupes ?
 
-Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire (HOOS JR), et un point sur l'un n'est pas garanti égal à un point sur l'autre : les deux ne sont donc pas mélangés dans un même modèle. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'essai orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
+Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire (HOOS JR, (score de la hanche pour prothèse articulaire, version abrégée)), et rien ne garantit qu'un point sur l'un vaille un point sur l'autre : les deux ne sont donc pas mélangés dans un même modèle. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'essai orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
@@ -140,7 +140,7 @@ Lire le résultat :
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : degrés de liberté
-Les estimations concordent. Les erreurs standard concordent à trois ou quatre chiffres significatifs : lme4 les calcule en maintenant les variances du genou et résiduelle à leurs estimations, statsmodels à partir de la courbure de toute la vraisemblance. Les valeurs p et les IC diffèrent un peu plus. lmerTest donne à chaque effet fixe un test t avec des degrés de liberté de **Satterthwaite**, une approximation de la quantité d'information sur laquelle repose l'estimation. statsmodels utilise un test z, comme si les degrés de liberté étaient infinis. Avec 330 genoux, la différence se situe à la troisième décimale ; avec une petite étude, fiez-vous à R.
+Les estimations concordent. Les erreurs standard concordent à trois ou quatre chiffres significatifs : lme4 les calcule en maintenant les variances du genou et résiduelle à leurs estimations, statsmodels à partir de la courbure de toute la vraisemblance. Les valeurs p et les intervalles de confiance (IC) diffèrent un peu plus. lmerTest donne à chaque effet fixe un test t avec des degrés de liberté de **Satterthwaite**, une approximation de la quantité d'information sur laquelle repose l'estimation. statsmodels utilise un test z, comme si les degrés de liberté étaient infinis. Avec 330 genoux, la différence se situe à la troisième décimale ; avec une petite étude, fiez-vous à R.
 :::
 
 ## Moyennes marginales estimées {#estimated-marginal-means}
@@ -194,10 +194,10 @@ check_agree(list(emm_pre = knee_emm$emmean[1], emm_1yr = knee_emm$emmean[4]), re
 check_agree(list(se_pre = knee_emm$SE[1], se_1yr = knee_emm$SE[4]), reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **emmean, lower.CL / upper.CL :** le KOOS JR moyen était de 50.0 (IC à 95 % 48.6 à 51.3) avant l'opération, de 62.5 à 6 semaines, de 74.2 à 3 mois et de 83.9 (IC à 95 % 82.5 à 85.3) à 1 an.
-- **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)).
+- **emmean, lower.CL / upper.CL :** le KOOS JR moyen était de 50.0 (IC à 95 % de 48.6 à 51.3) avant l'opération, de 62.5 à 6 semaines, de 74.2 à 3 mois et de 83.9 (IC à 95 % de 82.5 à 85.3) à 1 an.
+- **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % de 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)).
 
-Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an. C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, par hasard ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
+Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an. C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites manquées le sont presque entièrement au hasard : par simple coïncidence, ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
 
 ## Le temps : catégories ou courbe ? {#time}
 
@@ -365,13 +365,13 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 ```
 
 - **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. Le test de Wald de Python donne la statistique non divisée, 77.15 sur 3 degrés de liberté, avec aussi p < 0.001.
-- **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % −1.5 à 0.7) : l'écart s'était refermé.
+- **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
 
-Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 dans chaque bras). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond) (24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
+Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 dans chaque bras). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond ; 24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
 
 ::: {.callout-warning}
-## ⚠️ Attention : lisez une interaction à travers les moyennes
-Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, un p = 0.898 après ajustement de Holm signifie que les données ne peuvent pas montrer de différence ; elle ne montre pas que les bras sont identiques, et l'IC s'étend encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les EMM et la différence avec leurs IC pour que les lecteurs voient les deux.
+## ⚠️ Attention : lisez une interaction d'après les moyennes
+Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, un p = 0.898 après ajustement de Holm signifie que les données ne peuvent pas montrer de différence ; ce résultat ne montre pas que les bras sont identiques, et l'IC s'étend encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les EMM et la différence avec leurs IC pour que les lecteurs voient les deux.
 :::
 
 ::: {.callout-tip}
@@ -540,7 +540,7 @@ print(marginal_means(pf_model, visit_grid).round(2))
 Le modèle mixte utilise les 600 prothèses articulaires (2052 scores) au lieu des 328 qui ont les quatre scores. Ses moyennes de visites, 36.1, 39.8, 44.9 et 48.2, sont presque les mêmes que celles de la page 9 pour ces 328 (36.1, 39.4, 44.9 et 48.2) : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, si bien qu'écarter les cas incomplets a coûté de la précision plutôt que de l'exactitude.
 :::
 
-**3.** La douleur change-t-elle différemment avec une orthèse et avec un plâtre ? Ajustez le modèle visite × bras pour pain_nrs et rédigez la phrase des résultats.
+**3.** La douleur change-t-elle différemment avec une orthèse et avec un plâtre ? Ajustez le modèle visite × bras pour pain_nrs et rédigez la phrase de Résultats.
 
 ::: {.callout-tip collapse="true"}
 ## Solution

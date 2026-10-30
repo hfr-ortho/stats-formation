@@ -9,7 +9,7 @@ import csv
 import re
 import unicodedata
 
-from sitelib import ROOT
+from sitelib import ROOT, SITE_ROOT, docx_text
 from test_sources import CHUNK, CONTENT_DIRS, EXECUTABLE_CHUNK, KNITR, front_matter
 
 GLOSSARY = ROOT / "docs" / "glossary.csv"
@@ -931,3 +931,66 @@ def test_comment_rule_fails_english_comments_but_not_numbers_or_code():
 def test_comment_rule_ignores_hidden_chunks():
     en = "```{r}\n#| include: false\nx <- 1   # once\n```\n"
     assert comment_problems(en, en) == []
+
+
+# ---------------------------------------------------------------- banned French terms and the Word file
+
+# Calques and wrong terms the glossary and translation guide rule out. One constant, one rule test.
+FRENCH_BANNED = {
+    "ajuster pour": r"ajuster pour",
+    "ajusté pour": r"ajust(?:é|ée|és|ées) pour",
+    "test selon lequel": r"\btests? selon lequel",
+    "évidence claire": r"évidence claire",
+    "botte amovible": r"botte amovible",
+    "fracture de la hanche": r"fracture de la hanche",
+    "fracture de hanche": r"fracture de hanche",
+    "données du cabinet": r"données du cabinet",
+    "à égalité": r"à égalité",
+    "sans bruit": r"sans bruit",
+    "risque de base": r"risque de base",
+    "phrase de Results": r"phrase de Results",
+    "s'accumulent contre": r"s['’]accumulent contre",
+}
+
+
+def banned_terms(tr: str) -> list[str]:
+    """Banned terms in French prose: code, inline code, Methods and Results lines and quoted English
+    (inside « » or in italics) are left alone."""
+    reported = {line for p in reported_paragraphs(tr) for line in p.split("\n")}
+    found = []
+    for line in prose_lines(tr):
+        if line in reported:
+            continue
+        text = re.sub(r"<!--.*?-->", " ", line).replace("\u00a0", " ")
+        text = re.sub(r"`[^`\n]*`", " ", text)
+        text = re.sub(r"«[^»]*»", " ", text)
+        text = re.sub(r"\*[^*\n]+\*", " ", text)
+        text = re.sub(r"\]\([^)\s]*\)", "] ", text)
+        found += [name for name, rx in FRENCH_BANNED.items() if re.search(rx, text, re.IGNORECASE)]
+    return found
+
+
+def test_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
+    for bad in ["Ajustez pour l'âge, ajuster pour le sexe.", "Il est ajusté pour trois tests.",
+                "le test selon lequel x", "pas d'évidence claire", "une botte amovible",
+                "la fracture de la hanche", "une fracture de hanche", "les données du cabinet",
+                "à égalité", "sans bruit", "le risque de base", "la phrase de Results", "s'accumulent contre"]:
+        assert banned_terms(bad), bad
+    for good in ["Ajusté sur l'âge, mis en évidence.", "tient compte de toutes les paires", "la phrase de Résultats",
+                 "> **Results:** a fracture de hanche, ajusté pour l'âge", "« ajusté pour » est un calque",
+                 "le hazard de base", "`ajuster pour`", "```\najuster pour\n```"]:
+        assert banned_terms(good) == [], good
+    assert set(FRENCH_BANNED) >= {"ajuster pour", "phrase de Results", "s'accumulent contre"}
+
+
+def test_french_banned_terms():
+    found = {str(tr.relative_to(ROOT)): banned_terms(tr.read_text(encoding="utf-8"))
+             for _, tr in translated_pages("fr")}
+    assert {k: v for k, v in found.items() if v} == {}
+
+
+def test_french_report_docx_has_the_same_text_as_english(site):
+    english = SITE_ROOT / "en" / "report" / "18-example-report.docx"
+    french = SITE_ROOT / "fr" / "report" / "18-example-report.docx"
+    assert english.exists() and french.exists()
+    assert docx_text(french) == docx_text(english)

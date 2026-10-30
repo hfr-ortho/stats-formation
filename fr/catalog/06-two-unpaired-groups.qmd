@@ -1,6 +1,6 @@
 ---
 title: "6 · Comparer deux groupes indépendants"
-description: "Test t de Welch pour échantillons indépendants, test de Mann-Whitney, tests exact de Fisher et du khi-deux, et test du log-rank, chacun avec une taille d'effet et un IC à 95 %."
+description: "Test t de Welch pour échantillons indépendants, test de Mann-Whitney, test exact de Fisher, test du khi-deux et test du log-rank, chacun avec une taille d'effet et un IC à 95 %."
 engine: knitr
 toc-depth: 2
 ---
@@ -36,7 +36,7 @@ Pour garder le code court, l'exemple de prothèses articulaires utilise tous les
 - Dans **chaque groupe**, il est à peu près normal, ou chaque groupe est grand (environ 30 ou plus) et pas fortement asymétrique ([page 3](../foundations/03-distributions.qmd#within-groups)).
 - Un score qui additionne plusieurs questions, comme le score EFAS (six questions notées de 0 à 4, donc de 0 à 24), peut être traité comme une mesure quand peu de patients sont à son plancher ou à son plafond.
 - Utilisez la version de **Welch**, qui ne suppose pas que les deux groupes ont la même dispersion. C'est la valeur par défaut de R, mais pas celle de Python (voir l'encadré R ou Python).
-- Si le critère est asymétrique, s'accumule à un plancher ou à un plafond, ou est ordinal → le [test de Mann-Whitney](#mann-whitney).
+- Si le critère est asymétrique, se concentre à un plancher ou à un plafond, ou est ordinal → le [test de Mann-Whitney](#mann-whitney).
 
 ### Regarder d'abord les données
 
@@ -131,7 +131,7 @@ check_agree(list(t = unname(efas_test$statistic), df = unname(efas_test$paramete
 - **t = 6.00 :** la différence entre les moyennes vaut 6 erreurs standard.
 - **df = 106.05 :** le test de Welch ajuste les degrés de liberté à des dispersions inégales : ce n'est donc pas un nombre entier.
 - **p < 0.001 :** une différence aussi grande serait très improbable si les deux bras avaient le même score EFAS moyen.
-- **95% CI de 2.40 à 4.77 :** l'IC de la **différence de moyennes**, orthèse moins plâtre.
+- **IC à 95 % de 2.40 à 4.77 :** l'intervalle de confiance (IC) de la **différence de moyennes**, orthèse moins plâtre.
 - **mean in group boot 17.4, mean in group cast 13.8 :** les deux moyennes.
 
 ### Taille d'effet et IC à 95 %
@@ -292,7 +292,7 @@ check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticu
 
 - **W = 1074.5** (R) ou **U_val = 1074.5** (Python) : la statistique U de Mann-Whitney pour le bras orthèse, soit le nombre de paires (orthèse, plâtre) dans lesquelles le patient avec orthèse a déclaré plus de douleur, chaque ex æquo comptant pour une demi-paire. Il y a 58 × 58 = 3,364 paires : un U de 1,682 signifierait qu'il n'y a aucune tendance dans un sens ou dans l'autre. R l'appelle W.
 - **p < 0.001 :** une différence comme celle-ci serait inhabituelle si la douleur avait la même distribution dans les deux bras.
-- **difference in location −1.00, 95% CI de −2.00 à −1.00** (R seulement) : l'estimateur de Hodges-Lehmann, ci-dessous. R le trouve par une recherche numérique : il affiche donc −1.000041 et des valeurs du même genre ; les derniers chiffres sont du bruit.
+- **difference in location −1.00, IC à 95 % de −2.00 à −1.00** (R seulement) : l'estimateur de Hodges-Lehmann, ci-dessous. R le trouve par une recherche numérique : il affiche donc −1.000041 et des valeurs du même genre ; les derniers chiffres sont du bruit.
 - **RBC = −0.361** (Python) : la taille d'effet bisériale par rangs, ci-dessous.
 - Avec des scores entiers, un quartile peut tomber entre deux scores : le quartile supérieur du bras orthèse vaut 4.75 parce qu'il se situe aux trois quarts du chemin entre un 4 et un 5.
 
@@ -364,7 +364,7 @@ Le test de Mann-Whitney demande si les valeurs d'un groupe **ont tendance à êt
 
 ## Test exact de Fisher et test du khi-deux {#fisher-chi-square}
 
-**La question :** l'échec du greffon dans les 2 ans suivant une reconstruction du LCA diffère-t-il entre un greffon aux ischio-jambiers et un greffon os-tendon rotulien-os (BPTB) ?
+**La question :** l'échec de la greffe dans les 2 ans suivant une reconstruction du LCA diffère-t-il entre un greffon aux ischio-jambiers et un greffon os-tendon rotulien-os (BPTB) ?
 
 ### Quand l'utiliser
 
@@ -456,7 +456,7 @@ check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq
 ### Lire le résultat
 
 - Test de Fisher, **p-value = 0.7754 :** un tableau comme celui-ci serait courant si l'échec n'avait aucun lien avec le greffon. Nous le rapportons sous la forme p = 0.775.
-- **odds ratio 0.83, 95% CI de 0.22 à 3.20** (R) : la taille d'effet, ci-dessous.
+- **odds ratio 0.83, IC à 95 % de 0.22 à 3.20** (R) : la taille d'effet, ci-dessous.
 - **Effectifs attendus (expected) :** ce que contiendrait chaque case si l'échec n'avait aucun lien avec le greffon. Tous sont d'au moins 5, mais de justesse (le plus petit est 5.5) : le test du khi-deux est donc valide lui aussi.
 - **X-squared = 0.0003, p-value = 0.986 :** le test du khi-deux, avec la correction de continuité de Yates, concorde.
 
@@ -667,7 +667,7 @@ check_agree(list(hr = hr[1, "exp(coef)"], hr_low = hr[1, "lower .95"], hr_high =
             reticulate::py$chk)
 ```
 
-Le hazard de révision était environ trois fois plus élevé avec l'implant C (hazard ratio 3.04, IC à 95 % de 1.83 à 5.04).
+Le hazard (risque instantané) de révision était environ trois fois plus élevé avec l'implant C (hazard ratio 3.04, IC à 95 % de 1.83 à 5.04).
 
 La phrase de **Résultats** donne aussi la survie sans révision à 5 ans de chaque implant, avec son IC :
 
@@ -803,7 +803,7 @@ stopifnot(
 
 ## Exercices {#exercises}
 
-Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le haut.
+Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
 **1.** Comparez le **score EFAS à 6 semaines** entre les bras orthèse et plâtre avec le test t de Welch. Indiquez la moyenne et l'écart-type (ET) de chaque bras, ainsi que la différence de moyennes avec son IC à 95 %.
 
