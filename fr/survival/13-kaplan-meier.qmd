@@ -136,9 +136,9 @@ La méthode de Kaplan-Meier suppose qu'un patient censuré a le même risque fut
 Toute analyse de survie demande deux définitions, fixées avant de regarder les résultats :
 
 - Le **temps zéro**, le moment où le chronomètre démarre. Pour la survie de l'implant, c'est la **date de l'opération** : tous les patients partent du même moment clinique. Partir de la première consultation ignorerait les révisions survenues avant cette consultation.
-- **L'événement**, ce qui arrête le chronomètre. Ici, c'est la **révision, quelle qu'en soit la raison** : toute réopération qui retire ou remplace un composant. D'autres études utilisent la révision aseptique, ou toute réopération. Choisissez-en une à l'avance et définissez-la dans les Méthodes.
+- **L'événement**, ce qui arrête le chronomètre. Ici, c'est la **révision, quelle qu'en soit la raison** : toute réopération qui retire ou remplace un composant. D'autres études utilisent la révision aseptique, ou toute réopération. Choisissez une définition à l'avance et décrivez-la dans les Méthodes.
 
-En pratique, les données arrivent rarement sous la forme « années de suivi » et « révisé : oui/non ». Vous construisez ces colonnes à partir de dates. La cohorte d'exercice les contient déjà : `followup_years` et `event_status`, où 0 signifie censuré, 1 révisé et 2 décédé sans révision. Voici comment les fabriquer à partir d'un tableau de dates, pour quatre patients fictifs :
+En pratique, les données arrivent rarement sous la forme « années de suivi » et « révisé : oui/non ». Vous construisez ces colonnes à partir de dates. La cohorte d'exercice les contient déjà : `followup_years` et `event_status`, où 0 signifie censuré, 1 révisé et 2 décédé sans révision. Voici comment les construire à partir d'un tableau de dates, pour quatre patients fictifs :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -277,7 +277,7 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 Comment la lire :
 - **Les marches :** la courbe part de 100 % et descend à chaque révision. Les descentes deviennent plus grandes par la suite, parce que chaque révision représente alors une plus grande part des patients encore à risque, qui sont moins nombreux.
 - **Les traits** marquent les patients censurés. Ils ne font pas bouger la courbe ; ils quittent le groupe à risque.
-- **La bande grisée** est l'intervalle de confiance (IC) à 95 %. Elle s'élargit à mesure que les patients sortent.
+- **La bande ombrée** est l'intervalle de confiance (IC) à 95 %. Elle s'élargit à mesure que les patients sortent.
 - **Le tableau sous le graphique** donne le nombre de patients encore suivis (**à risque**) à chaque temps, 600 à l'opération, 332 à 4 ans et 84 à 8 ans, ainsi que les révisions jusque-là. Publiez toujours les effectifs à risque avec la courbe : ils disent au lecteur dans quelle mesure faire confiance à chaque partie de la courbe.
 
 ::: {.callout-warning}
@@ -287,7 +287,7 @@ Comment la lire :
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : la bande de confiance
-`survfit()` de R utilise par défaut un IC « log » ; lifelines utilise « log-log ». Nous écrivons `conf.type = "log-log"` dans R pour que les deux concordent, comme à la [page 4](../catalog/04-describe-one-group.qmd#kaplan-meier). Les effectifs à risque peuvent différer de un ou deux : R compte les patients suivis *au moins* 4 ans, lifelines ceux suivis *plus de* 4 ans ; un patient censuré à exactement 4.00 ans n'est donc que dans le compte de R. `add_at_risk_counts()` de lifelines ajoute aussi une ligne de patients censurés, sauf si vous choisissez les lignes avec `rows_to_show`.
+`survfit()` de R utilise par défaut un IC « log » ; lifelines utilise « log-log ». Nous écrivons `conf.type = "log-log"` dans R pour que les deux concordent, comme à la [page 4](../catalog/04-describe-one-group.qmd#kaplan-meier). Les effectifs à risque peuvent différer de un ou deux : R compte les patients suivis *au moins* 4 ans, lifelines ceux suivis *plus de* 4 ans ; un patient censuré à exactement 4.00 ans n'est compté que par R. `add_at_risk_counts()` de lifelines ajoute aussi une ligne de patients censurés, sauf si vous choisissez les lignes avec `rows_to_show`.
 :::
 
 ## Survie de l'implant à 2, 5 et 10 ans {#survivorship}
@@ -457,10 +457,10 @@ chk = {"chisq": float(approach_logrank.test_statistic), "p": float(approach_logr
 check_agree(list(chisq = approach_logrank$chisq, p = approach_logrank$pvalue), reticulate::py$chk)
 ```
 
-- **Observed / Expected :** les hanches postérieures ont eu 19 révisions là où 16.1 étaient attendues ; les hanches antérieures en ont eu 18 là où 20.9 étaient attendues.
+- **Observed / Expected :** les hanches opérées par voie postérieure ont eu 19 révisions là où 16.1 étaient attendues ; les hanches opérées par voie antérieure en ont eu 18 là où 20.9 étaient attendues.
 - **Chisq = 0.9 on 1 degree of freedom, p = 0.340 :** pas de preuve claire que les courbes diffèrent sur l'ensemble du suivi.
 
-Mais regardez le graphique. La courbe postérieure chute nettement dans les premiers mois, puis les deux courbes se rejoignent (plus tard elles se croisent même, là où les IC se chevauchent largement). Les révisions précoces sont réelles : à 6 mois, la survie de l'implant était de 88.7 % après la voie postérieure et de 98.6 % après la voie antérieure.
+Mais regardez le graphique. La courbe de la voie postérieure chute nettement dans les premiers mois, puis les deux courbes se rejoignent (plus tard elles se croisent même, là où les IC se chevauchent largement). Les révisions précoces sont réelles : à 6 mois, la survie de l'implant était de 88.7 % après la voie postérieure et de 98.6 % après la voie antérieure.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -648,7 +648,7 @@ glance(cif_by_implant) |>
   select(outcome_1, statistic_1, p.value_1, outcome_2, statistic_2, p.value_2)
 ```
 
-L'incidence cumulée de révision différait selon les implants (test de Gray, χ² = 31.5, ddl = 2, p < 0.001) ; il n'y avait pas de preuve claire que l'incidence cumulée de décès différait (χ² = 0.97, p = 0.616).
+L'incidence cumulée de révision différait selon les implants (test de Gray, χ² = 31.5, ddl (degrés de liberté) = 2, p < 0.001) ; il n'y avait pas de preuve claire que l'incidence cumulée de décès différait (χ² = 0.97, p = 0.616).
 
 > **Methods:** The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk, and compared between implants with Gray's test.
 >
@@ -657,7 +657,7 @@ L'incidence cumulée de révision différait selon les implants (test de Gray, �
 ::: {.callout-warning}
 ## ⚠️ Attention : quel nombre répond à votre question ?
 Les deux estimations sont utiles, mais elles répondent à des questions différentes :
-- **1 − Kaplan-Meier** répond à « comment l'implant se comporte-t-il tant que les patients sont en vie ? » C'est la mesure habituelle pour comparer des implants, et les registres la rapportent.
+- **1 − Kaplan-Meier** répond à « quelle est la performance de l'implant tant que les patients sont en vie ? » C'est la mesure habituelle pour comparer des implants, et les registres la rapportent.
 - **L'incidence cumulée** répond à « quelle proportion de patients sera réellement révisée ? » Utilisez-la pour conseiller les patients ou planifier les services, surtout pour les patients âgés.
 
 Dites laquelle vous rapportez. N'appelez jamais 1 − Kaplan-Meier « la proportion de patients révisés » quand beaucoup de patients sont décédés.
@@ -667,7 +667,7 @@ Dites laquelle vous rapportez. N'appelez jamais 1 − Kaplan-Meier « la propor
 ## 🔀 R ou Python : quels outils
 - **L'incidence cumulée :** `survfit()` de R l'estime dès que le statut a plus de deux niveaux. En Python, utilisez `CumIncidenceRight()` de statsmodels : il donne les estimations et leurs erreurs standard, mais pas d'IC ; le code construit donc le même IC log-log que R. lifelines a aussi un `AalenJohansenFitter`, mais il déplace les temps de suivi ex æquo d'une petite quantité aléatoire, ce qui peut modifier une estimation lue à exactement 5 ou 10 ans ; nous ne l'utilisons donc pas.
 - **Le test de Gray :** Python n'a pas d'implémentation mature du test de Gray. Tracez les courbes en Python, mais exécutez le test dans R. `cuminc()` de tidycmprsk donne aussi les incidences cumulées, avec une méthode d'IC légèrement différente.
-- **La régression de Fine-Gray** modélise l'incidence cumulée avec plusieurs prédicteurs à la fois ; elle n'existe aussi que dans R ([page 14](14-cox-regression.qmd#fine-gray)).
+- **La régression de Fine-Gray** modélise l'incidence cumulée avec plusieurs prédicteurs à la fois ; elle n'existe, elle aussi, que dans R ([page 14](14-cox-regression.qmd#fine-gray)).
 :::
 
 ```{r}
@@ -824,7 +824,7 @@ for implant, group in cohort.groupby("implant"):
     print(implant, round(row["cif"], 3), round(row["cif"] ** (1 / spread), 3), round(row["cif"] ** spread, 3))
 ```
 
-Python n'a pas de test de Gray ; prenez-le dans R.
+Python n'a pas de test de Gray ; obtenez-le avec R.
 :::
 
 > **Results:** The cumulative incidence of revision at 5 years, with death as a competing risk, was 9.7% (95% CI 6.2% to 14.1%) with implant A, 6.8% (95% CI 3.7% to 11.2%) with implant B and 27.3% (95% CI 19.5% to 35.6%) with implant C (Gray's test χ² = 31.5, df = 2, p < 0.001).

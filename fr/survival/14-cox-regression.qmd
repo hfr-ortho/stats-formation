@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-La [page 13](13-kaplan-meier.qmd) a comparé des courbes de survie. La **régression de Cox** va plus loin : elle donne à chaque groupe ou prédicteur un **hazard ratio** avec un intervalle de confiance (IC) à 95 %, et elle peut ajuster sur plusieurs prédicteurs à la fois. Les pages [8](../catalog/08-three-plus-unmatched.qmd#cox), [11](../catalog/11-predict-from-one.qmd#cox) et [12](../catalog/12-predict-from-several.qmd#cox) ont chacune ajusté un modèle de Cox en quelques étapes. Cette page traite le travail en entier :
+La [page 13](13-kaplan-meier.qmd) a comparé des courbes de survie. La **régression de Cox** va plus loin : elle donne à chaque groupe ou prédicteur un **hazard ratio** avec un intervalle de confiance (IC) à 95 %, et elle peut ajuster sur plusieurs prédicteurs à la fois. Les pages [8](../catalog/08-three-plus-unmatched.qmd#cox), [11](../catalog/11-predict-from-one.qmd#cox) et [12](../catalog/12-predict-from-several.qmd#cox) ont chacune ajusté un modèle de Cox en quelques étapes. Cette page couvre toute la démarche :
 - ce que signifie un hazard ratio
 - comment choisir les covariables
 - comment vérifier les conditions d'application du modèle, et que faire quand l'une d'elles n'est pas remplie
@@ -33,7 +33,7 @@ Jusqu'à la section sur les [patients bilatéraux](#stratified-cox), les exemple
 
 ## Le hazard ratio {#hazard-ratio}
 
-Le **hazard** est le taux de révision à un moment donné parmi les implants encore en place : la probabilité qu'un implant non révisé soit révisé dans le court intervalle qui suit. Il peut monter ou baisser au cours du temps. Le **hazard ratio** (HR) divise le hazard d'un groupe par celui d'un autre. Un modèle de Cox suppose que ce rapport reste le même sur tout le suivi, même si les hazards eux-mêmes changent : les hazards sont **proportionnels**.
+Le **hazard** (le risque instantané) est le taux de révision à un moment donné parmi les implants encore en place : la probabilité qu'un implant non révisé soit révisé dans le court intervalle qui suit. Il peut monter ou baisser au cours du temps. Le **hazard ratio** (HR) divise le hazard d'un groupe par celui d'un autre. Un modèle de Cox suppose que ce rapport reste le même sur tout le suivi, même si les hazards eux-mêmes changent : les hazards sont **proportionnels** (d'où le nom de la méthode, régression à « risques proportionnels »).
 
 Voici le modèle de Cox pour l'implant seul, avec l'implant A comme référence :
 
@@ -107,11 +107,11 @@ Lecture du résultat, ligne par ligne :
 - **se(coef), z, Pr(>|z|) :** l'erreur standard du coefficient, et le test de Wald, qui teste si le hazard ratio diffère de 1 (p < 0.001 pour C, p = 0.514 pour B).
 - **lower .95 / upper .95 :** l'IC à 95 % de chaque hazard ratio : 1.85 à 5.09 pour C, 0.45 à 1.50 pour B.
 - **Concordance = 0.659 :** parmi les paires de patients, la fréquence à laquelle celui qui a été révisé le plus tôt avait le risque prédit le plus élevé. 0.5 correspond à pile ou face et 1 à la perfection.
-- **Likelihood ratio, Wald and score tests :** trois versions du test global qui demande si l'implant compte tant soit peu. Avec assez d'événements, elles concordent ; le test du rapport de vraisemblance (27.6 sur 2 degrés de liberté, ddl, p < 0.001) est le plus fiable. Python affiche la concordance, puis ce test sous le tableau.
+- **Likelihood ratio, Wald and score tests :** trois versions du test global qui demande si l'implant joue un rôle quelconque. Avec assez d'événements, elles concordent ; le test du rapport de vraisemblance (27.6 sur 2 degrés de liberté, ddl, p < 0.001) est le plus fiable. Python affiche la concordance, puis ce test sous le tableau.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : convergence et affichage
-Les deux programmes traitent les temps de révision ex æquo avec la méthode d'Efron et prennent le premier groupe par ordre alphabétique (A) comme référence. La règle par défaut de lifelines pour arrêter les itérations s'arrête un peu trop tôt : ses hazard ratios peuvent donc différer de ceux de R à la cinquième ou à la sixième décimale. Chaque modèle Python de cette page la resserre avec `fit_options={"precision": 1e-12}`. `summary()` de R affiche la concordance et trois tests globaux ; lifelines les range dans `concordance_index_` et `log_likelihood_ratio_test()`. (`print_summary()` de lifelines montre tout d'un coup, y compris l'heure de l'ajustement du modèle.)
+Les deux programmes traitent les temps de révision ex æquo avec la méthode d'Efron et prennent le premier groupe par ordre alphabétique (A) comme référence. La règle par défaut de lifelines arrête les itérations un peu trop tôt : ses hazard ratios peuvent donc différer de ceux de R à la cinquième ou à la sixième décimale. Chaque modèle Python de cette page la resserre avec `fit_options={"precision": 1e-12}`. `summary()` de R affiche la concordance et trois tests globaux ; lifelines les range dans `concordance_index_` et `log_likelihood_ratio_test()`. (`print_summary()` de lifelines montre tout d'un coup, y compris l'heure de l'ajustement du modèle.)
 :::
 
 ::: {.callout-warning}
@@ -151,11 +151,11 @@ check_agree(list(risk_A = risk_5[1], risk_B = risk_5[2], risk_C = risk_5[3]), re
 
 ## Choisir les covariables {#choosing-covariates}
 
-Une étude qui compare des implants a une seule question : l'implant C comporte-t-il un risque de révision plus élevé que l'implant A ? Les autres prédicteurs du modèle sont là pour rendre cette comparaison équitable. Ces **covariables** sont choisies avant de regarder les résultats, pour une raison que vous pouvez écrire :
+Une étude qui compare des implants a une seule question : l'implant C comporte-t-il un risque de révision plus élevé que l'implant A ? Les autres prédicteurs du modèle sont là pour rendre cette comparaison équitable. Ces **covariables** sont choisies avant de regarder les résultats, pour une raison que vous pouvez justifier par écrit :
 
 - **Ajustez sur les facteurs de confusion :** les facteurs qui influencent à la fois l'implant que reçoit un patient et son risque de révision. L'âge, le sexe et l'IMC sont les plus courants en arthroplastie : les chirurgiens peuvent choisir les implants différemment pour les patients plus âgés, plus corpulents ou de sexe féminin, et ces facteurs peuvent modifier le risque de révision.
-- **N'ajustez pas sur ce que l'implant cause.** Une luxation ou une réopération qui suit le choix de l'implant fait partie de l'effet de l'implant : ce n'est pas un autre facteur qui expliquerait la différence. Ajuster sur elle masque l'effet que vous cherchez à mesurer.
-- **Ne choisissez pas les covariables d'après les données.** Garder seulement les prédicteurs avec p < 0.2 dans des modèles univariés, ou laisser une procédure pas à pas les choisir, rend les valeurs p et les IC plus certains qu'ils ne le sont et donne des réponses différentes dans chaque échantillon.
+- **N'ajustez pas sur ce que l'implant cause.** Une luxation ou une réopération qui suit le choix de l'implant fait partie de l'effet de l'implant : ce n'est pas un autre facteur qui expliquerait la différence. Ajuster sur cet événement masque l'effet que vous cherchez à mesurer.
+- **Ne choisissez pas les covariables d'après les données.** Garder seulement les prédicteurs avec p < 0.2 dans des modèles univariés, ou laisser une procédure pas à pas les choisir, fait paraître les valeurs p et les IC plus certains qu'ils ne le sont et donne des réponses différentes dans chaque échantillon.
 
 **Les événements limitent le modèle.** Un modèle de Cox demande environ **10 événements par terme**, un terme étant un coefficient : un prédicteur à deux niveaux comme le sexe est un terme, l'implant (B et C par rapport à A) en est deux, et une spline à 3 degrés de liberté en est trois. La cohorte d'exercice compte 81 révisions, ce qui suffit pour environ huit termes. L'implant, l'âge, le sexe et l'IMC en utilisent cinq, soit environ 16 événements par terme. Avec moins d'événements, ajustez sur moins de facteurs, et dites-le.
 
@@ -293,7 +293,7 @@ chk = {"hr_age": float(adjusted_model.summary.loc["age_10", "exp(coef)"])}
 check_agree(list(hr_age = adjusted_hr["age_10", "exp(coef)"]), reticulate::py$chk)
 ```
 
-Le hazard ratio d'aucun prédicteur n'a clairement changé au cours du temps (test global p = 0.359 ; l'IMC avait la plus petite valeur p, 0.106). Il n'y a donc pas de preuve claire contre les risques proportionnels, ce qui n'est pas la preuve qu'ils sont respectés : avec 81 révisions, le test peut passer à côté d'un changement modeste.
+Le hazard ratio d'aucun prédicteur n'a clairement changé au cours du temps (test global p = 0.359 ; l'IMC avait la plus petite valeur p, 0.106). Il n'y a donc pas de preuve claire contre les risques proportionnels, ce qui n'équivaut pas à la preuve qu'ils sont respectés : avec 81 révisions, le test peut passer à côté d'un changement modeste.
 
 **Maintenant, une vraie violation.** Les données d'exercice en contiennent une : dans les prothèses totales de hanche, la voie postérieure a un taux de révision bien plus élevé dans les premiers mois après l'opération (luxation précoce), et pas de taux plus élevé ensuite. La [page 13](13-kaplan-meier.qmd#log-rank) a montré les courbes qui se croisent.
 
@@ -356,8 +356,8 @@ check_agree(list(hr = unname(exp(coef(approach_model))), mean_log_hr = mean(appr
 ```
 
 - **Le test :** p < 0.001 (χ² de R = 11.3 sur 1 ddl). Le hazard ratio de la voie postérieure n'est pas constant.
-- **Les points :** un par révision. Les points proches de +2 sont des hanches postérieures et ceux proches de −2 des hanches antérieures : au début, presque tous les points sont donc en haut.
-- **La ligne continue** lisse les points en une estimation du logarithme du hazard ratio à chaque instant. Elle commence haut dans les premiers mois, quand les hanches postérieures étaient bien plus souvent révisées, puis passe sous la ligne pointillée, qui marque le hazard ratio unique du modèle, 1.37 (logarithme du hazard ratio 0.31).
+- **Les points :** un par révision. Les points proches de +2 sont des hanches opérées par voie postérieure et ceux proches de −2 des hanches opérées par voie antérieure : au début, presque tous les points sont donc en haut.
+- **La ligne continue** lisse les points en une estimation du logarithme du hazard ratio à chaque instant. Elle commence en haut dans les premiers mois, quand les hanches opérées par voie postérieure étaient bien plus souvent révisées, puis passe sous la ligne pointillée, qui marque le hazard ratio unique du modèle, 1.37 (logarithme du hazard ratio 0.31).
 
 Ce hazard ratio unique (1.37, IC à 95 % de 0.72 à 2.61) mélange un grand effet précoce et les années suivantes, où il n'y a pas de différence claire. Il ne décrit aucun moment réel du suivi : ne le rapportez donc pas.
 
@@ -368,14 +368,14 @@ Avec beaucoup d'événements, le test signale des changements trop petits pour c
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : deux versions du test
-`cox.zph()` de R (survival 3.0 et suivants) calcule le test du score complet, un par prédicteur, les deux termes de l'implant étant testés ensemble. `proportional_hazard_test()` de lifelines utilise l'approximation originale, plus simple, de Grambsch et Therneau et teste chaque colonne séparément (l'implant B et l'implant C ont chacun leur propre ligne). Les statistiques diffèrent légèrement (11.3 dans R, 11.2 dans Python pour la voie d'abord) et mènent ici aux mêmes conclusions. Les résidus de Schoenfeld mis à l'échelle de lifelines omettent le coefficient que R ajoute : le code Python le rajoute donc. Le graphique de R espace les révisions régulièrement sur l'axe du temps (son échelle « km ») ; le graphique Python utilise une échelle logarithmique pour la même raison : éviter que les nombreuses révisions précoces ne s'entassent à zéro.
+`cox.zph()` de R (survival 3.0 et suivants) calcule le test du score complet, un par prédicteur, les deux termes de l'implant étant testés ensemble. `proportional_hazard_test()` de lifelines utilise l'approximation originale, plus simple, de Grambsch et Therneau et teste chaque colonne séparément (l'implant B et l'implant C ont chacun leur propre ligne). Les statistiques diffèrent légèrement (11.3 dans R, 11.2 dans Python pour la voie d'abord) et mènent ici aux mêmes conclusions. Les résidus de Schoenfeld mis à l'échelle de lifelines omettent le coefficient que R ajoute : le code Python le rajoute donc. Le graphique de R espace les révisions régulièrement sur l'axe du temps (son échelle « km ») ; le graphique Python utilise une échelle logarithmique pour la même raison : éviter que les nombreuses révisions précoces ne s'entassent près de zéro.
 :::
 
-## Quand les hazards ne sont pas proportionnels {#remedies}
+## Quand les risques ne sont pas proportionnels {#remedies}
 
-Il y a deux solutions courantes. Le choix dépend de votre besoin du hazard ratio du prédicteur qui viole la condition.
+Il y a deux solutions courantes. Le bon choix dépend de la nécessité ou non d'obtenir le hazard ratio du prédicteur qui ne respecte pas la condition.
 
-**1. Stratifier, quand ce n'est qu'un ajustement.** Supposons que la question porte sur l'implant, dans les prothèses totales de hanche, et que la voie d'abord ne soit qu'une covariable. Un modèle de Cox **stratifié** par voie d'abord donne à chaque voie son propre risque de base, de forme quelconque, et estime les hazard ratios de l'implant au sein de chaque voie. La voie d'abord n'a pas de hazard ratio propre : son effet non proportionnel n'a donc plus d'importance.
+**1. Stratifier, quand ce n'est qu'un ajustement.** Supposons que la question porte sur l'implant, dans les prothèses totales de hanche, et que la voie d'abord ne soit qu'une covariable. Un modèle de Cox **stratifié** par voie d'abord donne à chaque voie son propre hazard de base, de forme quelconque, et estime les hazard ratios de l'implant au sein de chaque voie. La voie d'abord n'a pas de hazard ratio propre : son effet non proportionnel n'a donc plus d'importance.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -492,13 +492,13 @@ Choisissez le point de coupure avant de regarder, d'après un raisonnement clini
 
 Un modèle de Cox suppose que chaque ligne est un patient indépendant. Deux plans d'étude courants rompent cette condition.
 
-**Ensembles appariés.** Quand chaque patient avec l'implant C est apparié à des patients semblables qui ont reçu d'autres implants, les patients appariés vont ensemble. Un modèle de Cox **stratifié par ensemble apparié**, `strata(set_id)`, ne compare les implants qu'au sein des ensembles. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*. La [page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) traite des paires appariées et la [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) des ensembles appariés de trois.
+**Ensembles appariés.** Quand chaque patient avec l'implant C est apparié à des patients semblables qui ont reçu d'autres implants, les patients appariés forment un ensemble. Un modèle de Cox **stratifié par ensemble apparié**, `strata(set_id)`, ne compare les implants qu'au sein des ensembles. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*. La [page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) traite des paires appariées et la [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) des ensembles appariés de trois.
 
 **Patients bilatéraux.** 80 patients de la cohorte ont eu une prothèse des deux côtés. Leurs deux articulations partagent l'os, l'activité et le chirurgien du même patient : leurs résultats ne sont donc pas indépendants, et les traiter comme indépendants rend les IC trop étroits. Il y a trois choix courants :
 
 - **Garder les deux articulations et utiliser des erreurs standard robustes** en grappes sur le patient. Les hazard ratios ne changent pas ; les IC tiennent compte de l'appariement. C'est le choix habituel.
 - **Stratifier par patient**, `strata(patient_id)`, pour comparer les deux côtés de chaque patient. Seuls les patients dont les deux articulations diffèrent par le prédicteur, et qui ont eu une révision, apportent quelque chose : c'est donc rarement assez précis.
-- **Garder une articulation par patient**, par exemple la première opérée. Simple, mais cela jette des données.
+- **Garder une articulation par patient**, par exemple la première opérée. Simple, mais cela fait perdre des données.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -569,12 +569,12 @@ fine_gray
 ```
 
 Comparez-le au modèle spécifique à la cause :
-- **Implant C :** SHR 3.09 (IC à 95 % de 1.86 à 5.14), proche du HR spécifique à la cause de 3.19. Les taux de décès ne différaient pas clairement entre les implants (test de Gray à la [page 13](13-kaplan-meier.qmd#competing-risks)) : tenir compte du décès change donc peu.
+- **Implant C :** SHR 3.09 (IC à 95 % de 1.86 à 5.14), proche du HR spécifique à la cause de 3.19. L'incidence cumulée de décès ne différait pas clairement entre les implants (test de Gray à la [page 13](13-kaplan-meier.qmd#competing-risks)) : tenir compte du décès change donc peu.
 - **Âge :** SHR 1.07 pour 10 ans (IC à 95 % de 0.86 à 1.33), contre un HR spécifique à la cause de 1.22. Les patients plus âgés sont peut-être révisés à un taux un peu plus élevé tant qu'ils sont en vie, mais davantage d'entre eux décèdent avant de pouvoir être révisés : l'estimation de sous-distribution est donc plus proche de 1. Il n'y a pas de preuve claire que l'âge change le nombre de patients réellement révisés.
 
 Rapportez le modèle spécifique à la cause pour comparer des implants, et le modèle de Fine-Gray quand la question est de savoir combien de patients seront révisés. Beaucoup d'articles rapportent les deux, en précisant lequel est lequel.
 
-`crr()` ne peut pas tenir compte des patients qui ont eu une prothèse des deux côtés. Si c'est le cas de beaucoup des vôtres, la fonction `finegray()` de survival prépare les données pour un modèle de Fine-Gray que `coxph()` peut ajuster avec `cluster = patient_id`.
+`crr()` ne peut pas tenir compte des patients qui ont eu une prothèse des deux côtés. Si c'est le cas de beaucoup de vos patients, la fonction `finegray()` de survival prépare les données pour un modèle de Fine-Gray que `coxph()` peut ajuster avec `cluster = patient_id`.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un hazard ratio de sous-distribution n'est pas un hazard ratio
@@ -783,7 +783,7 @@ print(bmi_lr, chi2.sf(bmi_lr, df=2))
 Il n'y a pas de preuve claire que l'effet de l'IMC se courbe : la droite est donc conservée.
 :::
 
-**3.** Les prothèses totales de hanche et de genou ont peut-être des taux de révision de base différents. Ajustez de nouveau le modèle ajusté, stratifié par intervention. Le hazard ratio de l'implant C change-t-il ? Rédigez la phrase de résultats.
+**3.** Les prothèses totales de hanche et de genou ont peut-être des taux de révision de base différents. Refaites le modèle ajusté en le stratifiant par intervention. Le hazard ratio de l'implant C change-t-il ? Rédigez la phrase de résultats.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
