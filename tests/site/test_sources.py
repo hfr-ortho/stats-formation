@@ -242,9 +242,9 @@ def test_beyond_prose_guards_pin_numbers_quoted_from_other_pages():
     guards = {name: next(code for lang, code in hidden_chunks(text) if "Prose guard" in code)
               for name, text in written_pages("beyond")}
     assert "33.5" in guards["beyond/15-post-hoc.qmd"] and "3.07" in guards["beyond/15-post-hoc.qmd"]
-    assert "34.9" in guards["beyond/16-mixed-models.qmd"] and "831" in guards["beyond/16-mixed-models.qmd"]
+    assert "39.4" in guards["beyond/16-mixed-models.qmd"] and "promis_pf" in guards["beyond/16-mixed-models.qmd"]
     assert "ptukey(" in guards["beyond/15-post-hoc.qmd"]   # the 20% for six pairwise comparisons
-    assert "82.4, 86.4" in guards["beyond/16-mixed-models.qmd"]   # the 1-year EMMs' CIs in the Results
+    assert "16.6, 18.1" in guards["beyond/16-mixed-models.qmd"]   # the 3-month EMMs' CIs in the Results
 
 
 def calls_of(code, function):
@@ -310,7 +310,7 @@ def test_mixed_model_checks_loosen_the_tolerance_only_where_the_two_methods_diff
     by_tol = {tol: {name for names, t in checks if t == tol for name in names} for tol in [None, "1e-5", "1e-3"]}
     assert by_tol["1e-3"] and all(name.startswith(("se_", "wald")) for name in by_tol["1e-3"]), by_tol["1e-3"]
     assert by_tol["1e-5"] == {"sd_knee", "sd_residual"}
-    assert {"intercept", "visit_1yr", "emm_pre", "emm_1yr", "emm_male_6wk", "emm_female_1yr"} <= by_tol[None]
+    assert {"intercept", "visit_1yr", "emm_pre", "emm_1yr", "emm_boot_3mo", "emm_cast_12mo", "diff_3mo", "diff_12mo"} <= by_tol[None]
 
 
 def test_conover_p_values_are_checked_r_against_python():

@@ -77,8 +77,16 @@ def test_time_is_shown_as_categories_and_as_a_curve(site):
 
 
 def test_group_by_time_tests_the_interaction(site):
-    text = text_of(section(MIXED, "group-by-time"))
-    assert "visit:sex" in text and "p = 0.100" in text and "no clear evidence" in text
+    found = section(MIXED, "group-by-time")
+    text = text_of(found)
+    assert "visit:arm" in text and "efas" in code_of(found)
+    warning = text_of(found.select_one("div.callout-warning"))
+    assert "doesn't say the boot is better" in warning and "doesn't show the arms are the same" in warning
+
+
+def test_differences_between_arms_are_adjusted_across_visits(site):
+    """emmeans adjusts inside each by group, where there's one contrast, so Holm needs by = NULL."""
+    assert 'by = NULL, adjust = "holm"' in code_of(section(MIXED, "group-by-time"))
 
 
 def test_bilateral_patients_get_a_nested_model_and_a_pointer(site):
@@ -189,7 +197,7 @@ def test_post_hoc_results_say_where_the_other_pairs_are(site):
 def test_mixed_model_page_states_its_arithmetic_and_missingness_correctly(site):
     text = text_of(load(MIXED))
     assert "8.8² = 78.1" not in text and "8.84² = 78.1" in text
-    assert "Men were 2.7 points ahead" in text
+    assert "boot led by 3.6 points" in text
     assert "missed completely at random" not in text and "almost entirely at random" in text
     assert "as long as the model describes how a knee's scores are related" in text
 
@@ -231,9 +239,10 @@ def test_false_positive_example_says_pairwise_tests_are_not_independent(site):
 
 
 def test_interaction_results_give_the_marginal_means_with_cis(site):
-    """Page 16's ⚠️ box says a non-significant interaction is reported with the EMMs and their CIs."""
-    results = next(text_of(q) for q in section(MIXED, "reporting").select("blockquote") if "Results:" in text_of(q))
-    assert "84.4 (95% CI 82.4 to 86.4) in men" in results and "83.4 (95% CI 81.3 to 85.4) in women" in results
+    """Page 16's ⚠️ box says an interaction is read through the EMMs and their CIs."""
+    results = " ".join(text_of(q) for q in section(MIXED, "reporting").select("blockquote"))
+    assert "17.3 (95% CI 16.6 to 18.1) with a boot" in results and "13.8 (95% CI 13.0 to 14.5) with a cast" in results
+    assert "Holm-adjusted p = 0.898" in results
 
 
 def test_agreement_example_is_a_systematic_offset(site):
@@ -250,8 +259,8 @@ def test_dunn_controls_false_positives_only_with_holm(site):
 
 
 def test_mixed_model_exercise_counts_joint_replacements_not_patients(site):
-    text = text_of(section(MIXED, "exercises"))
-    assert "patients" not in text and "600 joint replacements" in text
+    exercise_2 = text_of(section(MIXED, "exercises")).split("Does pain change differently")[0]
+    assert "patients" not in exercise_2 and "600 joint replacements" in exercise_2
 
 
 def test_walking_aid_answer_gives_counts_with_percentages(site):
