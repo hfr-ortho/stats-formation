@@ -50,6 +50,8 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - "centre" means a hospital: a distribution's center is its "moyenne" or "position".
 - "effectif" means the number of subjects, not a count of anything ("un comptage" for a count of days).
 - "groupé" means pooled ("regroupé"); clustered data are "en grappes".
+- In "Lire le résultat" bullets, name a printed term exactly as the output prints it, in bold, then explain it in French (**mean = 65.5 ans :** la moyenne…).
+- A "primary" arthroplasty is "primaire", never "première" (prothèse articulaire primaire).
 - Practice data and files are "d'exercice", never "d'entraînement". A PROM takes no plural -s.
 - Ethics: "autorisation" and "demande d'autorisation" (LRH, ORH), not "approbation" or "demande d'éthique".
 - In `tests-a-z`, keep each test's English name in the first cell wherever it differs from the French, in italics in parentheses: "Test t pour échantillons appariés (*paired t test*)".
