@@ -1,7 +1,7 @@
 # HFR Sub-project 2: Broaden the Examples — Design Addendum
 
 **Date:** 2026-10-06
-**Status:** Approved 2026-10-06. Phase 2a merged 2026-10-07 (PR #2); phase 2b on branch sp2b-pages-4-8.
+**Status:** Approved 06.10.2026. Phase 2a merged 07.10.2026 (PR #2), phase 2b merged 15.10.2026 (PR #3); phase 2c on branch sp2c-pages-9-17.
 **Parent spec:** `docs/superpowers/specs/2026-10-06-hfr-stats-formation-design.md` (§5 outlined
 this sub-project; this addendum replaces that outline)
 **Language:** English only. Translation (sub-projects 3–4) starts after this lands.
@@ -98,7 +98,7 @@ on the modified Budin view), `crossover_sign` (0/1).
 
 - **`promis_pf`**: PROMIS-29+2 physical function T-score, made from the same random draws
   as `vr12_pcs` and rescaled, so no other column changes. During phases 2a–2b both exist;
-  phase 2c drops `vr12_pcs` and `vr12_mcs`.
+  phase 2c drops `vr12_pcs` and `vr12_mcs`. Phase 2c clamps it to the four-item form's range, 22.5 to 57.0 (the first draft's 10 to 80 went beyond what the instrument can record).
 - **`ohs`**: Oxford Hip Score (0–48, higher is better) for THA cases at every visit, blank
   for TKA, drawn from its own seed after everything else, so every existing value is
   unchanged.
@@ -144,7 +144,7 @@ section does now.
 | 2b | 5 · `#binomial-test` | readmission vs a US state report | Suppose the target is that 90% of hip-fracture patients are operated within 48 hours. Is our proportion different? |
 | 2b | 6 · `#unpaired-t` | BMI, TKA vs THA | Is the EFAS score at 3 months different with a boot than with a cast? |
 | 2b | 6 · `#mann-whitney` | KOOS JR, men vs women | Is pain 6 weeks after the injury different with a boot than with a cast? |
-| 2b | 6 · `#fisher-chi-square` | readmission by sex | Is graft failure within 2 years more common after a hamstring than a BPTB graft? |
+| 2b | 6 · `#fisher-chi-square` | readmission by sex | Does graft failure within 2 years differ between a hamstring and a BPTB graft? |
 | 2b | 7 · `#paired-t` | VR-12 PCS, before vs 1 year | Do the frog-leg and Dunn 45° views give different alpha angles in the same hips? |
 | 2b | 8 · `#chi-square` | complications by surgeon | Does return to sport at 12 months differ between BPTB, hamstring and quadriceps grafts? |
 | 2c | 9 · `#repeated-measures-anova` | VR-12 PCS over time | Does physical function (PROMIS-29+2) change over the first year after surgery? |
@@ -154,6 +154,8 @@ section does now.
 | 2c | 11 · `#cox` | revision hazard vs age | Does the hazard of ACL graft failure rise with posterior tibial slope? |
 | 2c | 12 · `#multiple-logistic-regression` | complication predictors | Which factors predict return to sport at 12 months? |
 | 2c | 15, 16 (VR-12 passages) | VR-12 PCS | PROMIS-29+2 physical function |
+| 2c | 15 · #after-friedman | KOOS JR | The EFAS score with a boot, following page 9 |
+| 2c | 16 · exercise 3 | KOOS JR by age group | Pain, boot vs cast × visit |
 | 2c | 16 · `#group-by-time` | KOOS JR in knees, men vs women × visit (an interaction with no clear evidence) | Does the boot's advantage in EFAS score change over the year (boot vs cast × visit)? A clear interaction; the section's warning about reading interactions stays, now illustrated by the arms converging at 12 months |
 | 2c | 17 | knee alignment | Same `radiographic_reliability.csv`, reframed as osteotomy planning (HKA, MPTA, LDFA) |
 

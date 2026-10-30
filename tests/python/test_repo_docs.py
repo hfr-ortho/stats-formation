@@ -44,5 +44,5 @@ def test_claude_md_states_the_golden_rules():
                  "report numbers, not interpretation",
                  "deliberate public exception", "fetch-only", "2026-10-06-hfr-stats-formation-design.md",
                  "Three languages", "(in Vorbereitung)",
-                 "PermutationMethod", "position_jitter", 'method="percentile"']:
+                 "PermutationMethod", "position_jitter", "by = NULL", 'method="percentile"']:
         assert rule in text, rule
