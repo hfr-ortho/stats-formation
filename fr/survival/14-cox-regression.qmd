@@ -1,8 +1,814 @@
 ---
-title: "14 · Régression de Cox à risques proportionnels (en préparation)"
+title: "14 · Régression de Cox à risques proportionnels"
+description: "Hazard ratios, choix des covariables, modèles de Cox univariés et multivariés, vérification des effets en ligne droite et des risques proportionnels, solutions, régression de Cox stratifiée pour les ensembles appariés et les patients bilatéraux, régression de Fine-Gray et rédaction des résultats."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/survival/14-cox-regression.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+La [page 13](13-kaplan-meier.qmd) a comparé des courbes de survie. La **régression de Cox** va plus loin : elle donne à chaque groupe ou prédicteur un **hazard ratio** avec un intervalle de confiance (IC) à 95 %, et elle peut ajuster sur plusieurs prédicteurs à la fois. Les pages [8](../catalog/08-three-plus-unmatched.qmd#cox), [11](../catalog/11-predict-from-one.qmd#cox) et [12](../catalog/12-predict-from-several.qmd#cox) ont chacune ajusté un modèle de Cox en quelques étapes. Cette page traite le travail en entier :
+- ce que signifie un hazard ratio
+- comment choisir les covariables
+- comment vérifier les conditions d'application du modèle, et que faire quand l'une d'elles n'est pas remplie
+- comment traiter les ensembles appariés et les patients opérés des deux côtés
+- comment modéliser les risques concurrents
+- comment rédiger le résultat
+
+::: {.callout-note}
+## 💡 Comment fonctionne cette page
+Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages, les données et les modèles créés plus haut.
+
+Jusqu'à la section sur les [patients bilatéraux](#stratified-cox), les exemples traitent chaque cas comme un patient distinct, y compris les 80 patients opérés des deux côtés. Dans le code, les prothèses s'appellent THA et TKA ; dans le texte, nous disons PTH et PTG.
+:::
+
+## Le hazard ratio {#hazard-ratio}
+
+Le **hazard** est le taux de révision à un moment donné parmi les implants encore en place : la probabilité qu'un implant non révisé soit révisé dans le court intervalle qui suit. Il peut monter ou baisser au cours du temps. Le **hazard ratio** (HR) divise le hazard d'un groupe par celui d'un autre. Un modèle de Cox suppose que ce rapport reste le même sur tout le suivi, même si les hazards eux-mêmes changent : les hazards sont **proportionnels**.
+
+Voici le modèle de Cox pour l'implant seul, avec l'implant A comme référence :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(survival)
+library(ggsurvfit)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
+  mutate(age_10 = age / 10,                 # hazard ratios pour 10 ans d'âge
+         bmi_5 = bmi / 5)                   # et pour 5 kg/m² d'IMC
+
+implant_model <- coxph(Surv(followup_years, revised) ~ implant, data = cohort)
+summary(implant_model)
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from lifelines import CoxPHFitter, KaplanMeierFitter
+
+cohort = pd.read_csv("data/cohort.csv")
+cohort["age_10"] = cohort["age"] / 10       # hazard ratios pour 10 ans d'âge
+cohort["bmi_5"] = cohort["bmi"] / 5         # et pour 5 kg/m² d'IMC
+
+implant_model = CoxPHFitter().fit(
+    cohort[["followup_years", "revised", "implant"]],
+    duration_col="followup_years", event_col="revised", formula="implant",
+    fit_options={"precision": 1e-12},        # arrêter seulement à la convergence complète ; voir l'encadré R ou Python
+)
+print(implant_model.summary[["coef", "exp(coef)", "se(coef)", "exp(coef) lower 95%",
+                             "exp(coef) upper 95%", "z", "p"]].round(3).to_string())   # to_string() : affiche toutes les colonnes
+print(implant_model.concordance_index_)                              # indice de concordance
+print(implant_model.log_likelihood_ratio_test().test_statistic)     # test global du rapport de vraisemblance
+```
+:::
+
+```{python}
+#| include: false
+rows = implant_model.summary
+chk = {"hr_b": float(rows.loc["implant[T.B]", "exp(coef)"]), "hr_c": float(rows.loc["implant[T.C]", "exp(coef)"]),
+       "low_c": float(rows.loc["implant[T.C]", "exp(coef) lower 95%"]),
+       "high_c": float(rows.loc["implant[T.C]", "exp(coef) upper 95%"]),
+       "p_c": float(rows.loc["implant[T.C]", "p"]),
+       "lr": float(implant_model.log_likelihood_ratio_test().test_statistic),
+       "concordance": float(implant_model.concordance_index_)}
+```
+
+```{r}
+#| include: false
+implant_hr <- summary(implant_model)$conf.int
+check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["implantC", "exp(coef)"],
+                 low_c = implant_hr["implantC", "lower .95"], high_c = implant_hr["implantC", "upper .95"],
+                 p_c = summary(implant_model)$coefficients["implantC", "Pr(>|z|)"],
+                 lr = unname(summary(implant_model)$logtest["test"]),
+                 concordance = unname(summary(implant_model)$concordance["C"])),
+            reticulate::py$chk)
+```
+
+Lecture du résultat, ligne par ligne :
+- **n = 600, number of events = 81 :** les interventions et les révisions. Ce sont les révisions, et non les interventions, qui fixent ce qu'un modèle de Cox peut apprendre.
+- **coef :** le logarithme du hazard ratio. Personne ne le rapporte ; c'est ce que le modèle estime.
+- **exp(coef) :** le **hazard ratio**. Implant C : 3.07. À tout moment du suivi, un implant C non révisé était révisé à un taux environ trois fois plus élevé qu'un implant A non révisé. Implant B : 0.82.
+- **se(coef), z, Pr(>|z|) :** l'erreur standard du coefficient, et le test de Wald, qui teste si le hazard ratio diffère de 1 (p < 0.001 pour C, p = 0.514 pour B).
+- **lower .95 / upper .95 :** l'IC à 95 % de chaque hazard ratio : 1.85 à 5.09 pour C, 0.45 à 1.50 pour B.
+- **Concordance = 0.659 :** parmi les paires de patients, la fréquence à laquelle celui qui a été révisé le plus tôt avait le risque prédit le plus élevé. 0.5 correspond à pile ou face et 1 à la perfection.
+- **Likelihood ratio, Wald and score tests :** trois versions du test global qui demande si l'implant compte tant soit peu. Avec assez d'événements, elles concordent ; le test du rapport de vraisemblance (27.6 sur 2 degrés de liberté, ddl, p < 0.001) est le plus fiable. Python affiche la concordance, puis ce test sous le tableau.
+
+::: {.callout-tip}
+## 🔀 R ou Python : convergence et affichage
+Les deux programmes traitent les temps de révision ex æquo avec la méthode d'Efron et prennent le premier groupe par ordre alphabétique (A) comme référence. La règle par défaut de lifelines pour arrêter les itérations s'arrête un peu trop tôt : ses hazard ratios peuvent donc différer de ceux de R à la cinquième ou à la sixième décimale. Chaque modèle Python de cette page la resserre avec `fit_options={"precision": 1e-12}`. `summary()` de R affiche la concordance et trois tests globaux ; lifelines les range dans `concordance_index_` et `log_likelihood_ratio_test()`. (`print_summary()` de lifelines montre tout d'un coup, y compris l'heure de l'ajustement du modèle.)
+:::
+
+::: {.callout-warning}
+## ⚠️ Attention : un hazard ratio n'est pas un risque relatif
+« Trois fois le hazard » ne veut pas dire trois fois plus de révisions à 5 ans. À 5 ans, 28.9 % des genoux et des hanches avec l'implant C avaient été révisés (1 − Kaplan-Meier), contre 10.1 % avec l'implant A : 2.85 fois plus, et non 3.07. Les deux rapports sont proches quand les révisions sont rares et s'éloignent quand elles deviennent fréquentes. Rapportez le hazard ratio comme un rapport de taux, et donnez les risques cumulés séparément.
+:::
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+km_by_implant <- survfit(Surv(followup_years, revised) ~ implant, data = cohort)
+1 - summary(km_by_implant, times = 5)$surv    # révisés à 5 ans : A, B, C
+```
+
+## Python
+
+```{python}
+for implant, group in cohort.groupby("implant"):
+    implant_km = KaplanMeierFitter().fit(group["followup_years"], group["revised"])
+    print(implant, round(1 - implant_km.survival_function_at_times(5).iloc[0], 3))   # révisés à 5 ans
+```
+:::
+
+```{python}
+#| include: false
+chk = {}
+for implant, group in cohort.groupby("implant"):
+    chk[f"risk_{implant}"] = float(1 - KaplanMeierFitter().fit(group["followup_years"], group["revised"]).survival_function_at_times(5).iloc[0])
+```
+
+```{r}
+#| include: false
+risk_5 <- 1 - summary(km_by_implant, times = 5)$surv
+check_agree(list(risk_A = risk_5[1], risk_B = risk_5[2], risk_C = risk_5[3]), reticulate::py$chk)
+```
+
+## Choisir les covariables {#choosing-covariates}
+
+Une étude qui compare des implants a une seule question : l'implant C comporte-t-il un risque de révision plus élevé que l'implant A ? Les autres prédicteurs du modèle sont là pour rendre cette comparaison équitable. Ces **covariables** sont choisies avant de regarder les résultats, pour une raison que vous pouvez écrire :
+
+- **Ajustez sur les facteurs de confusion :** les facteurs qui influencent à la fois l'implant que reçoit un patient et son risque de révision. L'âge, le sexe et l'IMC sont les plus courants en arthroplastie : les chirurgiens peuvent choisir les implants différemment pour les patients plus âgés, plus corpulents ou de sexe féminin, et ces facteurs peuvent modifier le risque de révision.
+- **N'ajustez pas sur ce que l'implant cause.** Une luxation ou une réopération qui suit le choix de l'implant fait partie de l'effet de l'implant : ce n'est pas un autre facteur qui expliquerait la différence. Ajuster sur elle masque l'effet que vous cherchez à mesurer.
+- **Ne choisissez pas les covariables d'après les données.** Garder seulement les prédicteurs avec p < 0.2 dans des modèles univariés, ou laisser une procédure pas à pas les choisir, rend les valeurs p et les IC plus certains qu'ils ne le sont et donne des réponses différentes dans chaque échantillon.
+
+**Les événements limitent le modèle.** Un modèle de Cox demande environ **10 événements par terme**, un terme étant un coefficient : un prédicteur à deux niveaux comme le sexe est un terme, l'implant (B et C par rapport à A) en est deux, et une spline à 3 degrés de liberté en est trois. La cohorte d'exercice compte 81 révisions, ce qui suffit pour environ huit termes. L'implant, l'âge, le sexe et l'IMC en utilisent cinq, soit environ 16 événements par terme. Avec moins d'événements, ajustez sur moins de facteurs, et dites-le.
+
+## De l'analyse univariée à l'analyse multivariée {#univariable-multivariable}
+
+Un modèle **univarié** (ou non ajusté) a un seul prédicteur, comme le modèle de l'implant ci-dessus. Un modèle **multivarié** (ou ajusté) en a plusieurs ; chaque hazard ratio est alors l'effet de ce prédicteur, les autres étant maintenus constants.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+adjusted_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5, data = cohort)
+summary(adjusted_model)$conf.int
+```
+
+## Python
+
+```{python}
+cox_data = cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5"]]
+adjusted_model = CoxPHFitter().fit(cox_data, duration_col="followup_years", event_col="revised",
+                                   formula="implant + age_10 + sex + bmi_5", fit_options={"precision": 1e-12})
+print(adjusted_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+```{python}
+#| include: false
+rows = adjusted_model.summary
+chk = {"hr_c": float(rows.loc["implant[T.C]", "exp(coef)"]),
+       "low_c": float(rows.loc["implant[T.C]", "exp(coef) lower 95%"]),
+       "high_c": float(rows.loc["implant[T.C]", "exp(coef) upper 95%"]),
+       "hr_b": float(rows.loc["implant[T.B]", "exp(coef)"]), "hr_age": float(rows.loc["age_10", "exp(coef)"]),
+       "hr_male": float(rows.loc["sex[T.Male]", "exp(coef)"]), "hr_bmi": float(rows.loc["bmi_5", "exp(coef)"])}
+```
+
+```{r}
+#| include: false
+adjusted_hr <- summary(adjusted_model)$conf.int
+check_agree(list(hr_c = adjusted_hr["implantC", "exp(coef)"], low_c = adjusted_hr["implantC", "lower .95"],
+                 high_c = adjusted_hr["implantC", "upper .95"], hr_b = adjusted_hr["implantB", "exp(coef)"],
+                 hr_age = adjusted_hr["age_10", "exp(coef)"], hr_male = adjusted_hr["sexMale", "exp(coef)"],
+                 hr_bmi = adjusted_hr["bmi_5", "exp(coef)"]),
+            reticulate::py$chk)
+```
+
+Le hazard ratio de l'implant C est passé de 3.07 non ajusté à **3.19 ajusté** (IC à 95 % de 1.92 à 5.29). L'âge, le sexe et l'IMC n'expliquent pas la différence entre les implants. Quand une estimation ajustée bouge beaucoup, les covariables étaient probablement des facteurs de confusion pour l'estimation non ajustée ; dites-le dans la Discussion. Les petits écarts ne signifient pas grand-chose : un hazard ratio bouge un peu dès qu'on ajoute un prédicteur fort, même sans confusion.
+
+::: {.callout-warning}
+## ⚠️ Attention : les hazard ratios des covariables ne sont pas des résultats
+Le modèle affiche aussi des hazard ratios pour l'âge, le sexe et l'IMC. Le hazard de révision des hommes était environ la moitié de celui des femmes (0.51, IC à 95 % de 0.32 à 0.81). Il est tentant de le rapporter comme un second résultat, mais le modèle n'a pas été construit pour y répondre : personne n'a choisi de covariables qui rendraient équitable la comparaison des hommes et des femmes. Rapportez les estimations des covariables dans le tableau, et décrivez comme exploratoire toute estimation que vous discutez, comme le fait la [page 12](../catalog/12-predict-from-several.qmd#cox).
+:::
+
+## L'effet est-il une droite ? {#linearity}
+
+Un prédicteur mesuré comme l'âge entre dans le modèle sous forme de droite : chaque augmentation de 10 ans multiplie le hazard par le même facteur, que ce soit de 50 à 60 ans ou de 75 à 85 ans. Pour le vérifier, laissez l'effet se courber avec une **spline cubique naturelle** (la [page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explique les splines) et comparez les deux modèles avec un test du rapport de vraisemblance :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+library(splines)
+
+age_spline_model <- coxph(Surv(followup_years, revised) ~ implant + ns(age, df = 3) + sex + bmi_5,
+                          data = cohort)
+anova(adjusted_model, age_spline_model)    # test du rapport de vraisemblance : la courbure améliore-t-elle l'ajustement ?
+```
+
+## Python
+
+```{python}
+import patsy
+from scipy.stats import chi2
+
+age_knots = list(cohort["age"].quantile([1/3, 2/3]))       # les mêmes nœuds que ns(df = 3) de R
+age_low, age_high = cohort["age"].min(), cohort["age"].max()
+age_spline = patsy.dmatrix("cr(age, knots=age_knots, lower_bound=age_low, upper_bound=age_high,"
+                           " constraints='center') - 1", cohort, return_type="dataframe")
+age_spline.columns = ["age_1", "age_2", "age_3"]           # trois termes de spline
+
+spline_data = pd.concat([cox_data.drop(columns="age_10"), age_spline], axis=1)
+age_spline_model = CoxPHFitter().fit(spline_data, duration_col="followup_years", event_col="revised",
+                                     formula="implant + age_1 + age_2 + age_3 + sex + bmi_5",
+                                     fit_options={"precision": 1e-12})
+
+lr_stat = 2 * (age_spline_model.log_likelihood_ - adjusted_model.log_likelihood_)
+print(lr_stat, chi2.sf(lr_stat, df=2))     # test du rapport de vraisemblance : 3 termes de spline contre 1 droite
+```
+:::
+
+```{python}
+#| include: false
+chk = {"lr": float(lr_stat), "p": float(chi2.sf(lr_stat, df=2))}
+```
+
+```{r}
+#| include: false
+age_bend <- anova(adjusted_model, age_spline_model)
+check_agree(list(lr = age_bend$Chisq[2], p = age_bend$`Pr(>|Chi|)`[2]), reticulate::py$chk)
+```
+
+La spline n'a pas clairement amélioré l'ajustement (χ² = 0.29, ddl = 2, p = 0.864) : la droite pour l'âge est donc conservée. Rapportez la vérification dans les Méthodes. (L'exercice 2 vérifie l'IMC.)
+
+## Vérifier les risques proportionnels {#proportional-hazards}
+
+Le modèle de Cox suppose que chaque hazard ratio reste le même sur tout le suivi. La vérification classique utilise les **résidus de Schoenfeld**. À chaque révision, le modèle compare les prédicteurs du patient révisé à ceux de tous les patients encore à risque. Mis à l'échelle et ajouté au coefficient du modèle, chaque résidu estime le logarithme du hazard ratio à ce moment. Si le hazard ratio est constant, ces estimations se dispersent autour d'une droite horizontale ; si elles dérivent avec le temps, la condition n'est pas remplie.
+
+**D'abord, le modèle ajusté.**
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+cox.zph(adjusted_model)    # un test par prédicteur, et un test global
+```
+
+## Python
+
+```{python}
+from lifelines.statistics import proportional_hazard_test
+
+ph_test = proportional_hazard_test(adjusted_model, cox_data, time_transform="km")
+print(ph_test.summary[["test_statistic", "p"]])
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hr_age": float(adjusted_model.summary.loc["age_10", "exp(coef)"])}
+```
+
+```{r}
+#| include: false
+# The two proportional-hazards tests use different formulas (see the R vs Python box),
+# so only the model they test is compared here.
+check_agree(list(hr_age = adjusted_hr["age_10", "exp(coef)"]), reticulate::py$chk)
+```
+
+Le hazard ratio d'aucun prédicteur n'a clairement changé au cours du temps (test global p = 0.359 ; l'IMC avait la plus petite valeur p, 0.106). Il n'y a donc pas de preuve claire contre les risques proportionnels, ce qui n'est pas la preuve qu'ils sont respectés : avec 81 révisions, le test peut passer à côté d'un changement modeste.
+
+**Maintenant, une vraie violation.** Les données d'exercice en contiennent une : dans les prothèses totales de hanche, la voie postérieure a un taux de révision bien plus élevé dans les premiers mois après l'opération (luxation précoce), et pas de taux plus élevé ensuite. La [page 13](13-kaplan-meier.qmd#log-rank) a montré les courbes qui se croisent.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 4
+tha <- cohort |> filter(procedure == "THA")
+approach_model <- coxph(Surv(followup_years, revised) ~ approach, data = tha)
+approach_zph <- cox.zph(approach_model)
+approach_zph
+
+plot(approach_zph, resid = TRUE, se = TRUE)          # le logarithme du hazard ratio au cours du temps
+abline(h = coef(approach_model), lty = 2)            # le hazard ratio unique que suppose le modèle
+```
+
+## Python
+
+```{python}
+from statsmodels.nonparametric.smoothers_lowess import lowess
+
+tha = cohort[cohort["procedure"] == "THA"]
+tha_data = tha[["followup_years", "revised", "approach"]]
+approach_model = CoxPHFitter().fit(tha_data, duration_col="followup_years", event_col="revised",
+                                   formula="approach", fit_options={"precision": 1e-12})
+print(proportional_hazard_test(approach_model, tha_data, time_transform="km").summary[["test_statistic", "p"]])
+
+# résidus de Schoenfeld mis à l'échelle, un par révision ; en ajoutant le coefficient, on obtient le logarithme du hazard ratio au cours du temps
+residuals = approach_model.compute_residuals(tha_data, kind="scaled_schoenfeld")
+log_hr = residuals["approach[T.posterior]"] + approach_model.params_["approach[T.posterior]"]
+years = tha_data.loc[log_hr.index, "followup_years"]
+
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.scatter(years, log_hr, s=12)
+trend = lowess(log_hr, np.log(years), frac=2/3, it=0)     # courbe lissée ; it=0 donne à chaque point son plein poids
+ax.plot(np.exp(trend[:, 0]), trend[:, 1])
+ax.axhline(approach_model.params_["approach[T.posterior]"], linestyle="--")   # le hazard ratio unique que suppose le modèle
+ax.set_xscale("log")                                       # étale les révisions précoces
+ax.set_xticks([0.1, 0.5, 1, 2, 5], labels=["0.1", "0.5", "1", "2", "5"])
+ax.set_xlabel("Years since surgery (log scale)")
+ax.set_ylabel("Log hazard ratio, posterior vs anterior")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hr": float(approach_model.summary.loc["approach[T.posterior]", "exp(coef)"]),
+       "mean_log_hr": float(log_hr.mean()), "early_log_hr": float(log_hr[years <= 0.5].mean())}
+```
+
+```{r}
+#| include: false
+# zph$y holds the same scaled Schoenfeld residuals plus the coefficient, one per revision
+check_agree(list(hr = unname(exp(coef(approach_model))), mean_log_hr = mean(approach_zph$y),
+                 early_log_hr = mean(approach_zph$y[approach_zph$time <= 0.5])),
+            reticulate::py$chk)
+```
+
+- **Le test :** p < 0.001 (χ² de R = 11.3 sur 1 ddl). Le hazard ratio de la voie postérieure n'est pas constant.
+- **Les points :** un par révision. Les points proches de +2 sont des hanches postérieures et ceux proches de −2 des hanches antérieures : au début, presque tous les points sont donc en haut.
+- **La ligne continue** lisse les points en une estimation du logarithme du hazard ratio à chaque instant. Elle commence haut dans les premiers mois, quand les hanches postérieures étaient bien plus souvent révisées, puis passe sous la ligne pointillée, qui marque le hazard ratio unique du modèle, 1.37 (logarithme du hazard ratio 0.31).
+
+Ce hazard ratio unique (1.37, IC à 95 % de 0.72 à 2.61) mélange un grand effet précoce et les années suivantes, où il n'y a pas de différence claire. Il ne décrit aucun moment réel du suivi : ne le rapportez donc pas.
+
+::: {.callout-warning}
+## ⚠️ Attention : testez et regardez
+Avec beaucoup d'événements, le test signale des changements trop petits pour compter ; avec peu, il manque de vrais changements. Regardez toujours aussi le graphique. Et rapportez un test non significatif comme « pas de preuve claire que les hazard ratios ont changé au cours du temps », jamais comme la preuve que la condition est remplie.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : deux versions du test
+`cox.zph()` de R (survival 3.0 et suivants) calcule le test du score complet, un par prédicteur, les deux termes de l'implant étant testés ensemble. `proportional_hazard_test()` de lifelines utilise l'approximation originale, plus simple, de Grambsch et Therneau et teste chaque colonne séparément (l'implant B et l'implant C ont chacun leur propre ligne). Les statistiques diffèrent légèrement (11.3 dans R, 11.2 dans Python pour la voie d'abord) et mènent ici aux mêmes conclusions. Les résidus de Schoenfeld mis à l'échelle de lifelines omettent le coefficient que R ajoute : le code Python le rajoute donc. Le graphique de R espace les révisions régulièrement sur l'axe du temps (son échelle « km ») ; le graphique Python utilise une échelle logarithmique pour la même raison : éviter que les nombreuses révisions précoces ne s'entassent à zéro.
+:::
+
+## Quand les hazards ne sont pas proportionnels {#remedies}
+
+Il y a deux solutions courantes. Le choix dépend de votre besoin du hazard ratio du prédicteur qui viole la condition.
+
+**1. Stratifier, quand ce n'est qu'un ajustement.** Supposons que la question porte sur l'implant, dans les prothèses totales de hanche, et que la voie d'abord ne soit qu'une covariable. Un modèle de Cox **stratifié** par voie d'abord donne à chaque voie son propre risque de base, de forme quelconque, et estime les hazard ratios de l'implant au sein de chaque voie. La voie d'abord n'a pas de hazard ratio propre : son effet non proportionnel n'a donc plus d'importance.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+stratified_model <- coxph(Surv(followup_years, revised) ~ implant + strata(approach), data = tha)
+summary(stratified_model)$conf.int
+```
+
+## Python
+
+```{python}
+stratified_model = CoxPHFitter().fit(tha[["followup_years", "revised", "implant", "approach"]],
+                                     duration_col="followup_years", event_col="revised", formula="implant",
+                                     strata=["approach"], fit_options={"precision": 1e-12})
+print(stratified_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+```{python}
+#| include: false
+rows = stratified_model.summary
+chk = {"hr_b": float(rows.loc["implant[T.B]", "exp(coef)"]), "hr_c": float(rows.loc["implant[T.C]", "exp(coef)"]),
+       "low_c": float(rows.loc["implant[T.C]", "exp(coef) lower 95%"]),
+       "high_c": float(rows.loc["implant[T.C]", "exp(coef) upper 95%"])}
+```
+
+```{r}
+#| include: false
+stratified_hr <- summary(stratified_model)$conf.int
+check_agree(list(hr_b = stratified_hr["implantB", "exp(coef)"], hr_c = stratified_hr["implantC", "exp(coef)"],
+                 low_c = stratified_hr["implantC", "lower .95"], high_c = stratified_hr["implantC", "upper .95"]),
+            reticulate::py$chk)
+```
+
+Dans les prothèses totales de hanche, avec la voie d'abord comme strate, le hazard ratio de l'implant C était de 2.11 (IC à 95 % de 1.02 à 4.40) par rapport à l'implant A.
+
+**2. Découper le suivi, quand vous avez besoin de l'effet.** Si la voie d'abord *est* la question, donnez-lui un hazard ratio pour les 6 premiers mois et un autre pour la période suivante. Chaque patient suivi au-delà de 6 mois reçoit deux lignes, une par période ; le modèle estime alors l'effet de la voie d'abord séparément dans chacune :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+# une ligne par patient et par période : (0, 0.5] ans et (0.5, fin du suivi]
+tha_split <- survSplit(Surv(followup_years, revised) ~ ., data = tha, cut = 0.5, episode = "period") |>
+  mutate(posterior_early = as.numeric(approach == "posterior" & period == 1),
+         posterior_late  = as.numeric(approach == "posterior" & period == 2))
+
+split_model <- coxph(Surv(tstart, followup_years, revised) ~ posterior_early + posterior_late,
+                     data = tha_split)
+summary(split_model)$conf.int
+```
+
+## Python
+
+```{python}
+from lifelines import CoxTimeVaryingFitter
+
+hips = tha.reset_index(drop=True)
+hips["id"] = hips.index                                   # un identifiant par hanche, partagé par ses lignes
+
+early = hips.copy()                                       # ligne 1 : de l'opération à 6 mois
+early["start"] = 0.0
+early["stop"] = early["followup_years"].clip(upper=0.5)
+early["event"] = ((early["followup_years"] <= 0.5) & (early["revised"] == 1)).astype(int)
+early["period"] = 1
+
+late = hips[hips["followup_years"] > 0.5].copy()          # ligne 2 : à partir de 6 mois, si suivi aussi longtemps
+late["start"] = 0.5
+late["stop"] = late["followup_years"]
+late["event"] = late["revised"]
+late["period"] = 2
+
+tha_split = pd.concat([early, late])
+tha_split["posterior_early"] = ((tha_split["approach"] == "posterior") & (tha_split["period"] == 1)).astype(int)
+tha_split["posterior_late"] = ((tha_split["approach"] == "posterior") & (tha_split["period"] == 2)).astype(int)
+
+split_model = CoxTimeVaryingFitter().fit(
+    tha_split[["id", "start", "stop", "event", "posterior_early", "posterior_late"]],
+    id_col="id", event_col="event", start_col="start", stop_col="stop", fit_options={"precision": 1e-12})
+print(split_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+```{python}
+#| include: false
+rows = split_model.summary
+chk = {"hr_early": float(rows.loc["posterior_early", "exp(coef)"]),
+       "low_early": float(rows.loc["posterior_early", "exp(coef) lower 95%"]),
+       "high_early": float(rows.loc["posterior_early", "exp(coef) upper 95%"]),
+       "hr_late": float(rows.loc["posterior_late", "exp(coef)"]),
+       "low_late": float(rows.loc["posterior_late", "exp(coef) lower 95%"]),
+       "high_late": float(rows.loc["posterior_late", "exp(coef) upper 95%"])}
+```
+
+```{r}
+#| include: false
+split_hr <- summary(split_model)$conf.int
+check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early = split_hr["posterior_early", "lower .95"],
+                 high_early = split_hr["posterior_early", "upper .95"], hr_late = split_hr["posterior_late", "exp(coef)"],
+                 low_late = split_hr["posterior_late", "lower .95"], high_late = split_hr["posterior_late", "upper .95"]),
+            reticulate::py$chk)
+```
+
+Pendant les 6 premiers mois, le hazard de révision était 8.47 fois plus élevé après la voie postérieure (IC à 95 % de 1.93 à 37.3). Après 6 mois, l'estimation était de 0.43 (IC à 95 % de 0.16 à 1.16), ce qui est imprécis. L'IC de l'effet précoce est large parce qu'il repose sur 16 révisions précoces.
+
+Choisissez le point de coupure avant de regarder, d'après un raisonnement clinique : ici, la période de risque de luxation le plus élevé après une prothèse de hanche. Essayer plusieurs points de coupure jusqu'à ce que l'un donne un résultat spectaculaire, c'est de la pêche aux données (*data dredging*). R peut aussi laisser un hazard ratio changer progressivement avec le temps (l'argument `tt()` de `coxph()`), ce qui évite de choisir un point de coupure.
+
+> **Methods:** Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.
+>
+> **Results:** The hazard ratio for revision with the posterior approach compared with the anterior approach was 8.47 (95% CI 1.93 to 37.3) in the first 6 months and 0.43 (95% CI 0.16 to 1.16) after 6 months.
+
+## Cox stratifié : ensembles appariés et patients bilatéraux {#stratified-cox}
+
+Un modèle de Cox suppose que chaque ligne est un patient indépendant. Deux plans d'étude courants rompent cette condition.
+
+**Ensembles appariés.** Quand chaque patient avec l'implant C est apparié à des patients semblables qui ont reçu d'autres implants, les patients appariés vont ensemble. Un modèle de Cox **stratifié par ensemble apparié**, `strata(set_id)`, ne compare les implants qu'au sein des ensembles. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*. La [page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) traite des paires appariées et la [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) des ensembles appariés de trois.
+
+**Patients bilatéraux.** 80 patients de la cohorte ont eu une prothèse des deux côtés. Leurs deux articulations partagent l'os, l'activité et le chirurgien du même patient : leurs résultats ne sont donc pas indépendants, et les traiter comme indépendants rend les IC trop étroits. Il y a trois choix courants :
+
+- **Garder les deux articulations et utiliser des erreurs standard robustes** en grappes sur le patient. Les hazard ratios ne changent pas ; les IC tiennent compte de l'appariement. C'est le choix habituel.
+- **Stratifier par patient**, `strata(patient_id)`, pour comparer les deux côtés de chaque patient. Seuls les patients dont les deux articulations diffèrent par le prédicteur, et qui ont eu une révision, apportent quelque chose : c'est donc rarement assez précis.
+- **Garder une articulation par patient**, par exemple la première opérée. Simple, mais cela jette des données.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+clustered_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5,
+                         data = cohort, cluster = patient_id)    # erreurs standard robustes, en grappes sur le patient
+summary(clustered_model)$coefficients[, c("exp(coef)", "se(coef)", "robust se", "Pr(>|z|)")]
+summary(clustered_model)$conf.int["implantC", ]
+```
+
+## Python
+
+```{python}
+clustered_model = CoxPHFitter().fit(
+    cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "patient_id"]],
+    duration_col="followup_years", event_col="revised", formula="implant + age_10 + sex + bmi_5",
+    cluster_col="patient_id",                              # erreurs standard robustes, en grappes sur le patient
+    fit_options={"precision": 1e-12},
+)
+print(clustered_model.summary[["exp(coef)", "se(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+```{python}
+#| include: false
+rows = clustered_model.summary
+chk = {"se_b": float(rows.loc["implant[T.B]", "se(coef)"]), "se_c": float(rows.loc["implant[T.C]", "se(coef)"]),
+       "se_age": float(rows.loc["age_10", "se(coef)"]), "se_male": float(rows.loc["sex[T.Male]", "se(coef)"]),
+       "se_bmi": float(rows.loc["bmi_5", "se(coef)"])}
+```
+
+```{r}
+#| include: false
+robust_se <- summary(clustered_model)$coefficients[, "robust se"]
+# With tied follow-up times, R applies Efron's tie correction inside the robust variance and
+# lifelines doesn't; the two agree exactly when no times are tied (checked while writing this page).
+check_agree(list(se_b = robust_se[["implantB"]], se_c = robust_se[["implantC"]], se_age = robust_se[["age_10"]],
+                 se_male = robust_se[["sexMale"]], se_bmi = robust_se[["bmi_5"]]),
+            reticulate::py$chk, tol = 1e-3)
+```
+
+- **exp(coef) :** inchangé : le hazard ratio de l'implant C est toujours de 3.19.
+- **se(coef) / robust se :** R affiche les deux ; lifelines n'affiche que l'erreur robuste quand vous demandez des erreurs en grappes. Ici elles sont presque identiques (0.259 et 0.258 pour l'implant C), si bien que l'IC bouge à peine (1.92 à 5.28). Seuls 20 des 80 patients bilatéraux ont eu une révision : l'appariement compte donc peu dans cette cohorte. Il peut compter bien plus dans la vôtre : vérifiez, et dites dans les Méthodes ce que vous avez fait.
+
+::: {.callout-tip}
+## 🔀 R ou Python : erreurs standard robustes
+Les deux programmes calculent les mêmes erreurs standard robustes (« en sandwich »). Quand des temps de suivi sont ex æquo, R applique aussi la correction d'Efron des ex æquo dans la variance robuste et lifelines ne le fait pas : les deux diffèrent donc au quatrième chiffre significatif.
+:::
+
+## Régression à risques concurrents : Fine-Gray (R seulement) {#fine-gray}
+
+Tous les modèles de Cox ci-dessus ont traité le décès comme une censure. C'est un modèle de Cox **spécifique à la cause** (*cause-specific*) : ses hazard ratios décrivent le taux de révision parmi les patients encore en vie, ce qui est la bonne question pour savoir si un implant a de moins bons résultats. Mais comme l'a montré la [page 13](13-kaplan-meier.qmd#competing-risks), les décès empêchent aussi des révisions d'avoir jamais lieu. Pour « quels patients seront réellement révisés ? », utilisez le modèle de **Fine-Gray**, qui modélise directement l'incidence cumulée de la révision. Ses tailles d'effet sont des **hazard ratios de sous-distribution** (*subdistribution hazard ratios*, SHR).
+
+La régression de Fine-Gray n'a pas d'implémentation mature en Python : cette section n'existe donc que dans R. `crr()` de tidycmprsk prend le même statut à trois niveaux que l'incidence cumulée de la page 13 :
+
+```{r}
+#| warning: false
+library(tidycmprsk)
+
+cohort <- cohort |>
+  mutate(status = factor(event_status, levels = c(0, 1, 2),
+                         labels = c("censored", "revision", "death")))   # censored doit venir en premier
+
+fine_gray <- crr(Surv(followup_years, status) ~ implant + age_10 + sex + bmi_5,
+                 data = cohort, failcode = "revision")
+fine_gray
+```
+
+Comparez-le au modèle spécifique à la cause :
+- **Implant C :** SHR 3.09 (IC à 95 % de 1.86 à 5.14), proche du HR spécifique à la cause de 3.19. Les taux de décès ne différaient pas clairement entre les implants (test de Gray à la [page 13](13-kaplan-meier.qmd#competing-risks)) : tenir compte du décès change donc peu.
+- **Âge :** SHR 1.07 pour 10 ans (IC à 95 % de 0.86 à 1.33), contre un HR spécifique à la cause de 1.22. Les patients plus âgés sont peut-être révisés à un taux un peu plus élevé tant qu'ils sont en vie, mais davantage d'entre eux décèdent avant de pouvoir être révisés : l'estimation de sous-distribution est donc plus proche de 1. Il n'y a pas de preuve claire que l'âge change le nombre de patients réellement révisés.
+
+Rapportez le modèle spécifique à la cause pour comparer des implants, et le modèle de Fine-Gray quand la question est de savoir combien de patients seront révisés. Beaucoup d'articles rapportent les deux, en précisant lequel est lequel.
+
+`crr()` ne peut pas tenir compte des patients qui ont eu une prothèse des deux côtés. Si c'est le cas de beaucoup des vôtres, la fonction `finegray()` de survival prépare les données pour un modèle de Fine-Gray que `coxph()` peut ajuster avec `cluster = patient_id`.
+
+::: {.callout-warning}
+## ⚠️ Attention : un hazard ratio de sous-distribution n'est pas un hazard ratio
+Le SHR n'a pas de sens simple comme taux : les patients décédés restent dans son groupe « à risque ». Lisez-le seulement comme « incidence cumulée plus haute ou plus basse », et appelez-le hazard ratio de sous-distribution dans le texte et les tableaux.
+:::
+
+## Rédiger les résultats d'un modèle de Cox {#reporting}
+
+La plupart des articles présentent les modèles de Cox sous forme de tableau : une ligne par prédicteur, avec les hazard ratios univarié et multivarié côte à côte. Les deux colonnes utilisent des erreurs standard robustes en grappes sur le patient ([ci-dessus](#stratified-cox)) : leurs IC tiennent donc compte des patients bilatéraux.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(gtsummary)
+
+hr_labels <- list(implant ~ "Implant", age_10 ~ "Age (per 10 years)", sex ~ "Sex",
+                  bmi_5 ~ "BMI (per 5 kg/m²)")
+
+univariable_table <- cohort |>
+  select(followup_years, revised, implant, age_10, sex, bmi_5, patient_id) |>
+  tbl_uvregression(method = coxph, y = Surv(followup_years, revised), exponentiate = TRUE,
+                   include = c(implant, age_10, sex, bmi_5),
+                   method.args = list(cluster = patient_id),       # erreurs standard robustes, en grappes sur le patient
+                   label = hr_labels, pvalue_fun = label_style_pvalue(digits = 3))
+multivariable_table <- clustered_model |>                   # erreurs standard robustes, pour les patients bilatéraux
+  tbl_regression(exponentiate = TRUE, label = hr_labels, pvalue_fun = label_style_pvalue(digits = 3))
+
+tbl_merge(list(univariable_table, multivariable_table),
+          tab_spanner = c("**Univariable**", "**Multivariable**"))
+```
+
+## Python
+
+```{python}
+def hr_with_ci(model):
+    """Each term's hazard ratio and 95% CI as text, like '3.19 (1.92 to 5.29)'."""
+    rows = model.summary
+    return (rows["exp(coef)"].map("{:.2f}".format) + " (" + rows["exp(coef) lower 95%"].map("{:.2f}".format)
+            + " to " + rows["exp(coef) upper 95%"].map("{:.2f}".format) + ")")
+
+univariable = []
+for term in ["implant", "age_10", "sex", "bmi_5"]:
+    one_predictor = CoxPHFitter().fit(cohort[["followup_years", "revised", term, "patient_id"]],
+                                      duration_col="followup_years", event_col="revised", formula=term,
+                                      cluster_col="patient_id",      # erreurs standard robustes, en grappes sur le patient
+                                      fit_options={"precision": 1e-12})
+    univariable.append(hr_with_ci(one_predictor))
+
+hr_table = pd.DataFrame({"Univariable HR (95% CI)": pd.concat(univariable),
+                         "Multivariable HR (95% CI)": hr_with_ci(clustered_model)})   # erreurs standard robustes, pour les patients bilatéraux
+print(hr_table)
+```
+:::
+
+```{python}
+#| include: false
+def univariable_hr(term, row):
+    model = CoxPHFitter().fit(cox_data[["followup_years", "revised", term]], duration_col="followup_years",
+                              event_col="revised", formula=term, fit_options={"precision": 1e-12})
+    return float(model.summary.loc[row, "exp(coef)"])
+chk = {"uni_age": univariable_hr("age_10", "age_10"), "uni_male": univariable_hr("sex", "sex[T.Male]"),
+       "uni_bmi": univariable_hr("bmi_5", "bmi_5")}
+```
+
+```{r}
+#| include: false
+uni_hr <- function(term) exp(coef(coxph(reformulate(term, "Surv(followup_years, revised)"), data = cohort)))
+check_agree(list(uni_age = unname(uni_hr("age_10")), uni_male = unname(uni_hr("sex")), uni_bmi = unname(uni_hr("bmi_5"))),
+            reticulate::py$chk)
+```
+
+> **Methods:** The association between implant and revision for any reason was estimated with Cox proportional hazards regression, with time from surgery as the time scale and implant A as the reference. Age, sex and body mass index were chosen in advance as covariates. Age entered the model as a linear term after a natural cubic spline showed no clear evidence of non-linearity. Proportional hazards were checked with scaled Schoenfeld residuals. In the Cox models, robust standard errors clustered on patient accounted for patients who had both sides replaced. A Fine-Gray model, treating death as a competing risk, was fitted as a sensitivity analysis.
+>
+> **Results:** During follow-up, 81 of 600 procedures (13.5%) were revised. After adjustment for age, sex and body mass index, the hazard ratio for revision compared with implant A was 3.19 (95% CI 1.92 to 5.28) for implant C and 0.83 (95% CI 0.45 to 1.52) for implant B (test of proportional hazards, global p = 0.359). With death treated as a competing risk, the subdistribution hazard ratio for implant C was 3.09 (95% CI 1.86 to 5.14).
+
+Avant de soumettre, vérifiez que l'article indique :
+- le nombre de patients, d'interventions et d'événements
+- le temps zéro et la définition de l'événement ([page 13](13-kaplan-meier.qmd#time-zero))
+- sur quelles covariables l'ajustement a été fait, et pourquoi
+- comment les prédicteurs continus ont été modélisés, et comment les risques proportionnels ont été vérifiés
+- comment les patients bilatéraux et les décès ont été traités
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+implant_summary <- summary(implant_model)
+adjusted_zph <- cox.zph(adjusted_model)
+clustered_ci <- summary(clustered_model)$conf.int
+fg <- fine_gray$tidy
+fg_hr <- function(term) round(exp(fg$estimate[fg$term == term]), 2)
+fg_ci <- function(term) round(exp(c(fg$conf.low[fg$term == term], fg$conf.high[fg$term == term])), 2)
+bilateral <- cohort |> group_by(patient_id) |> filter(n() == 2) |> ungroup()
+asa_model <- coxph(Surv(followup_years, revised) ~ asa, data = cohort)
+bmi_spline_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + ns(bmi, df = 3), data = cohort)
+bmi_bend <- anova(adjusted_model, bmi_spline_model)
+procedure_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5 + strata(procedure), data = cohort)
+stopifnot(
+  implant_summary$n == 600, implant_summary$nevent == 81, round(100 * 81 / 600, 1) == 13.5,
+  sum(table(cohort$patient_id) == 2) == 80,
+  round(implant_hr[, "exp(coef)"], 2) == c(0.82, 3.07),
+  round(implant_hr["implantC", c("lower .95", "upper .95")], 2) == c(1.85, 5.09),
+  round(implant_hr["implantB", c("lower .95", "upper .95")], 2) == c(0.45, 1.50),
+  implant_summary$coefficients["implantC", "Pr(>|z|)"] < 0.001,
+  round(implant_summary$coefficients["implantB", "Pr(>|z|)"], 3) == 0.514,
+  round(implant_summary$concordance[["C"]], 3) == 0.659,
+  round(implant_summary$logtest[["test"]], 1) == 27.6, implant_summary$logtest[["pvalue"]] < 0.001,
+  round(100 * risk_5, 1) == c(10.1, 7.6, 28.9), round(risk_5[3] / risk_5[1], 2) == 2.85,
+  round(81 / 10) == 8, round(81 / 5) == 16,
+  round(adjusted_hr["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.29),
+  round(adjusted_hr["sexMale", c("exp(coef)", "lower .95", "upper .95")], 2) == c(0.51, 0.32, 0.81),
+  round(adjusted_hr["implantB", c("exp(coef)", "lower .95", "upper .95")], 2) == c(0.83, 0.45, 1.52),
+  round(age_bend$Chisq[2], 2) == 0.29, age_bend$Df[2] == 2, round(age_bend$`Pr(>|Chi|)`[2], 3) == 0.864,
+  round(adjusted_zph$table["GLOBAL", "p"], 3) == 0.359,
+  rownames(adjusted_zph$table)[which.min(adjusted_zph$table[, "p"])] == "bmi_5",
+  round(adjusted_zph$table["bmi_5", "p"], 3) == 0.106,
+  approach_zph$table["approach", "p"] < 0.001, round(approach_zph$table["approach", "chisq"], 1) == 11.3,
+  round(reticulate::py_eval("float(proportional_hazard_test(approach_model, tha_data, time_transform='km').summary['test_statistic'].iloc[0])"), 1) == 11.2,
+  round(exp(coef(approach_model)), 2) == 1.37, round(exp(confint(approach_model)), 2) == c(0.72, 2.61),
+  round(stratified_hr["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(2.11, 1.02, 4.40),
+  round(split_hr["posterior_early", c("exp(coef)", "lower .95")], 2) == c(8.47, 1.93),
+  round(split_hr["posterior_early", "upper .95"], 1) == 37.3,
+  round(split_hr["posterior_late", c("exp(coef)", "lower .95", "upper .95")], 2) == c(0.43, 0.16, 1.16),
+  sum(tha$revised == 1 & tha$followup_years <= 0.5) == 16,
+  round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
+  round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
+  n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
+  fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
+  fg_hr("age_10") == 1.07, fg_ci("age_10") == c(0.86, 1.33),
+  round(adjusted_hr["age_10", "exp(coef)"], 2) == 1.22,
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(summary(asa_model)$conf.int[, c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.38, 0.99, 1.93),
+  round(summary(asa_model)$coefficients[, "Pr(>|z|)"], 3) == 0.060,
+  round(bmi_bend$Chisq[2], 2) == 2.64, round(bmi_bend$`Pr(>|Chi|)`[2], 3) == 0.267,
+  round(summary(procedure_model)$conf.int["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.16, 1.90, 5.24)
+)
+```
+
+## Exercices {#exercises}
+
+Les solutions utilisent les packages, les données et les modèles créés dans les sections ci-dessus : exécutez donc d'abord la page depuis le haut.
+
+**1.** Ajustez un modèle de Cox univarié pour la classe ASA (comme nombre, de 1 à 4) et rédigez la phrase de résultats.
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+asa_model <- coxph(Surv(followup_years, revised) ~ asa, data = cohort)
+summary(asa_model)$conf.int
+summary(asa_model)$coefficients[, "Pr(>|z|)"]
+```
+
+## Python
+
+```{python}
+asa_model = CoxPHFitter().fit(cohort[["followup_years", "revised", "asa"]], duration_col="followup_years",
+                              event_col="revised", fit_options={"precision": 1e-12})
+print(asa_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
+```
+:::
+
+> **Results:** The hazard ratio for revision per ASA class was 1.38 (95% CI 0.99 to 1.93; p = 0.060).
+
+L'estimation est imprécise : les données sont compatibles avec une absence d'association comme avec un hazard presque doublé par classe.
+:::
+
+**2.** Vérifiez si l'effet de l'IMC dans le modèle ajusté est une droite, avec une spline cubique naturelle à 3 degrés de liberté.
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_spline_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + ns(bmi, df = 3),
+                          data = cohort)
+anova(adjusted_model, bmi_spline_model)
+```
+
+## Python
+
+```{python}
+bmi_knots = list(cohort["bmi"].quantile([1/3, 2/3]))
+bmi_low, bmi_high = cohort["bmi"].min(), cohort["bmi"].max()
+bmi_spline = patsy.dmatrix("cr(bmi, knots=bmi_knots, lower_bound=bmi_low, upper_bound=bmi_high,"
+                           " constraints='center') - 1", cohort, return_type="dataframe")
+bmi_spline.columns = ["bmi_1", "bmi_2", "bmi_3"]
+
+bmi_data = pd.concat([cox_data.drop(columns="bmi_5"), bmi_spline], axis=1)
+bmi_spline_model = CoxPHFitter().fit(bmi_data, duration_col="followup_years", event_col="revised",
+                                     formula="implant + age_10 + sex + bmi_1 + bmi_2 + bmi_3",
+                                     fit_options={"precision": 1e-12})
+bmi_lr = 2 * (bmi_spline_model.log_likelihood_ - adjusted_model.log_likelihood_)
+print(bmi_lr, chi2.sf(bmi_lr, df=2))
+```
+:::
+
+> **Results:** Comparing a natural cubic spline for BMI with a straight line gave a likelihood ratio χ² of 2.64 (df = 2, p = 0.267).
+
+Il n'y a pas de preuve claire que l'effet de l'IMC se courbe : la droite est donc conservée.
+:::
+
+**3.** Les prothèses totales de hanche et de genou ont peut-être des taux de révision de base différents. Ajustez de nouveau le modèle ajusté, stratifié par intervention. Le hazard ratio de l'implant C change-t-il ? Rédigez la phrase de résultats.
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+procedure_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5 + strata(procedure),
+                         data = cohort)
+summary(procedure_model)$conf.int["implantC", ]
+```
+
+## Python
+
+```{python}
+procedure_model = CoxPHFitter().fit(cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "procedure"]],
+                                    duration_col="followup_years", event_col="revised",
+                                    formula="implant + age_10 + sex + bmi_5", strata=["procedure"],
+                                    fit_options={"precision": 1e-12})
+print(procedure_model.summary.loc["implant[T.C]", ["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+À peine.
+
+> **Results:** In a Cox model stratified by procedure and adjusted for age, sex and BMI, the hazard ratio for revision with implant C compared with implant A was 3.16 (95% CI 1.90 to 5.24); without stratification it was 3.19.
 :::
