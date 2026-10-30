@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Dans un projet de recherche, la plus grande partie du temps sert à mettre les données en forme, pas aux statistiques. Les erreurs commises ici sont les plus dangereuses : le code s'exécute, les tableaux ont l'air corrects, et les chiffres sont faux. Cette page montre comment collecter des données propres dès le départ, comment les nettoyer quand elles ne le sont pas, et comment prouver que votre nettoyage n'a rien modifié qui n'aurait pas dû l'être.
+Dans un projet de recherche, la plus grande partie du temps sert à mettre les données en forme, pas aux statistiques. Les erreurs commises ici sont du genre dangereux : le code s'exécute, les tableaux ont l'air corrects, et les chiffres sont faux. Cette page montre comment collecter des données propres dès le départ, comment les nettoyer quand elles ne le sont pas, et comment prouver que votre nettoyage n'a rien modifié qui n'aurait pas dû l'être.
 
 ## Ce que veut dire « ordonné » {#what-tidy-means}
 
@@ -99,11 +99,11 @@ Voici les schémas non ordonnés que nous voyons le plus souvent dans les feuill
 
 ## Collecter des données ordonnées {#collecting}
 
-Le nettoyage le moins cher est celui que vous n'avez jamais à faire. Avant que quiconque ne relève un seul dossier, écrivez le **dictionnaire de données** : le nom, la signification, le type, les unités et les valeurs autorisées de chaque variable. Construisez ensuite la feuille de collecte à partir du dictionnaire.
+Le nettoyage le moins cher est celui que vous n'avez jamais à faire. Avant que quiconque ne dépouille un seul dossier, écrivez le **dictionnaire de données** : le nom, la signification, le type, les unités et les valeurs autorisées de chaque variable. Construisez ensuite la feuille de collecte à partir du dictionnaire.
 
 Ce site propose un modèle que vous pouvez copier : [`templates/data-collection-template.xlsx`](https://github.com/hfr-ortho/stats-formation/raw/main/templates/data-collection-template.xlsx). Il contient quatre feuilles :
 
-- **README** — les règles ci-dessous, pour la personne qui relève les dossiers.
+- **README** — les règles ci-dessous, pour la personne qui dépouille les dossiers.
 - **data** — une seule ligne d'en-tête, et des listes déroulantes ou des contrôles de plage sur chaque colonne sauf l'identifiant d'étude, pour que les fautes de frappe ne passent pas.
 - **dictionary** — la signification de chaque colonne.
 - **missing_codes** — ce qu'il faut saisir exactement quand une valeur ne figure pas dans le dossier.
@@ -163,9 +163,9 @@ Les vraies feuilles de saisie suivent rarement ces règles. Le fichier `data/mes
 
 Nous le corrigerons une étape à la fois. Chaque étape est assez petite pour être vérifiée. Exécutez les étapes dans l'ordre : chacune part du résultat de la précédente.
 
-### Étape 1 : lire les deux onglets, en texte {#step-1-read-both-tabs-as-text}
+### Étape 1 : lire les deux onglets comme du texte {#step-1-read-both-tabs-as-text}
 
-Lisez d'abord tout en texte. Si vous laissez le logiciel deviner les types, il transforme sans rien dire `32.1 kg/m2` en valeur manquante, et vous ne le saurez jamais. Nous convertirons les types volontairement à l'étape 5.
+Lisez d'abord tout comme du texte. Si vous laissez le logiciel deviner les types, il transforme `32.1 kg/m2` en valeur manquante sans prévenir, et vous ne le saurez jamais. Nous convertirons les types délibérément à l'étape 5.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -237,7 +237,7 @@ En R, nous appelons `janitor::clean_names()` avec le nom du package devant, au l
 ::: {.callout-tip}
 ## 🔀 R ou Python : le même fichier Excel, lu différemment
 - **En-têtes répétés.** R (avec `.name_repair = "minimal"`) garde les deux colonnes `Date` sous le nom `Date`. pandas renomme la seconde en `Date.1`.
-- **Vraies dates Excel.** Lues en texte, R donne le numéro de série Excel (`42010` signifie le 6 janvier 2015). pandas donne `2015-01-06 00:00:00`. L'étape 5 s'occupe des deux.
+- **Vraies dates Excel.** Lues comme du texte, R donne le numéro de série Excel (`42010` signifie le 6 janvier 2015). pandas donne `2015-01-06 00:00:00`. L'étape 5 s'occupe des deux.
 :::
 
 ### Étape 2 : supprimer les lignes et les colonnes qui ne sont pas des données {#step-2-drop-rows-and-columns-that-arent-data}
@@ -372,7 +372,7 @@ La colonne `Notes` mentionne certaines révisions (« revised 2021 for loosenin
 
 ### Étape 5 : donner à chaque colonne son vrai type {#step-5-give-every-column-its-real-type}
 
-Convertissez maintenant chaque colonne de texte en ce qu'elle est réellement. Une petite fonction gère les formats de date mélangés. Chaque recodage énumère les valeurs attendues et transforme tout le reste en valeur manquante : une surprise comme `U` pour le sexe apparaît au lieu de devenir sans bruit « Male ».
+Convertissez maintenant chaque colonne de texte en ce qu'elle est réellement. Une petite fonction gère les formats de date mélangés. Chaque recodage énumère les valeurs attendues et transforme tout le reste en valeur manquante : une surprise comme `U` pour le sexe apparaît au lieu de devenir « Male » en silence.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -507,7 +507,7 @@ pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
 R a besoin d'une étape séparée pour les numéros de série Excel (`janitor::excel_numeric_to_date()`). pandas a déjà transformé ces cellules en texte date-heure (`2015-01-06 00:00:00`), que sa fonction `parse_messy_date()` lit avec les autres dates ISO. Les deux lisent `"13.01.15"` avec le jour d'abord : c'est le style suisse, celui des feuilles de l'HFR. Les deux lisent les dates ISO séparément, parce que `dayfirst=True` de pandas les inverserait aussi (`2015-11-02` deviendrait le 11 février).
 :::
 
-## Remodeler une exportation de questionnaire {#reshaping}
+## Remodeler l'export d'un questionnaire {#reshaping}
 
 Le fichier `data/messy_survey_export.csv` est ce que produisent les plateformes de questionnaires : une ligne par patient, une colonne par question et par visite (`KOOS_Q3_6wk`), et une seconde ligne d'en-tête avec les intitulés des questions. Pour l'analyser, il nous faut une ligne par patient, par visite et par item.
 
@@ -579,7 +579,7 @@ pd.testing.assert_frame_equal(items, pd.read_csv("data/answer-keys/survey_items_
                               check_dtype=False)
 ```
 
-Un patient KOOS JR (score du genou après prothèse, version abrégée) a maintenant 7 items × 4 visites = 28 lignes. Une visite manquée garde ses lignes, avec la réponse vide : ainsi « attendu mais sans réponse » reste visible.
+Un patient KOOS JR a maintenant 7 items × 4 visites = 28 lignes. Une visite manquée garde ses lignes, avec la réponse vide : ainsi « attendu mais sans réponse » reste visible.
 
 ## Vérifier que rien n'a changé {#integrity}
 
@@ -742,10 +742,10 @@ print(pd.Series({
 assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 ```
 
-Avec la lecture correcte, rien ne manque et chaque PROM préopératoire tombe dans sa fenêtre. Les versions avec le mois d'abord se trompent de manières différentes :
+Avec la lecture correcte, rien ne manque et chaque PROM préopératoire tombe dans sa fenêtre de temps. Les versions avec le mois d'abord se trompent de manières différentes :
 
-- **R** ne peut pas lire avec le mois d'abord des dates comme `"13.01.15"` (il n'y a pas de 13e mois) : 30 dates d'opération deviennent donc manquantes. D'autres, comme `"04.03.24"`, sont lues « avec succès » comme le 3 avril au lieu du 4 mars, et le contrôle de fenêtre en signale 12.
-- **pandas** ne renvoie jamais de date manquante ici : quand le mois d'abord est impossible, il passe discrètement au jour d'abord. `"13.01.15"` sort donc juste par chance, alors que `"04.03.24"` devient le 3 avril. Seul le contrôle de fenêtre le remarque : il signale 12 dates.
+- **R** ne peut pas lire avec le mois d'abord des dates comme `"13.01.15"` (il n'y a pas de 13e mois) : 30 dates d'opération deviennent donc manquantes. D'autres, comme `"04.03.24"`, sont lues « avec succès » comme le 3 avril au lieu du 4 mars, et le contrôle de la fenêtre temporelle en signale 12.
+- **pandas** ne renvoie jamais de date manquante ici : quand le mois d'abord est impossible, il passe discrètement au jour d'abord. `"13.01.15"` sort donc juste par chance, alors que `"04.03.24"` devient le 3 avril. Seul le contrôle de la fenêtre temporelle le remarque : il signale 12 dates.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un seul contrôle ne suffit jamais
@@ -754,7 +754,7 @@ Ne lisez jamais une colonne qui mélange des formats avec un seul réglage : li
 
 ### Pour finir : comparer avec le corrigé {#finally-compare-with-the-answer-key}
 
-Comme il s'agit d'un jeu de données d'enseignement, il *existe* une bonne réponse connue : `data/answer-keys/abstraction_workbook_tidy.csv`. Notre résultat lui correspond exactement.
+Comme il s'agit d'un jeu de données pédagogique, il *existe* une bonne réponse connue : `data/answer-keys/abstraction_workbook_tidy.csv`. Notre résultat lui correspond exactement.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -822,7 +822,7 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Pas ordonnée : le *côté* et la *visite* se cachent dans les noms de colonnes. Une ligne devrait être un genou à une visite, avec les colonnes `patient_id`, `side`, `visit`, `koos`. Remodelez-la avec `pivot_longer()` (R) ou `melt()` (Python), en séparant chaque nom de colonne en côté et visite, comme nous l'avons fait pour l'exportation du questionnaire.
+Pas ordonnée : le *côté* et la *visite* se cachent dans les noms de colonnes. Une ligne devrait être un genou à une visite, avec les colonnes `patient_id`, `side`, `visit`, `koos`. Remodelez-la avec `pivot_longer()` (R) ou `melt()` (Python), en séparant chaque nom de colonne en côté et visite, comme nous l'avons fait pour l'export du questionnaire.
 :::
 
 **3.** Combien de cas ont un PROM à 1 an enregistré mais aucun PROM préopératoire ? Pourquoi est-ce important pour une analyse de l'amélioration ?
@@ -844,5 +844,5 @@ print(((tidy["prom_1yr"].notna()) & (tidy["prom_preop"].isna())).sum())
 ```
 :::
 
-Ces patients n'ont pas de valeur initiale (baseline), donc leur amélioration ne peut pas être calculée. Une analyse du changement les écarte sans rien dire. Indiquez combien ils sont, pour que les lecteurs le sachent.
+Ces patients n'ont pas de valeur initiale (baseline), donc leur amélioration ne peut pas être calculée. Une analyse du changement les écarte en silence. Indiquez combien ils sont, pour que les lecteurs le sachent.
 :::
