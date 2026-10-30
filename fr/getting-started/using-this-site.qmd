@@ -1,8 +1,146 @@
 ---
-title: "Comment utiliser ce site (en préparation)"
+title: "Comment utiliser ce site"
+description: "Choisir R ou Python, exécuter les exemples vous-même, les encadrés, la façon de rapporter les résultats et le fonctionnement des exercices."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/getting-started/using-this-site.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+## Choisir R ou Python une fois pour toutes {#pick-r-or-python-once}
+
+Chaque exemple de ce site est écrit deux fois : une fois en **R** et une fois en **Python**. Les deux donnent la même réponse. Cliquez sur un onglet pour choisir. Le site retient votre choix sur toutes les pages : vous ne choisissez qu'une fois. (Les liens EN, DE et FR en haut de la page changent la langue du texte, pas celle du code.)
+
+Voici un petit exemple : l'âge de cinq patients fictifs, leur moyenne et leur écart-type (ET).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ages <- c(64, 71, 58, 69, 75)   # l'âge de cinq patients fictifs
+
+mean_age <- mean(ages)           # la moyenne
+sd_age <- sd(ages)               # l'écart-type
+
+mean_age
+sd_age
+```
+
+## Python
+
+```{python}
+import pandas as pd
+
+ages = pd.Series([64, 71, 58, 69, 75])   # l'âge de cinq patients fictifs
+
+mean_age = ages.mean()                    # la moyenne
+sd_age = ages.std()                       # l'écart-type
+
+print(mean_age)
+print(sd_age)
+```
 :::
+
+```{r}
+#| include: false
+check_agree(
+  list(mean = mean_age, sd = sd_age),
+  list(mean = reticulate::py$mean_age, sd = reticulate::py$sd_age)
+)
+```
+
+Les deux donnent un âge moyen de 67.4 ans, avec un ET de 6.6 ans.
+
+::: {.callout-tip}
+## 🔀 R ou Python : le piège de l'écart-type
+Python a deux façons courantes de calculer un ET, et elles ne donnent pas le même résultat. `pandas` (`ages.std()`) divise par *n − 1*, comme `sd()` en R. `numpy` (`np.std(ages)`) divise par *n*, sauf si vous écrivez `np.std(ages, ddof=1)`. Les articles médicaux rapportent la version *n − 1*. Chaque fois que les valeurs par défaut des deux langages diffèrent, ce site les fixe explicitement et en explique la raison dans un encadré comme celui-ci.
+:::
+
+En coulisses, chaque page vérifie que les réponses de R et de Python concordent. Si elles divergent un jour, le site refuse de se construire : vous pouvez donc être sûr que les deux onglets disent la même chose.
+
+## Exécuter le code vous-même {#running-the-code-yourself}
+
+1. Ouvrez le dossier du dépôt dans Positron (voir [Installer et configurer](setup.qmd)).
+2. Enregistrez vos fichiers d'entraînement dans le dossier `scratch/`, par exemple `scratch/practice.R` ou `scratch/practice.py`. Git ignore tout ce qui se trouve dans `scratch/` : un fichier d'entraînement ne peut donc jamais être validé par erreur.
+3. Copiez le code avec le bouton de copie qui apparaît en haut à droite de chaque bloc de code.
+4. Exécutez une ligne avec **Cmd+Enter** (Mac) ou **Ctrl+Enter** (Windows). Positron l'envoie à la console.
+
+Les chemins de données comme `data/cohort.csv` partent du dossier racine du dépôt. Positron démarre à cet endroit quand vous ouvrez le dossier : les chemins fonctionnent donc tels quels.
+
+## Les encadrés que vous verrez {#the-boxes-youll-see}
+
+::: {.callout-note}
+## 💡 En clair
+L'idée sans le jargon. Si une page vous perd, lisez d'abord ces encadrés.
+:::
+
+::: {.callout-warning}
+## ⚠️ Attention
+Les erreurs que nous voyons souvent, et comment les éviter.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python
+Là où les valeurs par défaut des deux langages diffèrent, et ce que ce site fait à ce sujet.
+:::
+
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot
+Les mathématiques, pour les curieux. Ces encadrés sont fermés au départ : cliquez pour les ouvrir. Vous n'en avez jamais besoin pour utiliser correctement un test.
+:::
+
+## Comment rapporter les résultats {#how-results-are-reported}
+
+Chaque paragraphe « Rédiger les résultats » de ce site suit les mêmes règles, qui correspondent à ce qu'attendent les relecteurs de revues telles que JBJS, *The Bone & Joint Journal* et *CORR*.
+
+| Quoi | Comment le rapporter | Exemple |
+|------|------|------|
+| Variable continue, à peu près symétrique | moyenne (ET) | âge 67.4 (6.6) ans |
+| Variable continue, asymétrique | médiane (IIQ) | durée de séjour 1 (0–2) jours |
+| Catégories | n (%) | 312 (52 %) femmes |
+| Valeurs p | trois décimales ; jamais « p = 0.000 » ni « p = 1.000 » | p = 0.017 ; p < 0.001 ; p > 0.999 |
+| Estimations d'effet | avec un intervalle de confiance à 95 % | différence 1.6 kg/m² (IC à 95 % 0.7 à 2.5) |
+
+Les exemples du tableau sont des illustrations, pas des résultats tirés de nos données. [Données démographiques (tableau 1)](../foundations/02-demographics.qmd) montre la mise en page complète d'un tableau 1.
+
+**Une phrase de Résultats donne les chiffres, et s'arrête là :** la valeur de chaque groupe, l'estimation avec son IC à 95 %, et la valeur p. Évitez les mots qui interprètent les chiffres, comme « similaire », « plus élevé que », « plus souvent », « amélioré », « significatif », « pas d'évidence claire », ou des étiquettes comme « bon » ou « modéré ». Dire ce que les chiffres signifient est le travail de la Discussion. Voici un exemple :
+
+> KOOS JR at 1 year was a median of 87 points (IQR 76 to 94) in men and 85 (IQR 73 to 94) in women (Hodges-Lehmann difference 1 point, 95% CI −2 to 4; p = 0.432).
+
+Autour de chaque phrase de Résultats, le texte de ce site interprète bien les chiffres, car c'est ainsi qu'on apprend à lire un résultat. La phrase de Résultats elle-même est la partie à copier dans un manuscrit.
+
+## Exercices {#exercises}
+
+Chaque page se termine par deux à quatre courts exercices sur les données d'entraînement. Ils se compliquent en trois temps : refaire la même analyse sur une autre variable, choisir le bon test pour un court scénario, puis rédiger la phrase de Résultats. Les solutions sont masquées, dans les deux langages. Essayez d'abord, vérifiez ensuite.
+
+**À vous :** avec les mêmes cinq âges, trouvez la **médiane**.
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```r
+ages <- c(64, 71, 58, 69, 75)
+median(ages)   # 69
+```
+
+## Python
+
+```python
+import pandas as pd
+
+ages = pd.Series([64, 71, 58, 69, 75])
+ages.median()   # 69.0
+```
+:::
+
+:::
+
+## Obtenir de l'aide {#getting-help}
+
+- Quelque chose est faux ou confus sur ce site ? [Ouvrez un ticket](https://github.com/hfr-ortho/stats-formation/issues) sur GitHub.
+- Une question sur votre propre projet ? Demandez à votre responsable de projet.

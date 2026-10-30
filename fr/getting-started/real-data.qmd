@@ -1,8 +1,95 @@
 ---
-title: "Travailler avec de vraies données HFR (en préparation)"
+title: "Travailler avec de vraies données HFR"
+description: "Protéger les données des patients : les règles suisses, ce qui identifie un patient, où se trouvent les données de l'HFR, et les contrôles à faire avant chaque commit."
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/getting-started/real-data.qmd).
+Tout ce site utilise des données inventées. Votre vrai projet n'en utilisera pas. Cette page présente les règles qui protègent les patients et l'HFR. Lisez-la avant d'ouvrir un vrai jeu de données.
+
+::: {.callout-warning}
+## ⚠️ La règle absolue
+**Les données de patients ne vont jamais dans un dépôt git.** Cela comprend les dépôts privés, les commits, les tickets GitHub, les captures d'écran et les messages de discussion. Le dépôt de ce site est **public** : tout ce qui y est validé peut être lu par n'importe qui sur Internet, pour toujours. Ne copiez jamais de vraies données où que ce soit dans le dossier de ce tutoriel, y compris `data/` et `scratch/`.
 :::
+
+## Les règles suisses {#swiss-rules}
+
+Deux ensembles de règles s'appliquent à tout projet de recherche de l'HFR qui utilise des données de patients :
+
+- **La loi relative à la recherche sur l'être humain** (LRH ; en allemand HFG) et ses ordonnances. Une recherche avec des données de santé doit être approuvée par la commission d'éthique cantonale avant que quiconque touche aux données. Pour l'HFR, c'est la CER-VD, et chaque projet reçoit un numéro BASEC à son dépôt. Les essais cliniques, comme les essais randomisés, relèvent aussi de l'ordonnance sur les essais cliniques (OClin ; en allemand KlinV).
+- **La loi sur la protection des données.** Les données de santé sont des données personnelles sensibles. L'HFR est un hôpital cantonal : la loi fribourgeoise sur la protection des données s'applique donc à lui, en plus des règles propres de la loi relative à la recherche sur l'être humain sur les données de recherche.
+
+Votre responsable de projet a l'approbation et le protocole. Lisez-les avant de commencer : ils disent quelles données vous pouvez utiliser, et comment.
+
+### Codées, pas anonymes {#coded}
+
+Les études de l'HFR travaillent avec des données **codées**. Chaque patient reçoit un code d'étude (par exemple `C0001`), et une **clé de codage** distincte relie les codes aux patients. La clé de codage est conservée à part des données de l'étude, par la personne que la demande d'éthique désigne pour cela, et jamais dans un dépôt.
+
+« Codées » et « anonymes » n'ont pas le même sens en droit suisse. Des données ne sont anonymes que si on ne peut plus les relier à une personne : des données avec une clé de codage ne sont donc jamais anonymes. Employez le mot « codées » dans tout ce que vous écrivez, y compris les e-mails, les protocoles et les sections Méthodes.
+
+### Consentement général {#general-consent}
+
+L'HFR demande aux patients un **consentement général** à la réutilisation de leurs données pour la recherche. Dans une étude rétrospective, qui utilise des données déjà recueillies pendant les soins, seuls les patients qui ont signé le consentement général sont inclus, sauf si la commission d'éthique a approuvé autre chose pour votre projet. Les patients qui ont **refusé** ne sont jamais inclus et ne sont pas recontactés pour qu'on le leur redemande. Une étude prospective demande à chaque patient son consentement pour cette étude.
+
+## Ce qui identifie un patient {#identifiers}
+
+Les **identifiants directs** ne quittent jamais les systèmes cliniques :
+
+- noms, initiales, date de naissance, adresse, numéros de téléphone, adresses e-mail
+- le numéro AVS (`756.…`), les numéros de patient et de cas de l'HFR
+- les numéros de série et de lot des implants
+- les photographies de patients, et les images où un nom est incrusté
+
+Les **quasi-identifiants** identifient des patients lorsqu'on les combine. Dans une petite cohorte, âge + sexe + date d'opération + hôpital peuvent désigner une seule personne. Rendez-les moins précis avant que les données ne quittent l'environnement sécurisé :
+
+- l'âge en tranches, avec « 90 ans ou plus » pour les personnes très âgées
+- le mois ou l'année de l'opération, ou les « jours depuis l'opération », au lieu de la date
+- « un hôpital régional suisse » au lieu du nom de l'hôpital, si le protocole le permet
+
+## Les pièges à l'HFR {#traps}
+
+- **Les dates d'opération sont des dates.** Utilisez les « jours depuis l'opération » ou l'année de l'opération.
+- **Les patients très âgés.** Dans une petite cohorte, un âge de 97 ans peut identifier quelqu'un. Regroupez-les sous « 90 ans ou plus ».
+- **Les identifiants d'étude construits à partir de détails du patient.** Un identifiant fait d'initiales, d'un numéro de patient ou d'une date de naissance (comme `JS-0412`) reste un identifiant. Utilisez des codes arbitraires comme `C0001`.
+- **Les numéros de patient se cachent dans les noms de fichiers.** Méfiez-vous de noms comme `12345678_xray.png` ou `extraction_AHV.xlsx`.
+- **Les étiquettes d'implants.** Les numéros de lot et de série sont des identifiants de dispositif.
+- **Les radiographies.** Les fichiers DICOM contiennent le nom du patient, son numéro et des dates dans leurs en-têtes, et certaines images les ont incrustés dans les pixels.
+- **Les colonnes de « notes » en texte libre.** Elles accumulent des noms, des numéros de téléphone et des dates.
+- **Les captures d'écran du dossier du patient.** Ce sont aussi des données de patients.
+
+## Où se trouvent les données de l'HFR {#where}
+
+- Gardez les données de l'étude dans la base REDCap du projet : HFR Ortho encourage chaque projet à y conserver ses données. Ne les copiez nulle part ailleurs.
+- Le code d'analyse se trouve dans un dépôt privé de l'organisation GitHub d'HFR Ortho. Le dépôt lit les données à l'exécution depuis des dossiers ignorés par git (`data/raw/`, `db/`, `exports/`), listés dans `.gitignore` *avant le premier commit*.
+- La clé de codage reste chez la personne que la demande d'éthique désigne pour cela, jamais dans un dépôt.
+- Ce qui quitte l'environnement sécurisé est agrégé : tableaux, figures et résultats de modèles. Votre protocole peut exiger de masquer les petits effectifs.
+
+## Comment les projets HFR traitent les données dans le code {#in-code}
+
+Ces règles viennent des dépôts de projets d'HFR Ortho. [Données ordonnées](../foundations/01-tidy-data.qmd) les met toutes en pratique.
+
+1. **Lisez d'abord tout comme du texte.** Les dates arrivent dans plusieurs formats, les nombres contiennent du texte parasite, et des listes se cachent dans une seule cellule. Convertissez les types dans une étape délibérée et consignée, jamais en silence pendant la lecture.
+2. **Associez les colonnes par leur nom, pas par leur position.** Deux onglets d'un même classeur peuvent avoir des colonnes différentes.
+3. **Vérifiez ce que vous avez changé.** Après chaque étape de nettoyage, comparez le nombre de lignes et les résumés avant et après.
+
+## Outils d'IA {#ai}
+
+**Ne collez jamais de vraies données de patients dans un chatbot d'IA ni sur aucun site web.** Cela comprend ChatGPT, Claude, Copilot et les « nettoyeurs de données » en ligne. La seule exception est un outil que l'HFR a approuvé pour les données de patients : demandez à votre responsable de projet. Les données synthétiques de ce site peuvent être collées n'importe où.
+
+## Avant chaque commit {#before-commit}
+
+Exécutez ces deux commandes et lisez le résultat :
+
+```bash
+git status
+git diff --staged
+```
+
+Vérifiez qu'aucun fichier de données, export ou capture d'écran n'apparaît. Si vous en voyez un, retirez-le de l'index avec `git restore --staged <file>`.
+
+## Si quelque chose tourne mal {#incident}
+
+Si des données de patients arrivent dans un commit, un push ou un ticket :
+
+1. **Arrêtez-vous.** N'essayez pas de corriger avec un autre commit. Git garde l'historique.
+2. **Prévenez tout de suite votre responsable de projet.** Les données doivent être purgées de l'historique, et l'incident devra peut-être être annoncé au conseiller à la protection des données de l'HFR.
+
+Signaler vite est toujours la bonne décision, et personne ne vous en voudra de l'avoir fait.
