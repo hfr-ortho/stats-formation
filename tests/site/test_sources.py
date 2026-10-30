@@ -315,7 +315,7 @@ def test_mixed_model_checks_loosen_the_tolerance_only_where_the_two_methods_diff
 
 def test_conover_p_values_are_checked_r_against_python():
     checks = agreement_checks(dict(written_pages("beyond"))["beyond/15-post-hoc.qmd"])
-    assert {"log10_p_6wk_1yr", "log10_p_3mo_1yr"} <= {name for names, tol in checks for name in names}
+    assert {"log10_p_6wk_12mo", "log10_p_3mo_12mo"} <= {name for names, tol in checks for name in names}
 
 
 # ---- each section's Python runs on its own -------------------------------

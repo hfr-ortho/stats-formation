@@ -213,7 +213,15 @@ def test_conover_p_values_are_printed_in_full_in_both_languages(site):
     """Printing R's test object shows every p-value as "<2e-16", so nobody could see that R and Python agree."""
     shown = " ".join(pre.get_text() for pre in section(POST_HOC, "after-friedman").select(".cell-output pre"))
     assert "<2e-16" not in shown
-    assert len(re.findall(r"8\.85\d*e-36", shown)) >= 3   # R's table once, Python's symmetric table twice
+    assert len(re.findall(r"1\.4[23]\d*e-41", shown)) >= 3   # R's table once, Python's symmetric table twice
+
+
+def test_post_hoc_follow_ups_pick_up_page_9s_new_examples(site):
+    code = code_of(section(POST_HOC, "after-repeated-measures-anova"))
+    assert "promis_pf" in code and "vr12" not in code
+    found = section(POST_HOC, "after-friedman")
+    assert "efas" in code_of(found) and "prom_score" not in code_of(found)
+    assert "50 patients" in text_of(found)
 
 
 def test_false_positive_example_says_pairwise_tests_are_not_independent(site):

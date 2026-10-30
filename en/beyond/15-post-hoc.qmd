@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-A test for three or more groups asks one question: "is there any difference among them?". When the answer is yes, the next question is which groups differ from which. Answering it means running several tests at once, and every extra test is another chance of a false positive. This page shows how to compare groups in pairs while keeping that chance under control. Each "After …" section picks up an example from [page 8](../catalog/08-three-plus-unmatched.qmd), [page 9](../catalog/09-three-plus-matched.qmd) or [page 13](../survival/13-kaplan-meier.qmd).
+A test for three or more groups asks one question: "is there any difference among them?". When the answer is yes, the next question is which groups differ from which. Answering it means running several tests at once, and every extra test is another chance of a false positive. This page shows how to compare groups in pairs while keeping that chance under control. Most "After …" sections pick up an example from [page 8](../catalog/08-three-plus-unmatched.qmd), [page 9](../catalog/09-three-plus-matched.qmd) or [page 13](../survival/13-kaplan-meier.qmd).
 
 ::: {.callout-note}
 ## 💡 How this page works
@@ -39,6 +39,7 @@ library(survival)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)
 
 tests <- c(1, 3, 6, 10, 20)
 false_positives <- tibble(tests, chance_of_a_false_positive = round(1 - 0.95^tests, 2))
@@ -62,6 +63,7 @@ from lifelines.statistics import pairwise_logrank_test
 
 cohort = pd.read_csv("data/cohort.csv")
 proms = pd.read_csv("data/proms_long.csv")
+trial = pd.read_csv("data/foot_ankle_rct_long.csv")
 
 tests = np.array([1, 3, 6, 10, 20])
 false_positives = pd.DataFrame({"tests": tests, "chance_of_a_false_positive": (1 - 0.95**tests).round(2)})
@@ -317,51 +319,51 @@ The overall Fisher test says the complication rate differs across ASA classes (p
 
 ## After repeated-measures ANOVA: paired t tests {#after-repeated-measures-anova}
 
-[Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) found that the VR-12 physical component score (PCS) changed over the first year, in 328 patients measured at all four visits. To say *when* it changed, compare every pair of visits with a **paired t test** and adjust with Holm:
+[Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) found that PROMIS physical function changed over the first year, in 328 patients measured at all four visits. To say *when* it changed, compare every pair of visits with a **paired t test** and adjust with Holm:
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-pcs <- proms |>
-  select(case_id, visit, vr12_pcs) |>
+pf <- proms |>
+  select(case_id, visit, promis_pf) |>
   group_by(case_id) |>
-  filter(all(!is.na(vr12_pcs))) |>                  # patients measured at all four visits
+  filter(all(!is.na(promis_pf))) |>                  # patients measured at all four visits
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr"))) |>
   arrange(case_id, visit)                           # paired tests match rows by position
 
-pcs_pairs <- rstatix::pairwise_t_test(pcs, vr12_pcs ~ visit, paired = TRUE, p.adjust.method = "holm")
-pcs_pairs |> select(group1, group2, n1, statistic, df, p.adj)
+pf_pairs <- rstatix::pairwise_t_test(pf, promis_pf ~ visit, paired = TRUE, p.adjust.method = "holm")
+pf_pairs |> select(group1, group2, n1, statistic, df, p.adj)
 ```
 
 ## Python
 
 ```{python}
-pcs = proms[["case_id", "visit", "vr12_pcs"]]
-pcs = pcs[pcs.groupby("case_id")["vr12_pcs"].transform(lambda scores: scores.notna().all())]
+pf = proms[["case_id", "visit", "promis_pf"]]
+pf = pf[pf.groupby("case_id")["promis_pf"].transform(lambda scores: scores.notna().all())]
 
-pcs_pairs = pg.pairwise_tests(data=pcs, dv="vr12_pcs", within="visit", subject="case_id", padjust="holm")
-print(pcs_pairs[["A", "B", "T", "dof", "p_corr"]])
+pf_pairs = pg.pairwise_tests(data=pf, dv="promis_pf", within="visit", subject="case_id", padjust="holm")
+print(pf_pairs[["A", "B", "T", "dof", "p_corr"]])
 ```
 :::
 
 ```{python}
 #| include: false
 def paired_t(a, b):
-    row = pcs_pairs[((pcs_pairs["A"] == a) & (pcs_pairs["B"] == b)) | ((pcs_pairs["A"] == b) & (pcs_pairs["B"] == a))]
+    row = pf_pairs[((pf_pairs["A"] == a) & (pf_pairs["B"] == b)) | ((pf_pairs["A"] == b) & (pf_pairs["B"] == a))]
     return float(abs(row["T"].iloc[0]))
 chk = {"t_pre_6wk": paired_t("preop", "6wk"), "t_3mo_1yr": paired_t("3mo", "1yr"), "t_pre_1yr": paired_t("preop", "1yr")}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(t_pre_6wk = abs(pcs_pairs$statistic[1]), t_3mo_1yr = abs(pcs_pairs$statistic[6]),
-                 t_pre_1yr = abs(pcs_pairs$statistic[3])),
+check_agree(list(t_pre_6wk = abs(pf_pairs$statistic[1]), t_3mo_1yr = abs(pf_pairs$statistic[6]),
+                 t_pre_1yr = abs(pf_pairs$statistic[3])),
             reticulate::py$chk)
 ```
 
-Every pair of visits differs (all adjusted p < 0.001): PCS improved between each visit and the next, from pre-op to 6 weeks (t = 8.0) through to 3 months and 1 year (t = 7.6 for the last step). With 328 patients and changes this large, the adjustment changes nothing. It matters most when results sit near p = 0.05.
+Every pair of visits differs (all adjusted p < 0.001): PROMIS physical function improved between each visit and the next, from pre-op to 6 weeks (t = 8.0) through to 3 months and 1 year (t = 7.5 for the last step). With 328 patients and changes this large, the adjustment changes nothing. It matters most when results sit near p = 0.05.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: which way round
@@ -370,71 +372,72 @@ pingouin sorts the visits alphabetically and subtracts the second from the first
 
 ## After Friedman: pairwise Wilcoxon or Conover tests {#after-friedman}
 
-After a Friedman test, compare pairs of visits with **Wilcoxon signed-rank tests** and Holm's adjustment, or with **Conover's test**, which reuses the Friedman ranks (as Dunn's test does after Kruskal-Wallis) and is often more powerful. [Page 9](../catalog/09-three-plus-matched.qmd#friedman) found that KOOS JR changed between 6 weeks, 3 months and 1 year in 205 knees:
+After a Friedman test, compare pairs of visits with **Wilcoxon signed-rank tests** and Holm's adjustment, or with **Conover's test**, which reuses the Friedman ranks (as Dunn's test does after Kruskal-Wallis) and is often more powerful. [Page 9](../catalog/09-three-plus-matched.qmd#friedman) found that the EFAS score changed between 6 weeks, 3 months and 12 months in 50 patients with a boot:
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-koos <- proms |>
-  filter(instrument == "KOOS JR", visit != "preop") |>
-  select(case_id, visit, prom_score) |>
-  group_by(case_id) |>
-  filter(n() == 3, all(!is.na(prom_score))) |>         # knees scored at all three visits
+efas_boot <- trial |>
+  filter(arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |>
+  select(patient_id, visit, efas) |>
+  group_by(patient_id) |>
+  filter(all(!is.na(efas))) |>                         # patients scored at all three visits
   ungroup() |>
-  mutate(visit = factor(visit, levels = c("6wk", "3mo", "1yr"))) |>
-  arrange(case_id, visit)
+  mutate(visit = factor(visit, levels = c("6wk", "3mo", "12mo"))) |>
+  arrange(patient_id, visit)
 
-koos_pairs <- rstatix::pairwise_wilcox_test(koos, prom_score ~ visit, paired = TRUE, exact = FALSE, correct = FALSE,
+efas_pairs <- rstatix::pairwise_wilcox_test(efas_boot, efas ~ visit, paired = TRUE, exact = FALSE, correct = FALSE,
                                             p.adjust.method = "holm")
-koos_pairs |> select(group1, group2, statistic, p, p.adj)
+efas_pairs |> select(group1, group2, statistic, p, p.adj)
 
-koos_conover <- PMCMRplus::frdAllPairsConoverTest(y = koos$prom_score, groups = koos$visit, blocks = koos$case_id,
+efas_conover <- PMCMRplus::frdAllPairsConoverTest(y = efas_boot$efas, groups = efas_boot$visit, blocks = efas_boot$patient_id,
                                                   p.adjust.method = "holm")
-signif(koos_conover$p.value, 3)          # printing koos_conover itself shows these only as "<2e-16"
+signif(efas_conover$p.value, 3)          # printing efas_conover itself shows these only as "<2e-16"
 ```
 
 ## Python
 
 ```{python}
-koos = proms[(proms["instrument"] == "KOOS JR") & (proms["visit"] != "preop")]
-koos_wide = koos.pivot(index="case_id", columns="visit", values="prom_score")[["6wk", "3mo", "1yr"]].dropna()
-print(len(koos_wide))                                    # knees scored at all three visits
+visits = ["6wk", "3mo", "12mo"]
+efas_boot = trial[(trial["arm"] == "boot") & trial["visit"].isin(visits)]
+efas_wide = efas_boot.pivot(index="patient_id", columns="visit", values="efas")[visits].dropna()
+print(len(efas_wide))                                    # patients scored at all three visits
 
 wilcoxon = {}
-for a, b in [("6wk", "3mo"), ("6wk", "1yr"), ("3mo", "1yr")]:
-    wilcoxon[(a, b)] = stats.wilcoxon(koos_wide[a], koos_wide[b], method="approx", correction=False)
+for a, b in [("6wk", "3mo"), ("6wk", "12mo"), ("3mo", "12mo")]:
+    wilcoxon[(a, b)] = stats.wilcoxon(efas_wide[a], efas_wide[b], method="approx", correction=False)
     print(a, b, wilcoxon[(a, b)].statistic)
 print(multipletests([test.pvalue for test in wilcoxon.values()], method="holm")[1])
 
-koos_conover = sp.posthoc_conover_friedman(koos_wide, p_adjust="holm")
-print(koos_conover)
+efas_conover = sp.posthoc_conover_friedman(efas_wide, p_adjust="holm")
+print(efas_conover)
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"v_6wk_3mo": float(wilcoxon[("6wk", "3mo")].statistic), "v_3mo_1yr": float(wilcoxon[("3mo", "1yr")].statistic),
-       "n": float(len(koos_wide)),
+chk = {"v_6wk_3mo": float(wilcoxon[("6wk", "3mo")].statistic), "v_3mo_12mo": float(wilcoxon[("3mo", "12mo")].statistic),
+       "n": float(len(efas_wide)),
        # p-values this small would pass any check on their own, so compare their logarithms
-       "log10_p_6wk_1yr": float(np.log10(koos_conover.loc["6wk", "1yr"])),
-       "log10_p_3mo_1yr": float(np.log10(koos_conover.loc["3mo", "1yr"]))}
+       "log10_p_6wk_12mo": float(np.log10(efas_conover.loc["6wk", "12mo"])),
+       "log10_p_3mo_12mo": float(np.log10(efas_conover.loc["3mo", "12mo"]))}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(v_6wk_3mo = koos_pairs$statistic[1], v_3mo_1yr = koos_pairs$statistic[3],
-                 n = n_distinct(koos$case_id),
-                 log10_p_6wk_1yr = log10(koos_conover$p.value["1yr", "6wk"]),
-                 log10_p_3mo_1yr = log10(koos_conover$p.value["1yr", "3mo"])),
+check_agree(list(v_6wk_3mo = efas_pairs$statistic[1], v_3mo_12mo = efas_pairs$statistic[3],
+                 n = n_distinct(efas_boot$patient_id),
+                 log10_p_6wk_12mo = log10(efas_conover$p.value["12mo", "6wk"]),
+                 log10_p_3mo_12mo = log10(efas_conover$p.value["12mo", "3mo"])),
             reticulate::py$chk)
 ```
 
-All three pairs differ (adjusted p < 0.001 with either method): KOOS JR rose between 6 weeks and 3 months and again between 3 months and 1 year.
+All three pairs differ (adjusted p < 0.001 with either method): the EFAS score rose between 6 weeks and 3 months and again between 3 months and 12 months.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: the statistic
-R's `wilcox.test()` reports V, the sum of the positive ranks; scipy reports the smaller of the two rank sums. Here both are the same number, because the later visit scores higher for most knees. Conover's test needs the PMCMRplus package in R and scikit-posthocs in Python; they give the same p-values. Printing PMCMRplus's result shows any p-value below 2 × 10⁻¹⁶ only as "<2e-16", so print its `$p.value` table to see them.
+R's `wilcox.test()` reports V, the sum of the positive ranks; scipy reports the smaller of the two rank sums. Here both are the same number, because the later visit scores higher for most patients. Conover's test needs the PMCMRplus package in R and scikit-posthocs in Python; they give the same p-values. Printing PMCMRplus's result shows any p-value below 2 × 10⁻¹⁶ only as "<2e-16", so print its `$p.value` table to see them.
 :::
 
 ## After Cochran's Q: pairwise McNemar tests {#after-cochran-q}
@@ -622,9 +625,9 @@ stopifnot(
   sum(suppressWarnings(chisq.test(complications))$expected < 5) == 2,
   complications["1", "1"] == 0, sum(complications["1", ]) == 36, complications["4", "1"] == 4, sum(complications["4", ]) == 18,
   round(pairwise_fisher$p[3], 3) == 0.010, round(pairwise_fisher$p.adj[3], 3) == 0.058,
-  n_distinct(pcs$case_id) == 328, all(pcs_pairs$p.adj < 0.001),
-  round(abs(pcs_pairs$statistic[c(1, 6)]), 1) == c(8.0, 7.6),
-  n_distinct(koos$case_id) == 205, all(koos_pairs$p.adj < 0.001),
+  n_distinct(pf$case_id) == 328, all(pf_pairs$p.adj < 0.001),
+  round(abs(pf_pairs$statistic[c(1, 6)]), 1) == c(8.0, 7.5),
+  n_distinct(efas_boot$patient_id) == 50, all(efas_pairs$p.adj < 0.001), efas_pairs$statistic == c(6, 0, 16.5),
   nrow(aid) == 328, round(mcnemar_results$p_holm[2], 3) == 0.005, all(mcnemar_results$p_holm[-2] < 0.001),
   colMeans(aid[, c("preop", "3mo", "1yr")]) |> (\(x) x[2] < x[1] && x[3] < x[2])(),
   all(logrank_results$p_holm[2:3] < 0.001), round(logrank_results$p[1], 3) == 0.520,
