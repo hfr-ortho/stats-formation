@@ -80,6 +80,15 @@ def test_top_bar_links_every_language_home(site):
                 assert links.get(code.upper()) == expected, (lang, page, code)
 
 
+def test_language_links_have_accessible_names(site):
+    # Quarto keeps `aria-label` off text links in the navbar, so the switcher sets it in the browser
+    # (its logic is tested in tests/python/test_lang_switch.py); here: every page ships the names.
+    for lang in LANGS:
+        html = (SITE_ROOT / lang / "index.html").read_text(encoding="utf-8")
+        assert 'LANG_NAMES = { en: "English", de: "Deutsch", fr: "Français" }' in html, lang
+        assert len(load_lang(lang, "index.html").select("nav.navbar a.nav-link")) >= 3
+
+
 def test_root_page_offers_every_language_without_javascript(site):
     soup = BeautifulSoup((SITE_ROOT / "index.html").read_text(encoding="utf-8"), "html.parser")
     hrefs = {a["href"].removeprefix("./") for a in soup.select("main a[href]")}
