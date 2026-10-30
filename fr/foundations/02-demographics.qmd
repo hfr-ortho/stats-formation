@@ -20,7 +20,7 @@ Presque tout article clinique commence par le **tableau 1** : qui a été étud
 
 ::: {.callout-note}
 ## 💡 En clair
-Le tableau 1 *décrit* vos patients. Il ne répond pas à votre question de recherche. Il sert à permettre au lecteur de juger à qui s'appliquent vos résultats, et si vos groupes se ressemblaient au départ.
+Le tableau 1 *décrit* vos patients. Il ne répond pas à votre question de recherche. Il permet au lecteur de juger à qui s'appliquent vos résultats, et si vos groupes se ressemblaient au départ.
 :::
 
 ## Charger les données et choisir les variables {#setup}
@@ -65,7 +65,7 @@ labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA c
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une ligne par intervention, pas par patient
-La cohorte compte une ligne par *intervention*. 80 patients ont été opérés des deux côtés, donc 600 interventions concernent 520 patients. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop sûrs d'eux. [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
+La cohorte compte une ligne par *intervention*. 80 patients ont été opérés des deux côtés, donc 600 interventions concernent 520 patients. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop optimistes (valeurs p trop petites, IC trop étroits). [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
 :::
 
 ## Un seul groupe {#one-group}
@@ -119,7 +119,7 @@ check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(coho
 Les logiciels devinent le type des variables, et ils se trompent souvent :
 
 - **La classe ASA** ressemble à un nombre, donc elle est moyennée (« ASA moyen 2.4 »). C'est une catégorie.
-- **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste « 0 jour, 1 jour, 2 jours… ». C'est un effectif.
+- **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste « 0 jour, 1 jour, 2 jours… ». C'est un comptage (un nombre de jours).
 - **Les colonnes 0/1**, comme `diabetes` : gtsummary montre une seule ligne (combien valent 1, donc « oui »), alors que tableone montre la ligne 0 et la ligne 1. Dans un article, montrez seulement la ligne « oui ».
 
 Définissez vous-même le type de chaque variable (`type =` en R, `categorical =` en Python).
@@ -135,7 +135,7 @@ Comment savoir si une variable est asymétrique ? Regardez-la : [Distributions
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les quartiles
-gtsummary et tableone calculent les quartiles avec des formules différentes (dans les termes de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer : le quartile supérieur de la PTH est de 2 jours en R et de 1.8 en Python. Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
+gtsummary et tableone calculent les quartiles avec des formules différentes (selon la terminologie de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer : le quartile supérieur de la PTH est de 2 jours en R et de 1.8 en Python. Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
 :::
 
 ## Comparer des groupes {#by-group}
@@ -201,7 +201,7 @@ Regardez le sexe dans le tableau ci-dessus : 66 % des patients PTH sont des fe
 
 Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au seul hasard. (Dans les vraies cohortes de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.) C'est le premier problème des valeurs p dans le tableau 1 : sur un long tableau, des différences dues au hasard apparaissent.
 
-Le second problème est qu'une valeur p mélange *la taille* d'une différence et *le nombre de patients*. Avec 6,000 patients, une différence insignifiante donne p < 0.001. Avec 30, une grande différence ne le donne pas.
+Le second problème est qu'une valeur p mélange *la taille* d'une différence et *le nombre de patients*. Avec 6,000 patients, une différence négligeable (minime) donne p < 0.001. Avec 30, une grande différence ne le donne pas.
 
 La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'écart-type, quelle que soit la taille de l'échantillon. Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable.
 
@@ -253,7 +253,7 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Le sexe (SMD 0.31) et l'IMC (0.33) sont les nets déséquilibres. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables.
+Le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les SMD diffèrent légèrement
@@ -263,7 +263,7 @@ Le sexe (SMD 0.31) et l'IMC (0.33) sont les nets déséquilibres. L'âge (0.10),
 
 **Laquelle faut-il rapporter ?**
 
-- **Cohortes appariées ou pondérées** (études avec score de propension, par exemple une étude appariée sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
+- **Cohortes appariées ou pondérées** (études avec score de propension, par exemple une étude appariée portant sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
 - **Autres comparaisons observationnelles** : beaucoup de revues attendent encore des valeurs p. Ajoutez les SMD, et discutez les différences selon leur taille, pas selon leur valeur p.
 
 ## Données manquantes {#missing}
@@ -346,7 +346,7 @@ doc.save("scratch/table1-python.docx")
 ```
 :::
 
-Dans Word, adaptez la mise en forme au style de la revue : en général sans lignes verticales, et avec une note de bas de tableau qui indique quelles statistiques sont montrées (« mean (SD) ; median (IQR) ; n (%) ») et quels tests ont produit les valeurs p.
+Dans Word, adaptez la mise en forme au style de la revue : en général sans lignes verticales, et avec une note de bas de tableau qui indique quelles statistiques sont montrées (« mean (SD); median (IQR); n (%) ») et quels tests ont produit les valeurs p.
 
 ```{r}
 #| include: false
