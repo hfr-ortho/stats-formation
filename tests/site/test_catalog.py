@@ -349,3 +349,12 @@ SECTION_LINKS = {
 def test_links_into_the_survival_pages_land_on_the_section_they_promise(site, page, targets):
     hrefs = {target(page, a["href"]) for a in load(page).select("main a[href]")}
     assert [target for target in targets if target not in hrefs] == []
+
+
+def test_phase_2b_minors_stay_fixed(site):
+    assert "within 30 days of admission" in text_of(section("catalog/04-describe-one-group.html", "proportion"))
+    mann_whitney = text_of(section("catalog/06-two-unpaired-groups.html", "mann-whitney"))
+    assert "three-quarters of the way between a 4 and a 5" in mann_whitney
+    assert "differ between a hamstring graft" in text_of(section("catalog/06-two-unpaired-groups.html", "fisher-chi-square"))
+    assert "square root of the average of the two variances" in text_of(load("catalog/07-two-paired-groups.html"))
+    assert "prop.test(rts_table, correct = FALSE)$conf.int" in code_of(section("catalog/06-two-unpaired-groups.html", "exercises"))

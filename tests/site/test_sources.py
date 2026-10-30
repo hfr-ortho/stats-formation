@@ -471,5 +471,5 @@ def test_messages_are_hidden_by_knitr_for_every_page():
 
 def test_pages_use_the_swiss_discharge_labels():
     """cohort.csv says "rehabilitation clinic"; code still selecting "facility" would silently match nothing."""
-    offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"facilit", f.read_text(encoding="utf-8"))]
+    offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"\bfacilit(?:y|ies)\b", f.read_text(encoding="utf-8"))]
     assert offenders == [], "Use the discharge label 'rehabilitation clinic' in: " + ", ".join(offenders)
