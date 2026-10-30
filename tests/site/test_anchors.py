@@ -21,6 +21,8 @@ def fragment_links_without_fixed_ids(path):
             continue
         file, fragment = link.split("#", 1)
         dest = path if not file else (path.parent / file).resolve()
+        if dest.exists() and ".coming-soon" in dest.read_text(encoding="utf-8"):
+            continue  # a stub carries no fixed IDs yet: its translation brings them
         if not dest.exists() or fragment not in fixed_ids(dest):
             missing.append(link)
     return missing

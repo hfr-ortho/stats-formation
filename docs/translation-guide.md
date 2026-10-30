@@ -39,6 +39,17 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - THA/TKA are PTH/PTG in prose; say once per page that the code says `THA`, `TKA`.
 - Stubs: a translated page loses "(en préparation)" and its `.coming-soon` callout.
 
+## False friends and fixed choices (French)
+
+- Never "évidence" for evidence: write "preuve" ("pas de preuve claire").
+- Never "valider" for commit: write "faire un commit" ("tout ce qui entre dans un commit").
+- Never "détails" for details: write "informations" ("informations sur le patient").
+- Never "éventuellement", "consistant", "supporter", "adresser" or "réaliser que" in their English senses (possibly, consistent, to support, to address, to realize).
+- "dépôt" only for a repository. A submission (ethics) is a "soumission".
+- Practice data and files are "d'exercice", never "d'entraînement". A PROM takes no plural -s.
+- Ethics: "autorisation" and "demande d'autorisation" (LRH, ORH), not "approbation" or "demande d'éthique".
+- In `tests-a-z`, keep each test's English name in the first cell wherever it differs from the French, in italics in parentheses: "Test t pour échantillons appariés (*paired t test*)".
+
 ## Page procedure: self-check before you stop
 
 1. `uv run pytest tests/site/test_translations.py tests/site/test_anchors.py -q` passes (code, numbers, Methods/Results, page 18, structure, steps, headings, "vous", engine).

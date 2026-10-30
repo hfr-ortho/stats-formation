@@ -503,6 +503,68 @@ def test_glossary_has_a_french_term_for_every_row():
     assert [r["en"] for r in rows if not r["en"].strip() or not r["fr"].strip()] == []
 
 
+# ---------------------------------------------------------------- typography and comments
+
+PLAIN_SPACE_BEFORE = re.compile(r" [;:?!%»]")
+PLAIN_SPACE_AFTER = re.compile(r"« ")
+TABLE_SEPARATOR = re.compile(r"^\|[\s:|-]+\|?\s*$")
+TRANSLATED_KEYS = re.compile(r"^(title|subtitle|description):\s*(.*)$")
+
+
+def typography_problems(tr: str) -> list[str]:
+    """Plain spaces where French wants a non-breaking one (before ; : ? ! % » and after «), in translated
+    prose only. Code, inline code, URLs, link targets, `:::` fences, table separator rows, {attributes},
+    Methods/Results paragraphs and front-matter keys are left alone."""
+    reported = {line for p in reported_paragraphs(tr) for line in p.split("\n")}
+    lines = [m.group(2) for l in front_matter(tr).split("\n") if (m := TRANSLATED_KEYS.match(l))]
+    lines += [l for l in prose_lines(tr) if l not in reported]
+    problems = []
+    for line in lines:
+        if line.startswith(":::") or TABLE_SEPARATOR.match(line):
+            continue
+        text = re.sub(r"<!--.*?-->", " ", line)
+        text = re.sub(r"`[^`\n]*`", "``", text)
+        text = re.sub(r"\]\([^)\s]*\)", "]", text)
+        text = re.sub(r"<?https?://[^\s>)]*>?", "URL", text)
+        text = re.sub(r"\{[^{}\n]*\}", "", text)
+        found = PLAIN_SPACE_BEFORE.findall(text) + PLAIN_SPACE_AFTER.findall(text)
+        if found:
+            problems.append(f"{line.strip()[:70]!r}")
+    return problems
+
+
+def test_french_typography():
+    found = {str(tr.relative_to(ROOT)): typography_problems(tr.read_text(encoding="utf-8"))
+             for _, tr in translated_pages("fr")}
+    assert {k: v for k, v in found.items() if v} == {}
+
+
+def comment_lines(code: str) -> list[str]:
+    return [c for l in code.splitlines() if not l.lstrip().startswith("#|") and (c := split_comment(l)[1])]
+
+
+def has_words(comment: str) -> bool:
+    """False for a comment that holds only numbers or code (`# 69`, `# mean(x)`): those read the same in French."""
+    text = re.sub(r"`[^`]*`|[\w.]+\([^)]*\)|[\w.]+\$\w+|[\w.]+::\w+", " ", comment.lstrip("# "))
+    return bool(re.search(r"[A-Za-zÀ-ÿ]{3,}", text))
+
+
+def comment_problems(en: str, tr: str) -> list[str]:
+    a, b = fences(en), fences(tr)
+    problems = []
+    for i, ((i1, b1), (i2, b2)) in enumerate(zip(a, b), 1):
+        if i1.startswith("{mermaid") or (EXEC_INFO.match(i1) and is_hidden(split_options(b1)[0])):
+            continue
+        for x, y in zip(comment_lines(b1), comment_lines(b2)):
+            if x == y and has_words(y):
+                problems.append(f"block {i}: comment left in English: {y!r}")
+    return problems
+
+
+def test_visible_comments_are_translated():
+    check_pages(comment_problems)
+
+
 # ---------------------------------------------------------------- rule tests
 
 PAGE_EN = """---
@@ -781,3 +843,30 @@ def test_page_checks_bite_on_a_broken_page(tmp_path):
     assert [tr.name for _, tr in pairs] == ["a.qmd"]
     en, tr = pairs[0]
     assert code_problems(en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8"))
+
+
+def test_typography_rule_wants_non_breaking_spaces_in_prose_only(tmp_path):
+    ok = "---\ntitle: \"Un titre\u00a0: oui\"\nengine: knitr\n---\n\nVoici\u00a0: 95\u00a0%, \u00ab\u00a0oui\u00a0\u00bb ?\n"
+    ok = ok.replace("oui\u00a0\u00bb ?", "oui\u00a0\u00bb\u00a0?")
+    assert typography_problems(ok) == []
+    for bad in ["Voici : 5", "Soit 95 % des cas", "dit \u00ab oui\u00a0\u00bb", "dit \u00ab\u00a0oui \u00bb", "Vraiment ?", "Non !", "a ; b"]:
+        assert typography_problems(f"---\ntitle: T\n---\n\n{bad}\n") != [], bad
+    assert typography_problems('---\ntitle: "Un titre : oui"\n---\n\nx\n') != []
+
+
+def test_typography_rule_skips_code_urls_fences_and_reporting():
+    page = "---\ntitle: T\n---\n\n```r\nx <- 1 : 2   # a : b\n```\n\nVoir `a : b` et <https://x.ch/a> et [lien](a.qmd#x).\n\n::: {.callout-note collapse=\"true\"}\n:::\n\n|------|------|\n\n> **Results:** mean 5 : p = 0.5 ?\n"
+    assert typography_problems(page) == []
+
+
+def test_comment_rule_fails_english_comments_but_not_numbers_or_code():
+    en = "```r\nx <- 1   # once\ny <- 2   # 69\nz <- 3   # mean(x)\nw <- 4   # the mean\n```\n"
+    fr_bad = "```r\nx <- 1   # once\ny <- 2   # 69\nz <- 3   # mean(x)\nw <- 4   # la moyenne\n```\n"
+    fr_good = fr_bad.replace("# once", "# une seule fois")
+    assert comment_problems(en, fr_good) == []
+    assert len(comment_problems(en, fr_bad)) == 1 and "once" in comment_problems(en, fr_bad)[0]
+
+
+def test_comment_rule_ignores_hidden_chunks():
+    en = "```{r}\n#| include: false\nx <- 1   # once\n```\n"
+    assert comment_problems(en, en) == []
