@@ -113,6 +113,7 @@ MOVED_SECTIONS = {
     ("catalog/10-association.html", "pearson"): ("data/hip_preservation_imaging.csv", "torsion_budin_deg"),
     ("catalog/11-predict-from-one.html", "logistic-regression"): ("data/hip_fracture.csv", "hours_to_surgery"),
     ("catalog/11-predict-from-one.html", "cox"): ("data/acl_cohort.csv", "tibial_slope_deg"),
+    ("catalog/12-predict-from-several.html", "multiple-logistic-regression"): ("data/acl_cohort.csv", "rts_12mo"),
 }
 
 
@@ -122,6 +123,11 @@ def test_moved_sections_teach_from_their_new_data(site, cell, source):
     code = code_of(section(*cell))
     assert code.count(f'read_csv("{dataset}"') >= 2, f"{cell}: R and Python should both read {dataset}"
     assert column in code, f"{cell}: the code never uses {column}"
+
+
+def test_events_rule_counts_the_smaller_outcome_group(site):
+    warning = text_of(section("catalog/12-predict-from-several.html", "multiple-logistic-regression").select_one("div.callout-warning"))
+    assert "smaller outcome group" in warning and "15 of 350" in warning
 
 
 def test_pearson_warning_says_correlation_is_not_agreement(site):

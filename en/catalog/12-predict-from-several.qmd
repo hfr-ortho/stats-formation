@@ -21,9 +21,9 @@ Outcomes rarely depend on one thing. Heavier patients may take longer to operate
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: the joint replacement cohort and PROMs, and ACL reconstructions for logistic regression. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ## Multiple linear regression {#multiple-linear-regression}
@@ -366,13 +366,13 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 
 ## Multiple logistic regression {#multiple-logistic-regression}
 
-**The question:** Which patient factors predict a complication within 90 days?
+**The question:** Which factors predict return to sport at 12 months?
 
 ### When to use it
 
 - The outcome is **yes/no**, and you want the **odds ratio** for each of several predictors, adjusted for the others.
 - The assumptions of [simple logistic regression](11-predict-from-one.qmd#logistic-regression) still apply, for every measured predictor.
-- **Events limit predictors.** A common rule of thumb is at least 10 patients **with** the outcome per predictor. With 51 complications, this model can afford about five.
+- **Events limit predictors.** A common rule of thumb is at least 10 patients in the smaller outcome group per predictor. Here 173 returned and 177 didn't, so this model can afford about 17.
 - If the outcome is time until an event → [Cox regression](#cox).
 
 ### Look at the data first
@@ -384,14 +384,13 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 #| warning: false
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
-  mutate(age_10 = age / 10,   # per 10 years
-         bmi_5 = bmi / 5)     # per 5 kg/m²
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE) |>
+  mutate(age_10 = age / 10)   # per 10 years
 
-cohort |>
-  group_by(complication_90d) |>
-  summarise(n = n(), age = mean(age), bmi = mean(bmi), asa = mean(asa),
-            diabetes_percent = 100 * mean(diabetes), male_percent = 100 * mean(sex == "Male"))
+acl |>
+  group_by(rts_12mo) |>
+  summarise(n = n(), age = mean(age), tegner_preinjury = mean(tegner_preinjury),
+            bptb_percent = 100 * mean(graft == "BPTB"))
 ```
 
 ## Python
@@ -401,17 +400,16 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 
-cohort = pd.read_csv("data/cohort.csv")
-cohort["age_10"] = cohort["age"] / 10   # per 10 years
-cohort["bmi_5"] = cohort["bmi"] / 5     # per 5 kg/m²
-cohort["male"] = (cohort["sex"] == "Male").astype(int)
+acl = pd.read_csv("data/acl_cohort.csv")
+acl["age_10"] = acl["age"] / 10   # per 10 years
+acl["bptb"] = (acl["graft"] == "BPTB").astype(int)
 
-print(cohort.groupby("complication_90d")[["age", "bmi", "asa", "diabetes", "male"]].mean())
-print(cohort["complication_90d"].value_counts())
+print(acl.groupby("rts_12mo")[["age", "tegner_preinjury", "bptb"]].mean())
+print(acl["rts_12mo"].value_counts())
 ```
 :::
 
-The 51 patients with a complication were older on average (71.2 against 65.0 years), with a higher BMI (32.3 against 30.3) and a slightly higher ASA class. Diabetes was a little more common (11.8% against 9.1%), and men a little less common (39.2% against 43.2%).
+The 173 who returned were younger on average (27.1 against 30.7 years), with a higher Tegner level before the injury (7.0 against 6.0), and more had a BPTB graft (48.6% against 25.4%).
 
 ### Run it
 
@@ -419,44 +417,45 @@ The 51 patients with a complication were older on average (71.2 against 65.0 yea
 ## R
 
 ```{r}
-complication_model <- glm(complication_90d ~ age_10 + bmi_5 + asa + diabetes + sex,
-                          family = binomial, data = cohort)
-summary(complication_model)
+rts_model <- glm(rts_12mo ~ age_10 + sex + graft + tegner_preinjury,
+                 family = binomial, data = acl)
+summary(rts_model)
 ```
 
 ## Python
 
 ```{python}
-complication_model = smf.logit("complication_90d ~ age_10 + bmi_5 + asa + diabetes + sex",
-                               data=cohort).fit(disp=False)
-print(complication_model.summary())
+rts_model = smf.logit("rts_12mo ~ age_10 + sex + graft + tegner_preinjury",
+                      data=acl).fit(disp=False)
+print(rts_model.summary())
 ```
 :::
 
 ```{python}
 #| include: false
-params, errors = complication_model.params, complication_model.bse
-chk = {"age": float(params["age_10"]), "bmi": float(params["bmi_5"]), "asa": float(params["asa"]),
-       "diabetes": float(params["diabetes"]), "male": float(params["sex[T.Male]"]),
-       "se_age": float(errors["age_10"]), "se_bmi": float(errors["bmi_5"])}
+params, errors = rts_model.params, rts_model.bse
+chk = {"age": float(params["age_10"]), "tegner": float(params["tegner_preinjury"]),
+       "male": float(params["sex[T.Male]"]), "hamstring": float(params["graft[T.hamstring]"]),
+       "quadriceps": float(params["graft[T.quadriceps]"]),
+       "se_age": float(errors["age_10"]), "se_tegner": float(errors["tegner_preinjury"])}
 ```
 
 ```{r}
 #| include: false
-complication_coef <- summary(complication_model)$coefficients
-check_agree(list(age = complication_coef["age_10", "Estimate"], bmi = complication_coef["bmi_5", "Estimate"],
-                 asa = complication_coef["asa", "Estimate"], diabetes = complication_coef["diabetes", "Estimate"],
-                 male = complication_coef["sexMale", "Estimate"], se_age = complication_coef["age_10", "Std. Error"],
-                 se_bmi = complication_coef["bmi_5", "Std. Error"]),
+rts_coef <- summary(rts_model)$coefficients
+check_agree(list(age = rts_coef["age_10", "Estimate"], tegner = rts_coef["tegner_preinjury", "Estimate"],
+                 male = rts_coef["sexMale", "Estimate"], hamstring = rts_coef["grafthamstring", "Estimate"],
+                 quadriceps = rts_coef["graftquadriceps", "Estimate"], se_age = rts_coef["age_10", "Std. Error"],
+                 se_tegner = rts_coef["tegner_preinjury", "Std. Error"]),
             reticulate::py$chk, tol = 1e-4)   # glm() stops once the deviance settles, a step before statsmodels does
 ```
 
 ### Read the output
 
-- Each **coefficient** is the change in the log odds of a complication per unit of that predictor, adjusted for the others; the next step turns them into odds ratios.
-- **age_10: p < 0.001** and **bmi_5: p = 0.029:** age and BMI each predict complications, even allowing for the other.
-- **asa (p = 0.592), diabetes (p = 0.789), sexMale (p = 0.849):** no clear evidence for these, once age and BMI are in the model.
-- ASA class is entered as a number (1 to 4), so it counts as one predictor with one odds ratio per class. As four separate groups it would use three of the model's five or so predictors.
+- Each **coefficient** is the change in the log odds of returning to sport per unit of that predictor, adjusted for the others; the next step turns them into odds ratios.
+- **age_10: p = 0.031**, **tegner_preinjury** and **both grafts: p < 0.001:** each predicts return to sport, even allowing for the others.
+- **sexMale (p = 0.195):** no clear evidence for sex, once the others are in the model.
+- graft has three levels, so it takes two odds ratios, each against the first level (BPTB). Four predictors, five coefficients.
 
 ### Effect size and 95% CI
 
@@ -464,34 +463,34 @@ check_agree(list(age = complication_coef["age_10", "Estimate"], bmi = complicati
 ## R
 
 ```{r}
-exp(cbind(odds_ratio = coef(complication_model), confint(complication_model)))   # profile CIs
+exp(cbind(odds_ratio = coef(rts_model), confint(rts_model)))   # profile CIs
 ```
 
 ## Python
 
 ```{python}
-odds_ratios = np.exp(pd.concat([complication_model.params, complication_model.conf_int()], axis=1))   # Wald CIs
+odds_ratios = np.exp(pd.concat([rts_model.params, rts_model.conf_int()], axis=1))   # Wald CIs
 odds_ratios.columns = ["odds_ratio", "low", "high"]
 print(odds_ratios)
 ```
 :::
 
-The **adjusted odds ratios** are the effect sizes: 2.08 per 10 years of age (95% CI 1.46 to 3.02) and 1.39 per 5 kg/m² of BMI (95% CI 1.03 to 1.86). The CIs for ASA class (1.16 per class, 0.68 to 2.00), diabetes (0.88, 0.31 to 2.15) and male sex (0.94, 0.51 to 1.72) are wide.
+The **adjusted odds ratios** are the effect sizes: 0.71 per 10 years of age (95% CI 0.51 to 0.96) and 1.42 per Tegner level (95% CI 1.22 to 1.67). For a hamstring graft the odds ratio is 0.41 (0.25 to 0.69) and for a quadriceps graft 0.33 (0.17 to 0.63), both compared with BPTB. The CI for male sex (0.73, 0.46 to 1.17) is wide.
 
 ### How to report it
 
-> **Methods:** Complications within 90 days were modeled with multiple logistic regression on age (per 10 years), BMI (per 5 kg/m²), ASA class, diabetes and sex, chosen before the analysis.
+> **Methods:** Return to sport at 12 months was modeled with multiple logistic regression on age (per 10 years), sex, graft and pre-injury Tegner level, chosen before the analysis.
 >
-> **Results:** Complications followed 51 of 600 procedures (8.5%). In the multivariable model, the odds ratios for a complication were 2.08 per 10 years of age (95% CI 1.46 to 3.02), 1.39 per 5 kg/m² of BMI (95% CI 1.03 to 1.86), 1.16 per ASA class (95% CI 0.68 to 2.00), 0.88 for diabetes (95% CI 0.31 to 2.15) and 0.94 for male sex (95% CI 0.51 to 1.72).
+> **Results:** At 12 months, 173 of 350 reconstructions (49.4%) were followed by a return to the pre-injury sport. In the multivariable model, the odds ratios for return to sport were 0.71 per 10 years of age (95% CI 0.51 to 0.96), 1.42 per Tegner level (95% CI 1.22 to 1.67), 0.41 for a hamstring graft (95% CI 0.25 to 0.69) and 0.33 for a quadriceps graft (95% CI 0.17 to 0.63), both compared with BPTB, and 0.73 for male sex (95% CI 0.46 to 1.17).
 
 ::: {.callout-warning}
-## ⚠️ Watch out: too few events
-With 51 complications, five predictors is already at the limit. Add more and the odds ratios become unstable: their CIs balloon, and some may shoot off toward 0 or infinity. If you have more candidate predictors than events allow, choose the most important ones clinically, in advance; don't let p-values choose them for you.
+## ⚠️ Watch out: the smaller group sets the limit, and predictors must come first
+The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let p-values choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: profile and Wald CIs, again
-As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` profiles the likelihood and statsmodels uses Wald CIs. With few events the two can differ in the second decimal: for diabetes, 0.31 to 2.15 in R and 0.33 to 2.30 in Python. Say which you used.
+As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` profiles the likelihood and statsmodels uses Wald CIs. With few events the two can differ in the second decimal: for the quadriceps graft, 0.17 to 0.63 in R and 0.17 to 0.64 in Python. Say which you used.
 :::
 
 ## Cox regression {#cox}
@@ -618,20 +617,21 @@ As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default convergence 
 by_procedure <- cohort |> group_by(procedure) |> summarise(mean = mean(op_time_min), sd = sd(op_time_min))
 joint_ci <- confint(joint_recovery)
 joint_wald <- joint_coef[, "Estimate"] + outer(joint_coef[, "Std. Error"], c(-1, 1) * qt(0.975, nrow(recovery_data) - 6))
-complication_or <- exp(coef(complication_model))
-complication_ci <- exp(confint(complication_model))
-complication_wald <- exp(confint.default(complication_model))
-by_complication <- cohort |> group_by(complication_90d) |>
-  summarise(n = n(), age = mean(age), bmi = mean(bmi), diabetes = 100 * mean(diabetes), male = 100 * mean(sex == "Male"))
+rts_or <- exp(coef(rts_model))
+rts_ci <- exp(confint(rts_model))
+rts_wald <- exp(confint.default(rts_model))
+by_rts <- acl |> group_by(rts_12mo) |>
+  summarise(n = n(), age = mean(age), tegner = mean(tegner_preinjury), bptb = 100 * mean(graft == "BPTB"))
 by_implant <- cohort |> group_by(implant) |> summarise(n = n(), revised = sum(revised), age = mean(age), male = 100 * mean(sex == "Male"), bmi = mean(bmi))
 adjusted_p <- summary(adjusted_cox)$coefficients[, "Pr(>|z|)"]
 unadjusted_hr <- exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))
 ex_surgeon <- lm(op_time_min ~ bmi + age + sex + procedure + surgeon, data = cohort)
 ex_surgeon_test <- anova(time_model, ex_surgeon)
-ex_rehab <- glm(I(discharge == "rehabilitation clinic") ~ age_10 + sex + asa, family = binomial, data = cohort)
-ex_rehab_ci <- exp(confint(ex_rehab))
-ex_line <- glm(complication_90d ~ age, family = binomial, data = cohort)
-ex_bend <- glm(complication_90d ~ ns(age, df = 3), family = binomial, data = cohort)
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
+ex_fail <- glm(failure_2y ~ tibial_slope_deg + age_10, family = binomial, data = acl)
+ex_fail_ci <- exp(confint(ex_fail))
+ex_line <- glm(death_30d ~ hours_to_surgery, family = binomial, data = hip_fracture)
+ex_bend <- glm(death_30d ~ ns(hours_to_surgery, df = 3), family = binomial, data = hip_fracture)
 ex_bend_test <- anova(ex_line, ex_bend, test = "LRT")
 stopifnot(
   sum(table(cohort$patient_id) == 2) == 80, nrow(cohort) == 600,
@@ -651,15 +651,18 @@ stopifnot(
   round(log(2) * joint_coef["tau_diff", "Estimate"]) == 19, round(log(2) * joint_ci["tau_diff", ]) == c(11, 28),
   round(bend_test$F[2], 2) == 0.58, round(bend_test$`Pr(>F)`[2], 3) == 0.562,
   bend_test$Df[2] == 2, bend_test$Res.Df[2] == 593,
-  sum(cohort$complication_90d) == 51, round(100 * mean(cohort$complication_90d), 1) == 8.5,
-  by_complication$n == c(549, 51), round(by_complication$age, 1) == c(65.0, 71.2), round(by_complication$bmi, 1) == c(30.3, 32.3),
-  round(by_complication$diabetes, 1) == c(9.1, 11.8), round(by_complication$male, 1) == c(43.2, 39.2),
-  complication_coef["age_10", "Pr(>|z|)"] < 0.001, round(complication_coef["bmi_5", "Pr(>|z|)"], 3) == 0.029,
-  round(complication_coef[c("asa", "diabetes", "sexMale"), "Pr(>|z|)"], 3) == c(0.592, 0.789, 0.849),
-  round(complication_or[c("age_10", "bmi_5", "asa", "diabetes", "sexMale")], 2) == c(2.08, 1.39, 1.16, 0.88, 0.94),
-  round(complication_ci["age_10", ], 2) == c(1.46, 3.02), round(complication_ci["bmi_5", ], 2) == c(1.03, 1.86),
-  round(complication_ci["asa", ], 2) == c(0.68, 2.00), round(complication_ci["diabetes", ], 2) == c(0.31, 2.15),
-  round(complication_ci["sexMale", ], 2) == c(0.51, 1.72), round(complication_wald["diabetes", ], 2) == c(0.33, 2.30),
+  sum(acl$rts_12mo) == 173, sum(acl$rts_12mo == 0) == 177, round(100 * mean(acl$rts_12mo), 1) == 49.4,
+  by_rts$n == c(177, 173), round(by_rts$age, 1) == c(30.7, 27.1), round(by_rts$tegner, 1) == c(6.0, 7.0),
+  round(by_rts$bptb, 1) == c(25.4, 48.6),
+  round(rts_coef["age_10", "Pr(>|z|)"], 3) == 0.031, round(rts_coef["sexMale", "Pr(>|z|)"], 3) == 0.195,
+  rts_coef[c("tegner_preinjury", "grafthamstring", "graftquadriceps"), "Pr(>|z|)"] < 0.001,
+  round(rts_or[c("age_10", "sexMale", "grafthamstring", "graftquadriceps", "tegner_preinjury")], 2) == c(0.71, 0.73, 0.41, 0.33, 1.42),
+  round(rts_ci["age_10", ], 2) == c(0.51, 0.96), round(rts_ci["sexMale", ], 2) == c(0.46, 1.17),
+  round(rts_ci["grafthamstring", ], 2) == c(0.25, 0.69), round(rts_ci["graftquadriceps", ], 2) == c(0.17, 0.63),
+  round(rts_ci["tegner_preinjury", ], 2) == c(1.22, 1.67), round(rts_wald["graftquadriceps", ], 2) == c(0.17, 0.64),
+  sum(acl$graft_failure == 1 & acl$followup_years <= 1) == 6,
+  sum(acl$rts_12mo[acl$graft_failure == 1 & acl$followup_years <= 1]) == 0,
+  sum(acl$failure_2y) == 15, sum(acl$graft_failure) == 31, nrow(acl) == 350,
   by_implant$n == c(246, 217, 137), by_implant$revised == c(25, 18, 38), sum(cohort$revised) == 81,
   round(range(by_implant$age)) == c(65, 66), round(range(by_implant$male)) == c(42, 44), round(range(by_implant$bmi)) == c(30, 31),
   round(adjusted_hr[, "exp(coef)"], 2) == c(0.83, 3.19, 1.22, 0.51, 1.03),
@@ -678,13 +681,11 @@ stopifnot(
   round(coef(ex_surgeon)[["bmi"]], 2) == 1.27, round(confint(ex_surgeon)["bmi", ], 2) == c(1.06, 1.49),
   round(coef(ex_surgeon)[c("surgeonS2", "surgeonS3")], 2) == c(0.07, 0.60),
   round(confint(ex_surgeon)["surgeonS2", ], 2) == c(-2.57, 2.72), round(confint(ex_surgeon)["surgeonS3", ], 2) == c(-2.28, 3.48),
-  sum(cohort$discharge == "rehabilitation clinic") == 30,
-  round(exp(coef(ex_rehab))[c("age_10", "sexMale", "asa")], 2) == c(2.08, 1.36, 1.06),
-  round(ex_rehab_ci["age_10", ], 2) == c(1.34, 3.31), round(ex_rehab_ci["sexMale", ], 2) == c(0.63, 2.89),
-  round(ex_rehab_ci["asa", ], 2) == c(0.58, 1.94),
-  round(ex_bend_test$Deviance[2], 2) == 3.49, ex_bend_test$Df[2] == 2, round(ex_bend_test$`Pr(>Chi)`[2], 3) == 0.175,
-  round(exp(10 * coef(ex_line)[["age"]]), 2) == 2.12, round(exp(10 * confint(ex_line)["age", ]), 2) == c(1.53, 2.98),
-  sum(cohort$age >= 80) == 53, sum(cohort$complication_90d[cohort$age >= 80]) == 14
+  round(exp(coef(ex_fail))[c("tibial_slope_deg", "age_10")], 2) == c(1.26, 0.49),
+  round(ex_fail_ci["tibial_slope_deg", ], 2) == c(1.01, 1.59), round(ex_fail_ci["age_10", ], 2) == c(0.19, 1.04),
+  round(ex_bend_test$Deviance[2], 2) == 2.45, ex_bend_test$Df[2] == 2, round(ex_bend_test$`Pr(>Chi)`[2], 3) == 0.294,
+  round(exp(24 * coef(ex_line)[["hours_to_surgery"]]), 2) == 1.50, round(exp(24 * confint(ex_line)["hours_to_surgery", ]), 2) == c(1.21, 1.85),
+  sum(hip_fracture$death_30d[hip_fracture$hours_to_surgery > 72]) == 8, sum(hip_fracture$hours_to_surgery > 72) == 44
 )
 ```
 
@@ -725,37 +726,36 @@ print(surgeon_table.loc[["bmi", "surgeon[T.S2]", "surgeon[T.S3]"]])
 There's no clear evidence that adding surgeon improves the model, and BMI's coefficient doesn't change.
 :::
 
-**2.** A colleague wants to know which patient factors predict discharge to a rehabilitation clinic rather than home. Only 30 patients went to a rehabilitation clinic. Which model would you use, how many predictors can it take, and what do you find with age, sex and ASA class?
+**2.** A colleague wants to know which factors predict graft failure within 2 years. Only 15 grafts failed. Which model would you use, how many predictors can it take, and what do you find with tibial slope and age?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The outcome is yes/no: **multiple logistic regression**. With 30 events, the rule of thumb allows about three predictors, so choose them in advance; age, sex and ASA class are reasonable choices.
+The outcome is yes/no: **multiple logistic regression**. With 15 events, the rule of thumb allows one predictor, two at a stretch, and the CIs show the strain.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-rehab_model <- glm(I(discharge == "rehabilitation clinic") ~ age_10 + sex + asa, family = binomial, data = cohort)
-exp(cbind(odds_ratio = coef(rehab_model), confint(rehab_model)))
+fail_model <- glm(failure_2y ~ tibial_slope_deg + age_10, family = binomial, data = acl)
+exp(cbind(odds_ratio = coef(fail_model), confint(fail_model)))
 ```
 
 ## Python
 
 ```{python}
-cohort["rehab"] = (cohort["discharge"] == "rehabilitation clinic").astype(int)
-rehab_model = smf.logit("rehab ~ age_10 + sex + asa", data=cohort).fit(disp=False)
-rehab_ors = np.exp(pd.concat([rehab_model.params, rehab_model.conf_int()], axis=1))
-rehab_ors.columns = ["odds_ratio", "low", "high"]
-print(rehab_ors)
+fail_model = smf.logit("failure_2y ~ tibial_slope_deg + age_10", data=acl).fit(disp=False)
+fail_ors = np.exp(pd.concat([fail_model.params, fail_model.conf_int()], axis=1))
+fail_ors.columns = ["odds_ratio", "low", "high"]
+print(fail_ors)
 ```
 :::
 
-> **Results:** The odds ratios for discharge to a rehabilitation clinic were 2.08 per 10 years of age (95% CI 1.34 to 3.31), 1.36 for male sex (95% CI 0.63 to 2.89) and 1.06 per ASA class (95% CI 0.58 to 1.94).
+> **Results:** The odds ratios for graft failure within 2 years were 1.26 per degree of posterior tibial slope (95% CI 1.01 to 1.59) and 0.49 per 10 years of age (95% CI 0.19 to 1.04).
 
-The CIs are R's profile CIs. Only age's CI excludes 1.
+The CIs are R's profile CIs. With time-to-event data, Cox regression uses all 31 failures ([page 11](11-predict-from-one.qmd#cox)).
 :::
 
-**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), complications seemed to jump after age 80. Fit age as a natural cubic spline (3 degrees of freedom) in the logistic regression, compare it with the straight line, and write the Results sentence.
+**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), deaths seemed to jump after 72 hours. Fit the time to surgery as a natural cubic spline (3 degrees of freedom) in the logistic regression, compare it with the straight line, and write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -764,25 +764,27 @@ The CIs are R's profile CIs. Only age's CI excludes 1.
 ## R
 
 ```{r}
-line_model <- glm(complication_90d ~ age, family = binomial, data = cohort)
-bend_model <- glm(complication_90d ~ ns(age, df = 3), family = binomial, data = cohort)
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
+line_model <- glm(death_30d ~ hours_to_surgery, family = binomial, data = hip_fracture)
+bend_model <- glm(death_30d ~ ns(hours_to_surgery, df = 3), family = binomial, data = hip_fracture)
 anova(line_model, bend_model, test = "LRT")   # likelihood ratio test
 ```
 
 ## Python
 
 ```{python}
-age_knots = list(cohort["age"].quantile([1/3, 2/3]))
-age_low, age_high = cohort["age"].min(), cohort["age"].max()
-line_model = smf.logit("complication_90d ~ age", data=cohort).fit(disp=False)
-bend_model = smf.logit("complication_90d ~ cr(age, knots=age_knots, lower_bound=age_low, upper_bound=age_high,"
-                       " constraints='center')", data=cohort).fit(disp=False)
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
+hours_knots = list(hip_fracture["hours_to_surgery"].quantile([1/3, 2/3]))
+hours_low, hours_high = hip_fracture["hours_to_surgery"].min(), hip_fracture["hours_to_surgery"].max()
+line_model = smf.logit("death_30d ~ hours_to_surgery", data=hip_fracture).fit(disp=False)
+bend_model = smf.logit("death_30d ~ cr(hours_to_surgery, knots=hours_knots, lower_bound=hours_low,"
+                       " upper_bound=hours_high, constraints='center')", data=hip_fracture).fit(disp=False)
 lr = 2 * (bend_model.llf - line_model.llf)    # likelihood ratio statistic
 print(lr, stats.chi2.sf(lr, df=2))           # 2 extra degrees of freedom
 ```
 :::
 
-> **Results:** Comparing a natural cubic spline for age with a straight line gave a likelihood ratio χ² of 3.49 (df = 2, p = 0.175). With age modeled as linear, the odds ratio for a complication per 10 years of age was 2.12 (95% CI 1.53 to 2.98).
+> **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-The jump after 80 rests on 14 complications in 53 patients, too few to pin down a curve.
+The jump after 72 hours rests on 8 deaths in 44 patients, too few to pin down a curve.
 :::
