@@ -61,6 +61,8 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - "the practice's data" and "practice data" are data to practice on: "données d'exercice", never "du cabinet". A clinic ("the practice records it") is "le service".
 - A graft's type or tissue is "greffon" (type de greffon, greffon aux ischio-jambiers); the procedure and its failure are "greffe" (échec de la greffe).
 - Translate only what the English page says; don't bring in detail from the design spec (the trial's injury is "lésion du médio-pied", not a specific named injury).
+- "chez" is for people ("chez les patients"); for things, use "pour" ("pour les prothèses"), never "chez les prothèses".
+- "par chance" means luckily; "by chance" is "par hasard".
 
 ## Page procedure: self-check before you stop
 

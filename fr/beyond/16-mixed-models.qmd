@@ -16,9 +16,9 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Les PROM (mesures des résultats rapportés par le patient) sont recueillis à plusieurs visites, et les patients en manquent certaines. La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé des scores répétés avec l'ANOVA à mesures répétées, qui n'utilise que les patients mesurés à chaque visite. Un **modèle linéaire mixte** utilise tous les scores de tous les patients, et répond aux questions qu'une étude de PROM pose d'habitude : de combien les patients s'améliorent-ils, à partir de quand, et la récupération diffère-t-elle entre les groupes ?
+Les PROM (mesures des résultats rapportés par le patient) sont recueillis à plusieurs visites, et les patients en manquent certaines. La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé des scores répétés avec l'ANOVA à mesures répétées, qui n'utilise que les patients mesurés à chaque visite. Un **modèle linéaire mixte** utilise tous les scores de tous les patients, et répond aux questions qu'une étude de PROM pose d'habitude : de combien les patients s'améliorent-ils, à quelle échéance, et la récupération diffère-t-elle entre les groupes ?
 
-Les exemples utilisent le KOOS JR (score du genou après prothèse, version abrégée) chez les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire (HOOS JR), et un point sur l'un n'est pas garanti égal à un point sur l'autre : les deux ne sont donc pas mélangés dans un même modèle. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'essai orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
+Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire (HOOS JR), et un point sur l'un n'est pas garanti égal à un point sur l'autre : les deux ne sont donc pas mélangés dans un même modèle. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'essai orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
@@ -29,7 +29,7 @@ Chaque genou est traité comme un patient à part jusqu'à la section sur les [p
 
 ## Pourquoi pas l'ANOVA à mesures répétées ? {#why-mixed-models}
 
-Comptez pour combien des quatre visites chaque genou a un score :
+Comptez, pour chaque genou, à combien des quatre visites il a un score :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -87,8 +87,8 @@ Les 330 genoux ont tous au moins un score, 1146 au total, mais seulement 192 gen
 
 Écarter des patients n'est pas seulement du gaspillage. Cela peut biaiser le résultat, et cela dépend de la raison pour laquelle des scores manquent :
 - **Données manquantes complètement au hasard :** une visite manquée n'a rien à voir avec la récupération du patient (le service a reporté le rendez-vous, le patient a déménagé). Les deux méthodes sont non biaisées ; le modèle mixte est plus précis parce qu'il utilise plus de données.
-- **Données manquantes au hasard :** le fait de manquer dépend de choses que vous avez mesurées, comme un score antérieur. Un patient qui a eu un mauvais score à 6 semaines revient moins volontiers à 3 mois. L'ANOVA à mesures répétées est alors biaisée, parce que les patients qu'elle garde ont mieux récupéré ; un modèle mixte reste non biaisé, tant que le modèle décrit comment les scores d'un genou sont liés, parce qu'il utilise les scores antérieurs pour compléter le tableau.
-- **Données manquantes non au hasard :** le fait de manquer dépend du score qui n'a pas été recueilli (les patients ne viennent pas *parce que* leur genou va plus mal cette semaine-là). Rien dans les données seules ne le corrige. Dites-le comme une limite.
+- **Données manquantes au hasard :** le fait de manquer dépend de choses que vous avez mesurées, comme un score antérieur. Un patient qui a eu un mauvais score à 6 semaines a moins de chances de revenir à 3 mois. L'ANOVA à mesures répétées est alors biaisée, parce que les patients qu'elle garde ont mieux récupéré ; un modèle mixte reste non biaisé, tant que le modèle décrit comment les scores d'un genou sont liés, parce qu'il utilise les scores antérieurs pour compléter le tableau.
+- **Données manquantes non au hasard :** le fait de manquer dépend du score qui n'a pas été recueilli (les patients ne viennent pas *parce que* leur genou va plus mal cette semaine-là). Rien dans les données seules ne le corrige. Signalez-le comme une limite de l'étude.
 
 ## Un intercept aléatoire pour chaque genou {#random-intercept}
 
@@ -145,7 +145,7 @@ Les estimations concordent. Les erreurs standard concordent à trois ou quatre c
 
 ## Moyennes marginales estimées {#estimated-marginal-means}
 
-Rapportez l'estimation du modèle à chaque visite, avec son IC à 95 %. Ce sont les **moyennes marginales estimées** (*estimated marginal means*, EMM) : le score moyen que le modèle attend à chaque visite, en utilisant tous les genoux, y compris ceux qui ont manqué des visites.
+Rapportez l'estimation du modèle à chaque visite, avec son IC à 95 %. Ce sont les **moyennes marginales estimées** (*estimated marginal means*, EMM) : le score moyen que le modèle prédit à chaque visite, en utilisant tous les genoux, y compris ceux qui ont manqué des visites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -197,7 +197,7 @@ check_agree(list(se_pre = knee_emm$SE[1], se_1yr = knee_emm$SE[4]), reticulate::
 - **emmean, lower.CL / upper.CL :** le KOOS JR moyen était de 50.0 (IC à 95 % 48.6 à 51.3) avant l'opération, de 62.5 à 6 semaines, de 74.2 à 3 mois et de 83.9 (IC à 95 % 82.5 à 85.3) à 1 an.
 - **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)).
 
-Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an. C'est proche du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, par chance ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
+Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an. C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, par hasard ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
 
 ## Le temps : catégories ou courbe ? {#time}
 
@@ -256,7 +256,7 @@ chk = {"day_42": float(on_days.iloc[1]), "day_365": float(on_days.iloc[3])}
 check_agree(list(day_42 = on_days[[2]], day_365 = on_days[[4]]), reticulate::py$chk, tol = 1e-4)
 ```
 
-La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an, contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic d'environ 89 points vers 8 mois, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les catégories sont plus simples, ne font aucune affirmation de ce genre, et sont ce que le reste de cette page utilise.
+La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an, contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic d'environ 89 points vers 8 mois, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les catégories sont plus simples, ne font aucune affirmation de ce genre, et ce sont elles que le reste de cette page utilise.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une droite pour le temps
@@ -265,7 +265,7 @@ La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaine
 
 ## La récupération diffère-t-elle entre les groupes ? {#group-by-time}
 
-Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le bras et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'effet principal du bras seul ne compare que les niveaux moyens. Le modèle utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre.
+Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le bras de traitement (*arm*) et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'effet principal du bras seul ne compare que les niveaux moyens. Le modèle utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -364,24 +364,24 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 sur 3 et 310 ddl, p < 0.001 :** les profils diffèrent. Le test de Wald de Python donne la statistique non divisée, 77.15 sur 3 degrés de liberté, avec aussi p < 0.001.
-- **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait 3.0 points d'avance, et à 3 mois l'orthèse avait 3.6 points d'avance (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % −1.5 à 0.7) : l'écart s'était refermé.
+- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. Le test de Wald de Python donne la statistique non divisée, 77.15 sur 3 degrés de liberté, avec aussi p < 0.001.
+- **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % −1.5 à 0.7) : l'écart s'était refermé.
 
-Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 dans chaque bras). Deux mises en garde. Les scores EFAS s'entassent près de leur maximum à 12 mois (24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
+Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 dans chaque bras). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond) (24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : lisez une interaction à travers les moyennes
-Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, une valeur p ajustée de Holm de 0.898 signifie que les données ne peuvent pas montrer de différence ; elle ne montre pas que les bras sont identiques, et l'IC va encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les EMM et la différence avec leurs IC pour que les lecteurs voient les deux.
+Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, un p = 0.898 après ajustement de Holm signifie que les données ne peuvent pas montrer de différence ; elle ne montre pas que les bras sont identiques, et l'IC s'étend encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les EMM et la différence avec leurs IC pour que les lecteurs voient les deux.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les différences entre bras
-Python calcule les différences à partir des effets fixes avec des tests z : ses valeurs p ajustées de Holm diffèrent à la troisième décimale (0.897 contre 0.898).
+Python calcule les différences à partir des effets fixes avec des tests z : ses valeurs p ajustées selon Holm diffèrent à la troisième décimale (0.897 contre 0.898).
 :::
 
 ## Patients bilatéraux {#bilateral}
 
-46 des patients au genou ont eu les deux genoux remplacés : 92 des 330 genoux viennent donc par paires. Les deux genoux partagent la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième intercept aléatoire, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
+46 des patients opérés du genou ont eu les deux genoux remplacés : 92 des 330 genoux forment donc des paires. Les deux genoux appartiennent à la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième intercept aléatoire, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
 
 Dans cette cohorte, l'intercept au niveau du patient est presque exactement nul (lme4 avertit que l'ajustement est « singulier »), et le modèle du genou ci-dessus suffit donc. Dans vos données, ajustez le modèle emboîté et rapportez-le, sauf s'il est singulier. La [page 3](../foundations/03-distributions.qmd#paired) explique pourquoi les patients bilatéraux demandent de l'attention, et la [page 14](../survival/14-cox-regression.qmd#stratified-cox) montre la version pour l'analyse de survie.
 
@@ -474,7 +474,7 @@ stopifnot(
 
 Les solutions utilisent les packages, les données et les fonctions chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Ajustez le même modèle à intercept aléatoire au HOOS JR (score de la hanche après prothèse, version abrégée) chez les prothèses totales de hanche et rapportez la moyenne estimée à chaque visite.
+**1.** Ajustez le même modèle à intercept aléatoire au HOOS JR (score de la hanche pour prothèse articulaire, version abrégée) pour les prothèses totales de hanche et rapportez la moyenne estimée à chaque visite.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -507,7 +507,7 @@ print(marginal_means(hip_model, visit_grid).round(2))
 > **Results:** Of 270 hips, 136 had all four scores; all 906 scores were used. The estimated mean HOOS JR was 45.5 before surgery, 68.6 at 6 weeks, 80.1 at 3 months and 88.2 (95% CI 86.7 to 89.7) at 1 year.
 :::
 
-**2.** La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé la fonction physique PROMIS avec l'ANOVA à mesures répétées chez les 328 prothèses articulaires mesurées aux quatre visites. Ajustez plutôt un modèle mixte avec tous les scores. Combien de prothèses articulaires utilise-t-il, et les moyennes des visites changent-elles ?
+**2.** La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé la fonction physique PROMIS avec l'ANOVA à mesures répétées pour les 328 prothèses articulaires mesurées aux quatre visites. Ajustez plutôt un modèle mixte avec tous les scores. Combien de prothèses articulaires utilise-t-il, et les moyennes des visites changent-elles ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
