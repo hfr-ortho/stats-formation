@@ -278,3 +278,8 @@ def test_after_chi_square_no_longer_points_to_page_8s_old_exercise(site):
     text = text_of(section("beyond/15-post-hoc.html", "after-chi-square"))
     assert "Page 8's exercise 3" not in text
     assert "Take 90-day complications across the four ASA classes" in text
+
+
+def test_agreement_page_is_framed_as_osteotomy_planning(site):
+    text = text_of(load(AGREEMENT))
+    assert "osteotomy" in text and "planned correction" in text

@@ -111,3 +111,11 @@ def test_tidy_page_names_the_code_key_like_the_template(site):
     assert ("The code key, which links study codes to patient numbers, is kept in a separate, secured file "
             "by the person the ethics application names for it") in text
     assert "crosswalk" not in text
+
+
+def test_worked_examples_match_the_sections_they_point_to(site):
+    text = text_of("foundations/03-distributions.html")
+    for phrase in ["Is the EFAS score at 3 months different with a boot than with a cast?",
+                   "Is pain 6 weeks after the injury different with a boot than with a cast?",
+                   "Does graft failure within 2 years differ between hamstring and BPTB grafts?"]:
+        assert phrase in text, phrase
