@@ -9,7 +9,7 @@ write_tidy <- function(df, path) {
 # Record an MD5 for every CSV under `dir` ("<md5>  <path>", the format
 # `md5sum -c` reads). CI has no R; tests/python checks the CSVs against this.
 write_checksums <- function(dir) {
-  files <- sort(list.files(dir, pattern = "[.]csv$", recursive = TRUE))
+  files <- sort(list.files(dir, pattern = "[.]csv$", recursive = TRUE), method = "radix")
   sums <- unname(tools::md5sum(file.path(dir, files)))
   writeLines(paste0(sums, "  ", files), file.path(dir, "CHECKSUMS.md5"))
   invisible(file.path(dir, "CHECKSUMS.md5"))

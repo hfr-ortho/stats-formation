@@ -49,3 +49,9 @@ def test_csvs_match_the_generators_checksums():
     for name, digest in listed.items():
         actual = hashlib.md5((DATA / name).read_bytes()).hexdigest()
         assert actual == digest, f"data/{name} differs from what data-raw/generate.R wrote"
+
+
+def test_checksums_are_listed_in_byte_order():
+    """The stamp on every page is this file's MD5, so its order mustn't depend on the machine's locale."""
+    names = [line.split("  ", 1)[1] for line in (DATA / "CHECKSUMS.md5").read_text(encoding="utf-8").splitlines()]
+    assert names == sorted(names)

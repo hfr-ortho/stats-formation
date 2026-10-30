@@ -57,8 +57,8 @@ make_proms_long <- function(cohort, seed = 20261008, ohs_seed = 20261105) {
     prom_score  = round(clamp(score, 0, 100), 1),
     vr12_pcs    = round(clamp(pcs, 0, 100), 1),
     vr12_mcs    = round(clamp(mcs, 0, 100), 1),
-    # PROMIS-29+2 physical function (T-score): VR-12 PCS rescaled, no new draws.
-    promis_pf   = round(clamp(0.9 * pcs + 8, 10, 80), 1),
+    # PROMIS-29+2 physical function 4a (T-score, 22.5 to 57.0): VR-12 PCS rescaled, no new draws.
+    promis_pf   = round(clamp(0.9 * pcs + 8, 22.5, 57), 1),
     walking_aid = as.integer(aid)
   )
   measures <- c("visit_days", "prom_score", "vr12_pcs", "vr12_mcs", "promis_pf", "walking_aid")
