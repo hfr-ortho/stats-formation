@@ -74,12 +74,12 @@ Columns `en,de,fr,notes`; leave `de` blank. At least 120 rows, from a census of 
 | ACL reconstruction; graft | reconstruction du LCA; greffon |
 | BPTB; hamstring | os-tendon rotulien-os (BPTB); ischio-jambiers |
 | posterior tibial slope; femoral torsion | pente tibiale postérieure; torsion fémorale |
-| hip fracture | fracture de la hanche |
-| removable boot; cast | botte amovible; plâtre |
+| hip fracture | fracture du fémur proximal (code keeps `hip_fracture`) |
+| removable boot; cast | orthèse amovible (short form orthèse; code keeps `boot`); plâtre |
 | return to sport | retour au sport |
 | osteotomy | ostéotomie |
 | anterior approach | voie antérieure |
-| PROM | PROM (mesure rapportée par le patient) |
+| PROM | PROM (mesure des résultats rapportés par le patient) |
 
 Headings: `When to use it` → `Quand l'utiliser`; `Look at the data first` → `Regarder d'abord les données`; `Run it` → `Exécuter l'analyse`; `Read the output` → `Lire le résultat`; `Effect size and 95% CI` → `Taille d'effet et IC à 95 %`; `How to report it` → `Rédiger les résultats`. Callouts: `⚠️ Attention :`, `🔀 R ou Python :`, `💡`, `🔍 Sous le capot :`. `**The question:**` → `**La question :**`. `Solution` stays. `Exercises` → `Exercices`.
 

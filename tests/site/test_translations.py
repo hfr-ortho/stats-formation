@@ -323,9 +323,14 @@ def manuscript_problems(en: str, tr: str) -> list[str]:
 
 # ---------------------------------------------------------------- headings, callouts, register
 
+def norm(text: str) -> str:
+    """Heading text for comparison: non-breaking spaces become plain spaces, curly apostrophes straight."""
+    return text.replace("\u00a0", " ").replace("\u202f", " ").replace("\u2019", "'").strip()
+
+
 def headings(text: str, level: int):
     mark = "#" * level + " "
-    return [re.sub(r"\s*\{[^}]*\}\s*$", "", l[len(mark):]).strip()
+    return [norm(re.sub(r"\s*\{[^}]*\}\s*$", "", l[len(mark):]))
             for l in prose_lines(text) if l.startswith(mark)]
 
 
@@ -333,8 +338,8 @@ def step_problems(en: str, tr: str) -> list[str]:
     a, b = sections(en), sections(tr)
     problems = []
     for key in a.keys() & b.keys():
-        want = [STEPS[h] for h in headings(a[key], 3) if h in STEPS]
-        got = [h for h in headings(b[key], 3) if h in STEPS.values()]
+        want = [norm(STEPS[h]) for h in headings(a[key], 3) if h in STEPS]
+        got = [h for h in headings(b[key], 3) if h in {norm(v) for v in STEPS.values()}]
         if want != got:
             problems.append(f"section '{key}': steps {got}, expected {want}")
     return problems
@@ -398,7 +403,7 @@ def front_matter_problems(en: str, tr: str) -> list[str]:
 # ---------------------------------------------------------------- structure
 
 def structure(text: str) -> list[tuple[str, str]]:
-    """Fenced-div lines (verbatim), the `## R` / `## Python` / `## Solution` headings, and each code
+    """Fenced-div lines (verbatim), section headings by {#id}, the `## R` / `## Python` / `## Solution` headings, and each code
     block's info string, in page order: where the tabsets, solutions and chunks sit."""
     found, fenced = [], False
     for line in text.split("\n"):
@@ -411,6 +416,8 @@ def structure(text: str) -> list[tuple[str, str]]:
             fenced = True
         elif line.startswith(":::"):
             found.append(("div", line.strip()))
+        elif re.match(r"^## .*\{#([A-Za-z][\w:.-]*)", line):
+            found.append(("section", re.match(r"^## .*\{#([A-Za-z][\w:.-]*)", line).group(1)))
         elif line in ("## R", "## Python", "## Solution"):
             found.append(("heading", line))
     return found
@@ -746,6 +753,21 @@ def test_structure_rule_catches_moved_tabsets_and_changed_fences():
     assert structure_problems(PAGE_EN, PAGE_FR.replace("## Python", "## Python\n\n## Solution"))
     moved = PAGE_FR.replace("```{python}\nx = [1, 2]\n```\n:::\n", ":::\n```{python}\nx = [1, 2]\n```\n")
     assert structure_problems(PAGE_EN, moved)
+
+
+def test_steps_compare_through_non_breaking_spaces_and_curly_apostrophes():
+    en = "## S {#s}\n### Effect size and 95% CI\n### Look at the data first\n"
+    assert step_problems(en, "## S {#s}\n### Taille d\u2019effet et IC \u00e0 95\u00a0%\n### Regarder d\u2019abord les donn\u00e9es\n") == []
+    assert step_problems(en, "## S {#s}\n### Taille d'effet et IC à 95 %\n### Regarder d'abord les données\n") == []
+    assert step_problems(en, "## S {#s}\n### Taille d'effet\n### Regarder d'abord les données\n")
+
+
+def test_structure_notices_a_chunk_moved_across_a_section_heading():
+    en = "## One {#one}\n\n```{r}\nx\n```\n\n## Two {#two}\n"
+    fr = "## Un {#one}\n\n## Deux {#two}\n\n```{r}\nx\n```\n"
+    assert structure_problems(en, fr)
+    assert structure_problems(en, en.replace("{#two}", "{#deux}"))
+    assert structure_problems(en, en.replace("One", "Un").replace("Two", "Deux")) == []
 
 
 def test_page_checks_bite_on_a_broken_page(tmp_path):
