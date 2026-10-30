@@ -21,19 +21,19 @@ Deux groupes de patients **différents** : une orthèse amovible contre un plâ
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données du cabinet : un essai randomisé qui compare une orthèse amovible à un plâtre après une lésion de Chopart (les tests t et de Mann-Whitney), les reconstructions du LCA (test de Fisher) et la cohorte de prothèses articulaires (test du log-rank). L'essai et ses résultats sont inventés pour l'enseignement. Dans les données et dans le code, l'orthèse amovible s'appelle « boot » et le plâtre « cast » ; dans le texte, nous disons orthèse et plâtre. Le premier bloc de code de chaque section charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données du cabinet : un essai randomisé qui compare une orthèse amovible à un plâtre après une lésion du médio-pied (les tests t et de Mann-Whitney), les reconstructions du LCA (test de Fisher) et la cohorte de prothèses articulaires (test du log-rank). L'essai et ses résultats sont inventés pour l'enseignement. Dans les données et dans le code, l'orthèse amovible s'appelle « boot » et le plâtre « cast » ; dans le texte, nous disons orthèse et plâtre. Le premier bloc de code de chaque section charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, l'exemple de prothèses articulaires utilise tous les cas, y compris les 80 patients opérés des deux côtés. Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
 
 ## Test t pour échantillons indépendants {#unpaired-t}
 
-**La question :** le score EFAS, 3 mois après une lésion de Chopart, diffère-t-il avec une orthèse amovible par rapport à un plâtre ?
+**La question :** le score EFAS, 3 mois après une lésion du médio-pied, diffère-t-il avec une orthèse amovible par rapport à un plâtre ?
 
 ### Quand l'utiliser
 
 - Le critère est une **mesure**, comparée entre **deux groupes indépendants**.
-- Dans **chaque groupe**, il est à peu près normal, ou chaque groupe est grand (environ 30 ou plus) et pas très asymétrique ([page 3](../foundations/03-distributions.qmd#within-groups)).
+- Dans **chaque groupe**, il est à peu près normal, ou chaque groupe est grand (environ 30 ou plus) et pas fortement asymétrique ([page 3](../foundations/03-distributions.qmd#within-groups)).
 - Un score qui additionne plusieurs questions, comme le score EFAS (six questions notées de 0 à 4, donc de 0 à 24), peut être traité comme une mesure quand peu de patients sont à son plancher ou à son plafond.
 - Utilisez la version de **Welch**, qui ne suppose pas que les deux groupes ont la même dispersion. C'est la valeur par défaut de R, mais pas celle de Python (voir l'encadré R ou Python).
 - Si le critère est asymétrique, s'accumule à un plancher ou à un plafond, ou est ordinal → le [test de Mann-Whitney](#mann-whitney).
@@ -167,7 +167,7 @@ check_agree(list(g = efas_g$Hedges_g), reticulate::py$chk,
             tol = 1e-5)   # effectsize corrects g for small samples exactly, pingouin with the usual approximation
 ```
 
-Le g de Hedges vaut 1.13 : la moyenne du bras orthèse dépasse celle du bras plâtre de plus d'un écart-type, un effet grand. Savoir si 3.6 points sur un score de 24 points comptent pour les patients est une question clinique, pas statistique.
+Le g de Hedges vaut 1.13 : la moyenne du bras orthèse dépasse celle du bras plâtre de plus d'un écart-type, un grand effet. Savoir si 3.6 points sur un score de 24 points comptent pour les patients est une question clinique, pas statistique.
 
 ### Rédiger les résultats
 
@@ -189,12 +189,12 @@ Une vieille habitude consiste à faire un test d'égalité des variances (comme 
 
 ## Test de Mann-Whitney {#mann-whitney}
 
-**La question :** la douleur, 6 semaines après une lésion de Chopart, diffère-t-elle avec une orthèse amovible par rapport à un plâtre ?
+**La question :** la douleur, 6 semaines après une lésion du médio-pied, diffère-t-elle avec une orthèse amovible par rapport à un plâtre ?
 
 ### Quand l'utiliser
 
 - Le critère est **asymétrique**, a un **plafond ou un plancher**, ou est **ordinal**, et vous comparez **deux groupes indépendants**.
-- Le test demande si les valeurs d'un groupe ont tendance à être **plus grandes** que celles de l'autre : si vous tiriez au hasard un patient dans chaque groupe, quelle est la probabilité que le premier ait le score le plus élevé ?
+- Le test demande si les valeurs d'un groupe ont tendance à être **plus grandes** que celles de l'autre : si vous tiriez au hasard un patient dans chaque groupe, quelle est la probabilité que le premier ait un score plus élevé que le second ?
 - C'est le même test que le **test de la somme des rangs de Wilcoxon**. R l'appelle `wilcox.test()`.
 - Si le critère est à peu près normal dans chaque groupe → le [test t pour échantillons indépendants](#unpaired-t).
 
@@ -255,7 +255,7 @@ print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75
 ```
 :::
 
-Quatre patients ont manqué la visite de 6 semaines (2 dans chaque bras) : 116 des 120 patients randomisés sont donc analysés. La plupart des scores se situent entre 2 et 6, et beaucoup de patients ont le même score (ex æquo). Avec des nombres entiers sur une échelle ordinale, les médianes sont le bon résumé : 4 points avec une orthèse et 5 avec un plâtre.
+Quatre patients ont manqué la visite de 6 semaines (2 dans chaque bras) : 116 des 120 patients randomisés sont donc analysés. La plupart des scores se situent entre 2 et 6, et beaucoup de patients ont le même score (ex æquo). Avec des nombres entiers sur une échelle ordinale, les médianes sont un résumé adapté : 4 points avec une orthèse et 5 avec un plâtre.
 
 ### Exécuter l'analyse
 
@@ -290,7 +290,7 @@ check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticu
 
 ### Lire le résultat
 
-- **W = 1074.5** (R) ou **U_val = 1074.5** (Python) : la statistique U de Mann-Whitney pour le bras orthèse, soit le nombre de paires (orthèse, plâtre) dans lesquelles le patient avec orthèse a déclaré plus de douleur, les ex æquo comptant pour moitié. Il y a 58 × 58 = 3,364 paires : un U de 1,682 signifierait qu'il n'y a aucune tendance dans un sens ou dans l'autre. R l'appelle W.
+- **W = 1074.5** (R) ou **U_val = 1074.5** (Python) : la statistique U de Mann-Whitney pour le bras orthèse, soit le nombre de paires (orthèse, plâtre) dans lesquelles le patient avec orthèse a déclaré plus de douleur, chaque ex æquo comptant pour une demi-paire. Il y a 58 × 58 = 3,364 paires : un U de 1,682 signifierait qu'il n'y a aucune tendance dans un sens ou dans l'autre. R l'appelle W.
 - **p < 0.001 :** une différence comme celle-ci serait inhabituelle si la douleur avait la même distribution dans les deux bras.
 - **difference in location −1.00, 95% CI de −2.00 à −1.00** (R seulement) : l'estimateur de Hodges-Lehmann, ci-dessous. R le trouve par une recherche numérique : il affiche donc −1.000041 et des valeurs du même genre ; les derniers chiffres sont du bruit.
 - **RBC = −0.361** (Python) : la taille d'effet bisériale par rangs, ci-dessous.
@@ -342,7 +342,7 @@ check_agree(list(hl = unname(pain_test$estimate), rbc = pain_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by a numerical search, accurate to about 1e-4
 ```
 
-Avec une orthèse, la douleur était typiquement inférieure de 1 point (IC à 95 % de 2 points à 1 point de moins), et r = −0.36. Sur les 3,364 paires (orthèse, plâtre), le patient avec orthèse a déclaré moins de douleur dans 61 %, plus dans 25 %, et 14 % étaient à égalité. Avec des scores entiers, chaque différence entre deux patients est un nombre entier : l'estimateur de Hodges-Lehmann et son IC tombent donc eux aussi sur des nombres entiers, et l'estimation peut se trouver au bord de son propre IC, comme ici.
+Avec une orthèse, la douleur était typiquement inférieure de 1 point (IC à 95 % de 2 points à 1 point de moins), et r = −0.36. Sur les 3,364 paires (orthèse, plâtre), le patient avec orthèse a déclaré moins de douleur dans 61 %, plus dans 25 %, et 14 % étaient ex æquo. Avec des scores entiers, chaque différence entre deux patients est un nombre entier : l'estimateur de Hodges-Lehmann et son IC tombent donc eux aussi sur des nombres entiers, et l'estimation peut se trouver au bord de son propre IC, comme ici.
 
 ### Rédiger les résultats
 
@@ -462,7 +462,7 @@ check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : la correction de continuité de Yates
-Le test du khi-deux traite les effectifs comme s'ils pouvaient prendre n'importe quelle valeur, mais ce sont des nombres entiers. Pour un tableau 2 × 2, la **correction de Yates** soustrait 0.5 à chaque différence |observé − attendu| avant de l'élever au carré, ce qui augmente la valeur p (plus prudent). Elle sert à rapprocher la valeur p de celle de Fisher, mais elle peut aller trop loin, comme ici : chaque effectif observé n'est qu'à environ un demi-effectif de son effectif attendu (6 échecs contre 6.5 et 5.5 attendus), si bien que la statistique corrigée est presque 0 et que p = 0.986, contre 0.775 pour Fisher. Le `chisq.test()` de R et le `chi2_contingency()` de scipy l'appliquent tous deux par défaut aux tableaux 2 × 2 ; sans elle (`correct = FALSE`, `correction=False`), p = 0.754. L'une ou l'autre est acceptable si vous dites laquelle vous avez utilisée ; avec de petits effectifs, préférez le test de Fisher.
+Le test du khi-deux traite les effectifs comme s'ils pouvaient prendre n'importe quelle valeur, mais ce sont des nombres entiers. Pour un tableau 2 × 2, la **correction de Yates** soustrait 0.5 à chaque différence |observé − attendu| avant de l'élever au carré, ce qui augmente la valeur p (plus prudent). Elle est censée rapprocher la valeur p de celle de Fisher, mais elle peut aller trop loin, comme ici : chaque effectif observé n'est qu'à environ une demi-unité de son effectif attendu (6 échecs contre 6.5 et 5.5 attendus), si bien que la statistique corrigée est presque 0 et que p = 0.986, contre 0.775 pour Fisher. Le `chisq.test()` de R et le `chi2_contingency()` de scipy l'appliquent tous deux par défaut aux tableaux 2 × 2 ; sans elle (`correct = FALSE`, `correction=False`), p = 0.754. L'une ou l'autre est acceptable si vous dites laquelle vous avez utilisée ; avec de petits effectifs, préférez le test de Fisher.
 :::
 
 ### Taille d'effet et IC à 95 %
@@ -840,7 +840,7 @@ print(efas_6wk.groupby("arm")["efas"].agg(["count", "mean", "std"]))
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Dès 12 mois, beaucoup de patients sont au plafond de 24, ou près de celui-ci (13 % avec une orthèse et 17 % avec un plâtre ont obtenu 24) : on prend donc le **test de Mann-Whitney**.
+À 12 mois, beaucoup de patients sont au plafond de 24, ou près de celui-ci (13 % avec une orthèse et 17 % avec un plâtre ont obtenu 24) : on prend donc le **test de Mann-Whitney**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -871,7 +871,7 @@ print(efas_12mo.groupby("arm")["efas"].describe()[["count", "25%", "50%", "75%"]
 
 > **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
 
-Il n'y a pas de preuve claire d'une différence à 12 mois, après l'avance de 3.6 points de l'orthèse à 3 mois. Remarquez aussi que 18 des 120 patients ont manqué la visite de 12 mois, 5 dans le bras orthèse, 13 dans le bras plâtre : quand un bras perd plus de patients, ceux qui restent n'y sont peut-être plus comparables à ceux de l'autre bras. Savoir si l'écart entre les bras change vraiment au cours du temps est une question pour un seul modèle de toutes les visites : la [page 16](../beyond/16-mixed-models.qmd#group-by-time) montre comment.
+Il n'y a pas de preuve claire d'une différence à 12 mois, après l'avance de 3.6 points de l'orthèse à 3 mois. Remarquez aussi que 18 des 120 patients ont manqué la visite de 12 mois, 5 dans le bras orthèse, 13 dans le bras plâtre : quand un bras perd plus de patients, ceux qui restent n'y sont peut-être plus comparables à ceux de l'autre bras. Savoir si l'écart entre les bras change vraiment au cours du temps demande un seul modèle qui couvre toutes les visites : la [page 16](../beyond/16-mixed-models.qmd#group-by-time) montre comment.
 :::
 
 **3.** Le retour au sport 12 mois après une reconstruction du LCA diffère-t-il entre les femmes et les hommes ? Choisissez le test, exécutez-le et rédigez la phrase de Résultats avec la différence de risque et l'odds ratio.

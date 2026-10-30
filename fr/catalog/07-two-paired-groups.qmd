@@ -17,7 +17,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Des données **appariées** vont par deux : le même patient avant et après l'opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients appariés selon l'âge, le sexe et l'IMC. Les tests pour données appariées comparent chaque patient avec lui-même (ou avec son homologue apparié), ce qui élimine la variation entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la [page 6](06-two-unpaired-groups.qmd).
+Des données **appariées** vont par deux : le même patient avant et après l'opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients appariés selon l'âge, le sexe et l'IMC. Les tests pour données appariées comparent chaque patient avec lui-même (ou avec le patient auquel il est apparié), ce qui élimine la variation entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la [page 6](06-two-unpaired-groups.qmd).
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
@@ -33,7 +33,7 @@ Un test pour données appariées ne peut utiliser que les patients mesurés aux 
 
 ## Test t pour échantillons appariés {#paired-t}
 
-**La question :** l'incidence de la grenouille (frog-leg) et l'incidence de Dunn à 45° donnent-elles des angles alpha différents sur les mêmes hanches ?
+**La question :** l'incidence en grenouille (frog-leg) et l'incidence de Dunn à 45° donnent-elles des angles alpha différents sur les mêmes hanches ?
 
 ### Quand l'utiliser
 
@@ -44,7 +44,7 @@ Un test pour données appariées ne peut utiliser que les patients mesurés aux 
 
 ### Regarder d'abord les données
 
-L'angle alpha mesure à quel point la jonction tête-col du fémur bombe en avant (morphologie came) : plus l'angle est grand, plus la bosse est importante. Les données de préservation de la hanche contiennent une ligne par hanche (une hanche par patient), chez de jeunes adultes évalués pour une chirurgie de préservation de la hanche, avec l'angle alpha mesuré sur deux incidences : l'**incidence de la grenouille** (profil, *frog-leg*) et l'**incidence de Dunn à 45°**.
+L'angle alpha mesure à quel point la partie antérieure de la jonction tête-col fémorale fait saillie (morphologie cam) : plus l'angle est grand, plus la bosse est importante. Les données de préservation de la hanche contiennent une ligne par hanche (une hanche par patient), chez de jeunes adultes évalués pour une chirurgie de préservation de la hanche, avec l'angle alpha mesuré sur deux incidences : l'**incidence en grenouille** (profil, *frog-leg*) et l'**incidence de Dunn à 45°**.
 
 Les données appariées doivent être en **format large** : une ligne par patient, avec les deux mesures côte à côte. C'est déjà le cas ici ; la [page 1](../foundations/01-tidy-data.qmd#reshaping) montre comment remodeler des données qui ne le sont pas.
 
@@ -128,7 +128,7 @@ check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parame
 
 - **t = 7.75, df = 79 :** la différence moyenne est à presque 8 erreurs standard de zéro ; df (ddl) est le nombre de paires moins 1.
 - **p < 0.001 :** une différence aussi grande serait très improbable si les deux incidences donnaient en moyenne le même angle alpha.
-- **mean difference 3.67 :** en moyenne, l'incidence de Dunn donnait 3.7° de plus que l'incidence de la grenouille pour la même hanche.
+- **mean difference 3.67 :** en moyenne, l'incidence de Dunn donnait 3.7° de plus que l'incidence en grenouille pour la même hanche.
 - **95% CI de 2.73 à 4.61 :** l'IC de la différence moyenne.
 
 ### Taille d'effet et IC à 95 %
@@ -162,7 +162,7 @@ alpha_d <- effectsize::repeated_measures_d(imaging$alpha_dunn45_deg, imaging$alp
 check_agree(list(d_z = alpha_d$d_z), reticulate::py$chk)
 ```
 
-d~z~ = 0.87 est un effet grand : 62 des 80 hanches (78 %) ont une valeur plus élevée sur l'incidence de Dunn. Cela compte en clinique, car la morphologie came est souvent définie par un angle alpha supérieur à un seuil. Avec un seuil de 55°, 56 hanches sont positives pour la came sur l'incidence de Dunn et 48 sur l'incidence de la grenouille. Dites quelle incidence vous avez mesurée.
+d~z~ = 0.87 est un grand effet : 62 des 80 hanches (78 %) ont une valeur plus élevée sur l'incidence de Dunn. Cela compte en clinique, car la morphologie cam est souvent définie par un angle alpha supérieur à un seuil. Avec un seuil de 55°, 56 hanches sont cam-positives sur l'incidence de Dunn et 48 sur l'incidence en grenouille. Dites quelle incidence vous avez mesurée.
 
 ### Rédiger les résultats
 
@@ -172,7 +172,7 @@ d~z~ = 0.87 est un effet grand : 62 des 80 hanches (78 %) ont une valeur plus 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : n'analysez pas des données appariées comme des données indépendantes
-Faire un test t pour échantillons indépendants sur les deux colonnes ignore les mesures qui appartiennent à la même hanche. Ici, il donne p = 0.037 au lieu de p < 0.001 : la différence de 3.7° entre les incidences est petite à côté de l'écart de 11° entre hanches, et seul le test pour données appariées l'élimine. Il est faux même quand il donne par hasard le même résultat, car son erreur standard suppose 160 hanches indépendantes alors qu'il n'y en a que 80.
+Faire un test t pour échantillons indépendants sur les deux colonnes ignore quelles mesures appartiennent à la même hanche. Ici, il donne p = 0.037 au lieu de p < 0.001 : la différence de 3.7° entre les incidences est petite à côté de l'écart de 11° entre hanches, et seul le test pour données appariées l'élimine. Il est faux même quand il donne par hasard le même résultat, car son erreur standard suppose 160 hanches indépendantes alors qu'il n'y en a que 80.
 :::
 
 ::: {.callout-tip}
@@ -182,7 +182,7 @@ Faire un test t pour échantillons indépendants sur les deux colonnes ignore le
 
 ## Test des rangs signés de Wilcoxon {#wilcoxon-signed-rank}
 
-**La question :** le KOOS JR s'est-il amélioré entre avant l'opération et 1 an après une prothèse de genou ?
+**La question :** le KOOS JR s'est-il amélioré entre la période préopératoire et 1 an après une prothèse de genou ?
 
 ### Quand l'utiliser
 
@@ -361,7 +361,7 @@ Une valeur p minuscule dit que les scores ont augmenté en moyenne ; elle ne di
 ### Quand l'utiliser
 
 - Un critère **oui/non** mesuré **deux fois chez les mêmes patients** (ou une fois chez chaque membre d'une paire appariée).
-- Le test n'utilise que les **paires discordantes** : les patients qui ont changé (non → oui, ou oui → non). Les patients qui sont restés les mêmes n'apprennent rien sur la direction du changement.
+- Le test n'utilise que les **paires discordantes** : les patients qui ont changé (non → oui, ou oui → non). Les patients qui sont restés les mêmes ne renseignent pas sur la direction du changement.
 - La version du khi-deux demande au moins 10 paires discordantes environ au total. Avec moins, utilisez la version **exacte** (voir l'encadré R ou Python).
 
 ### Regarder d'abord les données
@@ -510,7 +510,7 @@ Une erreur fréquente consiste à croiser « aide oui/non » avec « avant l'
 
 - Le critère est le **délai jusqu'à un événement**, et les patients forment des **paires appariées** (ou des ensembles), ou bien les deux « patients » sont les deux articulations d'une même personne.
 - Un modèle de Cox **stratifié** par paire laisse chaque paire avoir son propre risque de base, et compare les implants seulement **au sein** des paires. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*.
-- Seules les paires où un patient a été révisé alors que l'autre était encore suivi apprennent quelque chose au modèle ; avec peu d'événements, attendez-vous à un IC large.
+- Seules les paires où un patient a été révisé alors que l'autre était encore suivi apportent une information au modèle ; avec peu d'événements, attendez-vous à un IC large.
 - La [page 14](../survival/14-cox-regression.qmd) traite la régression de Cox en détail.
 
 ### Regarder d'abord les données
@@ -595,7 +595,7 @@ check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"],
 
 - **n = 104, number of events = 22 :** 52 paires, 22 révisions.
 - **exp(coef) = 3.5 :** le hazard ratio, implant C contre implant A, au sein des paires.
-- **lower .95 = 1.15, upper .95 = 10.63 :** son IC à 95 %. Large, parce que seules 22 révisions l'informent.
+- **lower .95 = 1.15, upper .95 = 10.63 :** son IC à 95 %. Large, parce qu'il ne repose que sur 22 révisions.
 - **Pr(>|z|) = 0.027 :** la valeur p pour l'implant.
 - R affiche aussi un test du rapport de vraisemblance, un test de Wald et un test du score pour le modèle entier ; avec un seul prédicteur, ils testent tous la même chose.
 
@@ -724,7 +724,7 @@ print(imaging[["torsion_ct_deg", "torsion_budin_deg"]].agg(["count", "mean", "st
 Une différence de moyennes d'environ 1° semble rassurante, mais elle cache la façon dont les deux méthodes divergent : l'incidence de Budin donne des valeurs élevées dans les hanches à faible torsion et basses dans celles à forte torsion, et les deux erreurs s'annulent dans la moyenne. Un test t pour échantillons appariés ne pose de question que sur la différence moyenne ; la [page 17](../beyond/17-agreement.qmd#bland-altman) montre comment juger la concordance.
 :::
 
-**2.** Deux évaluateurs ont mesuré l'angle hanche-genou-cheville (HKA) sur les 60 mêmes radiographies de genou (`radiographic_reliability.csv`, séance 1). L'évaluateur 2 mesure-t-il systématiquement plus haut que l'évaluateur 1 ? Choisissez le test et exécutez-le.
+**2.** Deux évaluateurs ont mesuré l'angle hanche-genou-cheville (HKA) sur les 60 mêmes radiographies de genou (`radiographic_reliability.csv`, séance 1). L'évaluateur 2 donne-t-il systématiquement des valeurs plus élevées que l'évaluateur 1 ? Choisissez le test et exécutez-le.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
