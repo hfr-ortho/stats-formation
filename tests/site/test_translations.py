@@ -7,6 +7,7 @@ at the bottom, so we know they bite before any page exists."""
 import collections
 import csv
 import re
+import unicodedata
 
 from sitelib import ROOT
 from test_sources import CHUNK, CONTENT_DIRS, EXECUTABLE_CHUNK, KNITR, front_matter
@@ -435,22 +436,88 @@ def structure_problems(en: str, tr: str) -> list[str]:
 
 # ---------------------------------------------------------------- page tests
 
-BANNER = re.compile(r"::: \{\.callout-note\}\n## Traduction en cours\n.*?\n:::\n\n?", re.DOTALL)
+# The French "Tests de A à Z" table is sorted by the French names (a reader looks for Fisher under F and
+# Wilcoxon under W), so its rows no longer sit in English order. That one page compares its numbers and
+# inline code as sets of rows; everything outside the table is compared as on any other page.
+A_TO_Z = "tests-a-z.qmd"
 
 
-def without_banner(text: str) -> str:
-    """The French home page carries a temporary "Traduction en cours" callout that English hasn't.
-    It goes when the last page is translated; until then it isn't compared."""
-    return BANNER.sub("", text)
+def table_rows(text: str) -> list[str]:
+    return [l for l in text.split("\n") if l.startswith("|")][2:]       # without header and separator
+
+
+def without_rows(text: str) -> str:
+    return "\n".join(l for l in text.split("\n") if not l.startswith("|"))
+
+
+def row_set_problems(en: str, tr: str) -> list[str]:
+    def signature(rows):
+        return collections.Counter((tuple(number_tokens(r)), tuple(INLINE.findall(r))) for r in rows)
+    a, b = signature(table_rows(en)), signature(table_rows(tr))
+    return [] if a == b else [f"rows differ in numbers or inline code: only French {dict(b - a)}, only English {dict(a - b)}"]
 
 
 def check_pages(check):
     found = {}
     for en, tr in translated_pages("fr"):
-        problems = check(en.read_text(encoding="utf-8"), without_banner(tr.read_text(encoding="utf-8")))
+        en_text, tr_text = en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8")
+        problems = []
+        if tr.name == A_TO_Z and tr.parent.name == "fr":
+            if check in (code_problems, number_problems):
+                problems += row_set_problems(en_text, tr_text)
+            en_text, tr_text = without_rows(en_text), without_rows(tr_text)
+        problems += check(en_text, tr_text)
         if problems:
             found[str(tr.relative_to(ROOT))] = problems
     assert found == {}
+
+
+GENERIC = {"test", "tests", "estimateur", "ajustement", "limites", "courbe", "coefficient", "coefficients"}
+FUNCTION_WORDS = {"de", "du", "des", "la", "le", "les", "à", "pour", "un", "une", "et"}
+# Names a reader would look up under another word than the rule finds.
+SORT_AS = {"Test d'adéquation du khi-deux": "khi-deux", "Vérification des risques proportionnels": "risques proportionnels"}
+
+
+def sort_key(row: str) -> str:
+    """Where a French reader looks a row up: the proper name if the name has one (Fisher, Wilcoxon,
+    Bland-Altman), otherwise its first word that isn't Test, Estimateur, Ajustement... or a function word
+    ("Régression logistique" stays under R, "Test t pour échantillons appariés" under t). Accents don't count."""
+    name = row.split("|")[1].strip().split(" (*")[0]
+    name = re.sub(r"\s*\([^)]*\)", "", name).replace("\u00a0", " ")
+    key = SORT_AS.get(name)
+    if key is None:
+        words = [re.sub(r"^[dDlL]['’]", "", w) for w in name.split()]
+        proper = [w for w in words[1:] if w[:1].isupper() and not w.isupper()]
+        rest = [w for w in words if w.lower() not in GENERIC | FUNCTION_WORDS and w]
+        key = proper[0] if proper else rest[0]
+    decomposed = unicodedata.normalize("NFD", key.casefold())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def test_french_tests_a_z_is_sorted():
+    rows = table_rows((ROOT / "fr" / A_TO_Z).read_text(encoding="utf-8"))
+    keys = [sort_key(r) for r in rows]
+    assert keys == sorted(keys), [(a, b) for a, b in zip(keys, keys[1:]) if a > b]
+
+
+def test_sort_key_finds_the_distinctive_name():
+    def key(name):
+        return sort_key(f"| {name} | x | y |")
+    assert key("Test exact de Fisher (*Fisher's exact test*)") == "fisher"
+    assert key("Test des rangs signés de Wilcoxon (*x*)") == "wilcoxon"
+    assert key("Limites de concordance de Bland-Altman (*x*)") == "bland-altman"
+    assert key("Estimateur d'Aalen-Johansen (*x*)") == "aalen-johansen"
+    assert key("Test HSD de Tukey (*x*)") == "tukey"
+    assert key("Test t pour échantillons appariés (*x*)") == "t"
+    assert key("Régression logistique simple (*x*)") == "regression"
+    assert key("Test t pour échantillons indépendants (Welch) (*x*)") == "t"
+    assert key("Ajustement de Holm (*x*)") == "holm"
+
+
+def test_row_sets_ignore_order_but_not_numbers():
+    en = "| A | b | `x` 1 |\n|---|---|---|\n| c | d | 2 |\n| e | f | `y` |\n"
+    assert row_set_problems(en, "| A | b | c |\n|--|--|--|\n| e | f | `y` |\n| g | h | 2 |\n") == []
+    assert row_set_problems(en, "| A | b | c |\n|--|--|--|\n| e | f | `y` |\n| g | h | 3 |\n")
 
 
 def test_translated_code_matches_english():
@@ -792,12 +859,6 @@ def test_untranslated_headings_and_leads_fail_unless_allowed():
     fr = ("## Exécuter l'analyse\n\n**La question :** Comment ?\n\n### Regarder d'abord les données\n\n## R\n\n"
           "## Python\n\n## Solution\n\n## ⚠️ Attention : x\n\n**Windows :** lancez-le.\n")
     assert untranslated_titles(en, fr) == []
-
-
-def test_the_temporary_banner_is_not_compared():
-    fr = PAGE_FR.replace("## Section un {#one}", "::: {.callout-note}\n## Traduction en cours\nBientôt 3 pages.\n:::\n\n## Section un {#one}")
-    assert all_problems(PAGE_EN, without_banner(fr)) == []
-    assert all_problems(PAGE_EN, fr)
 
 
 def test_page_18_manuscript_rule_bites_and_html_blocks_may_change():

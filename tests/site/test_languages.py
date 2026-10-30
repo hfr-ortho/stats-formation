@@ -61,6 +61,12 @@ def test_untranslated_pages_are_stubs_that_link_to_english(site):
                 assert f"/en/{page}" in links, f"{lang}/{page} must link to the English page"
 
 
+def test_french_is_finished(site):
+    for page in PAGES:
+        assert load_lang("fr", page).select_one(".coming-soon") is None, page
+    assert "Traduction en cours" not in text_of(load_lang("fr", "index.html"))
+
+
 def test_home_pages_are_translated_and_link_the_same_pages(site):
     for lang in LANGS:
         soup = load_lang(lang, "index.html")
