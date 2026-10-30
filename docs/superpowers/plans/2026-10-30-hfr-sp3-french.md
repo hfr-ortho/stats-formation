@@ -81,7 +81,7 @@ Columns `en,de,fr,notes`; leave `de` blank. At least 120 rows, from a census of 
 | anterior approach | voie antérieure |
 | PROM | PROM (mesure rapportée par le patient) |
 
-Headings: `When to use it` → `Quand l'utiliser`; `Look at the data first` → `Regarder d'abord les données`; `Run it` → `Exécuter le test`; `Read the output` → `Lire le résultat`; `Effect size and 95% CI` → `Taille d'effet et IC à 95 %`; `How to report it` → `Comment le rapporter`. Callouts: `⚠️ Attention :`, `🔀 R ou Python :`, `💡`, `🔍 Sous le capot :`. `**The question:**` → `**La question :**`. `Solution` stays. `Exercises` → `Exercices`.
+Headings: `When to use it` → `Quand l'utiliser`; `Look at the data first` → `Regarder d'abord les données`; `Run it` → `Exécuter l'analyse`; `Read the output` → `Lire le résultat`; `Effect size and 95% CI` → `Taille d'effet et IC à 95 %`; `How to report it` → `Rédiger les résultats`. Callouts: `⚠️ Attention :`, `🔀 R ou Python :`, `💡`, `🔍 Sous le capot :`. `**The question:**` → `**La question :**`. `Solution` stays. `Exercises` → `Exercices`.
 
 - [ ] **Step 3: Write `docs/translation-guide.md`**
 
