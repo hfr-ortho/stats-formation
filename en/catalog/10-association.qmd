@@ -73,7 +73,7 @@ plt.show()
 ```
 :::
 
-The points follow a straight line, close to the dashed line where the two methods would read the same, with no extreme outliers. (Torsion can be negative: the femur is then retroverted.)
+The points follow a straight line, with no extreme outliers, but a flatter one than the dashed line where the two methods would read the same: the higher the torsion, the further the Budin reading falls below CT. (Torsion can be negative: the femur is then retroverted.)
 
 ### Run it
 
@@ -127,7 +127,7 @@ check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
 ## ⚠️ Watch out: r only sees straight lines, isn't cause, and isn't agreement
 A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn't say which causes which, or whether something else (age, sex) drives both. To adjust for other variables, use [multiple regression](12-predict-from-several.qmd#multiple-linear-regression).
 
-**A high r isn't agreement.** Two methods can rise and fall together and still read different angles. Here r = 0.86, yet the Budin reading was up to 12.9° away from CT, and 95% of the differences would be expected from −10.2° to 7.8°. To ask whether one method can replace the other, use [Bland-Altman limits](../beyond/17-agreement.qmd#bland-altman).
+**A high r isn't agreement.** Two methods can rise and fall together and still read different angles. Here r = 0.86, yet the Budin reading was up to 12.9° away from CT, and 95% of the differences would be expected from −10.2° to 7.8°. Even those limits hide a trend: in the 8 hips with 25° or more on CT, the Budin reading averaged 7.0° lower. To ask whether one method can replace the other, use [Bland-Altman limits](../beyond/17-agreement.qmd#bland-altman).
 :::
 
 ## Spearman correlation {#spearman}
@@ -432,6 +432,8 @@ stopifnot(
   round(max(abs(budin_minus_ct)), 1) == 12.9,
   round(mean(budin_minus_ct) + c(-1, 1) * 1.96 * sd(budin_minus_ct), 1) == c(-10.2, 7.8),
   round(mean(budin_minus_ct), 1) == -1.2,
+  sum(imaging$torsion_ct_deg >= 25) == 8, round(mean(budin_minus_ct[imaging$torsion_ct_deg >= 25]), 1) == -7.0,
+  min(imaging$torsion_ct_deg) < 0,
   nrow(change) == 404, change_medians$n[c(1, 5)] == c(14, 198), round(change_medians$median[c(1, 5)], 1) == c(25.4, 43.8),
   all(diff(change_medians$median) > 0),
   round(unname(satisfaction_corr$estimate), 2) == 0.38, round(unname(satisfaction_corr$statistic)) == 6764534,

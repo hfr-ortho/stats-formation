@@ -283,3 +283,7 @@ def test_after_chi_square_no_longer_points_to_page_8s_old_exercise(site):
 def test_agreement_page_is_framed_as_osteotomy_planning(site):
     text = text_of(load(AGREEMENT))
     assert "osteotomy" in text and "planned correction" in text
+
+
+def test_post_hoc_box_says_only_joint_replacement_examples_use_every_case(site):
+    assert "the joint replacement examples use every case" in text_of(load(POST_HOC))

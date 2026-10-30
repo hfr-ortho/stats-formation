@@ -615,7 +615,7 @@ Each 24 hours of delay multiplied the odds of death within 30 days by 1.50 (95% 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a straight line on the log-odds scale is an assumption
-The model says each 24 hours multiplies the odds by the same 1.50. The table above suggests otherwise: the rate barely changes up to 72 hours, then jumps. Check the shape before trusting a single odds ratio; [splines](12-predict-from-several.qmd#multiple-nonlinear-regression) let the effect bend. An odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (6.2%). And it isn't proof of cause: patients too unwell to operate on may wait longer, and they'd die more often whenever they were operated on.
+The model says each 24 hours multiplies the odds by the same 1.50. That's an assumption, and the bands above can't test it by eye. The last band is open-ended: its patients waited 97 hours on average, so a straight line already predicts its higher rate (17.2% from the model, 18.2% observed). To test the shape, let the effect bend and compare the two fits, as [exercise 3 on page 12](12-predict-from-several.qmd#exercises) does with [splines](12-predict-from-several.qmd#multiple-nonlinear-regression). An odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (6.2%). And it isn't proof of cause: patients too unwell to operate on may wait longer, and they'd die more often whenever they were operated on.
 :::
 
 ::: {.callout-tip}
@@ -732,7 +732,7 @@ check_agree(list(hr = slope_hr["tibial_slope_deg", "exp(coef)"], low = slope_hr[
 
 ### Effect size and 95% CI
 
-The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size. Hazard ratios multiply: a slope 5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21).
+The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size. Hazard ratios multiply: a slope 5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21), computed from the unrounded hazard ratio.
 
 ### How to report it
 
@@ -742,7 +742,7 @@ The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a hazard ratio isn't a treatment effect
-Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. With 31 failures, this model can take one or two predictors ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. With 31 failures, this model can take about three terms ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
 :::
 
 ::: {.callout-tip}
@@ -764,6 +764,7 @@ ex_hoos <- proms |> filter(instrument == "HOOS JR", !is.na(prom_score)) |> mutat
 ex_hoos_fit <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau), data = ex_hoos,
                    start = list(plateau = 85, start = 50, tau = 100))
 ex_hoos_ci <- confint(ex_hoos_fit)
+last_band <- hip_fracture$hours_to_surgery > 72   # the open-ended band of the logistic table
 stopifnot(
   sum(table(cohort$patient_id) == 2) == 80, nrow(cohort) == 600,
   round(coef(bmi_model), 2) == c(42.83, 1.37), round(bmi_fit$coefficients["bmi", "Std. Error"], 2) == 0.11,
@@ -789,6 +790,10 @@ stopifnot(
   round(delay_coef["(Intercept)", "Estimate"], 2) == -3.29, delay_coef["hours_24", "Pr(>|z|)"] < 0.001,
   round(exp(coef(delay_model))[["hours_24"]], 2) == 1.50, round(delay_ci["hours_24", ], 2) == c(1.21, 1.85),
   round(delay_wald["hours_24", ], 2) == c(1.22, 1.86),
+  round(mean(hip_fracture$hours_to_surgery[last_band])) == 97,
+  round(100 * mean(fitted(delay_model)[last_band]), 1) == 17.2,
+  round(100 * mean(hip_fracture$death_30d[last_band]), 1) == 18.2,
+  31 %/% 10 == 3,
   by_delay$n == c(574, 460, 122, 44), by_delay$deaths == c(29, 29, 8, 8),
   round(by_delay$percent[c(1, 4)], 1) == c(5.1, 18.2),
   nrow(acl) == 350, sum(acl$graft_failure) == 31,

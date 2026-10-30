@@ -685,7 +685,8 @@ stopifnot(
   round(ex_fail_ci["tibial_slope_deg", ], 2) == c(1.01, 1.59), round(ex_fail_ci["age_10", ], 2) == c(0.19, 1.04),
   round(ex_bend_test$Deviance[2], 2) == 2.45, ex_bend_test$Df[2] == 2, round(ex_bend_test$`Pr(>Chi)`[2], 3) == 0.294,
   round(exp(24 * coef(ex_line)[["hours_to_surgery"]]), 2) == 1.50, round(exp(24 * confint(ex_line)["hours_to_surgery", ]), 2) == c(1.21, 1.85),
-  sum(hip_fracture$death_30d[hip_fracture$hours_to_surgery > 72]) == 8, sum(hip_fracture$hours_to_surgery > 72) == 44
+  sum(hip_fracture$death_30d[hip_fracture$hours_to_surgery > 72]) == 8, sum(hip_fracture$hours_to_surgery > 72) == 44,
+  sum(hip_fracture$death_30d) == 74
 )
 ```
 
@@ -755,7 +756,7 @@ print(fail_ors)
 The CIs are R's profile CIs. With time-to-event data, Cox regression uses all 31 failures ([page 11](11-predict-from-one.qmd#cox)).
 :::
 
-**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), deaths seemed to jump after 72 hours. Fit the time to surgery as a natural cubic spline (3 degrees of freedom) in the logistic regression, compare it with the straight line, and write the Results sentence.
+**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), the death rate was highest in patients who waited more than 72 hours. Fit the time to surgery as a natural cubic spline (3 degrees of freedom) in the logistic regression, compare it with the straight line, and write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -768,6 +769,8 @@ hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 line_model <- glm(death_30d ~ hours_to_surgery, family = binomial, data = hip_fracture)
 bend_model <- glm(death_30d ~ ns(hours_to_surgery, df = 3), family = binomial, data = hip_fracture)
 anova(line_model, bend_model, test = "LRT")   # likelihood ratio test
+exp(24 * coef(line_model)[["hours_to_surgery"]])        # odds ratio per 24 hours
+exp(24 * confint(line_model)["hours_to_surgery", ])     # its 95% CI (profile)
 ```
 
 ## Python
@@ -781,10 +784,12 @@ bend_model = smf.logit("death_30d ~ cr(hours_to_surgery, knots=hours_knots, lowe
                        " upper_bound=hours_high, constraints='center')", data=hip_fracture).fit(disp=False)
 lr = 2 * (bend_model.llf - line_model.llf)    # likelihood ratio statistic
 print(lr, stats.chi2.sf(lr, df=2))           # 2 extra degrees of freedom
+print(np.exp(24 * line_model.params["hours_to_surgery"]))       # odds ratio per 24 hours
+print(np.exp(24 * line_model.conf_int().loc["hours_to_surgery"]))   # its 95% CI (Wald)
 ```
 :::
 
 > **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-The jump after 72 hours rests on 8 deaths in 44 patients, too few to pin down a curve.
+The CI is R's profile CI. The spline adds nothing clear, because the straight line already predicts that band's rate. And only 8 of the 74 deaths came after 72 hours, too few to pin down a curve.
 :::

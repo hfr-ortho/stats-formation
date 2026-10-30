@@ -358,3 +358,19 @@ def test_phase_2b_minors_stay_fixed(site):
     assert "differ between a hamstring graft" in text_of(section("catalog/06-two-unpaired-groups.html", "fisher-chi-square"))
     assert "square root of the average of the two variances" in text_of(load("catalog/07-two-paired-groups.html"))
     assert "prop.test(rts_table, correct = FALSE)$conf.int" in code_of(section("catalog/06-two-unpaired-groups.html", "exercises"))
+
+
+def test_logistic_warning_does_not_read_the_shape_off_open_ended_bands(site):
+    """The over-72-hours band is open-ended, and a straight line already predicts its rate."""
+    warning = text_of(section("catalog/11-predict-from-one.html", "logistic-regression").select_one("div.callout-warning"))
+    assert "suggests otherwise" not in warning and "17.2% from the model, 18.2% observed" in warning
+
+
+def test_pearson_warning_gives_the_trend_at_high_torsion(site):
+    warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
+    assert "averaged 7.0° lower" in warning
+
+
+def test_cox_events_rule_matches_page_14(site):
+    warning = text_of(section("catalog/11-predict-from-one.html", "cox").select_one("div.callout-warning"))
+    assert "about three terms" in warning
