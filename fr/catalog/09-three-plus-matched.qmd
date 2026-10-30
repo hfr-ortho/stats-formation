@@ -21,7 +21,7 @@ Les mêmes patients mesurés **trois fois ou plus** (avant l'opération, puis à
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données du cabinet : les PROM (mesures des résultats rapportés par le patient) et les ensembles appariés de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données du cabinet : les PROM (mesures des résultats rapportés par le patient) et les ensembles appariés de la cohorte de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les 80 patients opérés des deux côtés. Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
@@ -43,7 +43,7 @@ L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exig
 - Seuls les patients mesurés à **chaque** visite sont inclus (voir l'avertissement ci-dessus).
 - Si le critère est asymétrique, borné ou ordinal → le [test de Friedman](#friedman).
 
-La fonction physique PROMIS est un score T : 50 est la moyenne de la population générale des États-Unis. Le formulaire à quatre questions de PROMIS-29+2 va de 22.5 à 57.0, et 57.0 est le meilleur score qu'il puisse enregistrer.
+La fonction physique PROMIS est un score T : 50 est la moyenne de la population générale des États-Unis. La version à quatre questions de PROMIS-29+2 va de 22.5 à 57.0, et 57.0 est le meilleur score qu'elle puisse enregistrer.
 
 ### Regarder d'abord les données
 
@@ -101,7 +101,7 @@ print(pf.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[visits])
 ```
 :::
 
-328 patients ont été mesurés aux quatre visites. Leur score T moyen augmente à chaque visite, et les dispersions restent semblables. À 1 an, 28 d'entre eux sont à 57.0, le meilleur score que le formulaire puisse enregistrer. C'est une petite part, à une seule visite, parmi 328 patients : l'ANOVA à mesures répétées reste donc un choix raisonnable ici.
+328 patients ont été mesurés aux quatre visites. Leur score T moyen augmente à chaque visite, et les dispersions restent semblables. À 1 an, 28 d'entre eux sont à 57.0, le meilleur score que le questionnaire puisse enregistrer. C'est une petite part, à une seule visite, parmi 328 patients : l'ANOVA à mesures répétées reste donc un choix raisonnable ici.
 
 ### Exécuter l'analyse
 
@@ -110,7 +110,7 @@ print(pf.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[visits])
 
 ```{r}
 pf_anova <- rstatix::anova_test(data = pf, dv = promis_pf, wid = case_id, within = visit,
-                                 effect.size = c("pes", "ges"))   # eta carré partiel et généralisé
+                                 effect.size = c("pes", "ges"))   # êta carré partiel et généralisé
 pf_anova
 ```
 
@@ -118,7 +118,7 @@ pf_anova
 
 ```{python}
 pf_anova = pg.rm_anova(data=pf, dv="promis_pf", within="visit", subject="case_id",
-                        correction=True, effsize="np2", detailed=True)   # np2 = eta carré partiel
+                        correction=True, effsize="np2", detailed=True)   # np2 = êta carré partiel
 print(pf_anova.T)    # .T couche le tableau large sur le côté, pour qu'il tienne
 ```
 :::
@@ -146,15 +146,15 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 
 ### Lire le résultat
 
-- **F = 326.1, avec 3 et 981 degrés de liberté** (DFn/DFd en R, DF en Python) : à quel point les moyennes des visites diffèrent, comparé à la variation des scores de chaque patient autour de sa propre moyenne. 3 = quatre visites moins une ; 981 = 3 × (328 patients − 1).
+- **F = 326.1, avec 3 et 981 degrés de liberté** (DFn/DFd en R, DF en Python) : à quel point les moyennes des visites diffèrent, par rapport à la variation des scores de chaque patient autour de sa propre moyenne. 3 = quatre visites moins une ; 981 = 3 × (328 patients − 1).
 - **p** (R affiche `7.55e-147` ; le tableau de pingouin l'arrondit à `0.0` dans la ligne `p_unc`) : très inférieure à 0.001.
 - **Mauchly's Test for Sphericity** (R) : W = 0.995, p = 0.903. Aucune preuve que la sphéricité soit violée : le résultat non corrigé reste valable.
 - **Sphericity Corrections** (R) ou **eps** et **p_GG_corr** (Python) : l'epsilon de Greenhouse-Geisser vaut 0.997 (1 signifie une sphéricité parfaite), et la valeur p corrigée reste très inférieure à 0.001.
-- **pes = 0.499** (R) ou **np2** (Python) : l'eta carré partiel, ci-dessous.
+- **pes = 0.499** (R) ou **np2** (Python) : l'êta carré partiel, ci-dessous.
 
 ### Taille d'effet et IC à 95 %
 
-L'**eta carré partiel (η²~p~)** est la part de la variation intra-patient qu'expliquent les visites. Comme repère approximatif, 0.01 est petit, 0.06 moyen et 0.14 grand. L'**eta carré généralisé** (ges = 0.417 en R) compte aussi les différences *entre* patients, ce qui le rend comparable avec des plans d'étude qui ne sont pas à mesures répétées ; rapportez-le quand les lecteurs compareront des études de plans différents.
+L'**êta carré partiel (η²~p~)** est la part de la variation intra-patient qu'expliquent les visites. Comme repère approximatif, 0.01 est petit, 0.06 moyen et 0.14 grand. L'**êta carré généralisé** (ges = 0.417 en R) compte aussi les différences *entre* patients, ce qui le rend comparable avec des plans d'étude qui ne sont pas à mesures répétées ; rapportez-le quand les lecteurs compareront des études de plans différents.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -188,7 +188,7 @@ L'ANOVA dit que la fonction physique a changé quelque part au cours de l'année
 ## 🔀 R ou Python : quels outils vérifient la sphéricité
 - **R :** `aov(... + Error(case_id / visit))` de base donne le même test F mais ignore la sphéricité ; `rstatix::anova_test()` ajoute le test de Mauchly et les corrections. rstatix arrondit ses nombres à 3 décimales.
 - **Python :** `rm_anova(correction=True)` de pingouin donne le test de Mauchly et la correction de Greenhouse-Geisser. `AnovaRM` de statsmodels ne donne que le test F.
-- **Tailles d'effet :** pingouin renvoie l'eta carré soit partiel (`effsize="np2"`) soit généralisé (`effsize="ng2"`) ; rstatix renvoie les deux si on le demande.
+- **Tailles d'effet :** pingouin renvoie l'êta carré soit partiel (`effsize="np2"`) soit généralisé (`effsize="ng2"`) ; rstatix renvoie les deux si on le demande.
 :::
 
 ## Test de Friedman {#friedman}
@@ -293,7 +293,7 @@ check_agree(list(chisq = unname(efas_test$statistic), df = unname(efas_test$para
 
 ### Lire le résultat
 
-- **Friedman chi-squared = 84.9** (R) ou **Q** (Python) : à quel point les visites se classent de façon constante dans le même ordre d'un patient à l'autre.
+- **Friedman chi-squared = 84.9** (R) ou **Q** (Python) : à quel point les visites se classent de façon cohérente dans le même ordre d'un patient à l'autre.
 - **df = 2 :** trois visites moins une.
 - **p < 0.001** (R affiche "p < 2.2e-16").
 - **W = 0.849** (Python) : le W de Kendall, ci-dessous.
@@ -473,7 +473,7 @@ check_agree(c(setNames(as.list(aid_ci[1, ]), paste0("low_", visit_names)),
               setNames(as.list(aid_ci[2, ]), paste0("high_", visit_names))), reticulate::py$chk)
 ```
 
-L'utilisation a augmenté de 24.4 points de pourcentage entre l'avant-opération et 6 semaines, puis est tombée bien en dessous de son niveau préopératoire à 1 an (24.4 points de moins).
+L'utilisation a augmenté de 24.4 points de pourcentage entre la visite préopératoire et 6 semaines, puis est tombée bien en dessous de son niveau préopératoire à 1 an (24.4 points de moins).
 
 ### Rédiger les résultats
 
@@ -584,7 +584,7 @@ check_agree(list(hr_b = set_hr["implantB", "exp(coef)"], hr_c = set_hr["implantC
 
 ### Taille d'effet et IC à 95 %
 
-Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles appariés, l'implant C portait un hazard de révision environ quatre fois plus élevé que celui de l'implant A (3.91, IC à 95 % de 1.28 à 11.95). L'estimation pour l'implant B (0.43, IC à 95 % de 0.08 à 2.25) est trop imprécise pour être interprétée.
+Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles appariés, l'implant C avait un hazard de révision environ quatre fois plus élevé que celui de l'implant A (3.91, IC à 95 % de 1.28 à 11.95). L'estimation pour l'implant B (0.43, IC à 95 % de 0.08 à 2.25) est trop imprécise pour être interprétée.
 
 ### Rédiger les résultats
 
@@ -594,7 +594,7 @@ Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles app
 
 ::: {.callout-warning}
 ## ⚠️ Attention : seulement 24 événements
-Un modèle de Cox a besoin d'événements, pas seulement de patients. Avec 24 révisions réparties sur trois implants, les IC sont larges et le modèle ne permet pas d'ajuster pour quoi que ce soit d'autre. La [page 14](../survival/14-cox-regression.qmd#choosing-covariates) explique combien d'événements un modèle demande.
+Un modèle de Cox a besoin d'événements, pas seulement de patients. Avec 24 révisions réparties sur trois implants, les IC sont larges et le modèle ne permet pas d'ajuster sur quoi que ce soit d'autre. La [page 14](../survival/14-cox-regression.qmd#choosing-covariates) explique combien d'événements un modèle demande.
 :::
 
 ::: {.callout-tip}
@@ -690,7 +690,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le haut.
 
-**1.** Refaites l'ANOVA à mesures répétées pour la fonction physique PROMIS dans les prothèses de hanche seulement (`instrument == "HOOS JR"`).
+**1.** Refaites l'ANOVA à mesures répétées pour la fonction physique PROMIS chez les patients avec une prothèse de hanche seulement (`instrument == "HOOS JR"`).
 
 ::: {.callout-tip collapse="true"}
 ## Solution

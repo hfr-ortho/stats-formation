@@ -266,7 +266,7 @@ check_agree(list(h = unname(satisfaction_test$statistic), p = satisfaction_test$
 
 - **Kruskal-Wallis chi-squared = 0.68** (R) ou **statistic** (Python) : la statistique H. Elle mesure l'écart entre les rangs moyens des groupes. Les deux programmes la corrigent pour les nombreux scores ex æquo.
 - **df = 2 :** trois groupes moins un.
-- **p = 0.713 :** un écart de satisfaction au moins aussi grand entre les groupes serait très fréquent si les patients des chirurgiens étaient également satisfaits.
+- **p = 0.713 :** un écart de satisfaction au moins aussi grand que celui observé entre les groupes serait très fréquent si les patients des chirurgiens étaient également satisfaits.
 
 ### Taille d'effet et IC à 95 %
 
@@ -432,7 +432,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, une association entre petite et moyenne. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment ajuster pour d'autres facteurs.
+V = 0.25, une association entre petite et moyenne. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment ajuster sur d'autres facteurs.
 
 ### Rédiger les résultats
 
@@ -457,7 +457,7 @@ La correction de continuité de Yates ([page 6](06-two-unpaired-groups.qmd#fishe
 ### Quand l'utiliser
 
 - Le critère est un **délai jusqu'à un événement** (la révision), comparé entre **trois groupes indépendants ou plus**.
-- Le **test du log-rank** s'étend à trois groupes ou plus et répond à « les courbes diffèrent-elles ? ». La **régression de Cox** donne en plus un hazard ratio pour chaque groupe par rapport à un groupe de référence, et peut ajuster pour d'autres variables.
+- Le **test du log-rank** s'étend à trois groupes ou plus et répond à « les courbes diffèrent-elles ? ». La **régression de Cox** donne en plus un hazard ratio pour chaque groupe par rapport à un groupe de référence, et peut ajuster sur d'autres variables.
 - Elle suppose que le risque de chaque groupe est un multiple constant de celui du groupe de référence au fil du temps (**risques proportionnels**). La [page 14](../survival/14-cox-regression.qmd#proportional-hazards) montre comment le vérifier et traite la régression de Cox en entier.
 
 ### Regarder d'abord les données
@@ -556,14 +556,14 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 ### Lire le résultat
 
 - **exp(coef) :** le hazard ratio de chaque implant par rapport à l'implant A, la référence. Implant B : 0.82 ; implant C : 3.07.
-- **lower .95 / upper .95 :** les IC à 95 %. Celui de l'implant B (de 0.45 à 1.50) contient 1 : les données sont compatibles avec une absence de différence avec A. Celui de l'implant C (de 1.85 à 5.09) ne le contient pas.
+- **lower .95 / upper .95 :** les IC à 95 %. Celui de l'implant B (de 0.45 à 1.50) contient 1 : les données sont compatibles avec l'absence de différence par rapport à A. Celui de l'implant C (de 1.85 à 5.09) ne le contient pas.
 - **Pr(>|z|) :** la valeur p de chaque implant par rapport à A (p = 0.514 pour B, p < 0.001 pour C).
 - **Likelihood ratio test = 27.6 on 2 df, p < 0.001 :** le test global qui demande si l'implant compte du tout, l'équivalent pour Cox du test F de l'ANOVA. Python l'affiche comme deuxième nombre.
 - **Score (logrank) test = 33.5 :** le test du log-rank pour les trois implants, que Python affiche en dernier. (Le test du score de Cox et le test du log-rank traitent un peu différemment les délais de révision ex æquo : ils concordent donc à une décimale près, pas exactement.)
 
 ### Taille d'effet et IC à 95 %
 
-Les **hazard ratios** avec leur IC à 95 % sont les tailles d'effet : l'implant C portait un hazard de révision environ trois fois plus élevé que celui de l'implant A (3.07, IC à 95 % de 1.85 à 5.09), alors que l'implant B ne différait pas clairement de A (0.82, IC à 95 % de 0.45 à 1.50).
+Les **hazard ratios** avec leur IC à 95 % sont les tailles d'effet : l'implant C avait un hazard de révision environ trois fois plus élevé que celui de l'implant A (3.07, IC à 95 % de 1.85 à 5.09), alors que l'implant B ne différait pas clairement de A (0.82, IC à 95 % de 0.45 à 1.50).
 
 ### Rédiger les résultats
 
@@ -572,7 +572,7 @@ Les **hazard ratios** avec leur IC à 95 % sont les tailles d'effet : l'implan
 > **Results:** Compared with implant A, the hazard ratio for revision was 3.07 (95% CI 1.85 to 5.09) for implant C and 0.82 (95% CI 0.45 to 1.50) for implant B (likelihood ratio test for implant type, χ² = 27.6, df = 2, p < 0.001).
 
 ::: {.callout-warning}
-## ⚠️ Attention : le groupe de référence oriente le récit
+## ⚠️ Attention : le groupe de référence influence la lecture des résultats
 Chaque hazard ratio est ici relatif à l'implant A : le résultat ne compare donc pas B à C directement. Choisissez le groupe de référence à dessein (l'implant standard, le plus grand groupe) et dites lequel c'est. Et comme à la [page 4](04-describe-one-group.qmd#kaplan-meier), les décès sont ici traités comme des données censurées ; la [page 13](../survival/13-kaplan-meier.qmd#competing-risks) traite des risques concurrents.
 :::
 
