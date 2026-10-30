@@ -86,6 +86,13 @@ def test_fetch_wrapper_filters_search_json_and_returns_a_real_response():
     assert got == [True, 200, "b", [{"href": "fr/a.html#x"}]]
 
 
+def test_search_on_an_untranslated_language_uses_english():
+    probe = FETCH + script() + "\nlimitSearchTo('de', win);\n(async () => console.log(JSON.stringify(await (await win.fetch('../search.json')).json())))();"
+    out = subprocess.run([NODE, "-e", probe], capture_output=True, text=True, timeout=30)
+    assert out.returncode == 0, out.stderr
+    assert json.loads(out.stdout) == [{"href": "en/a.html"}]
+
+
 def test_fetch_wrapper_leaves_other_requests_alone():
     assert run_fetch('const r = await win.fetch("page.html"); return [r.status, await r.text(), calls];') == \
         [200, "page", ["page.html"]]

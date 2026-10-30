@@ -949,6 +949,8 @@ FRENCH_BANNED = {
     "sans bruit": r"sans bruit",
     "risque de base": r"risque de base",
     "phrase de Results": r"phrase de Results",
+    "phrase des résultats": r"(?-i:phrase des résultats)",     # lowercase only: "phrase de Résultats" is right
+    "phrase de résultats": r"(?-i:phrase de résultats)",
     "s'accumulent contre": r"s['’]accumulent contre",
 }
 
@@ -964,7 +966,7 @@ def banned_terms(tr: str) -> list[str]:
         text = re.sub(r"<!--.*?-->", " ", line).replace("\u00a0", " ")
         text = re.sub(r"`[^`\n]*`", " ", text)
         text = re.sub(r"«[^»]*»", " ", text)
-        text = re.sub(r"\*[^*\n]+\*", " ", text)
+        text = re.sub(r"(?<!\*)\*(?!\*)[^*\n]+(?<!\*)\*(?!\*)", " ", text)     # italics, not **bold**
         text = re.sub(r"\]\([^)\s]*\)", "] ", text)
         found += [name for name, rx in FRENCH_BANNED.items() if re.search(rx, text, re.IGNORECASE)]
     return found
@@ -974,7 +976,8 @@ def test_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
     for bad in ["Ajustez pour l'âge, ajuster pour le sexe.", "Il est ajusté pour trois tests.",
                 "le test selon lequel x", "pas d'évidence claire", "une botte amovible",
                 "la fracture de la hanche", "une fracture de hanche", "les données du cabinet",
-                "à égalité", "sans bruit", "le risque de base", "la phrase de Results", "s'accumulent contre"]:
+                "à égalité", "sans bruit", "le risque de base", "la phrase de Results", "s'accumulent contre", "la phrase des résultats", "la phrase de résultats",
+                "*italique* puis **gras** ajuster pour"]:
         assert banned_terms(bad), bad
     for good in ["Ajusté sur l'âge, mis en évidence.", "tient compte de toutes les paires", "la phrase de Résultats",
                  "> **Results:** a fracture de hanche, ajusté pour l'âge", "« ajusté pour » est un calque",
