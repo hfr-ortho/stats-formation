@@ -1,8 +1,598 @@
 ---
-title: "3 · Distributions et choix du test (en préparation)"
+title: "3 · Distributions et choix d'un test"
+description: "Vérifier si les données ont l'air normales, décider dans quelle colonne du tableau de décision vous vous trouvez, et comprendre les valeurs p, les tailles d'effet et les intervalles de confiance."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/foundations/03-distributions.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Le [tableau de décision](../choose-a-test.qmd) pose deux questions : quel est votre **objectif** (la ligne), et quel **type de données** avez-vous (la colonne)? Cette page traite de la seconde question, et surtout de sa partie la plus difficile : une mesure est-elle assez « gaussienne » (de distribution normale) pour la colonne de gauche ?
+
+## Pourquoi la forme de vos données compte {#why}
+
+Les tests de la première colonne (tests t, ANOVA, corrélation de Pearson) comparent des **moyennes**, et supposent que les données de chaque groupe suivent à peu près une distribution normale, en forme de cloche. Les tests de la deuxième colonne (Mann-Whitney, Wilcoxon, Kruskal-Wallis, Spearman) travaillent sur les **rangs**. Ils ne supposent pas de distribution normale.
+
+::: {.callout-note}
+## 💡 En clair
+Une moyenne résume bien un tas de nombres en forme de cloche. Elle résume mal un tas déséquilibré : quelques très longs séjours à l'hôpital tirent la moyenne loin de ce qui est typique. Les tests fondés sur les moyennes héritent de ce problème. Les tests basés sur les rangs demandent seulement « quelles valeurs sont les plus grandes ? », donc quelques valeurs extrêmes ne peuvent pas tout dominer.
+:::
+
+## Regarder d'abord : histogrammes et graphiques QQ {#look}
+
+Faites toujours un graphique avant de tester. Voici trois variables des données d'exercice : l'âge, la durée de séjour et le score PROM (mesure des résultats rapportés par le patient) à 1 an.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+cohort   <- read_csv("data/cohort.csv", show_col_types = FALSE)
+proms    <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+one_year <- proms |> filter(visit == "1yr", !is.na(prom_score))
+
+shapes <- bind_rows(
+  tibble(variable = "Age, years",           value = cohort$age),
+  tibble(variable = "Length of stay, days", value = cohort$los_days),
+  tibble(variable = "1-year PROM score",    value = one_year$prom_score)
+)
+
+ggplot(shapes, aes(value)) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~ variable, scales = "free")
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+
+cohort = pd.read_csv("data/cohort.csv")
+proms = pd.read_csv("data/proms_long.csv")
+one_year = proms[(proms["visit"] == "1yr") & proms["prom_score"].notna()]
+
+shapes = {
+    "Age, years": cohort["age"],
+    "Length of stay, days": cohort["los_days"],
+    "1-year PROM score": one_year["prom_score"],
+}
+
+fig, axes = plt.subplots(1, 3, figsize=(10, 3))
+for ax, (name, values) in zip(axes, shapes.items()):
+    ax.hist(values, bins=30)
+    ax.set_title(name)
+plt.tight_layout()
+plt.show()
+```
+:::
+
+- **L'âge** est une cloche assez symétrique.
+- **La durée de séjour** s'accumule à 0 et 1 jour et a une longue queue à droite : elle est **asymétrique à droite**.
+- **Le PROM à 1 an** s'accumule contre le haut de l'échelle (100), avec une queue à gauche : c'est un **effet plafond**.
+
+Un **graphique quantile-quantile (QQ plot)** rend la comparaison avec une distribution normale plus facile à voir. Si les données sont normales, les points tombent sur la droite.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+ggplot(shapes, aes(sample = value)) +
+  geom_qq() +
+  geom_qq_line() +
+  facet_wrap(~ variable, scales = "free")
+```
+
+## Python
+
+```{python}
+fig, axes = plt.subplots(1, 3, figsize=(10, 3))
+for ax, (name, values) in zip(axes, shapes.items()):
+    stats.probplot(values, plot=ax)
+    ax.set_title(name)
+plt.tight_layout()
+plt.show()
+```
+:::
+
+Comment les lire :
+
+- Points **sur la droite** : proche de la normale (l'âge).
+- Points **qui remontent à l'extrémité droite** : asymétrie à droite (la durée de séjour). Les paliers plats viennent des nombreuses valeurs ex æquo à 0, 1 et 2 jours.
+- Points **qui s'aplatissent en haut** : un plafond (le PROM). Beaucoup de patients partagent le score maximal.
+
+Un nombre qui mesure le déséquilibre d'une distribution est l'**asymétrie** (*skewness*) : 0 pour une forme symétrique, positive pour une queue à droite, négative pour une queue à gauche.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+skewness <- function(x) mean((x - mean(x))^3) / sd(x)^3
+
+c(age      = skewness(cohort$age),
+  los      = skewness(cohort$los_days),
+  prom_1yr = skewness(one_year$prom_score))
+```
+
+## Python
+
+```{python}
+def skewness(x):
+    return ((x - x.mean()) ** 3).mean() / x.std() ** 3
+
+print(pd.Series({
+    "age": skewness(cohort["age"]),
+    "los": skewness(cohort["los_days"]),
+    "prom_1yr": skewness(one_year["prom_score"]),
+}))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"age": float(skewness(cohort["age"])), "los": float(skewness(cohort["los_days"])),
+       "prom_1yr": float(skewness(one_year["prom_score"]))}
+```
+
+```{r}
+#| include: false
+check_agree(list(age = skewness(cohort$age), los = skewness(cohort$los_days),
+                 prom_1yr = skewness(one_year$prom_score)), reticulate::py$chk)
+```
+
+::: {.callout-tip}
+## 🔀 R ou Python : les fonctions d'asymétrie
+Les packages définissent l'asymétrie de façons légèrement différentes (`scipy.stats.skew()` et le package R `e1071` ont chacun leur formule), si bien que la troisième décimale peut différer. Nous avons écrit la formule à la main dans les deux langages pour que les nombres concordent exactement.
+:::
+
+## Tests formels : Shapiro-Wilk, et pourquoi ne pas s'y fier seul {#shapiro}
+
+Le **test de Shapiro-Wilk** pose la question : « Ces nombres pourraient-ils venir d'une distribution normale ? » Une petite valeur p veut dire « probablement pas ». La tentation est de le laisser décider : p < 0.05 → test de rangs, sinon → test t. Cette règle échoue dans les deux sens.
+
+**Il est trop sensible avec de grands échantillons.** Nos 600 âges ont l'air d'une cloche de manuel, et pourtant :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+shapiro.test(cohort$age)
+```
+
+## Python
+
+```{python}
+print(stats.shapiro(cohort["age"]))
+```
+:::
+
+p = 0.001 : « pas normal ». Avec 600 valeurs, le test détecte des écarts bien trop petits pour compter. Un test t sur ces âges serait parfaitement correct.
+
+**Il est trop faible avec de petits échantillons.** Prenons seulement les 10 premiers patients et leur score PROM à 1 an, une variable que nous *savons* asymétrique et plafonnée :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+first_ten <- head(one_year$prom_score, 10)
+first_ten
+shapiro.test(first_ten)
+```
+
+## Python
+
+```{python}
+first_ten = one_year["prom_score"].head(10)
+print(first_ten.tolist())
+print(stats.shapiro(first_ten))
+```
+:::
+
+```{python}
+#| include: false
+age_sw = stats.shapiro(cohort["age"])
+ten_sw = stats.shapiro(first_ten)
+chk = {"age_w": float(age_sw.statistic), "age_p": float(age_sw.pvalue),
+       "ten_w": float(ten_sw.statistic), "ten_p": float(ten_sw.pvalue)}
+```
+
+```{r}
+#| include: false
+age_sw <- shapiro.test(cohort$age)
+ten_sw <- shapiro.test(first_ten)
+check_agree(list(age_w = unname(age_sw$statistic), age_p = age_sw$p.value,
+                 ten_w = unname(ten_sw$statistic), ten_p = ten_sw$p.value), reticulate::py$chk)
+```
+
+p = 0.173 : « pas de preuve contre la normalité ». Dix valeurs ne peuvent tout simplement pas révéler la forme, et c'est justement là que la forme compte le plus.
+
+::: {.callout-warning}
+## ⚠️ Attention : ne laissez pas une seule valeur p choisir votre test
+Décidez à partir des graphiques, de ce que vous savez de la mesure (un score borné, un nombre de jours) et de la taille de l'échantillon. Utilisez Shapiro-Wilk comme un indice parmi d'autres, pas comme le juge. Puis dites dans vos Méthodes comment vous avez décidé.
+:::
+
+## Vérifier dans les groupes, pas sur les données regroupées {#within-groups}
+
+La condition de normalité porte sur les données **de chaque groupe** (ou, pour les modèles de régression, sur les **résidus** : ce qui reste après la prédiction du modèle). Regrouper des groupes de centres différents peut faire paraître non normales des données parfaitement normales.
+
+Voici un exemple extrême, inventé : deux groupes de 200 valeurs, chacun exactement normal, distants de 4 écarts-types.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+group_a <- qnorm(ppoints(200), mean = 40, sd = 5)   # 200 valeurs parfaitement normales
+group_b <- qnorm(ppoints(200), mean = 60, sd = 5)
+
+shapiro.test(group_a)$p.value                       # un groupe seul
+shapiro.test(c(group_a, group_b))$p.value           # les deux groupes ensemble
+```
+
+## Python
+
+```{python}
+points = (np.arange(1, 201) - 0.5) / 200            # les mêmes probabilités que ppoints(200) de R
+group_a = stats.norm.ppf(points, loc=40, scale=5)   # 200 valeurs parfaitement normales
+group_b = stats.norm.ppf(points, loc=60, scale=5)
+
+print(stats.shapiro(group_a).pvalue)                              # un groupe seul
+print(stats.shapiro(np.concatenate([group_a, group_b])).pvalue)   # les deux groupes ensemble
+```
+:::
+
+```{python}
+#| include: false
+chk = {"one": float(stats.shapiro(group_a).pvalue),
+       "pooled": float(stats.shapiro(np.concatenate([group_a, group_b])).pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(one = shapiro.test(group_a)$p.value,
+                 pooled = shapiro.test(c(group_a, group_b))$p.value), reticulate::py$chk)
+```
+
+Chaque groupe seul réussit sans peine (p ≈ 1). Regroupés, p < 0.001 : l'histogramme des valeurs regroupées a deux bosses, ce qui n'est pas la forme d'une distribution normale.
+
+Dans les vraies données, les groupes sont en général bien plus proches. L'IMC ne diffère que d'environ un tiers d'écart-type entre les patients PTH et PTG, donc regrouper change à peine quelque chose. Ce que l'on voit, c'est plutôt le verdict de Shapiro-Wilk qui oscille autour de 0.05 selon la façon de découper les mêmes données :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+shapiro.test(cohort$bmi)$p.value                         # regroupés
+
+cohort |>
+  group_by(procedure) |>
+  summarise(shapiro_p = shapiro.test(bmi)$p.value)       # chaque groupe seul
+
+fit <- lm(bmi ~ procedure, data = cohort)                # résidu = IMC moins la moyenne de son groupe
+shapiro.test(residuals(fit))$p.value
+
+ggplot(tibble(residual = residuals(fit)), aes(sample = residual)) +
+  geom_qq() +
+  geom_qq_line()
+```
+
+## Python
+
+```{python}
+print(stats.shapiro(cohort["bmi"]).pvalue)               # regroupés
+
+for procedure, group in cohort.groupby("procedure"):     # chaque groupe seul
+    print(procedure, stats.shapiro(group["bmi"]).pvalue)
+
+# résidu = IMC moins la moyenne de son groupe
+residuals = cohort["bmi"] - cohort.groupby("procedure")["bmi"].transform("mean")
+print(stats.shapiro(residuals).pvalue)
+
+fig, ax = plt.subplots(figsize=(4, 3))
+qq = stats.probplot(residuals, plot=ax)                  # donner un nom au résultat garde ses nombres hors de la sortie
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+chk = {"pooled": float(stats.shapiro(cohort["bmi"]).pvalue),
+       "residuals": float(stats.shapiro(residuals).pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(pooled = shapiro.test(cohort$bmi)$p.value,
+                 residuals = shapiro.test(residuals(fit))$p.value), reticulate::py$chk)
+```
+
+Regroupés, p = 0.044, PTH seule 0.051, PTG seule 0.124, résidus 0.306 : quatre découpages des mêmes données, de part et d'autre de 0.05, alors que le graphique QQ est une droite presque parfaite. C'est de nouveau la leçon de la section précédente : décidez à partir des graphiques et de ce que vous savez de la mesure, pas à partir d'une seule valeur p.
+
+## Quelle importance a la normalité ? {#robustness}
+
+Moins que vous ne le pensez, dès que les groupes sont assez grands. Les tests sur les moyennes reposent sur le fait que la **moyenne** est à peu près normale, pas chaque valeur individuelle. Grâce au *théorème central limite*, les moyennes d'environ 30 valeurs ou plus sont proches de la normale, même quand les valeurs elles-mêmes sont asymétriques.
+
+Un guide pratique :
+
+- **Environ 30 par groupe ou plus, asymétrie modérée, pas de valeurs atypiques extrêmes** : les tests t et l'ANOVA conviennent. Avec des données très asymétriques, le test de rangs reste souvent le meilleur résumé.
+- **Forte asymétrie ou valeurs atypiques extrêmes** : utilisez la colonne des rangs.
+- **Petits groupes (moins d'environ 15 par groupe)** : les graphiques ne montrent pas la forme, et aucun test n'a beaucoup de puissance. Choisissez d'après ce que vous savez de la mesure : la colonne des rangs pour les mesures asymétriques ou ordinales, la colonne gaussienne pour les mesures connues pour être à peu près normales. Attendez-vous à de larges intervalles de confiance dans les deux cas.
+- **Échelles ordinales, ou plafond ou plancher** : utilisez la colonne des rangs quelle que soit la taille de l'échantillon (ci-dessous).
+
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot : le théorème central limite
+Si vous tirez de nombreux échantillons aléatoires de taille *n* dans presque n'importe quelle distribution et que vous calculez la moyenne de chacun, ces moyennes forment une distribution qui se rapproche de la normale quand *n* grandit. Sa dispersion diminue proportionnellement à 1/√n. Les tests t reposent sur la distribution de la moyenne, c'est pourquoi ils tolèrent des données brutes non normales quand *n* est grand. « Environ 30 » est une règle empirique, pas une loi : plus les données sont asymétriques, plus *n* doit être grand.
+:::
+
+## Asymétrie, plafonds et transformations {#transform}
+
+Pour corriger une asymétrie à droite, on analyse souvent le **logarithme** des valeurs. Pour la durée de séjour, il faut utiliser log(jours + 1), parce que log(0) n'existe pas.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+c(skew_raw      = skewness(cohort$los_days),
+  skew_log      = skewness(log1p(cohort$los_days)),   # log1p(x) = log(1 + x)
+  share_zero    = mean(cohort$los_days == 0),
+  ceiling_1yr   = mean(one_year$prom_score == 100))
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+print(pd.Series({
+    "skew_raw": skewness(cohort["los_days"]),
+    "skew_log": skewness(np.log1p(cohort["los_days"])),   # log1p(x) = log(1 + x)
+    "share_zero": (cohort["los_days"] == 0).mean(),
+    "ceiling_1yr": (one_year["prom_score"] == 100).mean(),
+}))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"skew_log": float(skewness(np.log1p(cohort["los_days"]))),
+       "share_zero": float((cohort["los_days"] == 0).mean()),
+       "ceiling_1yr": float((one_year["prom_score"] == 100).mean())}
+```
+
+```{r}
+#| include: false
+check_agree(list(skew_log = skewness(log1p(cohort$los_days)),
+                 share_zero = mean(cohort$los_days == 0),
+                 ceiling_1yr = mean(one_year$prom_score == 100)), reticulate::py$chk)
+```
+
+Le logarithme aide (l'asymétrie passe d'environ 1.6 à 0.6), mais près de la moitié des séjours durent 0 jour, et aucune transformation ne peut étaler un tas de valeurs identiques. Les résultats sur une échelle logarithmique sont aussi plus difficiles à expliquer (« une différence de 0.3 en log(jours + 1) »). Ici, les tests basés sur les rangs sont plus simples et plus honnêtes.
+
+Il en va de même pour le **plafond** : 17 % des patients obtiennent le score maximal à 1 an, et aucune transformation ne permet de distinguer ces patients. Comparez les groupes avec des tests basés sur les rangs, ou rapportez la proportion qui atteint le plafond (ou une amélioration cliniquement importante) comme un critère oui/non.
+
+## Les données ordinales vont toujours dans la colonne des rangs {#ordinal}
+
+Les données **ordinales** ont un ordre, mais pas d'écart fixe : la satisfaction de 1 (« très insatisfait ») à 5 (« très satisfait »), la classe ASA, la douleur « nulle / légère / modérée / sévère ». Le pas de 4 à 5 n'a pas forcément la même taille que le pas de 1 à 2, donc les moyennes sont difficiles à interpréter.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+count(cohort, satisfaction_1yr)
+```
+
+## Python
+
+```{python}
+print(cohort["satisfaction_1yr"].value_counts(dropna=False).sort_index())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"very_satisfied": float((cohort["satisfaction_1yr"] == 5).sum()),
+       "no_answer": float(cohort["satisfaction_1yr"].isna().sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(very_satisfied = sum(cohort$satisfaction_1yr == 5, na.rm = TRUE),
+                 no_answer = sum(is.na(cohort$satisfaction_1yr))), reticulate::py$chk)
+```
+
+Rapportez les données ordinales en effectifs et pourcentages, ou en médiane (intervalle interquartile, IIQ), et comparez les groupes avec des tests basés sur les rangs. Ne faites jamais un test t sur des scores de Likert, quel que soit le nombre de patients.
+
+## Données indépendantes ou appariées ? {#paired}
+
+Les lignes du tableau de décision demandent aussi si vos groupes sont **indépendants** ou **appariés**.
+
+- **Non appariés (indépendants)** : des patients différents dans chaque groupe. PTH et PTG ; site A et site B ; hommes et femmes.
+- **Appariés** : les mêmes patients mesurés deux fois, ou des paires naturelles. PROM avant l'opération et à 1 an chez les mêmes patients ; genou gauche et genou droit chez les patients opérés des deux côtés ; deux évaluateurs qui mesurent les mêmes radiographies.
+- **Appariés par sélection (*matched*)** : chaque patient d'un groupe a été choisi pour ressembler à un patient de l'autre groupe (selon l'âge, le sexe, l'IMC…). Traitez ces ensembles comme des paires.
+
+**Les patients opérés des deux côtés demandent de l'attention.** Dans notre cohorte, 80 patients apparaissent deux fois, une fois pour chaque côté, en général dans le même groupe. Leurs deux interventions partagent l'âge, le sexe et l'état de santé de la même personne, donc elles ne sont pas indépendantes. Les tests qui traitent chaque ligne comme un patient distinct sont alors un peu trop sûrs d'eux (valeurs p trop petites, IC trop étroits). Soit vous analysez une seule intervention par patient (par exemple la première), soit vous utilisez des méthodes conçues pour les données groupées, comme les [modèles mixtes](../beyond/16-mixed-models.qmd#bilateral). Dites ce que vous avez fait.
+
+L'appariement compte parce que les mesures d'un même patient sont liées. Une analyse appariée prend chaque patient comme son propre témoin, ce qui supprime la variation d'un patient à l'autre et donne en général une réponse plus précise. Analyser des données appariées comme si elles ne l'étaient pas est l'une des erreurs les plus fréquentes de la littérature.
+
+## De votre question à un test {#flowchart}
+
+```{mermaid}
+flowchart TD
+  A[Quel est votre objectif ?] --> B[Décrire un groupe]
+  A --> M[Comparer un groupe à une valeur hypothétique]
+  A --> C[Comparer des groupes ou des mesures]
+  A --> D[Association ou prédiction]
+  C --> E{Mêmes patients ou appariés ?}
+  E -->|Non| F[Lignes non appariées]
+  E -->|Oui| G[Lignes appariées]
+  B --> H{Quel type de critère de jugement ?}
+  M --> H
+  F --> H
+  G --> H
+  D --> H
+  H -->|Mesure, à peu près normale dans les groupes| I[Colonne gaussienne]
+  H -->|Très asymétrique, bornée ou ordinale| J[Colonne des rangs]
+  H -->|Oui / non| K[Colonne binomiale]
+  H -->|Délai jusqu'à un événement| L[Colonne de survie]
+```
+
+Trouvez ensuite votre ligne et votre colonne dans le [tableau de décision](../choose-a-test.qmd). Quelques exemples tirés de questions de recherche typiques en orthopédie :
+
+| Question | Ligne | Colonne | Test |
+|------|------|------|------|
+| Le score EFAS à 3 mois est-il différent avec une orthèse qu'avec un plâtre ? | Deux groupes indépendants | Gaussienne | [Test t pour échantillons indépendants](../catalog/06-two-unpaired-groups.qmd#unpaired-t) |
+| La douleur 6 semaines après la blessure est-elle différente avec une orthèse qu'avec un plâtre ? | Deux groupes indépendants | Rangs (ordinale) | [Test de Mann-Whitney](../catalog/06-two-unpaired-groups.qmd#mann-whitney) |
+| Le KOOS JR s'est-il amélioré entre l'avant-opération et 1 an ? | Deux groupes appariés | Rangs (plafond) | [Test des rangs signés de Wilcoxon](../catalog/07-two-paired-groups.qmd#wilcoxon-signed-rank) |
+| L'échec de la greffe dans les 2 ans diffère-t-il entre les greffons aux ischio-jambiers et os-tendon rotulien-os (BPTB) ? | Deux groupes indépendants | Binomiale | [Test exact de Fisher](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) |
+| La satisfaction diffère-t-elle entre les chirurgiens S1, S2 et S3 ? | Trois groupes indépendants ou plus | Rangs (ordinale) | [Test de Kruskal-Wallis](../catalog/08-three-plus-unmatched.qmd#kruskal-wallis) |
+| Le modèle d'implant influence-t-il la survie sans révision ? | Trois groupes indépendants ou plus | Survie | [Régression de Cox](../catalog/08-three-plus-unmatched.qmd#cox) |
+
+## Valeurs p, tailles d'effet et intervalles de confiance {#effect-sizes}
+
+Chaque test de ce site rapporte trois choses. Elles répondent à des questions différentes, et de bons Résultats donnent les trois.
+
+- La **taille d'effet** répond à *de quelle ampleur ?* Par exemple, la différence entre deux moyennes.
+- L'**intervalle de confiance (IC) à 95 %** répond à *quelle est notre certitude sur cette ampleur ?* C'est l'étendue des tailles d'effet compatibles avec les données.
+- La **valeur p** répond à *à quel point des données comme celles-ci seraient-elles surprenantes s'il n'y avait vraiment aucune différence ?* Elle ne mesure ni l'ampleur ni l'importance d'un effet.
+
+Voici les trois pour l'IMC des patients PTG et PTH, avec le test t pour échantillons indépendants (de Welch) de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_test <- t.test(bmi ~ procedure, data = cohort)   # test t de Welch (valeur par défaut de R)
+bmi_test
+
+difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # PTG moins PTH
+ci <- -rev(bmi_test$conf.int)                                        # inverser pour obtenir PTG moins PTH
+tibble(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value)
+```
+
+## Python
+
+```{python}
+tka = cohort.loc[cohort["procedure"] == "TKA", "bmi"]
+tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
+
+bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # test t de Welch
+ci = bmi_test.confidence_interval()
+
+print(pd.Series({"difference": tka.mean() - tha.mean(),
+                 "ci_low": ci.low, "ci_high": ci.high, "p": bmi_test.pvalue}))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
+       "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
+            reticulate::py$chk)
+```
+
+> TKA patients had a higher BMI than THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+
+Une différence de 1.8 kg/m² est-elle *cliniquement* importante ? La valeur p ne peut pas vous le dire. Demandez-vous si une différence située n'importe où dans l'IC (0.9 à 2.6 kg/m²) changerait le risque ou la prise en charge, par exemple le taux de complications. C'est un jugement clinique, pas de la statistique. **Statistiquement significatif** veut dire seulement que des données comme celles-ci seraient inhabituelles s'il n'y avait vraiment aucune différence. Cela ne veut pas dire que la différence est grande ou importante.
+
+::: {.callout-warning}
+## ⚠️ Attention : deux erreurs de lecture classiques
+- **« p = 0.20, donc il n'y a pas de différence. »** Non. Cela veut dire que les données n'ont pas pu exclure zéro. Regardez l'IC : s'il va de « nocif » à « très utile », l'étude était trop petite pour conclure.
+- **« p < 0.001, donc l'effet est grand. »** Non. Avec assez de patients, de minuscules différences obtiennent de minuscules valeurs p. Regardez la taille d'effet et l'IC.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : quel groupe vient en premier
+`t.test(bmi ~ procedure)` de R soustrait dans l'ordre alphabétique des groupes (PTH moins PTG). Avec `scipy`, `ttest_ind(tka, tha)` soustrait le second argument du premier. Même réponse, signe opposé. Dites toujours quel groupe a été soustrait de quel autre, comme nous l'avons fait ci-dessus.
+:::
+
+Pour les PROM, jugez les différences par rapport à la **différence minimale cliniquement importante (DMCI)** : le plus petit changement que les patients ressentent comme significatif. Les DMCI publiées varient selon l'étude et la méthode utilisée pour les établir, donc citez celle que vous utilisez. Attention à la façon de l'utiliser : une DMCI est un seuil *intra-patient*, pour le changement d'une seule personne. Une différence entre les moyennes de deux groupes qui est plus petite que la DMCI ne prouve pas qu'aucun patient n'en a bénéficié, et une différence plus grande ne veut pas dire que tous en ont bénéficié. Comparer la proportion de patients de chaque groupe qui ont atteint la DMCI est souvent l'analyse la plus claire.
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+preop_scores <- proms$prom_score[proms$visit == "preop" & !is.na(proms$prom_score)]
+stopifnot(
+  round(shapiro.test(cohort$age)$p.value, 3) == 0.001,
+  round(shapiro.test(first_ten)$p.value, 3) == 0.173,
+  round(shapiro.test(cohort$bmi)$p.value, 3) == 0.044,
+  round(shapiro.test(cohort$bmi[cohort$procedure == "THA"])$p.value, 3) == 0.051,
+  round(shapiro.test(cohort$bmi[cohort$procedure == "TKA"])$p.value, 3) == 0.124,
+  round(shapiro.test(residuals(fit))$p.value, 3) == 0.306,
+  shapiro.test(group_a)$p.value > 0.99,
+  shapiro.test(c(group_a, group_b))$p.value < 0.001,
+  bmi_test$p.value < 0.001,
+  sum(table(cohort$patient_id) == 2) == 80,
+  round(skewness(cohort$los_days), 1) == 1.6,
+  round(skewness(log1p(cohort$los_days)), 1) == 0.6,
+  mean(cohort$los_days == 0) > 0.45, mean(cohort$los_days == 0) < 0.5,
+  round(100 * mean(one_year$prom_score == 100)) == 17,
+  round(difference, 1) == 1.8, round(ci[1], 1) == 0.9, round(ci[2], 1) == 2.6,
+  round(skewness(preop_scores), 1) == 0.1
+)
+```
+
+## Exercices {#exercises}
+
+**1.** Dessinez un histogramme et un graphique QQ du score PROM **avant l'opération**. Est-il plus proche de la normale que le score à 1 an ? Pourquoi ?
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+preop <- proms |> filter(visit == "preop", !is.na(prom_score))
+ggplot(preop, aes(prom_score)) + geom_histogram(bins = 30)
+ggplot(preop, aes(sample = prom_score)) + geom_qq() + geom_qq_line()
+skewness(preop$prom_score)
+```
+
+## Python
+
+```{python}
+preop = proms[(proms["visit"] == "preop") & proms["prom_score"].notna()]
+fig, axes = plt.subplots(1, 2, figsize=(8, 3))
+axes[0].hist(preop["prom_score"], bins=30)
+qq = stats.probplot(preop["prom_score"], plot=axes[1])   # donner un nom au résultat garde ses nombres hors de la sortie
+plt.show()
+print(skewness(preop["prom_score"]))
+```
+:::
+
+Beaucoup plus proche de la normale : asymétrie d'environ 0.1, et les points du graphique QQ suivent la droite. Avant l'opération, les scores se situent au milieu de l'échelle, loin du plafond. Après une opération réussie, beaucoup de patients atteignent le maximum, ce qui crée le plafond.
+:::
+
+**2.** Un fellow veut comparer la durée opératoire entre les chirurgiens S1 et S2, avec environ 40 cas chacun. L'histogramme est assez symétrique, avec quelques cas très longs. Quelle colonne du tableau de décision choisiriez-vous, et comment la justifieriez-vous dans les Méthodes ?
+
+::: {.callout-tip collapse="true"}
+## Solution
+La colonne gaussienne (un test t pour échantillons indépendants, version de Welch) est raisonnable. Avec environ 40 cas par groupe et une forme à peu près symétrique, le test t est robuste. Examinez le graphique QQ pour chaque chirurgien, et vérifiez que les quelques cas longs ne sont pas des valeurs atypiques extrêmes. Méthodes : « Operative time was approximately normally distributed within each group on visual inspection of histograms and QQ plots, and was compared with Welch's t test. » Si les cas longs étaient extrêmes, un test de Mann-Whitney serait le choix le plus prudent ; dites-le.
+:::
+
+**3.** Une étude rapporte : « 1-year KOOS JR was 2.1 points higher with the new implant (95% CI −1.5 to 5.7; p = 0.25). » Supposons que la DMCI du KOOS JR soit de 14 points. Écrivez une phrase qui interprète ce résultat.
+
+::: {.callout-tip collapse="true"}
+## Solution
+« L'étude n'a pas mis en évidence de différence claire du KOOS JR à 1 an entre les implants : l'estimation (2.1 points) et tout l'IC à 95 % (−1.5 à 5.7) sont bien inférieurs à la DMCI de 14 points, donc un grand bénéfice moyen du nouvel implant est peu probable. »
+
+C'est plus fort que « non significatif » : l'IC exclut une grande différence moyenne. À strictement parler, la DMCI est un seuil intra-patient, donc l'analyse de suivi la plus claire compare la proportion de patients de chaque groupe qui se sont améliorés d'au moins 14 points.
 :::

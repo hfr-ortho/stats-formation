@@ -1,8 +1,443 @@
 ---
-title: "2 · Données démographiques (tableau 1) (en préparation)"
+title: "2 · Données démographiques (tableau 1)"
+description: "Construire un tableau 1 prêt pour la publication, pour un groupe ou plusieurs : choisir les résumés, comparer les groupes, différences moyennes standardisées, données manquantes et export vers Word."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/foundations/02-demographics.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Presque tout article clinique commence par le **tableau 1** : qui a été étudié. Les relecteurs le lisent en premier, pour juger si vos patients ressemblent aux leurs et si vos groupes étaient comparables au départ. Cette page en construit un de A à Z.
+
+::: {.callout-note}
+## 💡 En clair
+Le tableau 1 *décrit* vos patients. Il ne répond pas à votre question de recherche. Il sert à permettre au lecteur de juger à qui s'appliquent vos résultats, et si vos groupes se ressemblaient au départ.
+:::
+
+## Charger les données et choisir les variables {#setup}
+
+Nous allons décrire la cohorte d'exercice : 600 prothèses primaires de hanche et de genou (PTH et PTG). Dans le code, elles s'appellent THA et TKA. Le tableau 1 contient en général les caractéristiques mesurées *avant* l'opération.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(gtsummary)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
+  mutate(asa = factor(asa))   # la classe ASA est une catégorie, pas un nombre
+
+table1_vars <- c("age", "sex", "bmi", "asa", "diabetes", "smoker", "los_days")
+
+labels <- list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
+               diabetes ~ "Diabetes", smoker ~ "Smoking status",
+               los_days ~ "Length of stay, days")
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from tableone import TableOne
+
+cohort = pd.read_csv("data/cohort.csv")
+cohort["asa"] = cohort["asa"].astype(str)   # la classe ASA est une catégorie, pas un nombre
+
+table1_vars = ["age", "sex", "bmi", "asa", "diabetes", "smoker", "los_days"]
+categorical = ["sex", "asa", "diabetes", "smoker"]
+
+labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA class",
+          "diabetes": "Diabetes", "smoker": "Smoking status",
+          "los_days": "Length of stay, days"}
+```
+:::
+
+::: {.callout-warning}
+## ⚠️ Attention : une ligne par intervention, pas par patient
+La cohorte compte une ligne par *intervention*. 80 patients ont été opérés des deux côtés, donc 600 interventions concernent 520 patients. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop sûrs d'eux. [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
+:::
+
+## Un seul groupe {#one-group}
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+table_one <- cohort |>
+  select(all_of(table1_vars)) |>
+  tbl_summary(
+    type      = list(los_days ~ "continuous"),          # peu de valeurs distinctes, mais c'est bien un nombre
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     los_days ~ "{median} ({p25}–{p75})"),
+    digits    = list(all_continuous() ~ 1, los_days ~ 0),   # 65.5 (9.4) ; jours entiers
+    label     = labels
+  )
+table_one
+```
+
+## Python
+
+```{python}
+table_one = TableOne(
+    cohort,
+    columns=table1_vars,
+    categorical=categorical,
+    nonnormal=["los_days"],      # indiquer la médiane [Q1, Q3] au lieu de la moyenne (ET)
+    rename=labels,
+)
+print(table_one.tabulate(tablefmt="github"))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"n": float(len(cohort)), "mean_age": float(cohort["age"].mean()),
+       "sd_age": float(cohort["age"].std()), "female": float((cohort["sex"] == "Female").sum()),
+       "median_los": float(cohort["los_days"].median())}
+```
+
+```{r}
+#| include: false
+check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(cohort$age),
+                 female = sum(cohort$sex == "Female"), median_los = median(cohort$los_days)),
+            reticulate::py$chk)
+```
+
+::: {.callout-warning}
+## ⚠️ Attention : dites au logiciel de quel type est chaque variable
+Les logiciels devinent le type des variables, et ils se trompent souvent :
+
+- **La classe ASA** ressemble à un nombre, donc elle est moyennée (« ASA moyen 2.4 »). C'est une catégorie.
+- **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste « 0 jour, 1 jour, 2 jours… ». C'est un effectif.
+- **Les colonnes 0/1**, comme `diabetes` : gtsummary montre une seule ligne (combien valent 1, donc « oui »), alors que tableone montre la ligne 0 et la ligne 1. Dans un article, montrez seulement la ligne « oui ».
+
+Définissez vous-même le type de chaque variable (`type =` en R, `categorical =` en Python).
+:::
+
+## Moyenne (ET) ou médiane (IIQ) ? {#which-summary}
+
+- **Variables continues à peu près symétriques** (âge, IMC) : moyenne (écart-type, ET).
+- **Variables asymétriques ou bornées** (durée de séjour, la plupart des PROM, mesures des résultats rapportés par le patient) : médiane (intervalle interquartile, IIQ). Un patient resté 30 jours déplace la moyenne bien plus que la médiane.
+- **Catégories** : n (%).
+
+Comment savoir si une variable est asymétrique ? Regardez-la : [Distributions et choix d'un test](03-distributions.qmd) explique comment. La durée de séjour est nettement asymétrique à droite, c'est pourquoi on en donne la médiane.
+
+::: {.callout-tip}
+## 🔀 R ou Python : les quartiles
+gtsummary et tableone calculent les quartiles avec des formules différentes (dans les termes de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer : le quartile supérieur de la PTH est de 2 jours en R et de 1.8 en Python. Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
+:::
+
+## Comparer des groupes {#by-group}
+
+La plupart des études comparent des groupes. Ici : PTH et PTG.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+by_procedure <- cohort |>
+  select(procedure, all_of(table1_vars)) |>
+  tbl_summary(
+    by        = procedure,
+    type      = list(los_days ~ "continuous"),
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     los_days ~ "{median} ({p25}–{p75})"),
+    digits    = list(all_continuous() ~ 1, los_days ~ 0),
+    label     = labels
+  ) |>
+  add_overall() |>
+  add_p(test = list(all_continuous() ~ "t.test",        # test t de Welch
+                    los_days ~ "kruskal.test",           # basé sur les rangs, pour la variable asymétrique
+                    all_categorical() ~ "chisq.test"),   # khi-deux
+        pvalue_fun = label_style_pvalue(digits = 3))     # p avec trois décimales
+by_procedure
+```
+
+## Python
+
+```{python}
+by_procedure = TableOne(
+    cohort,
+    columns=table1_vars,
+    categorical=categorical,
+    nonnormal=["los_days"],
+    groupby="procedure",
+    pval=True,               # test t de Welch, Kruskal-Wallis, khi-deux
+    htest_name=True,         # montrer quel test a produit chaque valeur p
+    rename=labels,
+)
+print(by_procedure.tabulate(tablefmt="github"))
+```
+:::
+
+```{python}
+#| include: false
+p_values = by_procedure.htest_table["P-Value"]
+chk = {v: float(p_values[v]) for v in table1_vars}
+```
+
+```{r}
+#| include: false
+p_r <- by_procedure$table_body |> filter(row_type == "label")
+check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
+```
+
+Chaque valeur p vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les variables continues symétriques, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, Kruskal-Wallis revient au test de Mann-Whitney) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les catégories.
+
+## Valeurs p ou différences moyennes standardisées ? {#smd}
+
+Regardez le sexe dans le tableau ci-dessus : 66 % des patients PTH sont des femmes, contre 50 % des patients PTG, p < 0.001. Est-ce une vraie différence entre les patients de hanche et de genou ?
+
+Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au seul hasard. (Dans les vraies cohortes de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.) C'est le premier problème des valeurs p dans le tableau 1 : sur un long tableau, des différences dues au hasard apparaissent.
+
+Le second problème est qu'une valeur p mélange *la taille* d'une différence et *le nombre de patients*. Avec 6,000 patients, une différence insignifiante donne p < 0.001. Avec 30, une grande différence ne le donne pas.
+
+La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'écart-type, quelle que soit la taille de l'échantillon. Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+balance <- cohort |>
+  select(procedure, all_of(table1_vars)) |>
+  tbl_summary(
+    by        = procedure,
+    type      = list(los_days ~ "continuous"),
+    statistic = list(all_continuous() ~ "{mean} ({sd})",
+                     los_days ~ "{median} ({p25}–{p75})"),
+    digits    = list(all_continuous() ~ 1, los_days ~ 0),
+    label     = labels
+  ) |>
+  add_difference(test = everything() ~ "smd")
+balance
+```
+
+## Python
+
+```{python}
+balance = TableOne(
+    cohort,
+    columns=table1_vars,
+    categorical=categorical,
+    nonnormal=["los_days"],
+    groupby="procedure",
+    smd=True,
+    rename=labels,
+)
+print(balance.smd_table)
+```
+:::
+
+```{python}
+#| include: false
+smd = balance.smd_table.iloc[:, 0]
+chk = {v: abs(float(smd[v])) for v in table1_vars}
+```
+
+```{r}
+#| include: false
+smd_r <- balance$table_body |> filter(row_type == "label")
+# Continuous SMDs differ in the 3rd decimal (variance divided by n in R's smd
+# package, n - 1 in tableone), documented in the R vs Python box below.
+check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
+```
+
+Le sexe (SMD 0.31) et l'IMC (0.33) sont les nets déséquilibres. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables.
+
+::: {.callout-tip}
+## 🔀 R ou Python : les SMD diffèrent légèrement
+- **Signe.** gtsummary soustrait la PTG de la PTH, tableone soustrait la PTH de la PTG. Donnez la valeur absolue, ou dites quel groupe a été soustrait de quel autre.
+- **Quatrième décimale.** Pour les variables continues, le package `smd` de R divise les variances par *n*, alors que tableone les divise par *n − 1* (la formule usuelle des manuels). L'âge donne 0.1048 en R et 0.1046 en Python. Les SMD des variables catégorielles concordent exactement.
+:::
+
+**Laquelle faut-il rapporter ?**
+
+- **Cohortes appariées ou pondérées** (études avec score de propension, par exemple une étude appariée sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
+- **Autres comparaisons observationnelles** : beaucoup de revues attendent encore des valeurs p. Ajoutez les SMD, et discutez les différences selon leur taille, pas selon leur valeur p.
+
+## Données manquantes {#missing}
+
+La version ordonnée du classeur désordonné de la [page 1](01-tidy-data.qmd) contient quelques IMC, classes ASA et durées de séjour que la personne qui a dépouillé les dossiers n'a pas trouvés. Les valeurs manquantes doivent apparaître dans le tableau 1. Ne les supprimez jamais en silence.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+abstraction <- read_csv("data/answer-keys/abstraction_workbook_tidy.csv", show_col_types = FALSE) |>
+  mutate(asa = factor(asa))
+
+abstraction |>
+  select(site, age, bmi, asa, los_days) |>
+  tbl_summary(by = site, type = list(los_days ~ "continuous"),
+              statistic = list(all_continuous() ~ "{mean} ({sd})",
+                               los_days ~ "{median} ({p25}–{p75})"),
+              digits = list(all_continuous() ~ 1, los_days ~ 0),
+              missing_text = "Missing")
+```
+
+## Python
+
+```{python}
+abstraction = pd.read_csv("data/answer-keys/abstraction_workbook_tidy.csv")
+abstraction["asa"] = abstraction["asa"].astype("Int64").astype("string")   # une catégorie ; les cases vides restent manquantes
+
+missing_table = TableOne(abstraction, columns=["age", "bmi", "asa", "los_days"],
+                         categorical=["asa"], nonnormal=["los_days"],
+                         groupby="site", missing=True,
+                         include_null=False)   # compter les cases vides comme manquantes, pas comme catégorie "None"
+print(missing_table.tabulate(tablefmt="github"))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"missing_bmi": float(abstraction["bmi"].isna().sum()),
+       "missing_asa": float(abstraction["asa"].isna().sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(missing_bmi = sum(is.na(abstraction$bmi)),
+                 missing_asa = sum(is.na(abstraction$asa))), reticulate::py$chk)
+```
+
+R ajoute une ligne « Missing » sous chaque variable qui a des valeurs manquantes. Python ajoute une colonne « Missing ». Dans les deux cas, les pourcentages portent sur les patients qui ont une valeur, et le lecteur voit combien ont été laissés de côté.
+
+## Exporter vers Word {#export}
+
+Les revues veulent le tableau 1 dans Word. Enregistrez-le dans votre dossier `scratch/` (git l'ignore), ouvrez-le et collez-le dans le manuscrit.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+by_procedure |>
+  as_flex_table() |>
+  flextable::save_as_docx(path = "scratch/table1.docx")
+```
+
+## Python
+
+```{python}
+from docx import Document
+
+table = by_procedure.tableone.reset_index()
+headers = [" ".join(str(part) for part in col if part).strip() for col in table.columns]
+
+doc = Document()
+grid = doc.add_table(rows=1, cols=len(headers))
+for cell, header in zip(grid.rows[0].cells, headers):
+    cell.text = header
+for _, row in table.iterrows():
+    for cell, value in zip(grid.add_row().cells, row):
+        cell.text = "" if pd.isna(value) else str(value)
+doc.save("scratch/table1-python.docx")
+```
+:::
+
+Dans Word, adaptez la mise en forme au style de la revue : en général sans lignes verticales, et avec une note de bas de tableau qui indique quelles statistiques sont montrées (« mean (SD) ; median (IQR) ; n (%) ») et quels tests ont produit les valeurs p.
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+pct <- function(x) round(100 * mean(x))
+site_table <- cohort |>
+  select(site, all_of(table1_vars)) |>
+  tbl_summary(by = site, type = list(los_days ~ "continuous")) |>
+  add_difference(test = everything() ~ "smd")
+site_rows <- site_table$table_body |> filter(row_type == "label")
+site_smd <- setNames(abs(site_rows$estimate), site_rows$variable)
+stopifnot(
+  nrow(cohort) == 600, n_distinct(cohort$patient_id) == 520,
+  sum(table(cohort$patient_id) == 2) == 80,
+  sum(cohort$procedure == "THA") == 270, sum(cohort$procedure == "TKA") == 330,
+  pct(cohort$sex[cohort$procedure == "THA"] == "Female") == 66,
+  pct(cohort$sex[cohort$procedure == "TKA"] == "Female") == 50,
+  round(mean(cohort$age), 1) == 65.5, round(sd(cohort$age), 1) == 9.4,
+  sum(cohort$sex == "Female") == 343, pct(cohort$sex == "Female") == 57,
+  median(cohort$los_days) == 1,
+  # what the libraries actually display (Python side checked in the next chunk)
+  by_procedure$table_body$stat_1[by_procedure$table_body$variable == "los_days" &
+                                   by_procedure$table_body$row_type == "label"] == "1 (0–2)",
+  by_procedure$table_body$stat_0[by_procedure$table_body$variable == "los_days" &
+                                   by_procedure$table_body$row_type == "label"] == "1 (0–1)",
+  by_procedure$table_body$stat_0[by_procedure$table_body$variable == "age" &
+                                   by_procedure$table_body$row_type == "label"] == "65.5 (9.4)",
+  round(abs(smd_r$estimate[smd_r$variable == "age"]), 2) == 0.10,
+  round(abs(smd_r$estimate[smd_r$variable == "asa"]), 2) == 0.12,
+  round(abs(smd_r$estimate[smd_r$variable == "smoker"]), 2) == 0.15,
+  abs(smd_r$estimate[smd_r$variable == "diabetes"]) < 0.1,
+  abs(smd_r$estimate[smd_r$variable == "los_days"]) < 0.1,
+  abs(site_smd[["smoker"]] - 0.23) < 0.005, abs(site_smd[["los_days"]] - 0.225) < 0.005,
+  all(site_smd[setdiff(names(site_smd), c("smoker", "los_days"))] < 0.11),
+  round(abs(smd_r$estimate[smd_r$variable == "sex"]), 2) == 0.31,
+  round(abs(smd_r$estimate[smd_r$variable == "bmi"]), 2) == 0.33
+)
+```
+
+```{python}
+#| include: false
+# Prose guard (Python side): the quartile tableone displays.
+assert by_procedure.tableone.loc[("Length of stay, days, median [Q1,Q3]", ""),
+                                 ("Grouped by procedure", "THA")] == "1.0 [0.0,1.8]"
+```
+
+## Exercices {#exercises}
+
+**1.** Faites un tableau 1 qui compare le **site A au site B** au lieu de la PTH à la PTG. Quelle variable diffère le plus entre les sites, selon la SMD ?
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+cohort |>
+  select(site, all_of(table1_vars)) |>
+  tbl_summary(by = site, type = list(los_days ~ "continuous"),
+              statistic = list(all_continuous() ~ "{mean} ({sd})",
+                               los_days ~ "{median} ({p25}–{p75})"),
+              digits = list(all_continuous() ~ 1, los_days ~ 0),
+              label = labels) |>
+  add_difference(test = everything() ~ "smd")
+```
+
+## Python
+
+```{python}
+by_site = TableOne(cohort, columns=table1_vars, categorical=categorical,
+                   nonnormal=["los_days"], groupby="site", smd=True, rename=labels)
+print(by_site.smd_table)
+```
+:::
+
+Le tabagisme (0.23) et la durée de séjour (0.22) diffèrent le plus entre les sites, et leurs intervalles de confiance (IC) à 95 % excluent zéro. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « significative ».
+:::
+
+**2.** Un fellow compare des patients de 80 ans ou plus à des patients plus jeunes, appariés sur le sexe, l'IMC et la classe ASA. Le tableau de départ doit-il montrer des valeurs p ou des SMD ? Pourquoi ?
+
+::: {.callout-tip collapse="true"}
+## Solution
+Des SMD. L'appariement a été conçu pour rendre les groupes semblables, donc tester s'ils diffèrent répond à une question que personne n'a posée, et avec des données appariées la valeur p reflète surtout la taille de l'échantillon. Les SMD montrent la qualité de l'appariement : visez une |SMD| inférieure à 0.1 sur chaque variable d'appariement.
+:::
+
+**3.** Écrivez la première phrase des Résultats qui décrit cette cohorte, avec les conventions de rédaction de [Comment utiliser ce site](../getting-started/using-this-site.qmd).
+
+::: {.callout-tip collapse="true"}
+## Solution
+"We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0–1) day."
+
+Vérifiez chaque nombre avec votre propre tableau : moyenne et écart-type pour l'âge, n (%) pour le sexe, médiane (IIQ) pour la durée de séjour.
 :::
