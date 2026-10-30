@@ -129,6 +129,7 @@ SECTION_LINKS = {
     "catalog/09-three-plus-matched.html": ["beyond/15-post-hoc.html#after-repeated-measures-anova",
                                            "beyond/15-post-hoc.html#after-friedman", "beyond/15-post-hoc.html#after-cochran-q",
                                            "beyond/16-mixed-models.html#why-mixed-models"],
+    "catalog/10-association.html": ["beyond/17-agreement.html#bland-altman"],
     "catalog/11-predict-from-one.html": ["beyond/16-mixed-models.html#random-intercept"],
     "catalog/12-predict-from-several.html": ["beyond/16-mixed-models.html#random-intercept"],
     "survival/13-kaplan-meier.html": ["beyond/15-post-hoc.html#after-log-rank"],

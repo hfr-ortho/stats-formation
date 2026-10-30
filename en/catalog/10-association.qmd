@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Two things measured on the same patients: BMI and operative time, PROM improvement and satisfaction, ASA class and hypertension. The tests on this page don't compare groups. They put **one number on how strongly the two go together**, with a 95% CI. If you want to **predict** one from the other, use regression ([page 11](11-predict-from-one.qmd)).
+Two things measured on the same patients: femoral torsion on CT and on the modified Budin view, PROM improvement and satisfaction, ASA class and hypertension. The tests on this page don't compare groups. They put **one number on how strongly the two go together**, with a 95% CI. If you want to **predict** one from the other, use regression ([page 11](11-predict-from-one.qmd)).
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets (hip imaging for Pearson, the joint replacement cohort otherwise). Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ## Pearson correlation {#pearson}
 
-**The question:** How closely does operative time track BMI?
+**The question:** How closely does femoral torsion on the modified Budin view track torsion on CT?
 
 ### When to use it
 
@@ -47,11 +47,12 @@ To keep the code short, the examples use every case, including the 80 patients w
 #| fig-height: 3.5
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE)   # one row per hip
 
-ggplot(cohort, aes(bmi, op_time_min)) +
-  geom_point(alpha = 0.4) +   # see-through points show where they pile up
-  labs(x = "BMI, kg/m²", y = "Operative time, minutes")
+ggplot(imaging, aes(torsion_ct_deg, torsion_budin_deg)) +
+  geom_point(alpha = 0.6) +   # see-through points show where they pile up
+  geom_abline(linetype = "dashed") +   # dashed line: the two methods read the same
+  labs(x = "Femoral torsion on CT, degrees", y = "Femoral torsion on Budin view, degrees")
 ```
 
 ## Python
@@ -61,17 +62,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 
-cohort = pd.read_csv("data/cohort.csv")
+imaging = pd.read_csv("data/hip_preservation_imaging.csv")   # one row per hip
 
 fig, ax = plt.subplots(figsize=(6, 3.5))
-ax.scatter(cohort["bmi"], cohort["op_time_min"], alpha=0.4)   # see-through points show where they pile up
-ax.set_xlabel("BMI, kg/m²")
-ax.set_ylabel("Operative time, minutes")
+ax.scatter(imaging["torsion_ct_deg"], imaging["torsion_budin_deg"], alpha=0.6)   # see-through points show where they pile up
+ax.axline((0, 0), slope=1, linestyle="--")   # dashed line: the two methods read the same
+ax.set_xlabel("Femoral torsion on CT, degrees")
+ax.set_ylabel("Femoral torsion on Budin view, degrees")
 plt.show()
 ```
 :::
 
-The points drift upward from left to right, along a rough line, with no extreme outliers.
+The points follow a straight line, close to the dashed line where the two methods would read the same, with no extreme outliers. (Torsion can be negative: the femur is then retroverted.)
 
 ### Run it
 
@@ -79,51 +81,53 @@ The points drift upward from left to right, along a rough line, with no extreme 
 ## R
 
 ```{r}
-bmi_corr <- cor.test(cohort$bmi, cohort$op_time_min)   # Pearson is the default
-bmi_corr
+torsion_corr <- cor.test(imaging$torsion_ct_deg, imaging$torsion_budin_deg)   # Pearson is the default
+torsion_corr
 ```
 
 ## Python
 
 ```{python}
-bmi_corr = stats.pearsonr(cohort["bmi"], cohort["op_time_min"])
-print(bmi_corr)
-print(bmi_corr.confidence_interval(confidence_level=0.95))
+torsion_corr = stats.pearsonr(imaging["torsion_ct_deg"], imaging["torsion_budin_deg"])
+print(torsion_corr)
+print(torsion_corr.confidence_interval(confidence_level=0.95))
 ```
 :::
 
 ```{python}
 #| include: false
-bmi_ci = bmi_corr.confidence_interval(confidence_level=0.95)
-chk = {"r": float(bmi_corr.statistic), "p": float(bmi_corr.pvalue), "low": float(bmi_ci.low), "high": float(bmi_ci.high)}
+torsion_ci = torsion_corr.confidence_interval(confidence_level=0.95)
+chk = {"r": float(torsion_corr.statistic), "p": float(torsion_corr.pvalue), "low": float(torsion_ci.low), "high": float(torsion_ci.high)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(r = unname(bmi_corr$estimate), p = bmi_corr$p.value,
-                 low = bmi_corr$conf.int[1], high = bmi_corr$conf.int[2]), reticulate::py$chk)
+check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
+                 low = torsion_corr$conf.int[1], high = torsion_corr$conf.int[2]), reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **cor** (R) or **statistic** (Python): Pearson's **r = 0.45**. It runs from −1 (a perfect falling line) through 0 (no straight-line relationship) to +1 (a perfect rising line).
-- **t = 12.4, df = 598:** the test statistic, with 600 procedures minus two degrees of freedom. Python doesn't print it.
-- **p < 0.001** (R prints `< 2.2e-16`): a correlation this strong would be very unlikely if BMI and operative time were unrelated.
-- **95% CI 0.39 to 0.51.**
+- **cor** (R) or **statistic** (Python): Pearson's **r = 0.86**. It runs from −1 (a perfect falling line) through 0 (no straight-line relationship) to +1 (a perfect rising line).
+- **t = 14.7, df = 78:** the test statistic, with 80 hips minus two degrees of freedom. Python doesn't print it.
+- **p < 0.001** (R prints `< 2.2e-16`): a correlation this strong would be very unlikely if torsion on CT and on the Budin view were unrelated.
+- **95% CI 0.79 to 0.91.**
 
 ### Effect size and 95% CI
 
-**r is the effect size**: r = 0.45 (95% CI 0.39 to 0.51). As a rough guide, 0.1 is small, 0.3 medium and 0.5 large. Squaring it gives the share of the variation in operative time that goes with BMI: r² = 0.20, about a fifth.
+**r is the effect size**: r = 0.86 (95% CI 0.79 to 0.91). As a rough guide, 0.1 is small, 0.3 medium and 0.5 large. Squaring it gives the share of the variation in Budin torsion that goes with CT torsion: r² = 0.74, about three-quarters.
 
 ### How to report it
 
-> **Methods:** The association between BMI and operative time was measured with Pearson's correlation coefficient (r).
+> **Methods:** The association between femoral torsion on CT and on the modified Budin view was measured with Pearson's correlation coefficient (r).
 >
-> **Results:** The correlation between BMI and operative time was r = 0.45 (Pearson; 95% CI 0.39 to 0.51; p < 0.001; n = 600 procedures).
+> **Results:** The correlation between femoral torsion on CT and on the modified Budin view was r = 0.86 (Pearson; 95% CI 0.79 to 0.91; p < 0.001; n = 80 hips).
 
 ::: {.callout-warning}
-## ⚠️ Watch out: r only sees straight lines, and isn't cause
-A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn't say which causes which, or whether something else (procedure type, surgeon) drives both. To adjust for other variables, use [multiple regression](12-predict-from-several.qmd#multiple-linear-regression).
+## ⚠️ Watch out: r only sees straight lines, isn't cause, and isn't agreement
+A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn't say which causes which, or whether something else (age, sex) drives both. To adjust for other variables, use [multiple regression](12-predict-from-several.qmd#multiple-linear-regression).
+
+**A high r isn't agreement.** Two methods can rise and fall together and still read different angles. Here r = 0.86, yet the Budin reading was up to 12.9° away from CT, and 95% of the differences would be expected between −10.2° and 7.8°. To ask whether one method can replace the other, use [Bland-Altman limits](../beyond/17-agreement.qmd#bland-altman).
 :::
 
 ## Spearman correlation {#spearman}
@@ -417,11 +421,17 @@ los_rho <- cor.test(cohort$los_days, cohort$age, method = "spearman", exact = FA
 los_ci <- DescTools::SpearmanRho(cohort$los_days, cohort$age, conf.level = 0.95)
 apnea_table <- table(sex = cohort$sex, sleep_apnea = cohort$sleep_apnea)
 apnea_phi <- effectsize::phi(apnea_table, adjust = FALSE)
+budin_minus_ct <- imaging$torsion_budin_deg - imaging$torsion_ct_deg
+alpha_corr <- cor.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)
 stopifnot(
   sum(table(cohort$patient_id) == 2) == 80, nrow(cohort) == 600,
-  round(unname(bmi_corr$estimate), 2) == 0.45, round(bmi_corr$conf.int, 2) == c(0.39, 0.51),
-  round(unname(bmi_corr$statistic), 1) == 12.4, unname(bmi_corr$parameter) == 598, bmi_corr$p.value < 0.001,
-  round(unname(bmi_corr$estimate)^2, 2) == 0.20,
+  nrow(imaging) == 80,
+  round(unname(torsion_corr$estimate), 2) == 0.86, round(torsion_corr$conf.int, 2) == c(0.79, 0.91),
+  round(unname(torsion_corr$statistic), 1) == 14.7, unname(torsion_corr$parameter) == 78, torsion_corr$p.value < 0.001,
+  round(unname(torsion_corr$estimate)^2, 2) == 0.74,
+  round(max(abs(budin_minus_ct)), 1) == 12.9,
+  round(mean(budin_minus_ct) + c(-1, 1) * 1.96 * sd(budin_minus_ct), 1) == c(-10.2, 7.8),
+  round(mean(budin_minus_ct), 1) == -1.2,
   nrow(change) == 404, change_medians$n[c(1, 5)] == c(14, 198), round(change_medians$median[c(1, 5)], 1) == c(25.4, 43.8),
   all(diff(change_medians$median) > 0),
   round(unname(satisfaction_corr$estimate), 2) == 0.38, round(unname(satisfaction_corr$statistic)) == 6764534,
@@ -436,9 +446,9 @@ stopifnot(
   round(sqrt(1 / 2), 2) == 0.71,
   round(effectsize::cramers_v(asa_hypertension)$Cramers_v, 2) == 0.18,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
-  round(cor(cohort$age, cohort$op_time_min), 2) == 0.14,
-  round(cor.test(cohort$age, cohort$op_time_min)$conf.int, 2) == c(0.06, 0.22),
-  cor.test(cohort$age, cohort$op_time_min)$p.value < 0.001, round(cor(cohort$age, cohort$op_time_min)^2, 2) == 0.02,
+  round(unname(alpha_corr$estimate), 2) == 0.93, round(alpha_corr$conf.int, 2) == c(0.89, 0.95),
+  alpha_corr$p.value < 0.001, round(unname(alpha_corr$estimate)^2, 2) == 0.86,
+  round(mean(imaging$alpha_dunn45_deg - imaging$alpha_frogleg_deg), 1) == 3.7,
   round(unname(los_rho$estimate), 2) == 0.15, los_rho$p.value < 0.001,
   round(los_ci[["lwr.ci"]], 2) == 0.07, round(los_ci[["upr.ci"]], 2) == 0.22,
   apnea_table[, "1"] == c(43, 69), rowSums(apnea_table) == c(343, 257),
@@ -453,7 +463,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** How strongly is operative time linked with **age**? Report Pearson's r with its 95% CI.
+**1.** How strongly are the **alpha angles** on the Dunn 45° and frog-leg views linked? Report Pearson's r with its 95% CI.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -462,20 +472,20 @@ The solutions use the packages and data loaded in the sections above, so run the
 ## R
 
 ```{r}
-cor.test(cohort$age, cohort$op_time_min)
+cor.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)
 ```
 
 ## Python
 
 ```{python}
-age_corr = stats.pearsonr(cohort["age"], cohort["op_time_min"])
-print(age_corr, age_corr.confidence_interval(confidence_level=0.95))
+alpha_corr = stats.pearsonr(imaging["alpha_dunn45_deg"], imaging["alpha_frogleg_deg"])
+print(alpha_corr, alpha_corr.confidence_interval(confidence_level=0.95))
 ```
 :::
 
-> **Results:** The correlation between age and operative time was r = 0.14 (Pearson; 95% CI 0.06 to 0.22; p < 0.001).
+> **Results:** The correlation between the alpha angle on the Dunn 45° and frog-leg views was r = 0.93 (Pearson; 95% CI 0.89 to 0.95; p < 0.001; n = 80 hips).
 
-The association is clear but weak: age goes with about 2% of the variation in operative time (r² = 0.02), against 20% for BMI.
+A strong correlation, yet the Dunn view read 3.7° higher on average ([page 7](07-two-paired-groups.qmd#paired-t)): r can't see a constant offset.
 :::
 
 **2.** A colleague asks whether older patients stay in hospital longer. Which correlation would you use, and what do you find?

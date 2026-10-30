@@ -110,6 +110,7 @@ MOVED_SECTIONS = {
     ("catalog/08-three-plus-unmatched.html", "chi-square"): ("data/acl_cohort.csv", "rts_12mo"),
     ("catalog/09-three-plus-matched.html", "repeated-measures-anova"): ("data/proms_long.csv", "promis_pf"),
     ("catalog/09-three-plus-matched.html", "friedman"): ("data/foot_ankle_rct_long.csv", "efas"),
+    ("catalog/10-association.html", "pearson"): ("data/hip_preservation_imaging.csv", "torsion_budin_deg"),
 }
 
 
@@ -119,6 +120,11 @@ def test_moved_sections_teach_from_their_new_data(site, cell, source):
     code = code_of(section(*cell))
     assert code.count(f'read_csv("{dataset}"') >= 2, f"{cell}: R and Python should both read {dataset}"
     assert column in code, f"{cell}: the code never uses {column}"
+
+
+def test_pearson_warning_says_correlation_is_not_agreement(site):
+    warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
+    assert "isn't agreement" in warning and "−10.2° and 7.8°" in warning
 
 
 def test_friedman_says_how_many_boot_patients_were_analyzed(site):
