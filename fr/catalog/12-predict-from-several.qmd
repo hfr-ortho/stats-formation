@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Un critère de jugement dépend rarement d'une seule chose. L'opération de patients plus lourds dure peut-être plus longtemps, mais celle de patients plus âgés aussi, et les genoux prennent plus de temps que les hanches. La **régression multiple** met plusieurs prédicteurs dans un seul modèle : chaque coefficient est donc l'effet de ce prédicteur **les autres étant maintenus fixes**, c'est-à-dire ajusté sur eux. Ce sont les quatre mêmes régressions que celles de la [page 11](11-predict-from-one.qmd), avec plus d'un prédicteur.
+Un critère de jugement dépend rarement d'une seule chose. L'opération de patients plus lourds dure peut-être plus longtemps, mais celle de patients plus âgés aussi, et les genoux prennent plus de temps que les hanches. La **régression multiple** met plusieurs prédicteurs dans un seul modèle : chaque coefficient est donc l'effet de ce prédicteur **les autres étant maintenus constants**, c'est-à-dire ajusté sur eux. Ce sont les quatre mêmes régressions que celles de la [page 11](11-predict-from-one.qmd), avec plus d'un prédicteur.
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données du cabinet : la cohorte de prothèses articulaires et les PROM (mesures des résultats rapportés par le patient), et les reconstructions du ligament croisé antérieur (LCA) pour la régression logistique. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données d'exercice : la cohorte de prothèses articulaires et les PROM (mesures des résultats rapportés par le patient), et les reconstructions du ligament croisé antérieur (LCA) pour la régression logistique. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les 80 patients opérés des deux côtés. Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait. Dans le code, ces prothèses s'appellent THA et TKA ; dans le texte, nous disons PTH et PTG.
 :::
@@ -79,7 +79,7 @@ print(cohort.groupby("procedure")["op_time_min"].agg(["count", "mean", "std"]))
 ```
 :::
 
-La durée opératoire augmente avec l'IMC pour les deux interventions, et les PTG durent plus longtemps que les PTH en moyenne : 88.3 minutes (écart-type, ET, 16.2) contre 79.8 (ET 15.5).
+La durée opératoire augmente avec l'IMC pour les deux interventions, et les opérations de PTG sont plus longues que celles de PTH en moyenne : 88.3 minutes (écart-type, ET, 16.2) contre 79.8 (ET 15.5).
 
 ### Exécuter l'analyse
 
@@ -120,14 +120,14 @@ check_agree(list(bmi = coef(time_model)[["bmi"]], age = coef(time_model)[["age"]
 
 ### Lire le résultat
 
-Chaque coefficient est la variation de la durée opératoire pour une unité de ce prédicteur, **les autres prédicteurs étant maintenus fixes** :
+Chaque coefficient est la variation de la durée opératoire pour une unité de ce prédicteur, **les autres prédicteurs étant maintenus constants** :
 
 - **bmi = 1.27 :** 1.27 minute de plus par kg/m² (IC à 95 % de 1.06 à 1.49), pour des patients du même âge, du même sexe et ayant la même intervention.
 - **age = 0.27 :** 0.27 minute de plus par année d'âge (IC à 95 % de 0.15 à 0.39).
-- **sexMale** (R) ou **sex[T.Male]** (Python) **= −1.48 :** les hommes ont pris 1.48 minute de moins que les femmes, mais l'IC (−3.81 à 0.84) contient 0. Les femmes sont le groupe de référence, car « Female » vient en premier dans l'ordre alphabétique.
+- **sexMale** (R) ou **sex[T.Male]** (Python) **= −1.48 :** les opérations ont duré 1.48 minute de moins chez les hommes que chez les femmes, mais l'IC (−3.81 à 0.84) contient 0. Les femmes sont le groupe de référence, car « Female » vient en premier dans l'ordre alphabétique.
 - **procedureTKA = 6.74 :** les PTG ont duré 6.74 minutes de plus que les PTH (IC à 95 % de 4.40 à 9.08).
 - **Multiple R-squared = 0.27, adjusted R-squared = 0.26 :** les quatre prédicteurs ensemble expliquent environ un quart de la variation. La valeur ajustée est pénalisée selon le nombre de prédicteurs.
-- **F-statistic, p < 0.001 :** le test selon lequel les quatre prédicteurs ensemble n'expliquent rien.
+- **F-statistic, p < 0.001 :** le test de l'hypothèse que les quatre prédicteurs ensemble n'expliquent rien.
 
 ### Taille d'effet et IC à 95 %
 
@@ -140,8 +140,8 @@ Les **coefficients ajustés** avec leur IC à 95 % sont les tailles d'effet, av
 > **Results:** Adjusted for age, sex and procedure, the coefficient for BMI was 1.27 minutes of operative time per kg/m² (95% CI 1.06 to 1.49; p < 0.001). The coefficient for TKA (vs THA) was 6.74 minutes (95% CI 4.40 to 9.08) and for age 0.27 minutes per year (95% CI 0.15 to 0.39). The model explained 27% of the variation in operative time (R² = 0.27).
 
 ::: {.callout-warning}
-## ⚠️ Attention : « ajusté » ne veut pas dire « causé », et plus de prédicteurs ne vaut pas mieux
-L'ajustement retire la part d'un effet expliquée par les variables **présentes** dans le modèle, pas par celles que vous avez laissées de côté ou jamais mesurées : un coefficient ajusté ne prouve donc toujours pas un lien de cause à effet. Choisissez les prédicteurs à l'avance et n'y touchez plus : ajouter des variables jusqu'à ce que quelque chose devienne significatif, ou retirer celles qui ne le sont pas (sélection pas à pas), donne des résultats qui ne se reproduiront pas.
+## ⚠️ Attention : « ajusté » ne veut pas dire « causal », et plus de prédicteurs ne vaut pas mieux
+L'ajustement retire la part d'un effet expliquée par les variables **présentes** dans le modèle, pas par celles que vous avez laissées de côté ou que vous n'avez jamais mesurées : un coefficient ajusté ne prouve donc toujours pas un lien de cause à effet. Choisissez les prédicteurs à l'avance et n'y touchez plus : ajouter des variables jusqu'à ce que quelque chose devienne significatif, ou retirer celles qui ne le sont pas (sélection pas à pas), donne des résultats qui ne se reproduiront pas.
 :::
 
 ::: {.callout-tip}
@@ -156,7 +156,7 @@ Les deux programmes prennent la première catégorie par ordre alphabétique com
 ### Quand l'utiliser
 
 - **La forme de la courbe est connue, mais ses nombres peuvent dépendre d'autres variables.** Prolongez la [courbe de récupération](11-predict-from-one.qmd#nonlinear-regression) pour que chacun de ses nombres puisse différer entre hanches et genoux, et ajustez un seul modèle par moindres carrés non linéaires.
-- **La forme n'est pas connue.** Laissez l'effet d'un prédicteur mesuré se courber avec une **spline** : une courbe souple faite de petits morceaux cubiques raccordés en douceur en des points appelés nœuds. Une spline cubique **naturelle** (ou **restreinte**) est une droite au-delà des nœuds extérieurs, ce qui l'empêche de s'agiter aux extrémités. Les splines s'ajustent à l'intérieur d'un modèle linéaire, logistique ou de Cox ordinaire, et c'est la façon habituelle de vérifier si une droite suffit.
+- **La forme n'est pas connue.** Laissez l'effet d'un prédicteur mesuré se courber avec une **spline** : une courbe souple faite de petits morceaux cubiques raccordés en douceur en des points appelés nœuds. Une spline cubique **naturelle** (ou **restreinte**) se prolonge en ligne droite au-delà des nœuds extérieurs, ce qui l'empêche de s'agiter aux extrémités. On peut intégrer une spline à un modèle linéaire, logistique ou de Cox ordinaire, et c'est la façon habituelle de vérifier si une droite suffit.
 - Si tous les effets sont des droites → [régression linéaire multiple](#multiple-linear-regression).
 
 ### Regarder d'abord les données
@@ -355,7 +355,7 @@ La constante de temps était plus longue de 27.5 jours pour les genoux (IC à 95
 
 ::: {.callout-warning}
 ## ⚠️ Attention : deux questionnaires, et des scores répétés
-Les hanches répondent au HOOS JR (score de la hanche après prothèse, version abrégée) et les genoux au KOOS JR (score du genou après prothèse, version abrégée). Un point de l'un n'est pas forcément égal à un point de l'autre : les différences de départ et de plateau mélangent donc les articulations et les questionnaires. La constante de temps se mesure en jours, pas en points : elle se compare plus équitablement, pourvu que les deux questionnaires suivent la récupération de façon semblable. Comme à la [page 11](11-predict-from-one.qmd#nonlinear-regression), chaque articulation fournit jusqu'à quatre scores liés : ces IC ne sont donc pas fiables, certains peuvent être trop étroits et d'autres trop larges. Un modèle mixte ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) en tient compte.
+Pour les hanches, on utilise le HOOS JR (score de la hanche après prothèse, version abrégée) ; pour les genoux, le KOOS JR (score du genou après prothèse, version abrégée). Un point de l'un n'est pas forcément égal à un point de l'autre : les différences de départ et de plateau mélangent donc les articulations et les questionnaires. La constante de temps se mesure en jours, pas en points : elle se compare plus équitablement, pourvu que les deux questionnaires suivent la récupération de façon semblable. Comme à la [page 11](11-predict-from-one.qmd#nonlinear-regression), chaque articulation fournit jusqu'à quatre scores liés : ces IC ne sont donc pas fiables, certains peuvent être trop étroits et d'autres trop larges. Un modèle mixte ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) en tient compte.
 :::
 
 ::: {.callout-tip}
@@ -372,7 +372,7 @@ Les hanches répondent au HOOS JR (score de la hanche après prothèse, version 
 
 - Le critère est **oui/non**, et vous voulez l'**odds ratio** de chacun de plusieurs prédicteurs, ajusté sur les autres.
 - Les conditions de la [régression logistique simple](11-predict-from-one.qmd#logistic-regression) s'appliquent toujours, pour chaque prédicteur mesuré.
-- **Les événements limitent les prédicteurs.** Une règle empirique courante est d'au moins 10 patients par prédicteur dans le plus petit des deux groupes du critère. Ici, 173 sont revenus au sport et 177 non : ce modèle peut donc en admettre environ 17.
+- **Les événements limitent les prédicteurs.** Une règle empirique courante est d'au moins 10 patients par prédicteur, comptés dans le plus petit des deux groupes définis par le critère. Ici, 173 sont revenus au sport et 177 non : ce modèle peut donc en admettre environ 17.
 - Si le critère est un délai jusqu'à un événement → [régression de Cox](#cox).
 
 ### Regarder d'abord les données
@@ -409,7 +409,7 @@ print(acl["rts_12mo"].value_counts())
 ```
 :::
 
-Les 173 patients qui sont revenus au sport étaient en moyenne plus jeunes (27.1 ans contre 30.7), avec un niveau d'activité de Tegner plus élevé avant la blessure (7.0 contre 6.0), et plus nombreux avaient une greffe os-tendon rotulien-os (BPTB) (48.6 % contre 25.4 %).
+Les 173 patients qui sont revenus au sport étaient en moyenne plus jeunes (27.1 ans contre 30.7), avec un niveau d'activité de Tegner plus élevé avant la blessure (7.0 contre 6.0), et ils étaient plus nombreux à avoir un greffon os-tendon rotulien-os (BPTB) (48.6 % contre 25.4 %).
 
 ### Exécuter l'analyse
 
@@ -453,9 +453,9 @@ check_agree(list(age = rts_coef["age_10", "Estimate"], tegner = rts_coef["tegner
 ### Lire le résultat
 
 - Chaque **coefficient** est la variation du logarithme des odds de retour au sport par unité de ce prédicteur, ajustée sur les autres ; l'étape suivante les transforme en odds ratios.
-- **age_10 : p = 0.031**, **tegner_preinjury** et **les deux greffes : p < 0.001 :** chacun prédit le retour au sport, même en tenant compte des autres.
-- **sexMale (p = 0.195) :** pas de preuve claire pour le sexe, une fois les autres dans le modèle.
-- La greffe a trois niveaux : elle prend donc deux odds ratios, chacun par rapport au premier niveau (BPTB). Quatre prédicteurs, cinq coefficients.
+- **age_10 : p = 0.031**, **tegner_preinjury** et **les deux greffons : p < 0.001 :** chacun prédit le retour au sport, même en tenant compte des autres.
+- **sexMale (p = 0.195) :** pas de preuve claire d'un effet du sexe, une fois les autres variables dans le modèle.
+- Le type de greffon a trois niveaux : il donne donc deux odds ratios, chacun par rapport au premier niveau (BPTB). Quatre prédicteurs, cinq coefficients.
 
 ### Taille d'effet et IC à 95 %
 
@@ -475,7 +475,7 @@ print(odds_ratios)
 ```
 :::
 
-Les **odds ratios ajustés** sont les tailles d'effet : 0.71 par 10 ans d'âge (IC à 95 % de 0.51 à 0.96) et 1.42 par niveau de Tegner (IC à 95 % de 1.22 à 1.67). Pour une greffe aux ischio-jambiers, l'odds ratio est de 0.41 (0.25 à 0.69) et pour une greffe au quadriceps de 0.33 (0.17 à 0.63), les deux par rapport à BPTB. L'IC du sexe masculin (0.73, 0.46 à 1.17) est large.
+Les **odds ratios ajustés** sont les tailles d'effet : 0.71 par 10 ans d'âge (IC à 95 % de 0.51 à 0.96) et 1.42 par niveau de Tegner (IC à 95 % de 1.22 à 1.67). Pour un greffon aux ischio-jambiers, l'odds ratio est de 0.41 (0.25 à 0.69) et pour un greffon au quadriceps de 0.33 (0.17 à 0.63), les deux par rapport à BPTB. L'IC du sexe masculin (0.73, 0.46 à 1.17) est large.
 
 ### Rédiger les résultats
 
@@ -485,17 +485,17 @@ Les **odds ratios ajustés** sont les tailles d'effet : 0.71 par 10 ans d'âge 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le plus petit groupe fixe la limite, et les prédicteurs doivent venir d'abord
-La règle empirique compte le plus petit des deux groupes du critère. Elle autorise environ 17 prédicteurs ici, mais seulement un ou deux pour un échec de la greffe dans les 2 ans (15 sur 350 ; exercice 2). Au-delà, les odds ratios deviennent instables : choisissez donc les prédicteurs sur des critères cliniques, à l'avance, et ne laissez pas les valeurs p les choisir à votre place. Et n'utilisez que ce qui est connu avant le critère : aucun des 6 patients dont la greffe a échoué la première année n'était revenu au sport à 12 mois ; un échec ne peut donc pas prédire le retour au sport ici, il fait partie du critère.
+La règle empirique compte le plus petit des deux groupes définis par le critère. Elle autorise environ 17 prédicteurs ici, mais seulement un ou deux pour un échec de la greffe dans les 2 ans (15 sur 350 ; exercice 2). Au-delà, les odds ratios deviennent instables : choisissez donc les prédicteurs sur des critères cliniques, à l'avance, et ne laissez pas les valeurs p les choisir à votre place. Et n'utilisez que ce qui est connu avant la survenue du critère : aucun des 6 patients dont la greffe a échoué la première année n'était revenu au sport à 12 mois ; un échec ne peut donc pas prédire le retour au sport ici, il fait partie du critère.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : IC par profil et IC de Wald, encore
-Comme à la [page 11](11-predict-from-one.qmd#logistic-regression), le `confint()` de R fait un profil de la vraisemblance et statsmodels utilise des IC de Wald. Avec peu d'événements, les deux peuvent différer à la deuxième décimale : pour la greffe au quadriceps, 0.17 à 0.63 avec R et 0.17 à 0.64 avec Python. Dites lequel vous avez utilisé.
+Comme à la [page 11](11-predict-from-one.qmd#logistic-regression), le `confint()` de R fait un profil de la vraisemblance et statsmodels utilise des IC de Wald. Avec peu d'événements, les deux peuvent différer à la deuxième décimale : pour le greffon au quadriceps, 0.17 à 0.63 avec R et 0.17 à 0.64 avec Python. Dites lequel vous avez utilisé.
 :::
 
 ## Régression de Cox {#cox}
 
-**La question :** l'implant C garde-t-il un hazard de révision plus élevé après ajustement sur l'âge, le sexe et l'IMC ?
+**La question :** l'implant C présente-t-il encore un hazard de révision plus élevé après ajustement sur l'âge, le sexe et l'IMC ?
 
 ### Quand l'utiliser
 
@@ -593,7 +593,7 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 
 ### Taille d'effet et IC à 95 %
 
-Les **hazard ratios ajustés** avec leur IC à 95 % sont les tailles d'effet. Celui que la question vise : l'implant C contre A, 3.19 (IC à 95 % de 1.92 à 5.29).
+Les **hazard ratios ajustés** avec leur IC à 95 % sont les tailles d'effet. Celui sur lequel porte la question : l'implant C contre A, 3.19 (IC à 95 % de 1.92 à 5.29).
 
 ### Rédiger les résultats
 
@@ -731,7 +731,7 @@ Il n'y a pas de preuve claire que l'ajout du chirurgien améliore le modèle, et
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Le critère est oui/non : **régression logistique multiple**. Avec 15 événements, la règle empirique autorise un seul prédicteur, deux à la rigueur, et les IC montrent la tension.
+Le critère est oui/non : **régression logistique multiple**. Avec 15 événements, la règle empirique autorise un seul prédicteur, deux à la rigueur, et les IC montrent que le modèle est à la limite.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -756,7 +756,7 @@ print(fail_ors)
 Les IC sont les IC par profil de vraisemblance de R. Avec des données de délai jusqu'à un événement, la régression de Cox utilise les 31 échecs ([page 11](11-predict-from-one.qmd#cox)).
 :::
 
-**3.** À la [page 11](11-predict-from-one.qmd#logistic-regression), le taux de décès était le plus élevé chez les patients qui avaient attendu plus de 72 heures. Ajustez le délai avant l'opération comme une spline cubique naturelle (3 degrés de liberté) dans la régression logistique, comparez-la à la droite, et rédigez la phrase de Résultats.
+**3.** À la [page 11](11-predict-from-one.qmd#logistic-regression), le taux de décès était le plus élevé chez les patients qui avaient attendu plus de 72 heures. Modélisez le délai avant l'opération par une spline cubique naturelle (3 degrés de liberté) dans la régression logistique, comparez-la à la droite, et rédigez la phrase de Résultats.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -791,5 +791,5 @@ print(np.exp(24 * line_model.conf_int().loc["hours_to_surgery"]))   # son IC à 
 
 > **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-L'IC est l'IC par profil de vraisemblance de R. La spline n'apporte rien de clair, car la droite prédit déjà le taux après 72 heures. Et seulement 8 des 74 décès sont survenus si tard : trop peu pour fixer une courbe.
+L'IC est l'IC par profil de vraisemblance de R. La spline n'apporte rien de clair, car la droite prédit déjà le taux au-delà de 72 heures. Et seulement 8 des 74 décès sont survenus si tard : trop peu pour déterminer une courbe.
 :::

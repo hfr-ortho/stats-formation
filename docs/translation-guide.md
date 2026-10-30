@@ -56,6 +56,10 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - Ethics: "autorisation" and "demande d'autorisation" (LRH, ORH), not "approbation" or "demande d'éthique".
 - In `tests-a-z`, keep each test's English name in the first cell wherever it differs from the French, in italics in parentheses: "Test t pour échantillons appariés (*paired t test*)".
 - Glosses of abbreviations and instrument names at first use (IC, PROM, HOOS JR, KOOS JR, LCA, IMC) are allowed even though the English doesn't spell them out.
+- "the test that X" is never "le test selon lequel X" (that says the test asserts X): write "le test de l'hypothèse que X".
+- "ajuster" is for fitting a model ("ajuster un modèle") and for "ajusté sur"; what a variable is modeled by is "modéliser … par" ("modélisez le délai par une spline").
+- "the practice's data" and "practice data" are data to practice on: "données d'exercice", never "du cabinet". A clinic ("the practice records it") is "le service".
+- A graft's type or tissue is "greffon" (type de greffon, greffon aux ischio-jambiers); the procedure and its failure are "greffe" (échec de la greffe).
 - Translate only what the English page says; don't bring in detail from the design spec (the trial's injury is "lésion du médio-pied", not a specific named injury).
 
 ## Page procedure: self-check before you stop
