@@ -111,6 +111,8 @@ MOVED_SECTIONS = {
     ("catalog/09-three-plus-matched.html", "repeated-measures-anova"): ("data/proms_long.csv", "promis_pf"),
     ("catalog/09-three-plus-matched.html", "friedman"): ("data/foot_ankle_rct_long.csv", "efas"),
     ("catalog/10-association.html", "pearson"): ("data/hip_preservation_imaging.csv", "torsion_budin_deg"),
+    ("catalog/11-predict-from-one.html", "logistic-regression"): ("data/hip_fracture.csv", "hours_to_surgery"),
+    ("catalog/11-predict-from-one.html", "cox"): ("data/acl_cohort.csv", "tibial_slope_deg"),
 }
 
 
@@ -297,10 +299,20 @@ def test_curve_fits_warn_that_repeated_scores_make_the_cis_unreliable(site, page
     assert any(a["href"].split("#")[0].endswith("beyond/16-mixed-models.html") for a in warnings[0].select("a[href]"))
 
 
-def test_cox_warning_describes_the_cause_specific_hazard(site):
-    """Censoring deaths gives the revision rate among patients still alive; it doesn't hide or create an age effect."""
-    warning = text_of(section("catalog/11-predict-from-one.html", "cox").select_one("div.callout-warning"))
-    assert "still alive" in warning and "hide an age effect" not in warning
+def test_cox_warning_says_a_slope_is_not_a_treatment(site):
+    """Slope isn't assigned, so the hazard ratio doesn't show what an osteotomy would do."""
+    found = section("catalog/11-predict-from-one.html", "cox")
+    warning = text_of(found.select_one("div.callout-warning"))
+    assert "treatment effect" in warning and "osteotomy" in warning
+
+
+def test_cox_section_keeps_the_cause_specific_lesson(site):
+    """Censoring deaths gives the rate among patients still alive; the section says when that matters."""
+    assert "still alive" in text_of(section("catalog/11-predict-from-one.html", "cox"))
+
+
+def test_linear_regression_no_longer_points_to_page_10s_r_squared(site):
+    assert "page 10" not in text_of(section("catalog/11-predict-from-one.html", "linear-regression")).lower()
 
 
 def test_unplanned_findings_are_labeled_in_the_results(site):

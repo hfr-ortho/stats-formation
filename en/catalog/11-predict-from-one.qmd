@@ -21,9 +21,9 @@ A correlation ([page 10](10-association.qmd)) says how strongly two things go to
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: the joint replacement cohort and PROMs, hip fracture for logistic regression, ACL reconstructions for Cox regression. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
-To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
+To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ## Simple linear regression {#linear-regression}
@@ -119,7 +119,7 @@ check_agree(list(intercept = coef(bmi_model)[["(Intercept)"]], slope = coef(bmi_
 - **bmi = 1.37:** the **slope**. Each extra kg/m² of BMI goes with 1.37 more minutes of operative time, on average.
 - **Std. Error 0.11, t = 12.4, p < 0.001:** the slope's uncertainty, and the test of whether it's zero (no relationship).
 - **95% CI 1.15 to 1.58** (R's `confint()`; Python's `[0.025 0.975]` columns).
-- **R-squared = 0.20:** BMI accounts for a fifth of the variation in operative time, the same as r² on [page 10](10-association.qmd#pearson).
+- **R-squared = 0.20:** BMI accounts for a fifth of the variation in operative time.
 - **Residual standard error 14.7** (R only): the typical distance of a patient's operative time from the line, in minutes.
 
 Before trusting the line, plot the residuals against the fitted values: they should form a band of even width around 0, with no curve.
@@ -482,16 +482,18 @@ Theil-Sen resists outliers, but nothing can see above a ceiling: the 37 knees at
 
 ## Simple logistic regression {#logistic-regression}
 
-**The question:** Does the risk of a complication within 90 days rise with age?
+**The question:** Does the risk of death within 30 days rise with the time to surgery?
 
 ### When to use it
 
-- The outcome is **yes/no** (complication or not), and you want the **odds ratio** per unit of one predictor.
-- It assumes the log odds change in a straight line with the predictor: each extra decade multiplies the odds by the same amount.
+- The outcome is **yes/no** (died or not), and you want the **odds ratio** per unit of one predictor.
+- It assumes the log odds change in a straight line with the predictor: each extra day of delay multiplies the odds by the same amount.
 - You need enough patients with the outcome: a common rule of thumb is at least 10 per predictor.
 - If the outcome is time until an event → [Cox regression](#cox).
 
 ### Look at the data first
+
+The model uses time to surgery as a number, in units of 24 hours, so the odds ratio is per day of delay. The bands are only for the picture.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -501,18 +503,19 @@ Theil-Sen resists outliers, but nothing can see above a ceiling: the 37 knees at
 #| fig-height: 3
 library(tidyverse)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
-  mutate(age_10 = age / 10)   # age in decades, so the odds ratio is per 10 years
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE) |>
+  mutate(hours_24 = hours_to_surgery / 24)   # time in days, so the odds ratio is per 24 hours
 
-by_age <- cohort |>
-  mutate(age_band = cut(age, breaks = c(-Inf, 59, 69, 79, Inf), labels = c("under 60", "60-69", "70-79", "80+"))) |>
-  group_by(age_band) |>
-  summarise(n = n(), complications = sum(complication_90d), percent = 100 * mean(complication_90d))
-by_age
+by_delay <- hip_fracture |>
+  mutate(delay_band = cut(hours_to_surgery, breaks = c(-Inf, 24, 48, 72, Inf),
+                          labels = c("up to 24 h", "24 to 48 h", "48 to 72 h", "over 72 h"))) |>
+  group_by(delay_band) |>
+  summarise(n = n(), deaths = sum(death_30d), percent = 100 * mean(death_30d))
+by_delay
 
-ggplot(by_age, aes(age_band, percent)) +
+ggplot(by_delay, aes(delay_band, percent)) +
   geom_col() +
-  labs(x = "Age at surgery", y = "Complications within 90 days, %")
+  labs(x = "Time from admission to surgery", y = "Deaths within 30 days, %")
 ```
 
 ## Python
@@ -523,23 +526,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
 
-cohort = pd.read_csv("data/cohort.csv")
-cohort["age_10"] = cohort["age"] / 10   # age in decades, so the odds ratio is per 10 years
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
+hip_fracture["hours_24"] = hip_fracture["hours_to_surgery"] / 24   # time in days, so the odds ratio is per 24 hours
 
-bands = pd.cut(cohort["age"], bins=[-np.inf, 59, 69, 79, np.inf], labels=["under 60", "60-69", "70-79", "80+"])
-by_age = cohort.groupby(bands, observed=True)["complication_90d"].agg(n="count", complications="sum", percent="mean")
-by_age["percent"] = 100 * by_age["percent"]
-print(by_age)
+bands = pd.cut(hip_fracture["hours_to_surgery"], bins=[-np.inf, 24, 48, 72, np.inf],
+               labels=["up to 24 h", "24 to 48 h", "48 to 72 h", "over 72 h"])
+by_delay = hip_fracture.groupby(bands, observed=True)["death_30d"].agg(n="count", deaths="sum", percent="mean")
+by_delay["percent"] = 100 * by_delay["percent"]
+print(by_delay)
 
 fig, ax = plt.subplots(figsize=(6, 3))
-bars = ax.bar(by_age.index.astype(str), by_age["percent"])
-ax.set_xlabel("Age at surgery")
-ax.set_ylabel("Complications within 90 days, %")
+bars = ax.bar(by_delay.index.astype(str), by_delay["percent"])
+ax.set_xlabel("Time from admission to surgery")
+ax.set_ylabel("Deaths within 30 days, %")
 plt.show()
 ```
 :::
 
-Complications followed 5 of 151 procedures (3.3%) in patients under 60 and 14 of 53 (26.4%) in patients aged 80 or more; 51 of 600 overall.
+Within 30 days, 29 of the 574 patients operated on within 24 hours died (5.1%), and 8 of the 44 operated on after more than 72 hours (18.2%); 74 of 1,200 overall.
 
 ### Run it
 
@@ -547,39 +551,39 @@ Complications followed 5 of 151 procedures (3.3%) in patients under 60 and 14 of
 ## R
 
 ```{r}
-age_model <- glm(complication_90d ~ age_10, family = binomial, data = cohort)   # binomial = yes/no outcome
-summary(age_model)
+delay_model <- glm(death_30d ~ hours_24, family = binomial, data = hip_fracture)   # binomial = yes/no outcome
+summary(delay_model)
 ```
 
 ## Python
 
 ```{python}
-age_model = smf.logit("complication_90d ~ age_10", data=cohort).fit(disp=False)   # disp=False: no fitting messages
-print(age_model.summary())
+delay_model = smf.logit("death_30d ~ hours_24", data=hip_fracture).fit(disp=False)   # disp=False: no fitting messages
+print(delay_model.summary())
 ```
 :::
 
 ```{python}
 #| include: false
-wald = age_model.conf_int()
-chk = {"coef": float(age_model.params["age_10"]), "se": float(age_model.bse["age_10"]),
-       "p": float(age_model.pvalues["age_10"]), "low": float(wald.loc["age_10", 0]), "high": float(wald.loc["age_10", 1])}
+wald = delay_model.conf_int()
+chk = {"coef": float(delay_model.params["hours_24"]), "se": float(delay_model.bse["hours_24"]),
+       "p": float(delay_model.pvalues["hours_24"]), "low": float(wald.loc["hours_24", 0]), "high": float(wald.loc["hours_24", 1])}
 ```
 
 ```{r}
 #| include: false
-age_coef <- summary(age_model)$coefficients
-check_agree(list(coef = age_coef["age_10", "Estimate"], se = age_coef["age_10", "Std. Error"], p = age_coef["age_10", "Pr(>|z|)"],
-                 low = confint.default(age_model)["age_10", 1], high = confint.default(age_model)["age_10", 2]),
+delay_coef <- summary(delay_model)$coefficients
+check_agree(list(coef = delay_coef["hours_24", "Estimate"], se = delay_coef["hours_24", "Std. Error"], p = delay_coef["hours_24", "Pr(>|z|)"],
+                 low = confint.default(delay_model)["hours_24", 1], high = confint.default(delay_model)["hours_24", 2]),
             reticulate::py$chk, tol = 1e-4)   # glm() stops once the deviance settles, a step before statsmodels does
 ```
 
 ### Read the output
 
-- **age_10 = 0.75:** the change in the **log odds** of a complication per 10 years of age. Log odds are hard to read, so turn the coefficient into an odds ratio (next step).
-- **Std. Error 0.17, z = 4.42, p < 0.001:** the test of whether age matters at all.
-- **Intercept = −7.49:** the log odds at age 0, which only anchors the line.
-- **Null and residual deviance** (R) or **LLR p-value** (Python): how much better the model fits with age than without it.
+- **hours_24 = 0.41:** the change in the **log odds** of death within 30 days per 24 hours of delay. Log odds are hard to read, so turn the coefficient into an odds ratio (next step).
+- **Std. Error 0.11, z = 3.78, p < 0.001:** the test of whether time to surgery matters at all.
+- **Intercept = −3.29:** the log odds at surgery on admission (0 hours), which only anchors the line.
+- **Null and residual deviance** (R) or **LLR p-value** (Python): how much better the model fits with time to surgery than without it.
 
 ### Effect size and 95% CI
 
@@ -589,49 +593,50 @@ The **odds ratio** is e raised to the coefficient.
 ## R
 
 ```{r}
-exp(cbind(odds_ratio = coef(age_model), confint(age_model)))   # profile CIs; see the R vs Python box
+exp(cbind(odds_ratio = coef(delay_model), confint(delay_model)))   # profile CIs; see the R vs Python box
 ```
 
 ## Python
 
 ```{python}
-odds_ratios = np.exp(pd.concat([age_model.params, age_model.conf_int()], axis=1))   # Wald CIs
+odds_ratios = np.exp(pd.concat([delay_model.params, delay_model.conf_int()], axis=1))   # Wald CIs
 odds_ratios.columns = ["odds_ratio", "low", "high"]
 print(odds_ratios)
 ```
 :::
 
-Each 10 years of age multiplied the odds of a complication by 2.12 (95% CI 1.53 to 2.98).
+Each 24 hours of delay multiplied the odds of death within 30 days by 1.50 (95% CI 1.21 to 1.85).
 
 ### How to report it
 
-> **Methods:** The association between age and complications within 90 days was estimated with logistic regression, with age in 10-year units.
+> **Methods:** The association between time from admission to surgery and death within 30 days was estimated with logistic regression, with time in 24-hour units.
 >
-> **Results:** Complications followed 51 of 600 procedures (8.5%). The odds ratio for a complication per 10 years of age was 2.12 (95% CI 1.53 to 2.98; p < 0.001).
+> **Results:** Within 30 days, 74 of 1,200 patients died (6.2%). The odds ratio for death per 24 hours of delay to surgery was 1.50 (95% CI 1.21 to 1.85; p < 0.001).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a straight line on the log-odds scale is an assumption
-The model says each decade multiplies the odds by the same 2.12. The table above suggests otherwise: the rate barely changes between the 60s and the 70s, then jumps after 80. Check the shape before trusting a single odds ratio; [splines](12-predict-from-several.qmd#multiple-nonlinear-regression) let the effect bend. And an odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (8.5%).
+The model says each 24 hours multiplies the odds by the same 1.50. The table above suggests otherwise: the rate barely changes up to 72 hours, then jumps. Check the shape before trusting a single odds ratio; [splines](12-predict-from-several.qmd#multiple-nonlinear-regression) let the effect bend. An odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (6.2%). And it isn't proof of cause: patients too unwell to operate on may wait longer, and they'd die more often whenever they were operated on.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: profile and Wald CIs
-R's `confint()` on a `glm()` **profiles** the likelihood, which is more accurate in small samples. statsmodels' `conf_int()` uses the simpler **Wald** method (estimate ± 1.96 standard errors), which gives 1.52 to 2.95 here; R's `confint.default()` does the same. Say which you used.
+R's `confint()` on a `glm()` **profiles** the likelihood, which is more accurate in small samples. statsmodels' `conf_int()` uses the simpler **Wald** method (estimate ± 1.96 standard errors), which gives 1.22 to 1.86 here; R's `confint.default()` does the same. Say which you used.
 :::
 
 ## Cox regression {#cox}
 
-**The question:** Does the hazard of revision rise with age at surgery?
+**The question:** Does the hazard of ACL graft failure rise with posterior tibial slope?
 
 ### When to use it
 
-- The outcome is **time until an event** (revision), and the predictor is a **measurement** (age).
-- Cox regression gives a **hazard ratio per unit** of the predictor. Choose a unit that means something: per 10 years, not per year.
-- It assumes the hazard ratio stays the same over time (**proportional hazards**) and that the log hazard changes in a straight line with age. [Page 14](../survival/14-cox-regression.qmd) shows how to check both and covers Cox regression in full.
+- The outcome is **time until an event** (graft failure), and the predictor is a **measurement** (tibial slope).
+- Cox regression gives a **hazard ratio per unit** of the predictor. Choose a unit that means something: here, per degree.
+- It assumes the hazard ratio stays the same over time (**proportional hazards**) and that the log hazard changes in a straight line with slope. [Page 14](../survival/14-cox-regression.qmd) shows how to check both and covers Cox regression in full.
+- Deaths are censored in any Cox model of another event. That hardly matters in young ACL patients, who rarely die during follow-up. In older patients it does: the hazard ratio then describes the rate among patients still alive, and a patient's actual chance of the event needs the [cumulative incidence](../survival/13-kaplan-meier.qmd#competing-risks) or a [Fine-Gray model](../survival/14-cox-regression.qmd#fine-gray).
 
 ### Look at the data first
 
-Splitting age in two is only for the picture; the model uses age as a number.
+Splitting slope in two is only for the picture; the model uses slope as a number.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -643,15 +648,14 @@ library(tidyverse)
 library(survival)
 library(ggsurvfit)
 
-cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
-  mutate(age_10 = age / 10,                                                  # age in decades
-         age_group = if_else(age >= 70, "70 or older", "under 70"))          # for the plot only
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE) |>
+  mutate(slope_group = if_else(tibial_slope_deg >= 12, "12° or more", "under 12°"))   # for the plot only
 
-survfit2(Surv(followup_years, revised) ~ age_group, data = cohort, conf.type = "log-log") |>
+survfit2(Surv(followup_years, graft_failure) ~ slope_group, data = acl, conf.type = "log-log") |>
   ggsurvfit() +
   add_risktable() +
   scale_ggsurvfit() +
-  labs(x = "Years since surgery", y = "Revision-free survival")
+  labs(x = "Years since reconstruction", y = "Graft survival")
 ```
 
 ## Python
@@ -662,25 +666,24 @@ import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
 from lifelines.plotting import add_at_risk_counts
 
-cohort = pd.read_csv("data/cohort.csv")
-cohort["age_10"] = cohort["age"] / 10                                         # age in decades
-cohort["age_group"] = cohort["age"].map(lambda age: "70 or older" if age >= 70 else "under 70")   # for the plot only
+acl = pd.read_csv("data/acl_cohort.csv")
+acl["slope_group"] = acl["tibial_slope_deg"].map(lambda slope: "12° or more" if slope >= 12 else "under 12°")   # for the plot only
 
 fig, ax = plt.subplots(figsize=(7, 4.5))
 curves = []
-for group_name, group in cohort.groupby("age_group"):
-    km = KaplanMeierFitter(label=group_name).fit(group["followup_years"], group["revised"])
+for group_name, group in acl.groupby("slope_group"):
+    km = KaplanMeierFitter(label=group_name).fit(group["followup_years"], group["graft_failure"])
     km.plot_survival_function(ax=ax, ci_show=False)
     curves.append(km)
-ax.set_xlabel("Years since surgery")
-ax.set_ylabel("Revision-free survival")
+ax.set_xlabel("Years since reconstruction")
+ax.set_ylabel("Graft survival")
 add_at_risk_counts(*curves, ax=ax)
 plt.tight_layout()
 plt.show()
 ```
 :::
 
-29 of 200 procedures in patients aged 70 or older were revised, against 52 of 400 in younger patients. The curves separate a little, with wide overlap.
+11 of the 73 reconstructions with a slope of 12° or more failed, and 20 of the 277 with a smaller slope.
 
 ### Run it
 
@@ -688,56 +691,63 @@ plt.show()
 ## R
 
 ```{r}
-age_cox <- coxph(Surv(followup_years, revised) ~ age_10, data = cohort)
-summary(age_cox)
+slope_cox <- coxph(Surv(followup_years, graft_failure) ~ tibial_slope_deg, data = acl)
+summary(slope_cox)
 ```
 
 ## Python
 
 ```{python}
-age_cox = CoxPHFitter().fit(cohort[["followup_years", "revised", "age_10"]],
-                            duration_col="followup_years", event_col="revised")
-print(age_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
-print(age_cox.log_likelihood_ratio_test().test_statistic)   # overall likelihood ratio test
+slope_cox = CoxPHFitter().fit(acl[["followup_years", "graft_failure", "tibial_slope_deg"]],
+                              duration_col="followup_years", event_col="graft_failure",
+                              fit_options={"precision": 1e-9})
+print(slope_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
+print(slope_cox.log_likelihood_ratio_test().test_statistic)   # overall likelihood ratio test
 ```
 :::
 
 ```{python}
 #| include: false
-row = age_cox.summary.loc["age_10"]
+row = slope_cox.summary.loc["tibial_slope_deg"]
 chk = {"hr": float(row["exp(coef)"]), "low": float(row["exp(coef) lower 95%"]), "high": float(row["exp(coef) upper 95%"]),
-       "p": float(row["p"]), "lr": float(age_cox.log_likelihood_ratio_test().test_statistic)}
+       "p": float(row["p"]), "lr": float(slope_cox.log_likelihood_ratio_test().test_statistic)}
 ```
 
 ```{r}
 #| include: false
-age_hr <- summary(age_cox)$conf.int
-check_agree(list(hr = age_hr["age_10", "exp(coef)"], low = age_hr["age_10", "lower .95"], high = age_hr["age_10", "upper .95"],
-                 p = summary(age_cox)$coefficients["age_10", "Pr(>|z|)"], lr = unname(summary(age_cox)$logtest["test"])),
+slope_hr <- summary(slope_cox)$conf.int
+check_agree(list(hr = slope_hr["tibial_slope_deg", "exp(coef)"], low = slope_hr["tibial_slope_deg", "lower .95"],
+                 high = slope_hr["tibial_slope_deg", "upper .95"],
+                 p = summary(slope_cox)$coefficients["tibial_slope_deg", "Pr(>|z|)"], lr = unname(summary(slope_cox)$logtest["test"])),
             reticulate::py$chk)
 ```
 
 ### Read the output
 
-- **exp(coef) = 1.25:** the hazard ratio per 10 years of age: the hazard of revision is 1.25 times higher for a patient 10 years older.
-- **lower .95 / upper .95 = 0.98 to 1.59:** the 95% CI, which includes 1 (no difference).
-- **Pr(>|z|) = 0.073:** the p-value for age.
-- **Likelihood ratio test = 3.23 on 1 df, p = 0.07:** the overall test; with one predictor it says the same as the p-value for age.
-- **Concordance = 0.56** (R only): how often the model ranks two patients' revision times correctly. 0.5 is a coin toss, so age alone predicts revision poorly.
+- **exp(coef) = 1.27:** the hazard ratio per degree of tibial slope: the hazard of graft failure is 1.27 times higher for a slope 1° steeper.
+- **lower .95 / upper .95 = 1.09 to 1.48:** the 95% CI, which excludes 1 (no difference).
+- **Pr(>|z|) = 0.002:** the p-value for slope.
+- **Likelihood ratio test = 10.1 on 1 df, p = 0.002:** the overall test; with one predictor it says the same as the p-value for slope.
+- **Concordance = 0.67** (R only): how often the model ranks two patients' graft failure times correctly. 0.5 is a coin toss, so slope alone is better than a coin toss, but far from a prediction for one patient.
 
 ### Effect size and 95% CI
 
-The **hazard ratio per 10 years**, 1.25 (95% CI 0.98 to 1.59), is the effect size. The CI is wide: the data fit a small decrease in hazard with age as well as a 59% increase per decade.
+The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size. Hazard ratios multiply: a slope 5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21).
 
 ### How to report it
 
-> **Methods:** The association between age at surgery and revision was estimated with Cox proportional hazards regression, with age in 10-year units.
+> **Methods:** The association between posterior tibial slope and ACL graft failure was estimated with Cox proportional hazards regression, with slope in degrees.
 >
-> **Results:** The hazard ratio for revision per 10 years of age was 1.25 (95% CI 0.98 to 1.59; p = 0.073).
+> **Results:** The hazard ratio for graft failure per degree of posterior tibial slope was 1.27 (95% CI 1.09 to 1.48; p = 0.002), with 31 failures in 350 reconstructions.
 
 ::: {.callout-warning}
-## ⚠️ Watch out: older patients die before they can be revised
-Deaths are treated as censored here, so the hazard ratio describes the revision rate among patients still alive. That's a fair answer to its own question. But older patients die sooner, so fewer of them live long enough to need a revision: an older patient's actual chance of being revised is smaller than the hazard ratio suggests. To describe that chance, use the cumulative incidence ([page 13](../survival/13-kaplan-meier.qmd#competing-risks)) or a Fine-Gray model ([page 14](../survival/14-cox-regression.qmd#fine-gray)).
+## ⚠️ Watch out: a hazard ratio isn't a treatment effect
+Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. With 31 failures, this model can take one or two predictors ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+:::
+
+::: {.callout-tip}
+## 🔀 R vs Python: lifelines stops early
+lifelines stops iterating slightly early by default, so the Python code tightens it with `fit_options={"precision": 1e-9}`. Here that changes nothing visible; on page 12 it does.
 :::
 
 ```{r}
@@ -745,11 +755,11 @@ Deaths are treated as censored here, so the hazard ratio describes the revision 
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 bmi_ci <- confint(bmi_model)
 recovery_ci <- confint(recovery)
-age_ci <- exp(confint(age_model))
-age_wald <- exp(confint.default(age_model))
+delay_ci <- exp(confint(delay_model))
+delay_wald <- exp(confint.default(delay_model))
 koos_ls <- coef(lm(one_year ~ preop, data = koos_wide))
 ex_age <- lm(op_time_min ~ age, data = cohort)
-ex_rehab <- glm(I(discharge == "rehabilitation clinic") ~ age_10, family = binomial, data = cohort)
+ex_death <- glm(death_30d ~ I(age / 10), family = binomial, data = hip_fracture)
 ex_hoos <- proms |> filter(instrument == "HOOS JR", !is.na(prom_score)) |> mutate(days = pmax(visit_days, 0))
 ex_hoos_fit <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau), data = ex_hoos,
                    start = list(plateau = 85, start = 50, tau = 100))
@@ -774,24 +784,27 @@ stopifnot(
   round(smooth$y[1]) == 70, round(smooth$y[length(smooth$y)]) == 99,
   round(c(ts_intercept, ts_slope), 2) == c(65.39, 0.39), round(ts_ci, 2) == c(0.27, 0.52),
   round(koos_ls[["preop"]], 2) == 0.43,
-  round(age_coef["age_10", c("Estimate", "Std. Error", "z value")], 2) == c(0.75, 0.17, 4.42),
-  round(age_coef["(Intercept)", "Estimate"], 2) == -7.49, age_coef["age_10", "Pr(>|z|)"] < 0.001,
-  round(exp(coef(age_model))[["age_10"]], 2) == 2.12, round(age_ci["age_10", ], 2) == c(1.53, 2.98),
-  round(age_wald["age_10", ], 2) == c(1.52, 2.95),
-  by_age$n == c(151, 249, 147, 53), by_age$complications[c(1, 4)] == c(5, 14),
-  round(by_age$percent[c(1, 4)], 1) == c(3.3, 26.4), sum(cohort$complication_90d) == 51,
-  round(100 * mean(cohort$complication_90d), 1) == 8.5,
-  sum(cohort$age >= 70) == 200, sum(cohort$revised[cohort$age >= 70]) == 29, sum(cohort$revised[cohort$age < 70]) == 52,
-  round(age_hr["age_10", c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.25, 0.98, 1.59),
-  round(summary(age_cox)$coefficients["age_10", "Pr(>|z|)"], 3) == 0.073,
-  round(unname(summary(age_cox)$logtest["test"]), 2) == 3.23, round(unname(summary(age_cox)$logtest["pvalue"]), 2) == 0.07,
-  round(unname(summary(age_cox)$concordance[1]), 2) == 0.56,
+  nrow(hip_fracture) == 1200, sum(hip_fracture$death_30d) == 74, round(100 * mean(hip_fracture$death_30d), 1) == 6.2,
+  round(delay_coef["hours_24", c("Estimate", "Std. Error", "z value")], 2) == c(0.41, 0.11, 3.78),
+  round(delay_coef["(Intercept)", "Estimate"], 2) == -3.29, delay_coef["hours_24", "Pr(>|z|)"] < 0.001,
+  round(exp(coef(delay_model))[["hours_24"]], 2) == 1.50, round(delay_ci["hours_24", ], 2) == c(1.21, 1.85),
+  round(delay_wald["hours_24", ], 2) == c(1.22, 1.86),
+  by_delay$n == c(574, 460, 122, 44), by_delay$deaths == c(29, 29, 8, 8),
+  round(by_delay$percent[c(1, 4)], 1) == c(5.1, 18.2),
+  nrow(acl) == 350, sum(acl$graft_failure) == 31,
+  sum(acl$tibial_slope_deg >= 12) == 73, sum(acl$graft_failure[acl$tibial_slope_deg >= 12]) == 11,
+  sum(acl$tibial_slope_deg < 12) == 277, sum(acl$graft_failure[acl$tibial_slope_deg < 12]) == 20,
+  round(slope_hr["tibial_slope_deg", c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.27, 1.09, 1.48),
+  round(summary(slope_cox)$coefficients["tibial_slope_deg", "Pr(>|z|)"], 3) == 0.002,
+  round(unname(summary(slope_cox)$logtest["test"]), 1) == 10.1, round(unname(summary(slope_cox)$logtest["pvalue"]), 3) == 0.002,
+  round(unname(summary(slope_cox)$concordance[1]), 2) == 0.67,
+  round(exp(5 * coef(slope_cox))[["tibial_slope_deg"]], 2) == 3.37,
+  round(exp(5 * confint(slope_cox))["tibial_slope_deg", ], 2) == c(1.57, 7.21),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(coef(ex_age)[["age"]], 2) == 0.24, round(confint(ex_age)["age", ], 2) == c(0.11, 0.38),
   summary(ex_age)$coefficients["age", "Pr(>|t|)"] < 0.001, round(summary(ex_age)$r.squared, 2) == 0.02,
-  sum(cohort$discharge == "rehabilitation clinic") == 30,
-  round(exp(coef(ex_rehab))[["age_10"]], 2) == 2.06, round(exp(confint(ex_rehab))["age_10", ], 2) == c(1.37, 3.17),
-  summary(ex_rehab)$coefficients["age_10", "Pr(>|z|)"] < 0.001,
+  round(exp(coef(ex_death))[[2]], 2) == 1.88, round(exp(confint(ex_death))[2, ], 2) == c(1.34, 2.67),
+  summary(ex_death)$coefficients[2, "Pr(>|z|)"] < 0.001,
   nrow(ex_hoos) == 906, n_distinct(ex_hoos$case_id) == 270,
   round(coef(ex_hoos_fit), 1) == c(87.9, 45.6, 53.4),
   round(ex_hoos_ci["plateau", ], 1) == c(86.3, 89.4), round(ex_hoos_ci["start", ], 1) == c(44.2, 46.9),
@@ -831,33 +844,34 @@ print(age_time.params, age_time.conf_int(), age_time.rsquared, sep="\n")
 That's about 2.4 minutes per decade, and age explains only 2% of the variation, against 20% for BMI.
 :::
 
-**2.** A colleague asks whether older patients are more likely to be discharged to a rehabilitation clinic rather than home. Which regression would you use, and what do you find?
+**2.** A colleague asks whether older hip fracture patients are more likely to die within 30 days. Which regression would you use, and what do you find?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The outcome is yes/no (rehabilitation clinic or home) and the predictor is a measurement: **simple logistic regression**. Only 30 patients went to a rehabilitation clinic, enough for one predictor.
+The outcome is yes/no and the predictor is a measurement: **simple logistic regression**. 74 deaths are plenty for one predictor.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-rehab_model <- glm(I(discharge == "rehabilitation clinic") ~ age_10, family = binomial, data = cohort)
-exp(cbind(odds_ratio = coef(rehab_model), confint(rehab_model)))
-summary(rehab_model)$coefficients
+hip_fracture <- hip_fracture |> mutate(age_10 = age / 10)   # age in decades, so the odds ratio is per 10 years
+death_model <- glm(death_30d ~ age_10, family = binomial, data = hip_fracture)
+exp(cbind(odds_ratio = coef(death_model), confint(death_model)))
+summary(death_model)$coefficients
 ```
 
 ## Python
 
 ```{python}
-cohort["rehab"] = (cohort["discharge"] == "rehabilitation clinic").astype(int)
-rehab_model = smf.logit("rehab ~ age_10", data=cohort).fit(disp=False)
-rehab_ors = np.exp(pd.concat([rehab_model.params, rehab_model.conf_int()], axis=1))
-rehab_ors.columns = ["odds_ratio", "low", "high"]
-print(rehab_ors, rehab_model.pvalues, sep="\n")
+hip_fracture["age_10"] = hip_fracture["age"] / 10   # age in decades, so the odds ratio is per 10 years
+death_model = smf.logit("death_30d ~ age_10", data=hip_fracture).fit(disp=False)
+death_ors = np.exp(pd.concat([death_model.params, death_model.conf_int()], axis=1))
+death_ors.columns = ["odds_ratio", "low", "high"]
+print(death_ors, death_model.pvalues, sep="\n")
 ```
 :::
 
-> **Results:** The odds ratio for discharge to a rehabilitation clinic per 10 years of age was 2.06 (95% CI 1.37 to 3.17; p < 0.001).
+> **Results:** The odds ratio for death within 30 days per 10 years of age was 1.88 (95% CI 1.34 to 2.67; p < 0.001).
 
 The CI is R's profile CI.
 :::
