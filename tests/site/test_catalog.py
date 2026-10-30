@@ -108,6 +108,8 @@ MOVED_SECTIONS = {
     ("catalog/06-two-unpaired-groups.html", "fisher-chi-square"): ("data/acl_cohort.csv", "failure_2y"),
     ("catalog/07-two-paired-groups.html", "paired-t"): ("data/hip_preservation_imaging.csv", "alpha_dunn45_deg"),
     ("catalog/08-three-plus-unmatched.html", "chi-square"): ("data/acl_cohort.csv", "rts_12mo"),
+    ("catalog/09-three-plus-matched.html", "repeated-measures-anova"): ("data/proms_long.csv", "promis_pf"),
+    ("catalog/09-three-plus-matched.html", "friedman"): ("data/foot_ankle_rct_long.csv", "efas"),
 }
 
 
@@ -117,6 +119,12 @@ def test_moved_sections_teach_from_their_new_data(site, cell, source):
     code = code_of(section(*cell))
     assert code.count(f'read_csv("{dataset}"') >= 2, f"{cell}: R and Python should both read {dataset}"
     assert column in code, f"{cell}: the code never uses {column}"
+
+
+def test_friedman_says_how_many_boot_patients_were_analyzed(site):
+    """Patients miss trial visits: the reader needs the number analyzed and the number randomized."""
+    found = section("catalog/09-three-plus-matched.html", "friedman")
+    assert "50 of the 60 patients" in " ".join(text_of(q) for q in found.select("blockquote"))
 
 
 # ---- review fixes ---------------------------------------------------------
