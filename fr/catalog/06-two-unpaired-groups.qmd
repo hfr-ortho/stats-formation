@@ -1,8 +1,910 @@
 ---
-title: "6 · Comparer deux groupes indépendants (en préparation)"
+title: "6 · Comparer deux groupes indépendants"
+description: "Test t de Welch pour échantillons indépendants, test de Mann-Whitney, tests exact de Fisher et du khi-deux, et test du log-rank, chacun avec une taille d'effet et un IC à 95 %."
+engine: knitr
+toc-depth: 2
 ---
 
-::: {.callout-note .coming-soon}
-## Pas encore traduit
-Cette page est en cours de traduction. En attendant, vous la trouverez [en anglais](../../en/catalog/06-two-unpaired-groups.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Deux groupes de patients **différents** : une orthèse amovible contre un plâtre dans un essai, un greffon aux ischio-jambiers contre un greffon os-tendon rotulien-os (BPTB), l'implant A contre l'implant C. C'est la comparaison la plus fréquente en recherche clinique. Si les mêmes patients sont mesurés deux fois, ou si les patients ont été appariés deux à deux, utilisez plutôt la [page 7](07-two-paired-groups.qmd).
+
+::: {.callout-note}
+## 💡 Comment fonctionne chaque section de cette page
+Chaque section répond à une question sur l'un des jeux de données du cabinet : un essai randomisé qui compare une orthèse amovible à un plâtre après une lésion de Chopart (les tests t et de Mann-Whitney), les reconstructions du LCA (test de Fisher) et la cohorte de prothèses articulaires (test du log-rank). L'essai et ses résultats sont inventés pour l'enseignement. Dans les données et dans le code, l'orthèse amovible s'appelle « boot » et le plâtre « cast » ; dans le texte, nous disons orthèse et plâtre. Le premier bloc de code de chaque section charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+
+Pour garder le code court, l'exemple de prothèses articulaires utilise tous les cas, y compris les 80 patients opérés des deux côtés. Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
+:::
+
+## Test t pour échantillons indépendants {#unpaired-t}
+
+**La question :** le score EFAS, 3 mois après une lésion de Chopart, diffère-t-il avec une orthèse amovible par rapport à un plâtre ?
+
+### Quand l'utiliser
+
+- Le critère est une **mesure**, comparée entre **deux groupes indépendants**.
+- Dans **chaque groupe**, il est à peu près normal, ou chaque groupe est grand (environ 30 ou plus) et pas très asymétrique ([page 3](../foundations/03-distributions.qmd#within-groups)).
+- Un score qui additionne plusieurs questions, comme le score EFAS (six questions notées de 0 à 4, donc de 0 à 24), peut être traité comme une mesure quand peu de patients sont à son plancher ou à son plafond.
+- Utilisez la version de **Welch**, qui ne suppose pas que les deux groupes ont la même dispersion. C'est la valeur par défaut de R, mais pas celle de Python (voir l'encadré R ou Python).
+- Si le critère est asymétrique, s'accumule à un plancher ou à un plafond, ou est ordinal → le [test de Mann-Whitney](#mann-whitney).
+
+### Regarder d'abord les données
+
+L'essai a randomisé 120 patients, 60 par bras, et mesuré le score EFAS (score de la Société européenne du pied et de la cheville ; 24 est le meilleur) à 6 semaines, 3 mois, 6 mois et 12 mois.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 4
+library(tidyverse)
+
+trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # une ligne par patient et par visite
+
+efas_3mo <- trial |>
+  filter(visit == "3mo", !is.na(efas)) |>                  # patients vus à 3 mois
+  mutate(arm = factor(arm, levels = c("boot", "cast")))    # boot en premier, donc différences = boot moins cast
+
+ggplot(efas_3mo, aes(efas)) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~ arm, ncol = 1) +
+  labs(x = "EFAS score at 3 months (24 = best)", y = "Patients")
+
+efas_3mo |>
+  group_by(arm) |>
+  summarise(n = n(), mean = mean(efas), sd = sd(efas))
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import pingouin as pg
+import matplotlib.pyplot as plt
+from scipy import stats
+
+trial = pd.read_csv("data/foot_ankle_rct_long.csv")                    # une ligne par patient et par visite
+efas_3mo = trial[trial["visit"] == "3mo"].dropna(subset=["efas"])      # patients vus à 3 mois
+efas_boot = efas_3mo.loc[efas_3mo["arm"] == "boot", "efas"]
+efas_cast = efas_3mo.loc[efas_3mo["arm"] == "cast", "efas"]
+
+fig, axes = plt.subplots(2, 1, figsize=(6, 4), sharex=True)
+axes[0].hist(efas_boot, bins=range(0, 26))
+axes[0].set_title("boot")
+axes[1].hist(efas_cast, bins=range(0, 26))
+axes[1].set_title("cast")
+axes[1].set_xlabel("EFAS score at 3 months (24 = best)")
+plt.tight_layout()
+plt.show()
+
+print(efas_3mo.groupby("arm")["efas"].agg(["count", "mean", "std"]))
+```
+:::
+
+Les deux bras ont à peu près une forme de cloche, aucun patient n'est au plancher (0) ni au plafond (24), et les deux groupes sont grands. Le bras orthèse se situe plus à droite. Huit patients ont manqué la visite de 3 mois (3 dans le bras orthèse, 5 dans le bras plâtre) : 112 des 120 patients randomisés sont donc analysés.
+
+### Exécuter l'analyse
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+efas_test <- t.test(efas ~ arm, data = efas_3mo)   # le test t de Welch est la valeur par défaut de R
+efas_test
+```
+
+## Python
+
+```{python}
+efas_test = stats.ttest_ind(efas_boot, efas_cast, equal_var=False)   # equal_var=False donne le test t de Welch
+print(efas_test)
+print(efas_boot.mean() - efas_cast.mean(), efas_test.confidence_interval())
+```
+:::
+
+```{python}
+#| include: false
+efas_ci = efas_test.confidence_interval()
+chk = {"t": float(efas_test.statistic), "df": float(efas_test.df), "p": float(efas_test.pvalue),
+       "ci_low": float(efas_ci.low), "ci_high": float(efas_ci.high)}
+```
+
+```{r}
+#| include: false
+check_agree(list(t = unname(efas_test$statistic), df = unname(efas_test$parameter), p = efas_test$p.value,
+                 ci_low = efas_test$conf.int[1], ci_high = efas_test$conf.int[2]), reticulate::py$chk)
+```
+
+### Lire le résultat
+
+- **t = 6.00 :** la différence entre les moyennes vaut 6 erreurs standard.
+- **df = 106.05 :** le test de Welch ajuste les degrés de liberté à des dispersions inégales : ce n'est donc pas un nombre entier.
+- **p < 0.001 :** une différence aussi grande serait très improbable si les deux bras avaient le même score EFAS moyen.
+- **95% CI de 2.40 à 4.77 :** l'IC de la **différence de moyennes**, orthèse moins plâtre.
+- **mean in group boot 17.4, mean in group cast 13.8 :** les deux moyennes.
+
+### Taille d'effet et IC à 95 %
+
+- La **différence de moyennes** avec son IC est la taille d'effet que les lecteurs comprennent le mieux : 3.6 points (IC à 95 % de 2.4 à 4.8).
+- Le **g de Hedges** exprime la différence en écarts-types, ce qui permet de comparer des effets mesurés sur des échelles différentes. Comme repère approximatif, 0.2 est petit, 0.5 moyen et 0.8 grand.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+effectsize::hedges_g(efas ~ arm, data = efas_3mo)
+```
+
+## Python
+
+```{python}
+g = pg.compute_effsize(efas_boot, efas_cast, eftype="hedges")
+print(g)
+print(pg.compute_esci(stat=g, nx=len(efas_boot), ny=len(efas_cast), eftype="hedges", decimals=3))   # son IC à 95 %
+```
+:::
+
+```{python}
+#| include: false
+chk = {"g": float(g)}
+```
+
+```{r}
+#| include: false
+efas_g <- effectsize::hedges_g(efas ~ arm, data = efas_3mo)
+check_agree(list(g = efas_g$Hedges_g), reticulate::py$chk,
+            tol = 1e-5)   # effectsize corrects g for small samples exactly, pingouin with the usual approximation
+```
+
+Le g de Hedges vaut 1.13 : la moyenne du bras orthèse dépasse celle du bras plâtre de plus d'un écart-type, un effet grand. Savoir si 3.6 points sur un score de 24 points comptent pour les patients est une question clinique, pas statistique.
+
+### Rédiger les résultats
+
+> **Methods:** EFAS scores at 3 months were compared between the arms with Welch's unpaired t test, in the patients seen at that visit.
+>
+> **Results:** At 3 months, the mean EFAS score was 17.4 points (SD 2.9; n = 57) with a boot and 13.8 (SD 3.4; n = 55) with a cast (difference 3.6 points, 95% CI 2.4 to 4.8; Hedges' g = 1.13, 95% CI 0.73 to 1.52; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Attention : ne testez pas d'abord les variances
+Une vieille habitude consiste à faire un test d'égalité des variances (comme celui de Levene), puis à choisir le test t de Student ou celui de Welch selon le résultat. Ne le faites pas : cette procédure en deux étapes fausse la valeur p. Utilisez le test de Welch d'emblée. Quand les variances sont vraiment égales, il donne presque le même résultat que celui de Student.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : Student ou Welch ?
+- **La valeur par défaut diffère.** `t.test()` de R exécute le test de **Welch**, sauf si vous ajoutez `var.equal = TRUE`. `ttest_ind()` de scipy exécute le test de **Student**, sauf si vous ajoutez `equal_var=False`. En Python, précisez-le toujours.
+- **L'ordre des groupes.** R soustrait dans l'ordre des niveaux du facteur (nous avons mis orthèse en premier) ; scipy soustrait le deuxième argument du premier.
+- **L'IC du g de Hedges.** effectsize utilise une méthode exacte et pingouin une approximation : les IC peuvent donc différer légèrement (0.73 à 1.52 en R, 0.73 à 1.53 en Python). Les estimations concordent à cinq décimales : les deux corrigent g pour les petits échantillons, effectsize avec la formule exacte et pingouin avec l'approximation habituelle.
+:::
+
+## Test de Mann-Whitney {#mann-whitney}
+
+**La question :** la douleur, 6 semaines après une lésion de Chopart, diffère-t-elle avec une orthèse amovible par rapport à un plâtre ?
+
+### Quand l'utiliser
+
+- Le critère est **asymétrique**, a un **plafond ou un plancher**, ou est **ordinal**, et vous comparez **deux groupes indépendants**.
+- Le test demande si les valeurs d'un groupe ont tendance à être **plus grandes** que celles de l'autre : si vous tiriez au hasard un patient dans chaque groupe, quelle est la probabilité que le premier ait le score le plus élevé ?
+- C'est le même test que le **test de la somme des rangs de Wilcoxon**. R l'appelle `wilcox.test()`.
+- Si le critère est à peu près normal dans chaque groupe → le [test t pour échantillons indépendants](#unpaired-t).
+
+### Regarder d'abord les données
+
+L'essai a mesuré la douleur sur une échelle numérique de la douleur (NRS) allant de 0 (pas de douleur) à 10 (la pire douleur imaginable), en nombres entiers : une échelle **ordinale**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 4
+library(tidyverse)
+
+trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # une ligne par patient et par visite
+
+pain_6wk <- trial |>
+  filter(visit == "6wk", !is.na(pain_nrs)) |>              # patients vus à 6 semaines
+  mutate(arm = factor(arm, levels = c("boot", "cast")))    # boot en premier, donc différences = boot moins cast
+
+ggplot(pain_6wk, aes(pain_nrs)) +
+  geom_bar() +                                             # une barre par score entier
+  facet_wrap(~ arm, ncol = 1) +
+  scale_x_continuous(breaks = 0:10) +
+  labs(x = "Pain at 6 weeks (NRS, 0 = none, 10 = worst)", y = "Patients")
+
+pain_6wk |>
+  group_by(arm) |>
+  summarise(n = n(), median = median(pain_nrs),
+            q1 = quantile(pain_nrs, 0.25), q3 = quantile(pain_nrs, 0.75))
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import pingouin as pg
+import matplotlib.pyplot as plt
+from scipy import stats
+
+trial = pd.read_csv("data/foot_ankle_rct_long.csv")                       # une ligne par patient et par visite
+pain_6wk = trial[trial["visit"] == "6wk"].dropna(subset=["pain_nrs"])     # patients vus à 6 semaines
+pain_boot = pain_6wk.loc[pain_6wk["arm"] == "boot", "pain_nrs"]
+pain_cast = pain_6wk.loc[pain_6wk["arm"] == "cast", "pain_nrs"]
+
+fig, axes = plt.subplots(2, 1, figsize=(6, 4), sharex=True)
+axes[0].hist(pain_boot, bins=np.arange(-0.5, 11))   # une barre par score entier
+axes[0].set_title("boot")
+axes[1].hist(pain_cast, bins=np.arange(-0.5, 11))
+axes[1].set_title("cast")
+axes[1].set_xlabel("Pain at 6 weeks (NRS, 0 = none, 10 = worst)")
+plt.tight_layout()
+plt.show()
+
+print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75%"]])
+```
+:::
+
+Quatre patients ont manqué la visite de 6 semaines (2 dans chaque bras) : 116 des 120 patients randomisés sont donc analysés. La plupart des scores se situent entre 2 et 6, et beaucoup de patients ont le même score (ex æquo). Avec des nombres entiers sur une échelle ordinale, les médianes sont le bon résumé : 4 points avec une orthèse et 5 avec un plâtre.
+
+### Exécuter l'analyse
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+pain_test <- wilcox.test(pain_nrs ~ arm, data = pain_6wk,
+                         exact = FALSE, correct = TRUE,   # voir l'encadré R ou Python
+                         conf.int = TRUE)                 # ajoute l'estimateur de Hodges-Lehmann et son IC
+pain_test
+```
+
+## Python
+
+```{python}
+# pg.mwu() exécute le test de Mann-Whitney de scipy et ajoute la taille d'effet bisériale par rangs
+pain_test = pg.mwu(pain_boot, pain_cast, method="asymptotic", use_continuity=True)   # voir l'encadré R ou Python
+print(pain_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"u": float(pain_test["U_val"].iloc[0]), "p": float(pain_test["p_val"].iloc[0])}
+```
+
+```{r}
+#| include: false
+check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticulate::py$chk)
+```
+
+### Lire le résultat
+
+- **W = 1074.5** (R) ou **U_val = 1074.5** (Python) : la statistique U de Mann-Whitney pour le bras orthèse, soit le nombre de paires (orthèse, plâtre) dans lesquelles le patient avec orthèse a déclaré plus de douleur, les ex æquo comptant pour moitié. Il y a 58 × 58 = 3,364 paires : un U de 1,682 signifierait qu'il n'y a aucune tendance dans un sens ou dans l'autre. R l'appelle W.
+- **p < 0.001 :** une différence comme celle-ci serait inhabituelle si la douleur avait la même distribution dans les deux bras.
+- **difference in location −1.00, 95% CI de −2.00 à −1.00** (R seulement) : l'estimateur de Hodges-Lehmann, ci-dessous. R le trouve par une recherche numérique : il affiche donc −1.000041 et des valeurs du même genre ; les derniers chiffres sont du bruit.
+- **RBC = −0.361** (Python) : la taille d'effet bisériale par rangs, ci-dessous.
+- Avec des scores entiers, un quartile peut tomber entre deux scores : le quartile supérieur du bras orthèse vaut 4.75 parce qu'il se situe aux trois quarts du chemin entre un 4 et un 5.
+
+### Taille d'effet et IC à 95 %
+
+- L'**estimateur de Hodges-Lehmann** est la médiane des différences entre le score de chaque patient avec orthèse et celui de chaque patient avec plâtre : une différence typique, en points.
+- La **corrélation bisériale par rangs (r)** va de −1 (chaque patient avec orthèse a déclaré moins de douleur que chaque patient avec plâtre) à +1 (l'inverse). 0 signifie qu'il n'y a aucune tendance dans un sens ou dans l'autre.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+pain_test$estimate                                       # estimateur de Hodges-Lehmann, boot moins cast
+pain_test$conf.int                                       # son IC à 95 %
+
+effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
+```
+
+## Python
+
+```{python}
+# estimateur de Hodges-Lehmann : médiane de toutes les différences boot moins cast
+def hodges_lehmann(x, y):
+    return np.median(np.subtract.outer(np.asarray(x), np.asarray(y)))
+
+print(hodges_lehmann(pain_boot, pain_cast))
+
+# scipy n'a pas d'IC pour lui : on utilise un bootstrap et on le recalcule sur 9999 jeux de données rééchantillonnés.
+# method="percentile" : avec des scores entiers, la méthode par défaut de scipy ne peut pas construire cet IC (voir l'encadré R ou Python)
+hl_boot = stats.bootstrap((pain_boot.to_numpy(), pain_cast.to_numpy()), hodges_lehmann, vectorized=False,
+                          method="percentile", rng=np.random.default_rng(2026))
+print(hl_boot.confidence_interval)
+
+print(pain_test["RBC"])                                  # r bisérial par rangs
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hl": float(hodges_lehmann(pain_boot, pain_cast)), "rbc": float(pain_test["RBC"].iloc[0])}
+```
+
+```{r}
+#| include: false
+pain_rb <- effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
+check_agree(list(hl = unname(pain_test$estimate), rbc = pain_rb$r_rank_biserial), reticulate::py$chk,
+            tol = 1e-4)   # R finds the Hodges-Lehmann estimate by a numerical search, accurate to about 1e-4
+```
+
+Avec une orthèse, la douleur était typiquement inférieure de 1 point (IC à 95 % de 2 points à 1 point de moins), et r = −0.36. Sur les 3,364 paires (orthèse, plâtre), le patient avec orthèse a déclaré moins de douleur dans 61 %, plus dans 25 %, et 14 % étaient à égalité. Avec des scores entiers, chaque différence entre deux patients est un nombre entier : l'estimateur de Hodges-Lehmann et son IC tombent donc eux aussi sur des nombres entiers, et l'estimation peut se trouver au bord de son propre IC, comme ici.
+
+### Rédiger les résultats
+
+> **Methods:** Pain at 6 weeks (NRS 0 to 10, an ordinal scale) was compared between the arms with the Mann-Whitney test, in the patients seen at that visit, with the Hodges-Lehmann estimate of the difference and its 95% CI as the effect size.
+>
+> **Results:** At 6 weeks, pain was a median of 4 points (IQR 3 to 4.75; n = 58) with a boot and 5 (IQR 4 to 6; n = 58) with a cast (Hodges-Lehmann difference −1 point, 95% CI −2 to −1; rank-biserial r = −0.36, 95% CI −0.53 to −0.17; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Attention : ce n'est pas un test des médianes
+Le test de Mann-Whitney demande si les valeurs d'un groupe **ont tendance à être plus grandes**, pas si les médianes diffèrent. Deux groupes peuvent avoir la même médiane et un test de Mann-Whitney significatif (si leurs formes diffèrent), ou des médianes différentes et un test non significatif. Indiquez les médianes pour décrire les groupes, mais n'écrivez pas « les médianes différaient de manière significative ».
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : valeurs par défaut du test de Mann-Whitney
+- **Exact ou approché.** Avec des ex æquo (comme ici), les deux programmes utilisent une approximation normale. Sans ex æquo, R calcule une valeur p exacte pour les groupes de moins de 50, scipy seulement pour de très petits groupes. Nous fixons `exact = FALSE` en R et `method="asymptotic"` en Python pour qu'ils concordent toujours.
+- **Correction de continuité.** Les deux programmes l'appliquent par défaut pour l'approximation ; nous la fixons quand même explicitement.
+- **L'IC de Hodges-Lehmann.** R le calcule en inversant le test ; le code Python utilise un bootstrap, une autre méthode. Avec des scores entiers, l'estimation bouge à peine : en laissant de côté n'importe quel patient, on obtient toujours −1. La méthode bootstrap par défaut de scipy (BCa) a besoin que ces estimations varient ; ici, elle renvoie donc `nan` avec un avertissement. La méthode des percentiles (`method="percentile"`) n'en a pas besoin. Ici, les deux IC concordent (−2.00 à −1.00) ; avec d'autres données, ils peuvent différer un peu.
+:::
+
+## Test exact de Fisher et test du khi-deux {#fisher-chi-square}
+
+**La question :** l'échec du greffon dans les 2 ans suivant une reconstruction du LCA diffère-t-il entre un greffon aux ischio-jambiers et un greffon os-tendon rotulien-os (BPTB) ?
+
+### Quand l'utiliser
+
+- Le critère est **oui/non**, comparé entre **deux groupes indépendants** : un tableau 2 × 2.
+- Le **test exact de Fisher** est valide quelle que soit la taille de l'échantillon. Le **test du khi-deux** est une approximation pour grands échantillons : ne l'utilisez que si chaque effectif *attendu* est d'au moins 5. En cas de doute, utilisez le test de Fisher.
+- Si les patients ont été suivis pendant des durées différentes et que l'événement peut survenir à tout moment → le [test du log-rank](#log-rank).
+
+### Regarder d'abord les données
+
+Les données du LCA contiennent une ligne par reconstruction primaire. Tous les patients ont été suivis au moins 2 ans, sauf si le greffon a échoué avant ; l'échec dans les 2 ans (`failure_2y`) est donc connu pour chaque reconstruction. Pour deux variables oui/non, « regarder » veut dire faire le tableau 2 × 2, avec le pourcentage dans chaque groupe.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE)
+two_grafts <- acl |> filter(graft %in% c("hamstring", "BPTB"))   # la question compare deux des trois greffons
+
+# Groupe de comparaison en premier, et le critère « oui » en premier
+failure_table <- table(
+  graft  = factor(two_grafts$graft, levels = c("hamstring", "BPTB")),
+  failed = factor(two_grafts$failure_2y, levels = c(1, 0), labels = c("yes", "no"))
+)
+failure_table
+prop.table(failure_table, margin = 1)    # pourcentages par ligne : les échecs avec chaque greffon
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+from scipy.stats.contingency import odds_ratio
+from statsmodels.stats.proportion import confint_proportions_2indep
+
+acl = pd.read_csv("data/acl_cohort.csv")
+two_grafts = acl[acl["graft"].isin(["hamstring", "BPTB"])]   # la question compare deux des trois greffons
+
+# Groupe de comparaison en premier, et le critère « oui » (1) en premier
+failure_table = pd.crosstab(two_grafts["graft"], two_grafts["failure_2y"]).loc[["hamstring", "BPTB"], [1, 0]]
+print(failure_table)
+print(pd.crosstab(two_grafts["graft"], two_grafts["failure_2y"], normalize="index"))   # pourcentages par ligne
+```
+:::
+
+6 greffons aux ischio-jambiers sur 154 (3.9 %) et 6 greffons BPTB sur 129 (4.7 %) ont échoué dans les 2 ans.
+
+### Exécuter l'analyse
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+failure_fisher <- fisher.test(failure_table)
+failure_fisher
+
+chisq.test(failure_table)$expected       # tous au moins 5, donc le khi-deux convient aussi
+failure_chisq <- chisq.test(failure_table)
+failure_chisq
+```
+
+## Python
+
+```{python}
+failure_fisher = stats.fisher_exact(failure_table)
+print(failure_fisher.pvalue)
+
+failure_chisq = stats.chi2_contingency(failure_table)   # contient les effectifs attendus
+print(failure_chisq.expected_freq)
+print(failure_chisq.statistic, failure_chisq.pvalue)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"fisher_p": float(failure_fisher.pvalue), "chisq": float(failure_chisq.statistic),
+       "chisq_p": float(failure_chisq.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq$statistic),
+                 chisq_p = failure_chisq$p.value), reticulate::py$chk)
+```
+
+### Lire le résultat
+
+- Test de Fisher, **p-value = 0.7754 :** un tableau comme celui-ci serait courant si l'échec n'avait aucun lien avec le greffon. Nous le rapportons sous la forme p = 0.775.
+- **odds ratio 0.83, 95% CI de 0.22 à 3.20** (R) : la taille d'effet, ci-dessous.
+- **Effectifs attendus (expected) :** ce que contiendrait chaque case si l'échec n'avait aucun lien avec le greffon. Tous sont d'au moins 5, mais de justesse (le plus petit est 5.5) : le test du khi-deux est donc valide lui aussi.
+- **X-squared = 0.0003, p-value = 0.986 :** le test du khi-deux, avec la correction de continuité de Yates, concorde.
+
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot : la correction de continuité de Yates
+Le test du khi-deux traite les effectifs comme s'ils pouvaient prendre n'importe quelle valeur, mais ce sont des nombres entiers. Pour un tableau 2 × 2, la **correction de Yates** soustrait 0.5 à chaque différence |observé − attendu| avant de l'élever au carré, ce qui augmente la valeur p (plus prudent). Elle sert à rapprocher la valeur p de celle de Fisher, mais elle peut aller trop loin, comme ici : chaque effectif observé n'est qu'à environ un demi-effectif de son effectif attendu (6 échecs contre 6.5 et 5.5 attendus), si bien que la statistique corrigée est presque 0 et que p = 0.986, contre 0.775 pour Fisher. Le `chisq.test()` de R et le `chi2_contingency()` de scipy l'appliquent tous deux par défaut aux tableaux 2 × 2 ; sans elle (`correct = FALSE`, `correction=False`), p = 0.754. L'une ou l'autre est acceptable si vous dites laquelle vous avez utilisée ; avec de petits effectifs, préférez le test de Fisher.
+:::
+
+### Taille d'effet et IC à 95 %
+
+Deux tailles d'effet, et il vaut la peine de rapporter les deux :
+
+- La **différence de risque** : la différence entre les deux pourcentages, en points de pourcentage. C'est ce que patients et cliniciens comprennent.
+- L'**odds ratio** : le rapport entre les odds d'échec avec un greffon aux ischio-jambiers et les odds avec un greffon BPTB. C'est ce que rapporte la régression logistique ([page 11](11-predict-from-one.qmd#logistic-regression)), donc il est utile pour comparer avec d'autres études.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+failure_fisher$estimate                  # odds ratio, ischio-jambiers contre BPTB
+failure_fisher$conf.int                  # son IC à 95 %
+
+risk <- prop.test(failure_table, correct = FALSE)
+risk$estimate                            # taux d'échec avec chaque greffon : ischio-jambiers, puis BPTB
+risk$conf.int                            # IC à 95 % de la différence de risque, ischio-jambiers moins BPTB
+```
+
+## Python
+
+```{python}
+failure_or = odds_ratio(failure_table.to_numpy(), kind="conditional")   # le même odds ratio que R
+print(failure_or.statistic, failure_or.confidence_interval())
+
+ham_yes, ham_no = failure_table.loc["hamstring"]
+bptb_yes, bptb_no = failure_table.loc["BPTB"]
+print(ham_yes / (ham_yes + ham_no), bptb_yes / (bptb_yes + bptb_no))   # taux d'échec
+print(confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes + bptb_no,
+                                 method="wald", compare="diff"))       # IC à 95 %, ischio-jambiers moins BPTB
+```
+:::
+
+```{python}
+#| include: false
+or_ci = failure_or.confidence_interval()
+rd_ci = confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes + bptb_no,
+                                   method="wald", compare="diff")
+chk = {"or": float(failure_or.statistic), "or_low": float(or_ci.low), "or_high": float(or_ci.high),
+       "rd_low": float(rd_ci[0]), "rd_high": float(rd_ci[1])}
+```
+
+```{r}
+#| include: false
+check_agree(list(or = unname(failure_fisher$estimate), or_low = failure_fisher$conf.int[1],
+                 or_high = failure_fisher$conf.int[2], rd_low = risk$conf.int[1], rd_high = risk$conf.int[2]),
+            reticulate::py$chk,
+            tol = 1e-4)   # both programs find the odds ratio and its CI by root-finding, accurate to about 1e-5
+```
+
+Le taux d'échec avec un greffon aux ischio-jambiers était inférieur de 0.8 point de pourcentage (IC à 95 % de 5.5 points de moins à 4.0 points de plus), soit un odds ratio de 0.83 (IC à 95 % de 0.22 à 3.20).
+
+### Rédiger les résultats
+
+> **Methods:** Graft failure within 2 years was compared between hamstring and BPTB grafts with Fisher's exact test. Effect sizes are reported as risk differences with Wald 95% CIs and as odds ratios with exact 95% CIs.
+>
+> **Results:** Graft failure within 2 years followed 6 of 154 hamstring reconstructions (3.9%) and 6 of 129 BPTB reconstructions (4.7%) (risk difference −0.8 percentage points, 95% CI −5.5 to 4.0; odds ratio 0.83, 95% CI 0.22 to 3.20; p = 0.775).
+
+::: {.callout-warning}
+## ⚠️ Attention : « pas de différence » exige un IC étroit
+L'IC de l'odds ratio va de 0.22 à 3.20 : les données sont compatibles avec un greffon aux ischio-jambiers qui aurait un cinquième des odds d'échec d'un greffon BPTB, ou trois fois ces odds. Avec seulement 12 échecs, cette étude ne peut pas trancher. « Pas de différence significative » est la formulation honnête ; « les greffons aux ischio-jambiers et BPTB échouent aussi souvent » ne l'est pas.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : deux odds ratios différents
+`fisher_exact()` de scipy donne l'odds ratio simple **de l'échantillon** (a × d) / (b × c), soit 0.8311 ici. `fisher.test()` de R donne l'odds ratio du **maximum de vraisemblance conditionnel**, 0.8316, qui va avec son IC exact. Utilisez `scipy.stats.contingency.odds_ratio(..., kind="conditional")` pour obtenir le nombre et l'IC de R. Les deux sont toujours proches ; dites lequel vous rapportez.
+:::
+
+## Test du log-rank {#log-rank}
+
+**La question :** la survie sans révision diffère-t-elle entre l'implant A et l'implant C ?
+
+### Quand l'utiliser
+
+- Le critère est le **délai jusqu'à un événement** (la révision), les patients ont été suivis pendant des durées différentes, et vous comparez **deux groupes indépendants**.
+- Le test compare les courbes de survie entières, pas la survie à un moment donné.
+- Le **test de Mantel-Haenszel** (ou test de Mantel-Cox) du tableau de décision est le même test sous un autre nom.
+- Il est le plus puissant quand le risque d'un groupe est un multiple constant de celui de l'autre au cours du temps (risques proportionnels). Si les courbes se croisent, voyez la [page 14](../survival/14-cox-regression.qmd#proportional-hazards).
+- Pour comparer trois groupes ou plus, ou pour ajuster sur d'autres variables → la [régression de Cox](08-three-plus-unmatched.qmd#cox).
+
+### Regarder d'abord les données
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 4.5
+library(tidyverse)
+library(survival)
+library(ggsurvfit)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+a_vs_c <- cohort |> filter(implant %in% c("A", "C"))   # deux groupes ; la page 8 compare les trois
+
+survfit2(Surv(followup_years, revised) ~ implant, data = a_vs_c, conf.type = "log-log") |>
+  ggsurvfit() +
+  add_confidence_interval() +
+  add_risktable() +
+  scale_ggsurvfit() +
+  labs(x = "Years since surgery", y = "Revision-free survival")
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from lifelines import KaplanMeierFitter, CoxPHFitter
+from lifelines.statistics import logrank_test
+from lifelines.plotting import add_at_risk_counts
+
+cohort = pd.read_csv("data/cohort.csv")
+a_vs_c = cohort[cohort["implant"].isin(["A", "C"])]   # deux groupes ; la page 8 compare les trois
+a = a_vs_c[a_vs_c["implant"] == "A"]
+c = a_vs_c[a_vs_c["implant"] == "C"]
+
+fig, ax = plt.subplots(figsize=(7, 4.5))
+km_a = KaplanMeierFitter(label="A").fit(a["followup_years"], a["revised"])
+km_c = KaplanMeierFitter(label="C").fit(c["followup_years"], c["revised"])
+km_a.plot_survival_function(ax=ax)
+km_c.plot_survival_function(ax=ax)
+ax.set_xlabel("Years since surgery")
+ax.set_ylabel("Revision-free survival")
+add_at_risk_counts(km_a, km_c, ax=ax)
+plt.tight_layout()
+plt.show()
+```
+:::
+
+La courbe de l'implant C descend plus vite dès le début, et l'écart ne cesse de grandir.
+
+### Exécuter l'analyse
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+implant_logrank <- survdiff(Surv(followup_years, revised) ~ implant, data = a_vs_c)
+implant_logrank
+```
+
+## Python
+
+```{python}
+implant_logrank = logrank_test(a["followup_years"], c["followup_years"],
+                               event_observed_A=a["revised"], event_observed_B=c["revised"])
+print(implant_logrank.test_statistic, implant_logrank.p_value)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"chisq": float(implant_logrank.test_statistic), "p": float(implant_logrank.p_value)}
+```
+
+```{r}
+#| include: false
+check_agree(list(chisq = implant_logrank$chisq, p = implant_logrank$pvalue), reticulate::py$chk)
+```
+
+### Lire le résultat
+
+- **N :** les patients de chaque groupe (246 avec l'implant A, 137 avec C).
+- **Observed** et **Expected :** les révisions de chaque groupe, et le nombre qu'il aurait eu si les deux implants avaient le même risque. L'implant C a eu 38 révisions pour 21.1 attendues ; l'implant A en a eu 25 pour 41.9 attendues.
+- **Chisq = 20.5 on 1 degree of freedom, p < 0.001 :** des courbes aussi différentes seraient très improbables si les implants avaient le même risque de révision.
+
+### Taille d'effet et IC à 95 %
+
+Le test du log-rank n'a pas de taille d'effet propre. La taille d'effet habituelle est le **hazard ratio** d'un modèle de Cox : combien de fois le risque de révision est plus élevé, à tout moment, avec l'implant C qu'avec l'implant A. La [page 14](../survival/14-cox-regression.qmd) explique en détail la régression de Cox.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+implant_cox <- coxph(Surv(followup_years, revised) ~ implant, data = a_vs_c)
+summary(implant_cox)$conf.int    # exp(coef) est le hazard ratio, C contre A
+```
+
+## Python
+
+```{python}
+implant_cox = CoxPHFitter().fit(a_vs_c[["followup_years", "revised", "implant"]],
+                                duration_col="followup_years", event_col="revised", formula="implant")
+print(implant_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
+```
+:::
+
+```{python}
+#| include: false
+hr_row = implant_cox.summary.iloc[0]
+chk = {"hr": float(hr_row["exp(coef)"]), "hr_low": float(hr_row["exp(coef) lower 95%"]),
+       "hr_high": float(hr_row["exp(coef) upper 95%"])}
+```
+
+```{r}
+#| include: false
+hr <- summary(implant_cox)$conf.int
+check_agree(list(hr = hr[1, "exp(coef)"], hr_low = hr[1, "lower .95"], hr_high = hr[1, "upper .95"]),
+            reticulate::py$chk)
+```
+
+Le risque de révision était environ trois fois plus élevé avec l'implant C (hazard ratio 3.04, IC à 95 % de 1.83 à 5.04).
+
+La phrase de **Résultats** donne aussi la survie sans révision à 5 ans de chaque implant, avec son IC :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+survival_5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c,
+                              conf.type = "log-log"), times = 5)
+survival_5
+```
+
+## Python
+
+```{python}
+for km in [km_a, km_c]:
+    ci_5 = km.confidence_interval_survival_function_.loc[:5].iloc[-1]   # dernier palier à 5 ans ou avant
+    print(km.label, km.survival_function_at_times(5).iloc[0], ci_5.to_list())
+```
+:::
+
+```{python}
+#| include: false
+ci_a = km_a.confidence_interval_survival_function_.loc[:5].iloc[-1]
+ci_c = km_c.confidence_interval_survival_function_.loc[:5].iloc[-1]
+chk = {"surv_a": float(km_a.survival_function_at_times(5).iloc[0]), "low_a": float(ci_a.iloc[0]),
+       "high_a": float(ci_a.iloc[1]), "surv_c": float(km_c.survival_function_at_times(5).iloc[0]),
+       "low_c": float(ci_c.iloc[0]), "high_c": float(ci_c.iloc[1])}
+```
+
+```{r}
+#| include: false
+check_agree(list(surv_a = survival_5$surv[1], low_a = survival_5$lower[1], high_a = survival_5$upper[1],
+                 surv_c = survival_5$surv[2], low_c = survival_5$lower[2], high_c = survival_5$upper[2]),
+            reticulate::py$chk)
+```
+
+### Rédiger les résultats
+
+> **Methods:** Revision-free survival was estimated with the Kaplan-Meier method and compared between implants with the log-rank test. Hazard ratios were estimated with Cox proportional hazards regression.
+>
+> **Results:** Revision-free survival at 5 years was 71.1% (95% CI 61.5% to 78.8%) with implant C and 89.9% (95% CI 84.7% to 93.3%) with implant A (log-rank p < 0.001; hazard ratio 3.04, 95% CI 1.83 to 5.04).
+
+::: {.callout-warning}
+## ⚠️ Attention : des IC qui se chevauchent ne sont pas un test
+Comparer les IC des deux courbes à un moment donné (« les IC à 5 ans se chevauchent, donc il n'y a pas de différence ») n'est pas un test valide, pas plus que comparer les pourcentages bruts de révisions. Utilisez le test du log-rank sur les courbes entières. Et comme à la [page 4](04-describe-one-group.qmd#kaplan-meier), les décès sont ici traités comme des données censurées ; la [page 13](../survival/13-kaplan-meier.qmd#competing-risks) traite des risques concurrents.
+:::
+
+::: {.callout-tip}
+## 🔀 R ou Python : une formule ou deux groupes
+`survdiff()` de R prend une formule avec une variable de regroupement. `logrank_test()` de lifelines prend séparément les délais de suivi et les événements de chaque groupe (`multivariate_logrank_test()` prend une colonne de regroupement). Ils calculent le même test. Les deux modèles de Cox traitent les délais de révision ex æquo avec la méthode d'Efron, donc les hazard ratios concordent.
+:::
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+efas_means <- tapply(efas_3mo$efas, efas_3mo$arm, mean)
+efas_sds <- tapply(efas_3mo$efas, efas_3mo$arm, sd)
+missed_3mo <- trial |> filter(visit == "3mo", is.na(efas))
+missed_6wk <- trial |> filter(visit == "6wk", is.na(pain_nrs))
+pain_b <- pain_6wk$pain_nrs[pain_6wk$arm == "boot"]
+pain_c <- pain_6wk$pain_nrs[pain_6wk$arm == "cast"]
+jackknife_hl <- c(sapply(seq_along(pain_b), function(i) median(outer(pain_b[-i], pain_c, "-"))),   # leave one patient out
+                  sapply(seq_along(pain_c), function(i) median(outer(pain_b, pain_c[-i], "-"))))
+pain_diffs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], pain_6wk$pain_nrs[pain_6wk$arm == "cast"], "-")
+expected_counts <- chisq.test(failure_table)$expected
+km5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = 5)
+ex_6wk <- trial |> filter(visit == "6wk", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
+ex_12mo <- trial |> filter(visit == "12mo", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
+ex_rts <- table(factor(acl$sex, levels = c("Female", "Male")),
+                factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no")))
+stopifnot(
+  sum(table(cohort$patient_id) == 2) == 80,
+  n_distinct(trial$patient_id) == 120, all(table(distinct(trial, patient_id, arm)$arm) == 60),
+  nrow(missed_3mo) == 8, as.vector(table(factor(missed_3mo$arm, levels = c("boot", "cast")))) == c(3, 5),
+  nrow(efas_3mo) == 112, as.vector(table(efas_3mo$arm)) == c(57, 55), all(efas_3mo$efas > 0 & efas_3mo$efas < 24),
+  round(unname(efas_test$statistic), 2) == 6.00, round(unname(efas_test$parameter), 2) == 106.05,
+  efas_test$p.value < 0.001,
+  round(efas_test$conf.int, 2) == c(2.40, 4.77), round(efas_test$conf.int, 1) == c(2.4, 4.8),
+  round(efas_means, 1) == c(17.4, 13.8), round(efas_sds, 1) == c(2.9, 3.4), round(diff(rev(efas_means)), 1) == 3.6,
+  round(efas_g$Hedges_g, 2) == 1.13, round(efas_g$CI_low, 2) == 0.73, round(efas_g$CI_high, 2) == 1.52,
+  round(reticulate::py_eval("float(pg.compute_esci(stat=g, nx=len(efas_boot), ny=len(efas_cast), eftype='hedges', decimals=3)[1])"), 2) == 1.53,
+  as.vector(table(pain_6wk$arm)) == c(58, 58), length(pain_diffs) == 3364,
+  mean(between(pain_6wk$pain_nrs, 2, 6)) > 0.75,
+  unname(pain_test$statistic) == 1074.5, pain_test$p.value < 0.001,
+  round(unname(pain_test$estimate), 2) == -1.00, round(pain_test$conf.int, 2) == c(-2.00, -1.00),
+  round(reticulate::py_eval("[float(hl_boot.confidence_interval.low), float(hl_boot.confidence_interval.high)]"), 2) == c(-2.00, -1.00),
+  all(jackknife_hl == -1), length(jackknife_hl) == 116,
+  as.vector(table(factor(missed_6wk$arm, levels = c("boot", "cast")))) == c(2, 2), nrow(pain_6wk) == 116,
+  round(pain_rb$r_rank_biserial, 3) == -0.361, round(pain_rb$r_rank_biserial, 2) == -0.36,
+  round(c(pain_rb$CI_low, pain_rb$CI_high), 2) == c(-0.53, -0.17),
+  tapply(pain_6wk$pain_nrs, pain_6wk$arm, median) == c(4, 5),
+  quantile(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], c(0.25, 0.75)) == c(3, 4.75),
+  quantile(pain_6wk$pain_nrs[pain_6wk$arm == "cast"], c(0.25, 0.75)) == c(4, 6),
+  round(100 * c(mean(pain_diffs < 0), mean(pain_diffs > 0), mean(pain_diffs == 0))) == c(61, 25, 14),
+  sum(pain_diffs > 0) + sum(pain_diffs == 0) / 2 == 1074.5,
+  failure_table["hamstring", "yes"] == 6, sum(failure_table["hamstring", ]) == 154,
+  failure_table["BPTB", "yes"] == 6, sum(failure_table["BPTB", ]) == 129, sum(failure_table[, "yes"]) == 12,
+  round(100 * prop.table(failure_table, 1)[, "yes"], 1) == c(3.9, 4.7),
+  all(acl$followup_years >= 2 | acl$graft_failure == 1),
+  round(failure_fisher$p.value, 3) == 0.775, round(failure_fisher$p.value, 4) == 0.7754,
+  min(expected_counts) >= 5, round(min(expected_counts), 1) == 5.5, round(expected_counts[, "yes"], 1) == c(6.5, 5.5),
+  round(unname(failure_chisq$statistic), 4) == 0.0003, round(failure_chisq$p.value, 3) == 0.986,
+  round(chisq.test(failure_table, correct = FALSE)$p.value, 3) == 0.754,
+  round(unname(failure_fisher$estimate), 2) == 0.83, round(failure_fisher$conf.int, 2) == c(0.22, 3.20),
+  round(unname(failure_fisher$estimate), 4) == 0.8316, round(6 * 123 / (148 * 6), 4) == 0.8311,
+  round(100 * unname(diff(rev(risk$estimate))), 1) == -0.8, round(100 * risk$conf.int, 1) == c(-5.5, 4.0),
+  implant_logrank$n == c(246, 137), implant_logrank$obs == c(25, 38),
+  round(implant_logrank$exp, 1) == c(41.9, 21.1),
+  round(implant_logrank$chisq, 1) == 20.5, implant_logrank$pvalue < 0.001,
+  round(hr[1, c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.04, 1.83, 5.04),
+  round(100 * km5$surv, 1) == c(89.9, 71.1),
+  round(100 * c(survival_5$lower, survival_5$upper), 1) == c(84.7, 61.5, 93.3, 78.8),
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(tapply(ex_6wk$efas, ex_6wk$arm, mean), 1) == c(12.4, 9.5), round(tapply(ex_6wk$efas, ex_6wk$arm, sd), 1) == c(2.7, 2.9),
+  round(diff(rev(tapply(ex_6wk$efas, ex_6wk$arm, mean))), 1) == 2.9,
+  round(t.test(efas ~ arm, data = ex_6wk)$conf.int, 1) == c(1.9, 4.0), t.test(efas ~ arm, data = ex_6wk)$p.value < 0.001,
+  nrow(ex_12mo) == 102, 120 - nrow(ex_12mo) == 18, as.vector(table(ex_12mo$arm)) == c(55, 47),
+  as.vector(table(ex_6wk$arm)) == c(58, 58),
+  round(100 * tapply(ex_12mo$efas == 24, ex_12mo$arm, mean)) == c(13, 17),
+  tapply(ex_12mo$efas, ex_12mo$arm, median) == c(20, 21),
+  quantile(ex_12mo$efas[ex_12mo$arm == "boot"], c(0.25, 0.75)) == c(18, 22),
+  quantile(ex_12mo$efas[ex_12mo$arm == "cast"], c(0.25, 0.75)) == c(19, 23),
+  round(wilcox.test(efas ~ arm, data = ex_12mo, exact = FALSE, correct = TRUE)$p.value, 3) == 0.291,
+  round(unlist(effectsize::rank_biserial(efas ~ arm, data = ex_12mo)[c("r_rank_biserial", "CI_low", "CI_high")]), 2) == c(-0.12, -0.33, 0.10),
+  ex_rts["Female", "yes"] == 81, sum(ex_rts["Female", ]) == 152, ex_rts["Male", "yes"] == 92, sum(ex_rts["Male", ]) == 198,
+  round(100 * prop.table(ex_rts, 1)[, "yes"], 1) == c(53.3, 46.5), round(100 * diff(rev(prop.table(ex_rts, 1)[, "yes"])), 1) == 6.8,
+  round(100 * prop.test(ex_rts, correct = FALSE)$conf.int, 1) == c(-3.7, 17.4),
+  round(unname(fisher.test(ex_rts)$estimate), 2) == 1.31, round(fisher.test(ex_rts)$conf.int, 2) == c(0.84, 2.05),
+  round(fisher.test(ex_rts)$p.value, 3) == 0.236
+)
+```
+
+## Exercices {#exercises}
+
+Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le haut.
+
+**1.** Comparez le **score EFAS à 6 semaines** entre les bras orthèse et plâtre avec le test t de Welch. Indiquez la moyenne et l'écart-type (ET) de chaque bras, ainsi que la différence de moyennes avec son IC à 95 %.
+
+::: {.callout-tip collapse="true"}
+## Solution
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+efas_6wk <- trial |>
+  filter(visit == "6wk", !is.na(efas)) |>
+  mutate(arm = factor(arm, levels = c("boot", "cast")))   # boot en premier
+t.test(efas ~ arm, data = efas_6wk)
+efas_6wk |> group_by(arm) |> summarise(n = n(), mean = mean(efas), sd = sd(efas))
+```
+
+## Python
+
+```{python}
+efas_6wk = trial[trial["visit"] == "6wk"].dropna(subset=["efas"])
+early_boot = efas_6wk.loc[efas_6wk["arm"] == "boot", "efas"]
+early_cast = efas_6wk.loc[efas_6wk["arm"] == "cast", "efas"]
+early_test = stats.ttest_ind(early_boot, early_cast, equal_var=False)
+print(early_test, early_boot.mean() - early_cast.mean(), early_test.confidence_interval())
+print(efas_6wk.groupby("arm")["efas"].agg(["count", "mean", "std"]))
+```
+:::
+
+> **Results:** At 6 weeks, the mean EFAS score was 12.4 points (SD 2.7; n = 58) with a boot and 9.5 (SD 2.9; n = 58) with a cast (difference 2.9 points, 95% CI 1.9 to 4.0; p < 0.001).
+:::
+
+**2.** Le **score EFAS à 12 mois** diffère-t-il entre les bras ? Regardez d'abord les données, puis choisissez le test.
+
+::: {.callout-tip collapse="true"}
+## Solution
+Dès 12 mois, beaucoup de patients sont au plafond de 24, ou près de celui-ci (13 % avec une orthèse et 17 % avec un plâtre ont obtenu 24) : on prend donc le **test de Mann-Whitney**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 4
+efas_12mo <- trial |>
+  filter(visit == "12mo", !is.na(efas)) |>
+  mutate(arm = factor(arm, levels = c("boot", "cast")))
+ggplot(efas_12mo, aes(efas)) + geom_bar() + facet_wrap(~ arm, ncol = 1) +
+  labs(x = "EFAS score at 12 months (24 = best)", y = "Patients")
+wilcox.test(efas ~ arm, data = efas_12mo, exact = FALSE, correct = TRUE)
+effectsize::rank_biserial(efas ~ arm, data = efas_12mo)
+efas_12mo |> group_by(arm) |> summarise(n = n(), median = median(efas),
+                                        q1 = quantile(efas, 0.25), q3 = quantile(efas, 0.75))
+```
+
+## Python
+
+```{python}
+efas_12mo = trial[trial["visit"] == "12mo"].dropna(subset=["efas"])
+late_boot = efas_12mo.loc[efas_12mo["arm"] == "boot", "efas"]
+late_cast = efas_12mo.loc[efas_12mo["arm"] == "cast", "efas"]
+print(pg.mwu(late_boot, late_cast, method="asymptotic", use_continuity=True))
+print(efas_12mo.groupby("arm")["efas"].describe()[["count", "25%", "50%", "75%"]])
+```
+:::
+
+> **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
+
+Il n'y a pas de preuve claire d'une différence à 12 mois, après l'avance de 3.6 points de l'orthèse à 3 mois. Remarquez aussi que 18 des 120 patients ont manqué la visite de 12 mois, 5 dans le bras orthèse, 13 dans le bras plâtre : quand un bras perd plus de patients, ceux qui restent n'y sont peut-être plus comparables à ceux de l'autre bras. Savoir si l'écart entre les bras change vraiment au cours du temps est une question pour un seul modèle de toutes les visites : la [page 16](../beyond/16-mixed-models.qmd#group-by-time) montre comment.
+:::
+
+**3.** Le retour au sport 12 mois après une reconstruction du LCA diffère-t-il entre les femmes et les hommes ? Choisissez le test, exécutez-le et rédigez la phrase de Résultats avec la différence de risque et l'odds ratio.
+
+::: {.callout-tip collapse="true"}
+## Solution
+Critère oui/non, deux groupes indépendants : **test exact de Fisher**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+rts_table <- table(sex      = factor(acl$sex, levels = c("Female", "Male")),
+                   returned = factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no")))
+rts_table
+fisher.test(rts_table)
+prop.test(rts_table, correct = FALSE)$conf.int
+```
+
+## Python
+
+```{python}
+rts_table = pd.crosstab(acl["sex"], acl["rts_12mo"]).loc[["Female", "Male"], [1, 0]]
+print(rts_table)
+print(stats.fisher_exact(rts_table).pvalue)
+rts_or = odds_ratio(rts_table.to_numpy(), kind="conditional")
+print(rts_or.statistic, rts_or.confidence_interval())
+women_yes, women_no = rts_table.loc["Female"]
+men_yes, men_no = rts_table.loc["Male"]
+print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_yes + men_no,
+                                 method="wald", compare="diff"))
+```
+:::
+
+> **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
 :::
