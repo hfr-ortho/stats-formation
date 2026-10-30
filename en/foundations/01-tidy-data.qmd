@@ -163,7 +163,7 @@ Real abstraction sheets rarely follow those rules. `data/messy_abstraction_workb
 
 We'll fix it one step at a time. Every step is small enough to check. Run the steps in order: each one starts from the result of the step before.
 
-### Step 1: read both tabs, as text
+### Step 1: read both tabs, as text {#step-1-read}
 
 Read everything as text first. If you let the software guess types, it silently turns `32.1 kg/m2` into a missing value, and you never find out. We'll convert types deliberately in step 5.
 
@@ -240,7 +240,7 @@ In R we call `janitor::clean_names()` with the package name in front instead of 
 - **Real Excel dates.** Read as text, R gives the Excel serial number (`42010` means 6 Jan 2015). pandas gives `2015-01-06 00:00:00`. Step 5 handles both.
 :::
 
-### Step 2: drop rows and columns that aren't data
+### Step 2: drop rows and columns that aren't data {#step-2-drop}
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -276,7 +276,7 @@ check_agree(list(rows = nrow(step2)), reticulate::py$chk)
 
 Names and MRNs go as early as possible. Everything after this point works on a study ID only.
 
-### Step 3: one way to say "missing"
+### Step 3: one way to say "missing" {#step-3-missing}
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -318,7 +318,7 @@ check_agree(list(missing_bmi = sum(is.na(step3$bmi))), reticulate::py$chk)
 In this sheet `999` means "missing" in number columns. In another sheet it could be a real value. Write every missing code into the data dictionary *before* collection starts.
 :::
 
-### Step 4: recover the color-coded revisions
+### Step 4: recover the color-coded revisions {#step-4-revisions}
 
 The sheet marks revised cases only with a red fill on the Study ID cell. Most software reading a spreadsheet can't see colors at all, which is exactly why color must never carry data. Here we have to dig it out.
 
@@ -370,7 +370,7 @@ check_agree(list(revised = length(revised_ids)), reticulate::py$chk)
 
 The `Notes` column mentions some revisions ("revised 2021 for loosening"), but not all of them. If we had trusted the notes we would have missed cases. Only the colors were complete.
 
-### Step 5: give every column its real type
+### Step 5: give every column its real type {#step-5-types}
 
 Now convert each text column into what it really is. One small function handles the mixed date formats. Each recode lists the values it expects and turns anything else into a missing value, so a surprise like `U` for sex shows up instead of silently becoming "Male".
 
@@ -693,7 +693,7 @@ print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age"
 ```
 :::
 
-### What a failing check looks like
+### What a failing check looks like {#failing-check}
 
 Suppose we had parsed the surgery dates month-first (US style, as many online examples do) by mistake. Nothing crashes. Two checks catch it: a missing count (check 2, applied to the dates) and a new logic check that every pre-op PROM falls within a month before surgery.
 
@@ -749,7 +749,7 @@ With the correct parse, nothing is missing and every pre-op PROM falls in its wi
 Never parse a column that mixes formats with one setting: read each format on its own, as `parse_messy_date()` does. And notice that the missing count caught this bug in R but not in Python, while the logic check caught it in both. Run all the checks every time; they catch different mistakes.
 :::
 
-### Finally: compare with the answer key
+### Finally: compare with the answer key {#answer-key}
 
 Because this is a teaching dataset, there *is* a known right answer: `data/answer-keys/abstraction_workbook_tidy.csv`. Our result matches it exactly.
 
