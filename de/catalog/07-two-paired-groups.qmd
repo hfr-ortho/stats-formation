@@ -1,8 +1,795 @@
 ---
-title: "7 · Zwei verbundene Gruppen vergleichen (in Vorbereitung)"
+title: "7 · Zwei gepaarte Gruppen vergleichen"
+description: "t-Test für gepaarte Stichproben, Wilcoxon-Vorzeichen-Rang-Test, McNemar-Test und stratifizierte Cox-Regression: dieselben Patientinnen und Patienten zweimal gemessen, oder gematchte Paare."
+engine: knitr
+toc-depth: 2
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/catalog/07-two-paired-groups.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+**Gepaarte** Daten kommen in Zweiergruppen, die zusammengehören: dieselbe Person vor und nach der Operation, zwei Röntgenaufnahmen derselben Hüfte, zwei Beurteilende, die dasselbe Röntgenbild ausmessen, oder zwei Personen, die einander nach Alter, Geschlecht und BMI (Body-Mass-Index) zugeordnet wurden (gematcht). Gepaarte Tests vergleichen jede Person mit sich selbst (oder mit ihrem Match) und entfernen so die Variation zwischen den Personen, mit der Tests für unabhängige Gruppen zurechtkommen müssen. Wenn Ihre beiden Gruppen aus verschiedenen Personen bestehen, verwenden Sie stattdessen [Seite 6](06-two-unpaired-groups.qmd).
+
+::: {.callout-note}
+## 💡 So funktioniert jeder Abschnitt dieser Seite
+Jeder Abschnitt beantwortet eine Frage zu den Übungsdaten. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+
+Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
+:::
+
+::: {.callout-warning}
+## ⚠️ Achtung: Nur vollständige Paare zählen
+Ein gepaarter Test kann nur Personen verwenden, die zu **beiden** Zeitpunkten gemessen wurden. Wer eine Kontrolle verpasst hat, fällt heraus, und wenn sich diese Personen vom Rest unterscheiden (zum Beispiel, wenn Personen mit schlechtem Verlauf nicht mehr kommen), ist das Resultat verzerrt. Berichten Sie immer, wie viele Patientinnen und Patienten beide Messungen hatten. [Gemischte Modelle](../beyond/16-mixed-models.qmd#why-mixed-models) können die Daten aller Personen verwenden, auch bei unvollständiger Nachbeobachtung.
+:::
+
+## t-Test für gepaarte Stichproben {#paired-t}
+
+**Die Frage:** Ergeben die Lauenstein-Aufnahme (Frog-Leg) und die Dunn-45°-Aufnahme in denselben Hüften unterschiedliche Alpha-Winkel?
+
+### Wann verwenden
+
+- Jede Person (oder jedes gematchte Paar) liefert **zwei Messungen** derselben Grösse: hier den Alpha-Winkel derselben Hüfte auf zwei Röntgenaufnahmen.
+- Die **Differenzen** zwischen den beiden Messungen sind ungefähr normalverteilt, oder es gibt etwa 30 oder mehr Paare. Die Voraussetzung betrifft die Differenzen, nicht jede Messung für sich.
+- Die Paare sind voneinander unabhängig.
+- Wenn die Differenzen schief sind oder die Messwerte begrenzt oder ordinal sind → [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
+
+### Zuerst die Daten ansehen
+
+Der Alpha-Winkel misst, wie stark sich der vordere Teil des Kopf-Hals-Übergangs am Femur vorwölbt (Cam-Morphologie): Je grösser der Winkel, desto grösser die Vorwölbung. Die Daten zur Hüfterhaltung enthalten eine Zeile pro Hüfte (eine Hüfte pro Person) von jungen Erwachsenen, die für eine hüfterhaltende Operation abgeklärt wurden, mit dem Alpha-Winkel auf zwei Aufnahmen: der **Lauenstein-Aufnahme (Frog-Leg)** und der **Dunn-45°-Aufnahme**.
+
+Gepaarte Daten müssen im **Breitformat** vorliegen: eine Zeile pro Person, mit den beiden Messungen nebeneinander. Diese Daten tun das bereits; [Seite 1](../foundations/01-tidy-data.qmd#reshaping) zeigt, wie man Daten umformt, bei denen das nicht so ist.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE) |>   # eine Zeile pro Hüfte
+  mutate(difference = alpha_dunn45_deg - alpha_frogleg_deg)                            # Dunn minus Frog-Leg
+
+nrow(imaging)
+sum(is.na(imaging$difference))   # Hüften, bei denen eine der beiden Aufnahmen fehlt
+
+ggplot(imaging, aes(difference)) +
+  geom_histogram(binwidth = 1) +
+  geom_vline(xintercept = 0, linetype = "dashed") +   # keine Differenz
+  labs(x = "Alpha angle, Dunn 45° minus frog-leg, degrees", y = "Hips")
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+
+imaging = pd.read_csv("data/hip_preservation_imaging.csv")                             # eine Zeile pro Hüfte
+imaging["difference"] = imaging["alpha_dunn45_deg"] - imaging["alpha_frogleg_deg"]   # Dunn minus Frog-Leg
+
+print(len(imaging), imaging["difference"].isna().sum())   # Hüften, und Hüften, bei denen eine der beiden Aufnahmen fehlt
+
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(imaging["difference"], bins=range(-6, 14))
+ax.axvline(0, linestyle="--")                              # keine Differenz
+ax.set_xlabel("Alpha angle, Dunn 45° minus frog-leg, degrees")
+ax.set_ylabel("Hips")
+plt.show()
+```
+:::
+
+Alle 80 Hüften haben beide Aufnahmen. Die Differenzen bilden einen ungefähr symmetrischen Hügel, dessen Mitte rechts von null liegt: Die meisten Hüften messen auf der Dunn-Aufnahme höher.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+alpha_test <- t.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg, paired = TRUE)   # Dunn minus Frog-Leg
+alpha_test
+```
+
+## Python
+
+```{python}
+alpha_test = stats.ttest_rel(imaging["alpha_dunn45_deg"], imaging["alpha_frogleg_deg"])   # Dunn minus Frog-Leg
+print(alpha_test)
+print(imaging["difference"].mean(), alpha_test.confidence_interval())
+```
+:::
+
+```{python}
+#| include: false
+alpha_ci = alpha_test.confidence_interval()
+chk = {"t": float(alpha_test.statistic), "df": float(alpha_test.df), "p": float(alpha_test.pvalue),
+       "mean_diff": float(imaging["difference"].mean()), "ci_low": float(alpha_ci.low), "ci_high": float(alpha_ci.high)}
+```
+
+```{r}
+#| include: false
+check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parameter), p = alpha_test$p.value,
+                 mean_diff = unname(alpha_test$estimate), ci_low = alpha_test$conf.int[1],
+                 ci_high = alpha_test$conf.int[2]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **t = 7.75, df = 79:** Die mittlere Differenz ist fast 8 Standardfehler von null entfernt; df ist die Anzahl der Paare minus 1.
+- **p < 0.001:** Eine so grosse Differenz wäre sehr unwahrscheinlich, wenn die beiden Aufnahmen im Mittel denselben Alpha-Winkel ergäben.
+- **mean difference 3.67:** Im Mittel lag der Wert auf der Dunn-Aufnahme 3.7° höher als auf der Lauenstein-Aufnahme derselben Hüfte.
+- **95% CI 2.73 to 4.61:** das KI für die mittlere Differenz.
+
+### Effektstärke und 95%-KI
+
+- Die **Mittelwertsdifferenz** mit ihrem KI, in Grad: 3.7° (95%-KI 2.7 bis 4.6).
+- **Cohens d~z~** teilt die Mittelwertsdifferenz durch die Standardabweichung der Differenzen: wie gleichmässig sich die beiden Aufnahmen über die Hüften hinweg unterscheiden. Die übliche Richtschnur (0.2 klein, 0.5 mittel, 0.8 gross) gilt auch hier.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+effectsize::repeated_measures_d(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg, method = "z", adjust = FALSE)
+```
+
+## Python
+
+```{python}
+d_z = imaging["difference"].mean() / imaging["difference"].std()   # Mittelwertsdifferenz / SD der Differenzen
+print(d_z)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"d_z": float(d_z)}
+```
+
+```{r}
+#| include: false
+alpha_d <- effectsize::repeated_measures_d(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg, method = "z", adjust = FALSE)
+check_agree(list(d_z = alpha_d$d_z), reticulate::py$chk)
+```
+
+d~z~ = 0.87 ist ein grosser Effekt: 62 der 80 Hüften (78 %) messen auf der Dunn-Aufnahme höher. Das ist in der Klinik wichtig, weil eine Cam-Morphologie oft über einen Alpha-Winkel oberhalb eines Schwellenwerts definiert wird. Bei einem Schwellenwert von 55° gelten 56 Hüften auf der Dunn-Aufnahme als Cam-positiv und 48 auf der Lauenstein-Aufnahme. Geben Sie an, auf welcher Aufnahme Sie gemessen haben.
+
+### Resultate formulieren
+
+> **Methods:** The alpha angle on the Dunn 45° and frog-leg views of the same hip was compared with a paired t test.
+>
+> **Results:** In 80 hips, the mean alpha angle was 61.8° (SD 11.2) on the Dunn 45° view and 58.2° (SD 10.8) on the frog-leg view (mean difference 3.7°, 95% CI 2.7 to 4.6; d~z~ = 0.87, 95% CI 0.61 to 1.12; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Analysieren Sie gepaarte Daten nicht wie unabhängige Gruppen
+Ein t-Test für unabhängige Stichproben auf den beiden Spalten ignoriert, welche Messwerte zur selben Hüfte gehören. Hier ergibt er p = 0.037 statt p < 0.001: Die Differenz von 3.7° zwischen den Aufnahmen ist klein neben der Streuung von 11° zwischen den Hüften, und nur der gepaarte Test nimmt diese Streuung heraus. Er ist auch dann falsch, wenn er zufällig dieselbe Antwort liefert, denn sein Standardfehler setzt 160 unabhängige Hüften voraus, obwohl es nur 80 sind.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: gepaarte Effektstärken
+`compute_effsize(x, y, paired=True)` von pingouin gibt **nicht** d~z~ zurück: Es gibt d~av~ zurück (die Mittelwertsdifferenz geteilt durch die Quadratwurzel aus dem Durchschnitt der beiden Varianzen), hier 0.33. Beide sind legitim, beantworten aber verschiedene Fragen und sind nicht austauschbar: d~av~ vergleicht die Differenz damit, wie stark sich die Hüften untereinander unterscheiden, d~z~ damit, wie gleichmässig sich die beiden Aufnahmen innerhalb einer Hüfte unterscheiden. Wir berechnen d~z~ direkt, damit die beiden Sprachen übereinstimmen; geben Sie an, welches Sie berichten.
+:::
+
+## Wilcoxon-Vorzeichen-Rang-Test {#wilcoxon-signed-rank}
+
+**Die Frage:** Hat sich der KOOS JR (Score für Knie-Gelenkersatz, Kurzform) von vor der Operation bis 1 Jahr nach einem Kniegelenkersatz verbessert?
+
+### Wann verwenden
+
+- Zwei gepaarte Messungen, und die Zielgrösse ist **schief** oder hat einen **Decken- oder Bodeneffekt**. Der KOOS JR nach 1 Jahr hat einen Deckeneffekt ([Seite 3](../foundations/03-distributions.qmd#transform)).
+- Zählen Sie bei einer **ordinalen** Skala (Zufriedenheit von 1 bis 5) die Personen, deren Wert gestiegen beziehungsweise gesunken ist, und vergleichen Sie die beiden Anzahlen mit einem Binomialtest (dem **Vorzeichentest**, [Seite 5](05-one-group-vs-hypothetical.qmd#binomial-test)).
+- Er bringt die Grössen der Veränderungen in eine Rangfolge und vergleicht die Ränge der Verbesserungen mit den Rängen der Verschlechterungen.
+- Veränderungen von genau null enthalten keine Information über die Richtung und werden weggelassen.
+- Wenn die Veränderungen ungefähr normalverteilt sind → [t-Test für gepaarte Stichproben](#paired-t).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+
+koos <- proms |>
+  filter(instrument == "KOOS JR", visit %in% c("preop", "1yr")) |>
+  select(case_id, visit, prom_score) |>
+  pivot_wider(names_from = visit, values_from = prom_score, names_prefix = "koos_") |>
+  filter(!is.na(koos_preop), !is.na(koos_1yr)) |>
+  mutate(change = koos_1yr - koos_preop)
+
+ggplot(koos, aes(change)) +
+  geom_histogram(binwidth = 2.5) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  labs(x = "Change in KOOS JR, 1 year minus pre-op", y = "Patients")
+
+koos |> summarise(n = n(), improved = sum(change > 0),
+                  median_preop = median(koos_preop), median_1yr = median(koos_1yr))
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import pingouin as pg
+import matplotlib.pyplot as plt
+from scipy import stats
+
+proms = pd.read_csv("data/proms_long.csv")
+
+koos = (proms[(proms["instrument"] == "KOOS JR") & proms["visit"].isin(["preop", "1yr"])]
+        .pivot(index="case_id", columns="visit", values="prom_score")
+        .dropna())
+koos["change"] = koos["1yr"] - koos["preop"]
+
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(koos["change"], bins=np.arange(0, 72.5, 2.5))
+ax.axvline(0, linestyle="--")
+ax.set_xlabel("Change in KOOS JR, 1 year minus pre-op")
+ax.set_ylabel("Patients")
+plt.show()
+
+print(len(koos), (koos["change"] > 0).sum(), koos["preop"].median(), koos["1yr"].median())
+```
+:::
+
+Alle 246 Patientinnen und Patienten mit beiden Scores haben sich verbessert. (Echte Daten sind selten so aufgeräumt: Meist verschlechtert sich eine Minderheit der Personen. Diese Daten sind synthetisch.)
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+koos_test <- wilcox.test(koos$koos_1yr, koos$koos_preop, paired = TRUE,
+                         exact = FALSE, correct = FALSE,   # siehe den Kasten «R oder Python»
+                         conf.int = TRUE)                  # ergänzt den Hodges-Lehmann-Schätzer und das KI
+koos_test
+```
+
+## Python
+
+```{python}
+# pg.wilcoxon() führt den Test von scipy aus und ergänzt die biseriale Rangkorrelation als Effektstärke
+koos_test = pg.wilcoxon(koos["1yr"], koos["preop"], method="approx", correction=False)   # siehe den Kasten «R oder Python»
+print(koos_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"p": float(koos_test["p_val"].iloc[0]), "rbc": float(koos_test["RBC"].iloc[0])}
+```
+
+```{r}
+#| include: false
+koos_rb <- effectsize::rank_biserial(koos$koos_1yr, koos$koos_preop, paired = TRUE)
+# No log-p check here (page 5 has one): R computes this two-sided p as 1 - pnorm(13.6), which is
+# exactly 0 in floating point. With every patient improved, no Wilcoxon setting changes a shown number.
+check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **V = 30381** (R): die Summe der Ränge der Verbesserungen. Bei 246 Personen ergeben die Ränge zusammen 246 × 247 / 2 = 30381, sodass jeder Rang zu einer Verbesserung gehört. Python gibt die kleinere Summe an, die der Verschlechterungen: **W_val = 0**.
+- **p < 0.001.**
+- **(pseudo)median 34.1, 95% CI 32.3 to 35.9:** der Hodges-Lehmann-Schätzer der typischen Veränderung, siehe unten.
+- **RBC = 1.0** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
+
+### Effektstärke und 95%-KI
+
+- Der **Hodges-Lehmann-Schätzer** der Veränderung (der Median der Mittelwerte aller Paare von Veränderungen) mit seinem KI, in Punkten.
+- Die **biseriale Rangkorrelation (r) für gepaarte Daten**: +1, wenn sich alle Personen verbessert haben, −1, wenn sich alle Personen verschlechtert haben, 0, wenn sich Verbesserungen und Verschlechterungen die Waage halten. Hier ist sie genau 1.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+koos_test$estimate                                                # Hodges-Lehmann-Schätzer der Veränderung
+koos_test$conf.int                                                # sein 95%-KI
+
+effectsize::rank_biserial(koos$koos_1yr, koos$koos_preop, paired = TRUE)
+```
+
+## Python
+
+```{python}
+# Hodges-Lehmann-Schätzer: der Median der Mittelwerte aller Paare von Veränderungen
+def hodges_lehmann(x):
+    x = np.asarray(x)
+    i, j = np.triu_indices(len(x))          # alle Paare, auch jede Veränderung mit sich selbst
+    return np.median((x[i] + x[j]) / 2)
+
+print(hodges_lehmann(koos["change"]))
+
+# scipy hat dafür kein KI, also ein Bootstrap: auf 9999 neu gezogenen Datensätzen neu berechnen
+boot = stats.bootstrap((koos["change"].to_numpy(),), hodges_lehmann, vectorized=False,
+                       rng=np.random.default_rng(2026))
+print(boot.confidence_interval)
+
+print(koos_test["RBC"])                                           # biseriale Rangkorrelation r
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hl": float(hodges_lehmann(koos["change"]))}
+```
+
+```{r}
+#| include: false
+check_agree(list(hl = unname(koos_test$estimate)), reticulate::py$chk,
+            tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
+```
+
+### Resultate formulieren
+
+> **Methods:** Because 1-year KOOS JR scores showed a ceiling effect, change from before surgery was assessed with the Wilcoxon signed-rank test, with the Hodges-Lehmann estimate of the change and its 95% CI as the effect size.
+>
+> **Results:** In all 246 patients with both scores, the change was positive. Median KOOS JR was 50.0 (IQR 40.8 to 58.2) before surgery and 85.8 (IQR 75.0 to 94.0) at 1 year (Hodges-Lehmann estimate of the change 34.1 points, 95% CI 32.3 to 35.9; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: «Signifikante Verbesserung» ist nicht die ganze Geschichte
+Ein winziger p-Wert sagt, dass die Scores im Durchschnitt gestiegen sind; er sagt nicht, wie viele Patientinnen und Patienten sich um einen **bedeutsamen** Betrag verbessert haben. Berichten Sie bei patientenberichteten Messinstrumenten (PROM) auch den Anteil der Personen, deren Veränderung die minimale klinisch relevante Differenz (MCID) erreichte, eine Schwelle innerhalb der Person ([Seite 3](../foundations/03-distributions.qmd#effect-sizes)).
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Standardwerte beim Wilcoxon-Test
+- **Die Teststatistik.** R gibt V an, die Summe der Ränge der positiven Veränderungen. scipy (und pingouin) geben die **kleinere** der beiden Summen an. Die p-Werte stimmen überein.
+- **Exakt oder näherungsweise.** R verwendet bei weniger als 50 Paaren ohne Bindungen einen exakten p-Wert und fügt der Normalapproximation eine Stetigkeitskorrektur hinzu; die Standardwerte von scipy sind anders. Wir setzen `exact = FALSE, correct = FALSE` in R und `method="approx", correction=False` in Python, damit beide übereinstimmen.
+- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests; der Python-Code verwendet einen Bootstrap, also eine andere Methode. Hier stimmen sie auf zwei Dezimalstellen überein (32.30 bis 35.90), wie auf [Seite 6](06-two-unpaired-groups.qmd#mann-whitney), bei anderen Daten können sie aber leicht voneinander abweichen.
+:::
+
+## McNemar-Test {#mcnemar}
+
+**Die Frage:** Ist die Wahrscheinlichkeit, eine Gehhilfe zu benutzen, 6 Wochen nach der Operation höher als davor?
+
+### Wann verwenden
+
+- Eine **Ja/Nein**-Zielgrösse, die **zweimal bei denselben Personen** gemessen wird (oder einmal bei jedem Mitglied eines gematchten Paars).
+- Er verwendet nur die **diskordanten Paare**: die Personen, bei denen sich etwas geändert hat (nein → ja oder ja → nein). Personen, bei denen alles gleich blieb, sagen nichts über die Richtung der Veränderung aus.
+- Die Chi-Quadrat-Version braucht insgesamt mindestens etwa 10 diskordante Paare. Bei weniger verwenden Sie die **exakte** Version (siehe den Kasten «R oder Python»).
+
+### Zuerst die Daten ansehen
+
+Bei gepaarten Ja/Nein-Daten heisst «Ansehen», eine 2 × 2-Tabelle **vorher × nachher** zu betrachten: Jede Person kommt darin einmal vor.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+
+aid <- proms |>
+  filter(visit %in% c("preop", "6wk")) |>
+  select(case_id, visit, walking_aid) |>
+  pivot_wider(names_from = visit, values_from = walking_aid, names_prefix = "aid_") |>
+  filter(!is.na(aid_preop), !is.na(aid_6wk))
+
+aid_table <- table(preop = aid$aid_preop, six_weeks = aid$aid_6wk)   # 1 = benutzt eine Gehhilfe
+aid_table
+colMeans(aid[, c("aid_preop", "aid_6wk")])                          # Anteil der Personen mit Gehhilfe
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+from statsmodels.stats.contingency_tables import mcnemar
+
+proms = pd.read_csv("data/proms_long.csv")
+
+aid = (proms[proms["visit"].isin(["preop", "6wk"])]
+       .pivot(index="case_id", columns="visit", values="walking_aid")
+       .dropna())
+
+aid_table = pd.crosstab(aid["preop"], aid["6wk"])   # 1 = benutzt eine Gehhilfe
+print(aid_table)
+print(aid[["preop", "6wk"]].mean())                 # Anteil der Personen mit Gehhilfe
+```
+:::
+
+Von 505 Patientinnen und Patienten, die bei beiden Kontrollen gesehen wurden, hatten 134 nie eine Gehhilfe und 108 zu beiden Zeitpunkten eine. Bei den übrigen 263 änderte sich etwas: **193 begannen**, eine Gehhilfe zu benutzen, und **70 hörten auf**.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+aid_test <- mcnemar.test(aid_table)   # mit Stetigkeitskorrektur, dem Standard von R
+aid_test
+```
+
+## Python
+
+```{python}
+aid_test = mcnemar(aid_table.to_numpy(), exact=False, correction=True)   # Chi-Quadrat-Version, wie in R
+print(aid_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"chisq": float(aid_test.statistic), "p": float(aid_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(chisq = unname(aid_test$statistic), p = aid_test$p.value), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **McNemar's chi-squared = 56.6, df = 1:** wie unausgewogen die Aufteilung 193 gegen 70 ist, verglichen mit der gleichmässigen Aufteilung, die man erwarten würde, wenn sich die Benutzung der Gehhilfe nicht verändert hätte.
+- **p < 0.001.**
+
+### Effektstärke und 95%-KI
+
+Die Effektstärke beim McNemar-Test ist das **Odds Ratio der diskordanten Paare**: Personen, die begannen, eine Gehhilfe zu benutzen, geteilt durch Personen, die aufhörten, 193 / 70. Sein exaktes KI stammt aus einem Binomialtest auf den diskordanten Paaren.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+started <- aid_table["0", "1"]    # vorher keine Gehhilfe, nach 6 Wochen eine Gehhilfe
+stopped <- aid_table["1", "0"]    # vorher eine Gehhilfe, nach 6 Wochen keine Gehhilfe
+
+started / stopped                                    # Odds Ratio der diskordanten Paare
+
+ci <- binom.test(started, started + stopped)$conf.int  # KI für den Anteil der Wechselnden, die begannen
+ci / (1 - ci)                                        # umgerechnet in ein KI für das Odds Ratio
+```
+
+## Python
+
+```{python}
+started = int(aid_table.loc[0, 1])    # vorher keine Gehhilfe, nach 6 Wochen eine Gehhilfe
+stopped = int(aid_table.loc[1, 0])    # vorher eine Gehhilfe, nach 6 Wochen keine Gehhilfe
+
+print(started / stopped)                                                # Odds Ratio der diskordanten Paare
+
+ci = stats.binomtest(started, started + stopped).proportion_ci(method="exact")   # Anteil der Wechselnden, die begannen
+print(ci.low / (1 - ci.low), ci.high / (1 - ci.high))                   # umgerechnet in ein KI für das Odds Ratio
+```
+:::
+
+```{python}
+#| include: false
+chk = {"or": float(started / stopped), "or_low": float(ci.low / (1 - ci.low)),
+       "or_high": float(ci.high / (1 - ci.high))}
+```
+
+```{r}
+#| include: false
+check_agree(list(or = started / stopped, or_low = ci[1] / (1 - ci[1]), or_high = ci[2] / (1 - ci[2])),
+            reticulate::py$chk)
+```
+
+Patientinnen und Patienten begannen 2.8-mal so häufig, eine Gehhilfe zu benutzen, wie sie aufhörten (95%-KI 2.1 bis 3.7).
+
+### Resultate formulieren
+
+> **Methods:** Walking-aid use before surgery and at 6 weeks was compared with McNemar's test, with the discordant-pair odds ratio and its exact 95% CI as the effect size.
+>
+> **Results:** Among 505 patients assessed at both visits, 35.2% used a walking aid before surgery and 59.6% at 6 weeks; 193 patients started and 70 stopped using an aid (discordant-pair odds ratio 2.76, 95% CI 2.09 to 3.68; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Kein Chi-Quadrat-Test und kein Test nach Fisher bei gepaarten Ja/Nein-Daten
+Ein häufiger Fehler ist, «Gehhilfe ja/nein» gegen «präoperativ / 6 Wochen» zu kreuztabellieren und einen gewöhnlichen Chi-Quadrat-Test durchzuführen. Diese Tabelle zählt jede Person zweimal, als hätte man 1010 unabhängige Patientinnen und Patienten untersucht. Der McNemar-Test verwendet jede Person einmal, über die Tabelle vorher × nachher.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Chi-Quadrat oder exakt?
+`mcnemar.test()` in R gibt die Chi-Quadrat-Version an, mit einer Stetigkeitskorrektur, ausser Sie setzen `correct = FALSE`. `mcnemar()` in statsmodels gibt die **exakte** (binomiale) Version an, ausser Sie setzen `exact=False`. Bei wenigen diskordanten Paaren (unter etwa 10) ist die exakte Version die richtige: Führen Sie in R `binom.test(started, started + stopped)` aus.
+:::
+
+## Stratifizierte Cox-Regression {#stratified-cox}
+
+**Die Frage:** Ist bei Patientinnen und Patienten, die nach Eingriff, Alter, Geschlecht, BMI und ASA-Klasse gematcht wurden, das Revisionsrisiko mit Implantat C höher als mit Implantat A?
+
+### Wann verwenden
+
+- Die Zielgrösse ist die **Zeit bis zu einem Ereignis**, und die Patientinnen und Patienten bilden **gematchte Paare** (oder Gruppen), oder die beiden «Fälle» sind die beiden Gelenke einer Person.
+- Ein nach Paaren **stratifiziertes** Cox-Modell gibt jedem Paar sein eigenes Ausgangsrisiko und vergleicht die Implantate nur **innerhalb** der Paare. Die Entscheidungstabelle nennt das *bedingte Regression mit proportionalen Hazards*.
+- Nur Paare, in denen eine Person revidiert wurde, während die andere noch nachbeobachtet wurde, sagen dem Modell etwas; bei wenigen Ereignissen ist ein breites KI zu erwarten.
+- [Seite 14](../survival/14-cox-regression.qmd) behandelt die Cox-Regression ausführlich.
+
+### Zuerst die Daten ansehen
+
+Die gematchte Datei hat eine Zeile pro Person und eine `set_id`, die jede gematchte Gruppe gemeinsam hat. Jede Gruppe enthält eine Person mit jedem Implantat (A, B und C); hier behalten wir A und C, wodurch Paare entstehen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(survival)
+
+matched <- read_csv("data/matched_sets.csv", show_col_types = FALSE)
+
+pairs <- matched |>
+  filter(implant %in% c("A", "C")) |>
+  mutate(revised = as.integer(event_status == 1))   # 1 = revidiert; Todesfälle und Zensierung = 0
+
+pairs |> select(set_id, implant, age, sex, bmi, followup_years, revised) |> head(4)
+pairs |> group_by(implant) |> summarise(patients = n(), revisions = sum(revised))
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+from lifelines import CoxPHFitter
+
+matched = pd.read_csv("data/matched_sets.csv")
+
+pairs = matched[matched["implant"].isin(["A", "C"])].copy()
+pairs["revised"] = (pairs["event_status"] == 1).astype(int)   # 1 = revidiert; Todesfälle und Zensierung = 0
+
+print(pairs[["set_id", "implant", "age", "sex", "bmi", "followup_years", "revised"]].head(4))
+print(pairs.groupby("implant")["revised"].agg(["count", "sum"]))
+```
+:::
+
+52 Paare: 5 Revisionen mit Implantat A und 17 mit Implantat C.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+pair_cox <- coxph(Surv(followup_years, revised) ~ implant + strata(set_id), data = pairs)
+summary(pair_cox)
+```
+
+## Python
+
+```{python}
+pair_cox = CoxPHFitter().fit(
+    pairs[["followup_years", "revised", "implant", "set_id"]],
+    duration_col="followup_years", event_col="revised",
+    formula="implant", strata=["set_id"],    # ein Stratum pro gematchtem Paar
+    fit_options={"precision": 1e-9},         # erst aufhören, wenn vollständig konvergiert; siehe den Kasten «R oder Python»
+)
+print(pair_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
+```
+:::
+
+```{python}
+#| include: false
+row = pair_cox.summary.iloc[0]
+chk = {"hr": float(row["exp(coef)"]), "hr_low": float(row["exp(coef) lower 95%"]),
+       "hr_high": float(row["exp(coef) upper 95%"]), "p": float(row["p"])}
+```
+
+```{r}
+#| include: false
+pair_hr <- summary(pair_cox)$conf.int
+check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"], hr_high = pair_hr[1, "upper .95"],
+                 p = summary(pair_cox)$coefficients[1, "Pr(>|z|)"]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **n = 104, number of events = 22:** 52 Paare, 22 Revisionen.
+- **exp(coef) = 3.5:** das Hazard Ratio (HR), das Verhältnis der momentanen Ereignisraten, Implantat C gegenüber Implantat A, innerhalb der Paare.
+- **lower .95 = 1.15, upper .95 = 10.63:** sein 95%-KI. Breit, weil nur 22 Revisionen dazu beitragen.
+- **Pr(>|z|) = 0.027:** der p-Wert für Implantat.
+- R gibt ausserdem einen Likelihood-Quotienten-, einen Wald- und einen Score-Test für das ganze Modell aus; bei einem Prädiktor testen alle dasselbe.
+
+### Effektstärke und 95%-KI
+
+Das **Hazard Ratio** ist die Effektstärke: Innerhalb gematchter Paare war der Hazard einer Revision mit Implantat C 3.5-mal so hoch (95%-KI 1.15 bis 10.63).
+
+### Resultate formulieren
+
+> **Methods:** Revision risk was compared between implants in matched pairs using Cox regression stratified by pair.
+>
+> **Results:** In 52 pairs matched on procedure, age, sex, BMI and ASA class, 17 implant C and 5 implant A procedures were revised (hazard ratio for implant C vs A 3.50, 95% CI 1.15 to 10.63; p = 0.027).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Ignorieren Sie das Matching nicht
+Ein gewöhnliches Cox-Modell auf denselben 104 Patientinnen und Patienten (ohne `strata()`) behandelt sie als voneinander unabhängig. Das wirft das Matching weg, das Sie mit Aufwand erstellt haben. Hier ergibt es eine etwas andere Antwort (Hazard Ratio 3.60); bei stärkeren Matching-Faktoren kann der Unterschied gross sein. Analysieren Sie gematchte Daten als gematchte Daten.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Strata und Konvergenz
+R setzt `strata(set_id)` in die Modellformel; lifelines nimmt `strata=["set_id"]` als separates Argument. Bei so wenigen Ereignissen und vielen Strata hört die Standard-Konvergenzregel von lifelines etwas zu früh auf (ein Hazard Ratio von 3.4997 statt 3.5), daher verschärfen wir sie mit `fit_options={"precision": 1e-9}`.
+:::
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+wide_pair <- function(data, value, first, second) {   # complete pairs of two visits, one row per case
+  data |> filter(visit %in% c(first, second)) |> select(case_id, visit, value = all_of(value)) |>
+    pivot_wider(names_from = visit, values_from = value) |> filter(!is.na(.data[[first]]), !is.na(.data[[second]]))
+}
+ex_torsion <- t.test(imaging$torsion_budin_deg, imaging$torsion_ct_deg, paired = TRUE)
+ex_torsion_d <- effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_deg, method = "z", adjust = FALSE)
+ex_torsion_diff <- imaging$torsion_budin_deg - imaging$torsion_ct_deg
+ex_hka <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
+  filter(session == 1) |> select(knee_id, rater, hka_deg) |> pivot_wider(names_from = rater, values_from = hka_deg)
+ex_hka_test <- t.test(ex_hka$R2, ex_hka$R1, paired = TRUE)
+ex_later <- wide_pair(filter(proms, instrument == "KOOS JR"), "prom_score", "3mo", "1yr") |>
+  rename(koos_3mo = `3mo`, koos_1yr = `1yr`)
+ex_later_test <- wilcox.test(ex_later$koos_1yr, ex_later$koos_3mo, paired = TRUE, exact = FALSE, correct = FALSE,
+                             conf.int = TRUE)
+stopifnot(
+  sum(table(distinct(proms, case_id, patient_id)$patient_id) == 2) == 80,
+  nrow(imaging) == 80, n_distinct(imaging$hip_id) == 80, !anyNA(imaging$difference),
+  min(imaging$difference) > -6, max(imaging$difference) < 13,
+  round(unname(alpha_test$statistic), 2) == 7.75, unname(alpha_test$parameter) == 79, alpha_test$p.value < 0.001,
+  round(unname(alpha_test$estimate), 2) == 3.67, round(unname(alpha_test$estimate), 1) == 3.7,
+  round(alpha_test$conf.int, 2) == c(2.73, 4.61), round(alpha_test$conf.int, 1) == c(2.7, 4.6),
+  round(c(mean(imaging$alpha_dunn45_deg), sd(imaging$alpha_dunn45_deg),
+          mean(imaging$alpha_frogleg_deg), sd(imaging$alpha_frogleg_deg)), 1) == c(61.8, 11.2, 58.2, 10.8),
+  round(alpha_d$d_z, 2) == 0.87, round(c(alpha_d$CI_low, alpha_d$CI_high), 2) == c(0.61, 1.12),
+  sum(imaging$difference > 0) == 62, round(100 * mean(imaging$difference > 0)) == 78,
+  sum(imaging$alpha_dunn45_deg > 55) == 56, sum(imaging$alpha_frogleg_deg > 55) == 48,
+  round(t.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)$p.value, 3) == 0.037,
+  round(mean(c(sd(imaging$alpha_dunn45_deg), sd(imaging$alpha_frogleg_deg)))) == 11,
+  round(reticulate::py_eval("float(pg.compute_effsize(imaging['alpha_dunn45_deg'], imaging['alpha_frogleg_deg'], paired=True, eftype='cohen'))"), 2) == 0.33,
+  nrow(koos) == 246, all(koos$change > 0),
+  unname(koos_test$statistic) == 246 * 247 / 2, unname(koos_test$statistic) == 30381,
+  koos_test$p.value < 0.001,
+  round(unname(koos_test$estimate), 1) == 34.1, round(koos_test$conf.int, 1) == c(32.3, 35.9),
+  round(koos_test$conf.int, 2) == c(32.30, 35.90),
+  round(reticulate::py_eval("[float(boot.confidence_interval.low), float(boot.confidence_interval.high)]"), 2) == c(32.30, 35.90),
+  koos_rb$r_rank_biserial == 1,
+  round(median(koos$koos_preop), 1) == 50.0, round(quantile(koos$koos_preop, c(0.25, 0.75)), 1) == c(40.8, 58.2),
+  round(median(koos$koos_1yr), 1) == 85.8, round(quantile(koos$koos_1yr, c(0.25, 0.75)), 1) == c(75.0, 94.0),
+  nrow(aid) == 505, aid_table["0", "0"] == 134, aid_table["1", "1"] == 108,
+  started == 193, stopped == 70, started + stopped == 263,
+  round(unname(aid_test$statistic), 1) == 56.6, aid_test$p.value < 0.001,
+  round(100 * mean(aid$aid_preop), 1) == 35.2, round(100 * mean(aid$aid_6wk), 1) == 59.6,
+  round(started / stopped, 2) == 2.76, round(ci / (1 - ci), 2) == c(2.09, 3.68), round(ci / (1 - ci), 1) == c(2.1, 3.7),
+  round(started / stopped, 1) == 2.8,
+  n_distinct(pairs$set_id) == 52, nrow(pairs) == 104, sum(pairs$revised) == 22,
+  sum(pairs$revised[pairs$implant == "A"]) == 5, sum(pairs$revised[pairs$implant == "C"]) == 17,
+  round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
+  round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
+  round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs))), 2) == 3.60,
+  round(reticulate::py_eval("float(np.exp(CoxPHFitter().fit(pairs[['followup_years', 'revised', 'implant', 'set_id']], duration_col='followup_years', event_col='revised', formula='implant', strata=['set_id']).params_.iloc[0]))"), 4) == 3.4997,
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(unname(ex_torsion$estimate), 1) == -1.2, round(ex_torsion$conf.int, 1) == c(-2.2, -0.2),
+  round(ex_torsion$p.value, 3) == 0.023,
+  round(mean(ex_torsion_diff) / sd(ex_torsion_diff), 2) == -0.26,
+  round(c(mean(imaging$torsion_ct_deg), sd(imaging$torsion_ct_deg), mean(imaging$torsion_budin_deg), sd(imaging$torsion_budin_deg)), 1) == c(14.5, 8.9, 13.3, 7.6),
+  round(c(ex_torsion_d$CI_low, ex_torsion_d$CI_high), 2) == c(-0.48, -0.04),
+  mean(ex_torsion_diff[imaging$torsion_ct_deg < 5]) > 0, mean(ex_torsion_diff[imaging$torsion_ct_deg > 25]) < 0,
+  nrow(ex_hka) == 60, round(unname(ex_hka_test$estimate), 2) == 0.50,
+  round(ex_hka_test$conf.int, 2) == c(0.08, 0.93), round(ex_hka_test$p.value, 3) == 0.022,
+  nrow(ex_later) == 225, sum(ex_later$koos_1yr > ex_later$koos_3mo) == 176, sum(ex_later$koos_1yr < ex_later$koos_3mo) == 46,
+  round(c(median(ex_later$koos_3mo), median(ex_later$koos_1yr)), 1) == c(73.1, 85.2),
+  round(quantile(ex_later$koos_3mo, c(0.25, 0.75)), 1) == c(65.4, 81.5),
+  round(quantile(ex_later$koos_1yr, c(0.25, 0.75)), 1) == c(73.6, 93.8),
+  round(unname(ex_later_test$estimate), 1) == 9.9, round(ex_later_test$conf.int, 1) == c(8.2, 11.6),
+  ex_later_test$p.value < 0.001,
+  round(effectsize::rank_biserial(ex_later$koos_1yr, ex_later$koos_3mo, paired = TRUE)$r_rank_biserial, 2) == 0.74
+)
+```
+
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Bei denselben Hüften wurde auch die Femurtorsion im CT und auf der modifizierten Budin-Aufnahme gemessen (`torsion_ct_deg`, `torsion_budin_deg`). Misst die Budin-Aufnahme die Torsion systematisch anders als das CT? Berichten Sie die Mittelwertsdifferenz mit ihrem 95%-KI und d~z~.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+t.test(imaging$torsion_budin_deg, imaging$torsion_ct_deg, paired = TRUE)   # Budin-Aufnahme minus CT
+effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_deg, method = "z", adjust = FALSE)
+imaging |> summarise(n = n(), across(c(torsion_ct_deg, torsion_budin_deg), list(mean = mean, sd = sd)))
+```
+
+## Python
+
+```{python}
+torsion_test = stats.ttest_rel(imaging["torsion_budin_deg"], imaging["torsion_ct_deg"])   # Budin-Aufnahme minus CT
+torsion_diff = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]
+print(torsion_test, torsion_diff.mean(), torsion_test.confidence_interval(), torsion_diff.mean() / torsion_diff.std())
+print(imaging[["torsion_ct_deg", "torsion_budin_deg"]].agg(["count", "mean", "std"]))
+```
+:::
+
+> **Results:** In 80 hips, the mean femoral torsion was 14.5° (SD 8.9) on CT and 13.3° (SD 7.6) on the Budin view (mean difference, Budin minus CT, −1.2°, 95% CI −2.2 to −0.2; d~z~ = −0.26, 95% CI −0.48 to −0.04; p = 0.023).
+
+Eine mittlere Differenz von etwa 1° wirkt beruhigend, verdeckt aber, wie die beiden Methoden voneinander abweichen: Die Budin-Aufnahme liegt bei Hüften mit wenig Torsion zu hoch und bei Hüften mit viel Torsion zu tief, und die beiden Fehler heben sich im Mittelwert auf. Ein gepaarter t-Test fragt nur nach der mittleren Differenz; [Seite 17](../beyond/17-agreement.qmd#bland-altman) zeigt, wie man die Übereinstimmung beurteilt.
+:::
+
+**2.** Zwei Beurteilende haben den Hüft-Knie-Sprunggelenk-Winkel (HKA) auf denselben 60 Röntgenaufnahmen des Knies gemessen (`radiographic_reliability.csv`, Sitzung 1). Misst die beurteilende Person 2 systematisch höher als die beurteilende Person 1? Wählen Sie den Test und führen Sie ihn durch.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+Zwei Messungen am selben Röntgenbild sind **gepaart**, und HKA-Winkel sind Messwerte, die ungefähr normalverteilt sind: der **t-Test für gepaarte Stichproben**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+readings <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
+  filter(session == 1) |>
+  select(knee_id, rater, hka_deg) |>
+  pivot_wider(names_from = rater, values_from = hka_deg)
+
+t.test(readings$R2, readings$R1, paired = TRUE)   # Person 2 minus Person 1
+```
+
+## Python
+
+```{python}
+readings = pd.read_csv("data/radiographic_reliability.csv")
+readings = readings[readings["session"] == 1].pivot(index="knee_id", columns="rater", values="hka_deg")
+hka_test = stats.ttest_rel(readings["R2"], readings["R1"])   # Person 2 minus Person 1
+print(hka_test, (readings["R2"] - readings["R1"]).mean(), hka_test.confidence_interval())
+```
+:::
+
+> **Results:** The mean difference between rater 2's and rater 1's readings was 0.50° (95% CI 0.08° to 0.93°; p = 0.022).
+
+Eine so kleine systematische Differenz spielt klinisch womöglich keine Rolle; [Seite 17](../beyond/17-agreement.qmd#bland-altman) zeigt, wie man die Übereinstimmung zwischen Beurteilenden richtig einschätzt.
+:::
+
+**3.** Patientinnen und Patienten verbessern sich in den ersten 3 Monaten stark. Verbessern sie sich zwischen 3 Monaten und 1 Jahr weiter? Testen Sie das für den KOOS JR und schreiben Sie den Results-Satz.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+Der KOOS JR hat nach 1 Jahr einen Deckeneffekt, also verwenden Sie den **Wilcoxon-Vorzeichen-Rang-Test**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+later <- proms |>
+  filter(instrument == "KOOS JR", visit %in% c("3mo", "1yr")) |>
+  select(case_id, visit, prom_score) |>
+  pivot_wider(names_from = visit, values_from = prom_score, names_prefix = "koos_") |>
+  filter(!is.na(koos_3mo), !is.na(koos_1yr))
+
+wilcox.test(later$koos_1yr, later$koos_3mo, paired = TRUE, exact = FALSE, correct = FALSE, conf.int = TRUE)
+effectsize::rank_biserial(later$koos_1yr, later$koos_3mo, paired = TRUE)
+later |> summarise(n = n(), better = sum(koos_1yr > koos_3mo), worse = sum(koos_1yr < koos_3mo))
+quantile(later$koos_3mo, c(0.25, 0.50, 0.75))
+quantile(later$koos_1yr, c(0.25, 0.50, 0.75))
+```
+
+## Python
+
+```{python}
+later = (proms[(proms["instrument"] == "KOOS JR") & proms["visit"].isin(["3mo", "1yr"])]
+         .pivot(index="case_id", columns="visit", values="prom_score").dropna())
+print(pg.wilcoxon(later["1yr"], later["3mo"], method="approx", correction=False))
+print(len(later), (later["1yr"] > later["3mo"]).sum(), (later["1yr"] < later["3mo"]).sum())
+print(later[["3mo", "1yr"]].quantile([0.25, 0.50, 0.75]))
+```
+:::
+
+> **Results:** Between 3 months and 1 year, the change in KOOS JR was positive in 176 of 225 patients and negative in 46. The median was 73.1 (IQR 65.4 to 81.5) at 3 months and 85.2 (IQR 73.6 to 93.8) at 1 year (Hodges-Lehmann estimate of the change 9.9 points, 95% CI 8.2 to 11.6; rank-biserial r = 0.74; p < 0.001).
 :::
