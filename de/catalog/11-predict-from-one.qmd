@@ -1,8 +1,918 @@
 ---
-title: "11 · Einen Wert aus einer anderen Variable vorhersagen (in Vorbereitung)"
+title: "11 · Einen Wert aus einer anderen Variable vorhersagen"
+description: "Einfache lineare und nichtlineare Regression, nichtparametrische Regression, einfache logistische Regression und Cox-Regression: wie sich eine Zielgrösse mit einem Prädiktor verändert."
+engine: knitr
+toc-depth: 2
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/catalog/11-predict-from-one.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Eine Korrelation ([Seite 10](10-association.qmd)) sagt, wie stark zwei Grössen zusammenhängen. Die **Regression** sagt, **um wie viel sich die Zielgrösse pro Einheit des Prädiktors verändert**, und erlaubt es, die Zielgrösse für eine neue Patientin oder einen neuen Patienten vorherzusagen. Welche Regression passt, hängt von der Zielgrösse ab: eine Messgrösse entlang einer Geraden oder einer Kurve, eine Messgrösse, die nicht normalverteilt ist, eine Ja/Nein-Zielgrösse oder die Zeit bis zu einem Ereignis. Bei mehreren Prädiktoren gleichzeitig siehe [Seite 12](12-predict-from-several.qmd).
+
+::: {.callout-note}
+## 💡 So funktioniert jeder Abschnitt dieser Seite
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: die Kohorte zum Gelenkersatz und die PROMs (patientenberichtete Messinstrumente), die proximale Femurfraktur für die logistische Regression, die VKB-Rekonstruktionen für die Cox-Regression. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+
+Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
+:::
+
+## Einfache lineare Regression {#linear-regression}
+
+**Die Frage:** Um wie viel länger dauert die Operation pro zusätzlichem Punkt des BMI (Body-Mass-Index)?
+
+### Wann verwenden
+
+- Die Zielgrösse ist eine **Messgrösse**, und Sie möchten wissen, wie stark sie sich **pro Einheit eines Prädiktors** verändert, oder sie vorhersagen.
+- Der Zusammenhang ist ungefähr eine **Gerade**, und die Zielgrösse jeder Patientin und jedes Patienten ist von denen der anderen unabhängig.
+- Die **Residuen** (der Abstand jeder Patientin und jedes Patienten von der Geraden) sind ungefähr normalverteilt, mit ähnlicher Streuung entlang der ganzen Geraden. Prüfen Sie das nach der Anpassung.
+- Wenn der Zusammenhang gekrümmt ist → [nichtlineare Regression](#nonlinear-regression). Wenn die Zielgrösse schief ist oder einen Deckeneffekt hat → [nichtparametrische Regression](#nonparametric-regression). Wenn sie Ja/Nein ist → [logistische Regression](#logistic-regression).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3.5
+library(tidyverse)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+
+ggplot(cohort, aes(bmi, op_time_min)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = FALSE) +   # die Gerade der kleinsten Quadrate
+  labs(x = "BMI, kg/m²", y = "Operative time, minutes")
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.formula.api as smf
+
+cohort = pd.read_csv("data/cohort.csv")
+
+fig, ax = plt.subplots(figsize=(6, 3.5))
+ax.scatter(cohort["bmi"], cohort["op_time_min"], alpha=0.4)
+slope, intercept = np.polyfit(cohort["bmi"], cohort["op_time_min"], deg=1)   # die Gerade der kleinsten Quadrate
+bmi_range = np.array([cohort["bmi"].min(), cohort["bmi"].max()])
+ax.plot(bmi_range, intercept + slope * bmi_range)
+ax.set_xlabel("BMI, kg/m²")
+ax.set_ylabel("Operative time, minutes")
+plt.show()
+```
+:::
+
+Die Punkte streuen um eine ansteigende Gerade, ohne Krümmung und ohne extreme Ausreisser.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_model <- lm(op_time_min ~ bmi, data = cohort)   # Zielgrösse ~ Prädiktor
+summary(bmi_model)
+confint(bmi_model)
+```
+
+## Python
+
+```{python}
+bmi_model = smf.ols("op_time_min ~ bmi", data=cohort).fit()   # Zielgrösse ~ Prädiktor
+print(bmi_model.summary())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"intercept": float(bmi_model.params["Intercept"]), "slope": float(bmi_model.params["bmi"]),
+       "se": float(bmi_model.bse["bmi"]), "low": float(bmi_model.conf_int().loc["bmi", 0]),
+       "high": float(bmi_model.conf_int().loc["bmi", 1]), "r2": float(bmi_model.rsquared), "f": float(bmi_model.fvalue)}
+```
+
+```{r}
+#| include: false
+bmi_fit <- summary(bmi_model)
+check_agree(list(intercept = coef(bmi_model)[["(Intercept)"]], slope = coef(bmi_model)[["bmi"]],
+                 se = bmi_fit$coefficients["bmi", "Std. Error"], low = confint(bmi_model)["bmi", 1],
+                 high = confint(bmi_model)["bmi", 2], r2 = bmi_fit$r.squared, f = unname(bmi_fit$fstatistic["value"])),
+            reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **Intercept = 42.8:** die vorhergesagte Operationsdauer bei einem BMI von 0. Das ist unmöglich, daher hat der Wert für sich allein keine Bedeutung; er verankert die Gerade.
+- **bmi = 1.37:** die **Steigung**. Jedes zusätzliche kg/m² BMI geht im Mittel mit 1.37 Minuten mehr Operationsdauer einher.
+- **Std. Error 0.11, t = 12.4, p < 0.001:** die Unsicherheit der Steigung und der Test, ob sie null ist (kein Zusammenhang).
+- **95% CI 1.15 to 1.58:** das Konfidenzintervall (KI) der Steigung (`confint()` in R; die Spalten `[0.025 0.975]` in Python).
+- **R-squared = 0.20:** Der BMI erklärt ein Fünftel der Variation der Operationsdauer.
+- **Residual standard error 14.7** (nur R): der typische Abstand der Operationsdauer einer Patientin oder eines Patienten von der Geraden, in Minuten.
+
+Bevor Sie der Geraden trauen, tragen Sie die Residuen gegen die angepassten Werte auf: Sie sollten ein Band gleichbleibender Breite um 0 bilden, ohne Krümmung.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(fitted = fitted(bmi_model), residual = resid(bmi_model)) |>
+  ggplot(aes(fitted, residual)) +
+  geom_point(alpha = 0.4) +
+  geom_hline(yintercept = 0) +
+  labs(x = "Fitted operative time, minutes", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.scatter(bmi_model.fittedvalues, bmi_model.resid, alpha=0.4)
+ax.axhline(0, color="black")
+ax.set_xlabel("Fitted operative time, minutes")
+ax.set_ylabel("Residual, minutes")
+plt.show()
+```
+:::
+
+Das tun sie hier: ein Band gleichbleibender Breite, ohne Krümmung und ohne Trichterform.
+
+### Effektstärke und 95%-KI
+
+Die **Steigung** mit ihrem 95%-KI ist die Effektstärke: 1.37 Minuten pro kg/m² (95%-KI 1.15 bis 1.58). Rechnen Sie sie auf eine klinisch bedeutsame Differenz um: 5 kg/m² BMI gehen mit 6.8 Minuten mehr einher (95%-KI 5.8 bis 7.9). **R² = 0.20** sagt, wie viel der Variation die Gerade erklärt.
+
+### Resultate formulieren
+
+> **Methods:** Operative time was modeled on BMI with simple linear regression.
+>
+> **Results:** The slope of operative time on BMI was 1.37 minutes per kg/m² (95% CI 1.15 to 1.58; p < 0.001; R² = 0.20), or 6.8 minutes (95% CI 5.8 to 7.9) per 5 kg/m².
+
+::: {.callout-warning}
+## ⚠️ Achtung: Die Gerade ist ein Mittelwert, und zwar nur innerhalb Ihrer Daten
+Die Gerade sagt die **mittlere** Operationsdauer bei jedem BMI vorher. Einzelne Patientinnen und Patienten streuen um etwa 15 Minuten nach beiden Seiten um sie (der Residualstandardfehler); für die Planung des Eingriffs bei einer einzelnen Person ist sie daher ein schlechtes Werkzeug. Und der BMI reicht hier von 18.0 bis 44.5: Verwenden Sie die Gerade nicht, um ausserhalb dieses Bereichs vorherzusagen.
+:::
+
+## Nichtlineare Regression {#nonlinear-regression}
+
+**Die Frage:** Wie schnell erholt sich der KOOS JR (Score für Knie-Gelenkersatz, Kurzform) nach einem Kniegelenkersatz, und wo flacht er ab?
+
+### Wann verwenden
+
+- Die Zielgrösse folgt einer **Kurve, deren Form Sie im Voraus kennen**, und die Zahlen der Kurve haben eine Bedeutung: hier ein Ausgangsscore, ein Plateau und eine Erholungsrate.
+- Sie geben die Formel und grobe Startwerte vor, und das Programm findet die Werte, die am besten passen (nichtlineare Methode der kleinsten Quadrate).
+- Wenn Sie die Form nicht kennen → [Splines](12-predict-from-several.qmd#multiple-nonlinear-regression) oder [LOWESS](#nonparametric-regression). Wenn es eine Gerade ist → [lineare Regression](#linear-regression).
+
+Die hier verwendete Erholungskurve:
+
+$$\text{score} = \text{plateau} - (\text{plateau} - \text{start}) \times e^{-\text{days}/\tau}$$
+
+- **start:** der Score am Tag der Operation.
+- **plateau:** das Niveau, auf dem sich der Score einpendelt.
+- **τ (tau):** die Zeitkonstante. Nach τ Tagen haben die Patientinnen und Patienten 63 % ihrer endgültigen Verbesserung erreicht, und die Hälfte der Verbesserung schon nach τ × ln 2 ≈ 0.69 τ Tagen.
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3.5
+library(tidyverse)
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+
+koos <- proms |>
+  filter(instrument == "KOOS JR", !is.na(prom_score)) |>
+  mutate(days = pmax(visit_days, 0))   # präoperative Kontrollen (1-27 Tage vor der Operation) zählen als Tag 0
+
+ggplot(koos, aes(days, prom_score)) +
+  geom_point(alpha = 0.2) +
+  labs(x = "Days since surgery", y = "KOOS JR")
+
+nrow(koos)                # Scores
+n_distinct(koos$case_id)  # Knie
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+from scipy.optimize import curve_fit
+
+proms = pd.read_csv("data/proms_long.csv")
+
+koos = proms[proms["instrument"] == "KOOS JR"].dropna(subset=["prom_score"]).copy()
+koos["days"] = koos["visit_days"].clip(lower=0)   # präoperative Kontrollen (1-27 Tage vor der Operation) zählen als Tag 0
+
+fig, ax = plt.subplots(figsize=(6, 3.5))
+ax.scatter(koos["days"], koos["prom_score"], alpha=0.2)
+ax.set_xlabel("Days since surgery")
+ax.set_ylabel("KOOS JR")
+plt.show()
+
+print(len(koos), koos["case_id"].nunique())   # Scores, Knie
+```
+:::
+
+1146 Scores von 330 Knien. Die Scores steigen in den ersten 3 Monaten steil an und danach langsamer bis zu 1 Jahr: eine Kurve, die abflacht, keine Gerade.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+recovery <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau),
+                data = koos,
+                start = list(plateau = 85, start = 50, tau = 100))   # grobe Startwerte, aus der Abbildung abgelesen
+summary(recovery)
+```
+
+## Python
+
+```{python}
+def recovery_curve(days, plateau, start, tau):
+    return plateau - (plateau - start) * np.exp(-days / tau)
+
+estimates, covariance = curve_fit(recovery_curve, koos["days"], koos["prom_score"],
+                                  p0=[85, 50, 100])   # grobe Startwerte, aus der Abbildung abgelesen
+standard_errors = np.sqrt(np.diag(covariance))
+print(pd.DataFrame({"estimate": estimates, "std_error": standard_errors}, index=["plateau", "start", "tau"]))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"plateau": float(estimates[0]), "start": float(estimates[1]), "tau": float(estimates[2]),
+       "se_plateau": float(standard_errors[0]), "se_tau": float(standard_errors[2])}
+```
+
+```{r}
+#| include: false
+recovery_coef <- summary(recovery)$coefficients
+check_agree(list(plateau = recovery_coef["plateau", "Estimate"], start = recovery_coef["start", "Estimate"],
+                 tau = recovery_coef["tau", "Estimate"], se_plateau = recovery_coef["plateau", "Std. Error"],
+                 se_tau = recovery_coef["tau", "Std. Error"]),
+            reticulate::py$chk, tol = 1e-4)   # both approximate the curve's derivatives numerically, so they agree to ~5 digits
+```
+
+### Ausgabe lesen
+
+- **plateau = 84.2:** Der KOOS JR flacht bei etwa 84 Punkten ab.
+- **start = 49.8:** der geschätzte Score am Tag der Operation.
+- **tau = 80.9:** die Zeitkonstante in Tagen.
+- **Std. Error:** die Unsicherheit jedes Schätzwerts. Die t-Werte und p-Werte prüfen, ob die jeweilige Zahl null ist, woran hier niemand zweifelt; ignorieren Sie sie.
+- **Residual standard error 12.33 on 1143 degrees of freedom** (nur R): Einzelne Scores streuen um etwa 12 Punkte um die Kurve.
+
+### Effektstärke und 95%-KI
+
+Die Zahlen der Kurve sind mit ihren 95%-KI die Effektstärken. Die Hälfte der endgültigen Verbesserung ist nach τ × ln 2 Tagen erreicht.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+confint(recovery)                       # Profil-KI; siehe den Kasten «R oder Python»
+log(2) * coef(recovery)[["tau"]]        # Tage bis zur Hälfte der endgültigen Verbesserung
+log(2) * confint(recovery)["tau", ]
+```
+
+## Python
+
+```{python}
+t_crit = stats.t.ppf(0.975, df=len(koos) - 3)   # 3 Parameter
+print(pd.DataFrame({"low": estimates - t_crit * standard_errors, "high": estimates + t_crit * standard_errors},
+                   index=["plateau", "start", "tau"]))
+print(np.log(2) * estimates[2])                  # Tage bis zur Hälfte der endgültigen Verbesserung
+```
+:::
+
+Der KOOS JR stieg von etwa 49.8 Punkten (95%-KI 48.5 bis 51.2) am Tag der Operation auf ein Plateau von 84.2 zu (95%-KI 82.6 bis 85.9). Die Hälfte der Verbesserung war nach etwa 56 Tagen erreicht, das sind 8 Wochen (95%-KI 49 bis 64).
+
+### Resultate formulieren
+
+> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery.
+>
+> **Results:** In 330 knees (1146 scores), the fitted curve gave an estimated KOOS JR of 49.8 points (95% CI 48.5 to 51.2) at surgery and a plateau of 84.2 points (95% CI 82.6 to 85.9); half of the change was reached at about 56 days (95% CI 49 to 64).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Jedes Knie kommt bis zu viermal vor
+Die nichtlineare Methode der kleinsten Quadrate behandelt die 1146 Scores wie 1146 voneinander unabhängige Patientinnen und Patienten, sie stammen aber von 330 Knien, und Scores desselben Knies hängen zusammen. Diesen Intervallen kann man daher nicht trauen: Je nach Zahl können sie zu schmal oder zu breit sein. Ein gemischtes Modell ([Seite 16](../beyond/16-mixed-models.qmd#random-intercept)) berücksichtigt das. Und wenn die Anpassung nicht konvergiert, versuchen Sie Startwerte, die näher an dem liegen, was die Abbildung zeigt.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: zwei Arten von KI
+- `nls()` in R und `curve_fit()` in scipy verwenden verschiedene Anpassungsalgorithmen, finden aber dieselben Schätzwerte und Standardfehler.
+- `confint()` in R **profiliert** die Anpassung: Es entfernt jede Zahl von ihrem Schätzwert, bis die Anpassung signifikant schlechter wird. scipy gibt nur die Standardfehler an, daher verwendet der Python-Code Schätzwert ± t × Standardfehler. Die beiden KI unterscheiden sich leicht; hier reicht das KI von τ in R von 71.0 bis 92.5 Tagen und in Python von 69.9 bis 91.8. Beides ist in Ordnung; geben Sie an, welches Sie verwendet haben.
+:::
+
+## Nichtparametrische Regression {#nonparametric-regression}
+
+**Die Frage:** Wie hängt der KOOS JR nach 1 Jahr vom KOOS JR vor der Operation ab, wenn viele Patientinnen und Patienten den Höchstwert von 100 erreichen?
+
+### Wann verwenden
+
+- Die Zielgrösse ist eine Messgrösse, die **nicht normalverteilt** ist: Sie hat einen Deckeneffekt, ist schief oder hat Ausreisser, sodass die Residuen einer Geraden nicht normalverteilt sein werden.
+- **LOWESS** (lokal gewichtete Glättung) zeichnet die Form ohne Formel: Es passt viele kleine Geraden an, jede an die Punkte in ihrer Nähe, und verbindet sie zu einer glatten Kurve. Es liefert ein Bild, keinen p-Wert.
+- Die **Theil-Sen-Steigung** ist der Median der Steigungen zwischen allen Paaren von Patientinnen und Patienten. Einige extreme Fälle verschieben sie kaum, und ihr KI beruht auf Rängen, nicht auf normalverteilten Residuen.
+- Wenn die Residuen ungefähr normalverteilt sind → [lineare Regression](#linear-regression).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3.5
+library(tidyverse)
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+
+koos_wide <- proms |>
+  filter(instrument == "KOOS JR", visit %in% c("preop", "1yr")) |>
+  select(case_id, visit, prom_score) |>
+  pivot_wider(names_from = visit, values_from = prom_score) |>   # eine Zeile pro Knie
+  rename(one_year = `1yr`) |>
+  filter(!is.na(preop), !is.na(one_year))
+
+smooth <- lowess(koos_wide$preop, koos_wide$one_year)   # LOWESS-Kurve, mit den Standardwerten von R
+
+ggplot(koos_wide, aes(preop, one_year)) +
+  geom_point(alpha = 0.4) +
+  geom_line(data = tibble(preop = smooth$x, one_year = smooth$y), linewidth = 1) +
+  labs(x = "KOOS JR before surgery", y = "KOOS JR at 1 year")
+
+nrow(koos_wide)
+sum(koos_wide$one_year == 100)   # am Höchstwert
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+from statsmodels.nonparametric.smoothers_lowess import lowess
+
+proms = pd.read_csv("data/proms_long.csv")
+
+koos_wide = (proms[(proms["instrument"] == "KOOS JR") & proms["visit"].isin(["preop", "1yr"])]
+             .pivot(index="case_id", columns="visit", values="prom_score")   # eine Zeile pro Knie
+             .dropna(subset=["preop", "1yr"]))
+
+smooth = lowess(koos_wide["1yr"], koos_wide["preop"], frac=2/3, it=3,
+                delta=0.01 * np.ptp(koos_wide["preop"]))   # die Standardwerte von lowess() in R
+
+fig, ax = plt.subplots(figsize=(6, 3.5))
+ax.scatter(koos_wide["preop"], koos_wide["1yr"], alpha=0.4)
+ax.plot(smooth[:, 0], smooth[:, 1], linewidth=2)
+ax.set_xlabel("KOOS JR before surgery")
+ax.set_ylabel("KOOS JR at 1 year")
+plt.show()
+
+print(len(koos_wide), (koos_wide["1yr"] == 100).sum())   # Knie, am Höchstwert
+```
+:::
+
+```{python}
+#| include: false
+chk = {"low_end": float(smooth[0, 1]), "middle": float(smooth[100, 1]), "high_end": float(smooth[-1, 1])}
+```
+
+```{r}
+#| include: false
+check_agree(list(low_end = smooth$y[1], middle = smooth$y[101], high_end = smooth$y[length(smooth$y)]), reticulate::py$chk)
+```
+
+246 Knie haben beide Scores, und 37 davon (15.0 %) erreichen den Höchstwert von 100 nach 1 Jahr. Die LOWESS-Kurve steigt über den Bereich der präoperativen Scores stetig von etwa 70 auf etwa 99.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+x <- koos_wide$preop
+y <- koos_wide$one_year
+n <- length(x)
+
+pairs <- combn(n, 2)                                  # jedes Paar von Knien
+dx <- x[pairs[2, ]] - x[pairs[1, ]]
+dy <- y[pairs[2, ]] - y[pairs[1, ]]
+slopes <- sort(dy[dx != 0] / dx[dx != 0])             # Paare mit demselben präoperativen Score haben keine Steigung
+ts_slope <- median(slopes)
+ts_intercept <- median(y - ts_slope * x)
+
+# Sens 95%-KI: von beiden Enden der sortierten Steigungen um einen Betrag nach innen gehen, der von der
+# Varianz von Kendalls S bestimmt wird, korrigiert für gebundene Scores (dieselbe Methode wie in scipy)
+tie_term <- function(v) { counts <- table(v); sum(counts * (counts - 1) * (2 * counts + 5)) }
+var_s <- (n * (n - 1) * (2 * n + 5) - tie_term(x) - tie_term(y)) / 18
+step <- qnorm(0.975) * sqrt(var_s)
+m <- length(slopes)
+ts_ci <- c(slopes[max(round((m - step) / 2), 1)], slopes[min(round((m + step) / 2) + 1, m)])
+
+c(intercept = ts_intercept, slope = ts_slope, low = ts_ci[1], high = ts_ci[2])
+```
+
+## Python
+
+```{python}
+koos_slope = stats.theilslopes(koos_wide["1yr"], koos_wide["preop"], method="joint")   # siehe den Kasten «R oder Python»
+print(koos_slope)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"slope": float(koos_slope.slope), "intercept": float(koos_slope.intercept),
+       "low": float(koos_slope.low_slope), "high": float(koos_slope.high_slope)}
+```
+
+```{r}
+#| include: false
+check_agree(list(slope = ts_slope, intercept = ts_intercept, low = ts_ci[1], high = ts_ci[2]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **slope = 0.39:** Jeder zusätzliche Punkt vor der Operation geht mit 0.39 Punkten mehr nach 1 Jahr einher (der Median aller paarweisen Steigungen).
+- **intercept = 65.4:** der vorhergesagte Score nach 1 Jahr bei einem präoperativen Score von 0; er verankert die Gerade.
+- **low, high** (R) oder **low_slope, high_slope** (Python): das 95%-KI für die Steigung, 0.27 bis 0.52.
+
+### Effektstärke und 95%-KI
+
+Die **Theil-Sen-Steigung** mit ihrem KI ist die Effektstärke: 0.39 Punkte nach 1 Jahr pro präoperativem Punkt (95%-KI 0.27 bis 0.52). Eine gewöhnliche Gerade der kleinsten Quadrate ergibt 0.43; die beiden würden stärker voneinander abweichen, wenn einige ungewöhnliche Patientinnen und Patienten die Gerade der kleinsten Quadrate beeinflussten.
+
+### Resultate formulieren
+
+> **Methods:** Because 1-year KOOS JR clustered at the ceiling, its relationship with pre-op KOOS JR was described with a LOWESS smoother and summarized with the Theil-Sen slope.
+>
+> **Results:** Among 246 knees, 37 (15.0%) scored 100 at 1 year. The Theil-Sen slope of the 1-year KOOS JR on the pre-op KOOS JR was 0.39 points per point (95% CI 0.27 to 0.52).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Robust schützt nicht vor einem Deckeneffekt
+Theil-Sen ist unempfindlich gegenüber Ausreissern, aber über einen Höchstwert hinaus kann man nichts erkennen: Die 37 Knie bei 100 hätten auf einer längeren Skala vielleicht mehr erreicht, daher ist die wahre Steigung am oberen Ende des Bereichs unbekannt. Und eine LOWESS-Kurve ist an ihren beiden Enden am wenigsten verlässlich, weil sie dort auf wenigen Patientinnen und Patienten beruht.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Theil-Sen in R und LOWESS-Einstellungen
+- **Theil-Sen in R:** Einige R-Packages berechnen das KI falsch, wenn Scores gebunden sind, wie es PROM-Scores immer sind (deming 1.4-1 wendet seine Korrektur für Bindungen falsch an; das KI von mblm ist viel zu schmal). Daher berechnet der R-Code die Steigung und Sens KI direkt, auf dieselbe Weise wie scipy, und die beiden stimmen exakt überein.
+- **Achsenabschnitt:** Der Standard von scipy (`method="separate"`) berechnet ihn als median(y) − Steigung × median(x). Der R-Code berechnet median(y − Steigung × x), was scipy `method="joint"` nennt. Die Steigung ist in beiden Fällen dieselbe.
+- **LOWESS:** `lowess()` in R und `lowess()` in statsmodels führen denselben Algorithmus aus, aber die Standardwerte von statsmodels sind anders (es setzt `delta` auf 0), daher schreibt der Python-Code die Einstellungen von R ausdrücklich hin. `geom_smooth()` von ggplot2 verwendet einen anderen Glätter, `loess()`, der eine ähnliche, aber nicht identische Kurve zeichnet.
+:::
+
+## Einfache logistische Regression {#logistic-regression}
+
+**Die Frage:** Steigt das Risiko, innerhalb von 30 Tagen zu versterben, mit der Zeit bis zur Operation?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **Ja/Nein** (verstorben oder nicht), und Sie möchten das **Odds Ratio** pro Einheit eines Prädiktors.
+- Sie setzt voraus, dass sich die Log-Odds geradlinig mit dem Prädiktor verändern: Jeder zusätzliche Tag Verzögerung multipliziert die Odds mit demselben Faktor.
+- Sie brauchen genug Patientinnen und Patienten mit der Zielgrösse: Als Faustregel gelten mindestens 10 pro Prädiktor.
+- Wenn die Zielgrösse die Zeit bis zu einem Ereignis ist → [Cox-Regression](#cox).
+
+### Zuerst die Daten ansehen
+
+Das Modell verwendet die Zeit bis zur Operation als Zahl, in Einheiten von 24 Stunden, sodass das Odds Ratio pro Tag Verzögerung gilt. Die Bänder dienen nur der Abbildung.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE) |>
+  mutate(hours_24 = hours_to_surgery / 24)   # Zeit in Tagen, damit das Odds Ratio pro 24 Stunden gilt
+
+by_delay <- hip_fracture |>
+  mutate(delay_band = cut(hours_to_surgery, breaks = c(-Inf, 24, 48, 72, Inf),
+                          labels = c("up to 24 h", "24 to 48 h", "48 to 72 h", "over 72 h"))) |>
+  group_by(delay_band) |>
+  summarise(n = n(), deaths = sum(death_30d), percent = 100 * mean(death_30d))
+by_delay
+
+ggplot(by_delay, aes(delay_band, percent)) +
+  geom_col() +
+  labs(x = "Time from admission to surgery", y = "Deaths within 30 days, %")
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import statsmodels.formula.api as smf
+
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
+hip_fracture["hours_24"] = hip_fracture["hours_to_surgery"] / 24   # Zeit in Tagen, damit das Odds Ratio pro 24 Stunden gilt
+
+bands = pd.cut(hip_fracture["hours_to_surgery"], bins=[-np.inf, 24, 48, 72, np.inf],
+               labels=["up to 24 h", "24 to 48 h", "48 to 72 h", "over 72 h"])
+by_delay = hip_fracture.groupby(bands, observed=True)["death_30d"].agg(n="count", deaths="sum", percent="mean")
+by_delay["percent"] = 100 * by_delay["percent"]
+print(by_delay)
+
+fig, ax = plt.subplots(figsize=(6, 3))
+bars = ax.bar(by_delay.index.astype(str), by_delay["percent"])
+ax.set_xlabel("Time from admission to surgery")
+ax.set_ylabel("Deaths within 30 days, %")
+plt.show()
+```
+:::
+
+Innerhalb von 30 Tagen starben 29 der 574 Patientinnen und Patienten, die innerhalb von 24 Stunden operiert wurden (5.1 %), und 8 der 44, die nach mehr als 72 Stunden operiert wurden (18.2 %); insgesamt 74 von 1,200.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+delay_model <- glm(death_30d ~ hours_24, family = binomial, data = hip_fracture)   # binomial = Ja/Nein-Zielgrösse
+summary(delay_model)
+```
+
+## Python
+
+```{python}
+delay_model = smf.logit("death_30d ~ hours_24", data=hip_fracture).fit(disp=False)   # disp=False: keine Meldungen zur Anpassung
+print(delay_model.summary())
+```
+:::
+
+```{python}
+#| include: false
+wald = delay_model.conf_int()
+chk = {"coef": float(delay_model.params["hours_24"]), "se": float(delay_model.bse["hours_24"]),
+       "p": float(delay_model.pvalues["hours_24"]), "low": float(wald.loc["hours_24", 0]), "high": float(wald.loc["hours_24", 1])}
+```
+
+```{r}
+#| include: false
+delay_coef <- summary(delay_model)$coefficients
+check_agree(list(coef = delay_coef["hours_24", "Estimate"], se = delay_coef["hours_24", "Std. Error"], p = delay_coef["hours_24", "Pr(>|z|)"],
+                 low = confint.default(delay_model)["hours_24", 1], high = confint.default(delay_model)["hours_24", 2]),
+            reticulate::py$chk, tol = 1e-4)   # glm() stops once the deviance settles, a step before statsmodels does
+```
+
+### Ausgabe lesen
+
+- **hours_24 = 0.41:** die Veränderung der **Log-Odds** des Todes innerhalb von 30 Tagen pro 24 Stunden Verzögerung. Log-Odds sind schwer zu lesen, wandeln Sie den Koeffizienten daher in ein Odds Ratio um (nächster Schritt).
+- **Std. Error 0.11, z = 3.78, p < 0.001:** der Test, ob die Zeit bis zur Operation überhaupt eine Rolle spielt.
+- **Intercept = −3.29:** die Log-Odds bei einer Operation direkt bei Eintritt (0 Stunden), die die Gerade nur verankern.
+- **Null and residual deviance** (R) oder **LLR p-value** (Python): wie viel besser das Modell mit der Zeit bis zur Operation passt als ohne sie.
+
+### Effektstärke und 95%-KI
+
+Das **Odds Ratio** ist e hoch dem Koeffizienten.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+exp(cbind(odds_ratio = coef(delay_model), confint(delay_model)))   # Profil-KI; siehe den Kasten «R oder Python»
+```
+
+## Python
+
+```{python}
+odds_ratios = np.exp(pd.concat([delay_model.params, delay_model.conf_int()], axis=1))   # Wald-KI
+odds_ratios.columns = ["odds_ratio", "low", "high"]
+print(odds_ratios)
+```
+:::
+
+Je 24 Stunden Verzögerung multiplizierten sich die Odds des Todes innerhalb von 30 Tagen mit 1.50 (95%-KI 1.21 bis 1.85).
+
+### Resultate formulieren
+
+> **Methods:** The association between time from admission to surgery and death within 30 days was estimated with logistic regression, with time in 24-hour units.
+>
+> **Results:** Within 30 days, 74 of 1,200 patients died (6.2%). The odds ratio for death per 24 hours of delay to surgery was 1.50 (95% CI 1.21 to 1.85; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Eine Gerade auf der Log-Odds-Skala ist eine Annahme
+Das Modell sagt, dass jede Verzögerung um 24 Stunden die Odds mit demselben Faktor 1.50 multipliziert. Das ist eine Annahme, und die Bänder oben können sie nicht von Auge prüfen. Das letzte Band ist nach oben offen: Seine Patientinnen und Patienten warteten im Mittel 97 Stunden, sodass eine Gerade seine höhere Rate bereits vorhersagt (17.2 % laut Modell, 18.2 % beobachtet). Um die Form zu prüfen, lassen Sie den Effekt sich krümmen und vergleichen Sie die beiden Anpassungen, wie es [Übung 3 auf Seite 12](12-predict-from-several.qmd#exercises) mit [Splines](12-predict-from-several.qmd#multiple-nonlinear-regression) tut. Ein Odds Ratio ist kein relatives Risiko: Beide liegen nur dann nahe beieinander, wenn die Zielgrösse selten ist, wie hier (6.2 %). Und es ist kein Beweis für eine Ursache: Patientinnen und Patienten, die für eine Operation zu krank sind, warten womöglich länger, und sie würden häufiger sterben, wann immer sie operiert würden.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Profil-Likelihood-KI und Wald-KI
+`confint()` in R verwendet bei einem `glm()` das **Profil** der Likelihood, was in kleinen Stichproben genauer ist. `conf_int()` in statsmodels verwendet die einfachere **Wald**-Methode (Schätzwert ± 1.96 Standardfehler), die hier 1.22 bis 1.86 ergibt; `confint.default()` in R tut dasselbe. Geben Sie an, welche Sie verwendet haben.
+:::
+
+## Cox-Regression {#cox}
+
+**Die Frage:** Steigt der Hazard eines Transplantatversagens beim vorderen Kreuzband mit dem posterioren tibialen Slope?
+
+### Wann verwenden
+
+- Die Zielgrösse ist die **Zeit bis zu einem Ereignis** (Transplantatversagen), und der Prädiktor ist eine **Messgrösse** (tibialer Slope).
+- Die Cox-Regression gibt ein **Hazard Ratio pro Einheit** des Prädiktors an. Wählen Sie eine Einheit, die etwas bedeutet: hier pro Grad.
+- Sie setzt voraus, dass das Hazard Ratio über die Zeit gleich bleibt (**proportionale Hazards**) und dass sich der Log-Hazard geradlinig mit dem Slope verändert. [Seite 14](../survival/14-cox-regression.qmd) zeigt, wie man beides prüft, und behandelt die Cox-Regression ausführlich.
+- Todesfälle werden in jedem Cox-Modell für ein anderes Ereignis zensiert. Bei jungen VKB-Patientinnen und -Patienten, die während der Nachbeobachtung selten sterben, spielt das kaum eine Rolle. Bei älteren Personen schon: Das Hazard Ratio beschreibt dann die Rate unter den Patientinnen und Patienten, die noch leben, und die tatsächliche Wahrscheinlichkeit des Ereignisses für eine einzelne Person erfordert die [kumulative Inzidenz](../survival/13-kaplan-meier.qmd#competing-risks) oder ein [Fine-Gray-Modell](../survival/14-cox-regression.qmd#fine-gray).
+
+### Zuerst die Daten ansehen
+
+Die Aufteilung des Slopes in zwei Gruppen dient nur der Abbildung; das Modell verwendet den Slope als Zahl.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 4.5
+library(tidyverse)
+library(survival)
+library(ggsurvfit)
+
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE) |>
+  mutate(slope_group = if_else(tibial_slope_deg >= 12, "12° or more", "under 12°"))   # nur für die Abbildung
+
+survfit2(Surv(followup_years, graft_failure) ~ slope_group, data = acl, conf.type = "log-log") |>
+  ggsurvfit() +
+  add_risktable() +
+  scale_ggsurvfit() +
+  labs(x = "Years since reconstruction", y = "Graft survival")
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from lifelines import KaplanMeierFitter, CoxPHFitter
+from lifelines.plotting import add_at_risk_counts
+
+acl = pd.read_csv("data/acl_cohort.csv")
+acl["slope_group"] = acl["tibial_slope_deg"].map(lambda slope: "12° or more" if slope >= 12 else "under 12°")   # nur für die Abbildung
+
+fig, ax = plt.subplots(figsize=(7, 4.5))
+curves = []
+for group_name, group in acl.groupby("slope_group"):
+    km = KaplanMeierFitter(label=group_name).fit(group["followup_years"], group["graft_failure"])
+    km.plot_survival_function(ax=ax, ci_show=False)
+    curves.append(km)
+ax.set_xlabel("Years since reconstruction")
+ax.set_ylabel("Graft survival")
+add_at_risk_counts(*curves, ax=ax)
+plt.tight_layout()
+plt.show()
+```
+:::
+
+11 der 73 Rekonstruktionen mit einem Slope von 12° oder mehr versagten, und 20 der 277 mit einem kleineren Slope.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+slope_cox <- coxph(Surv(followup_years, graft_failure) ~ tibial_slope_deg, data = acl)
+summary(slope_cox)
+```
+
+## Python
+
+```{python}
+slope_cox = CoxPHFitter().fit(acl[["followup_years", "graft_failure", "tibial_slope_deg"]],
+                              duration_col="followup_years", event_col="graft_failure",
+                              fit_options={"precision": 1e-9})
+print(slope_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
+print(slope_cox.log_likelihood_ratio_test().test_statistic)   # globaler Likelihood-Quotienten-Test
+```
+:::
+
+```{python}
+#| include: false
+row = slope_cox.summary.loc["tibial_slope_deg"]
+chk = {"hr": float(row["exp(coef)"]), "low": float(row["exp(coef) lower 95%"]), "high": float(row["exp(coef) upper 95%"]),
+       "p": float(row["p"]), "lr": float(slope_cox.log_likelihood_ratio_test().test_statistic)}
+```
+
+```{r}
+#| include: false
+slope_hr <- summary(slope_cox)$conf.int
+check_agree(list(hr = slope_hr["tibial_slope_deg", "exp(coef)"], low = slope_hr["tibial_slope_deg", "lower .95"],
+                 high = slope_hr["tibial_slope_deg", "upper .95"],
+                 p = summary(slope_cox)$coefficients["tibial_slope_deg", "Pr(>|z|)"], lr = unname(summary(slope_cox)$logtest["test"])),
+            reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **exp(coef) = 1.27:** das Hazard Ratio pro Grad tibialem Slope: Der Hazard eines Transplantatversagens ist 1.27-mal so hoch, wenn der Slope um 1° steiler ist.
+- **lower .95 / upper .95 = 1.09 to 1.48:** das 95%-KI, das 1 (kein Unterschied) ausschliesst.
+- **Pr(>|z|) = 0.002:** der p-Wert für den Slope.
+- **Likelihood ratio test = 10.1 on 1 df, p = 0.002:** der Gesamttest; bei einem Prädiktor sagt er dasselbe wie der p-Wert für den Slope.
+- **Concordance = 0.67** (nur R): wie oft das Modell die Zeiten bis zum Transplantatversagen zweier Patientinnen oder Patienten richtig ordnet. 0.5 ist ein Münzwurf, der Slope allein ist also besser als ein Münzwurf, aber weit von einer Vorhersage für eine einzelne Person entfernt.
+
+### Effektstärke und 95%-KI
+
+Das **Hazard Ratio pro Grad**, 1.27 (95%-KI 1.09 bis 1.48), ist die Effektstärke. Hazard Ratios multiplizieren sich: Ein um 5° steilerer Slope bringt den 3.37-fachen Hazard mit sich (95%-KI 1.57 bis 7.21), berechnet aus dem ungerundeten Hazard Ratio.
+
+### Resultate formulieren
+
+> **Methods:** The association between posterior tibial slope and ACL graft failure was estimated with Cox proportional hazards regression, with slope in degrees.
+>
+> **Results:** The hazard ratio for graft failure per degree of posterior tibial slope was 1.27 (95% CI 1.09 to 1.48; p = 0.002), with 31 failures in 350 reconstructions.
+
+::: {.callout-warning}
+## ⚠️ Achtung: Ein Hazard Ratio ist kein Behandlungseffekt
+Der Slope wurde nicht zugeteilt: Patientinnen und Patienten mit einem steilen Slope können sich auch in anderen Punkten unterscheiden. Ein Hazard Ratio von 1.27 pro Grad zeigt nicht, dass eine Osteotomie, die den Slope um 1° verringert, den Hazard um so viel senken würde. Das kann nur eine Studie zur Osteotomie selbst zeigen. Bei 31 Transplantatversagen kann dieses Modell etwa drei Terme tragen ([Seite 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: lifelines hört zu früh auf
+lifelines hört standardmässig etwas zu früh mit dem Iterieren auf, daher verschärft der Python-Code die Regel mit `fit_options={"precision": 1e-9}`. Hier ändert das nichts Sichtbares; auf Seite 12 schon.
+:::
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+bmi_ci <- confint(bmi_model)
+recovery_ci <- confint(recovery)
+delay_ci <- exp(confint(delay_model))
+delay_wald <- exp(confint.default(delay_model))
+koos_ls <- coef(lm(one_year ~ preop, data = koos_wide))
+ex_age <- lm(op_time_min ~ age, data = cohort)
+ex_death <- glm(death_30d ~ I(age / 10), family = binomial, data = hip_fracture)
+ex_hoos <- proms |> filter(instrument == "HOOS JR", !is.na(prom_score)) |> mutate(days = pmax(visit_days, 0))
+ex_hoos_fit <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau), data = ex_hoos,
+                   start = list(plateau = 85, start = 50, tau = 100))
+ex_hoos_ci <- confint(ex_hoos_fit)
+last_band <- hip_fracture$hours_to_surgery > 72   # the open-ended band of the logistic table
+stopifnot(
+  sum(table(cohort$patient_id) == 2) == 80, nrow(cohort) == 600,
+  round(coef(bmi_model), 2) == c(42.83, 1.37), round(bmi_fit$coefficients["bmi", "Std. Error"], 2) == 0.11,
+  round(bmi_fit$coefficients["bmi", "t value"], 1) == 12.4, bmi_fit$coefficients["bmi", "Pr(>|t|)"] < 0.001,
+  round(bmi_ci["bmi", ], 2) == c(1.15, 1.58), round(bmi_fit$r.squared, 2) == 0.20, round(bmi_fit$sigma, 1) == 14.7,
+  round(5 * coef(bmi_model)[["bmi"]], 1) == 6.8, round(5 * bmi_ci["bmi", ], 1) == c(5.8, 7.9),
+  range(cohort$bmi) == c(18.0, 44.5),
+  range(proms$visit_days[proms$visit == "preop"], na.rm = TRUE) == c(-27, -1),
+  nrow(koos) == 1146, n_distinct(koos$case_id) == 330,
+  round(recovery_coef[, "Estimate"], 1) == c(84.2, 49.8, 80.9), round(summary(recovery)$sigma, 2) == 12.33,
+  df.residual(recovery) == 1143,
+  round(recovery_ci["plateau", ], 1) == c(82.6, 85.9), round(recovery_ci["start", ], 1) == c(48.5, 51.2),
+  round(recovery_ci["tau", ], 1) == c(71.0, 92.5),
+  round(log(2) * coef(recovery)[["tau"]]) == 56, round(log(2) * recovery_ci["tau", ]) == c(49, 64),
+  round(log(2) * coef(recovery)[["tau"]] / 7) == 8, round(1 - exp(-1), 2) == 0.63, round(log(2), 2) == 0.69,
+  round(recovery_coef["tau", "Estimate"] + c(-1, 1) * qt(0.975, 1143) * recovery_coef["tau", "Std. Error"], 1) == c(69.9, 91.8),
+  nrow(koos_wide) == 246, sum(koos_wide$one_year == 100) == 37, round(100 * mean(koos_wide$one_year == 100), 1) == 15.0,
+  round(smooth$y[1]) == 70, round(smooth$y[length(smooth$y)]) == 99,
+  round(c(ts_intercept, ts_slope), 2) == c(65.39, 0.39), round(ts_ci, 2) == c(0.27, 0.52),
+  round(koos_ls[["preop"]], 2) == 0.43,
+  nrow(hip_fracture) == 1200, sum(hip_fracture$death_30d) == 74, round(100 * mean(hip_fracture$death_30d), 1) == 6.2,
+  round(delay_coef["hours_24", c("Estimate", "Std. Error", "z value")], 2) == c(0.41, 0.11, 3.78),
+  round(delay_coef["(Intercept)", "Estimate"], 2) == -3.29, delay_coef["hours_24", "Pr(>|z|)"] < 0.001,
+  round(exp(coef(delay_model))[["hours_24"]], 2) == 1.50, round(delay_ci["hours_24", ], 2) == c(1.21, 1.85),
+  round(delay_wald["hours_24", ], 2) == c(1.22, 1.86),
+  round(mean(hip_fracture$hours_to_surgery[last_band])) == 97,
+  round(100 * mean(fitted(delay_model)[last_band]), 1) == 17.2,
+  round(100 * mean(hip_fracture$death_30d[last_band]), 1) == 18.2,
+  31 %/% 10 == 3,
+  by_delay$n == c(574, 460, 122, 44), by_delay$deaths == c(29, 29, 8, 8),
+  round(by_delay$percent[c(1, 4)], 1) == c(5.1, 18.2),
+  nrow(acl) == 350, sum(acl$graft_failure) == 31,
+  sum(acl$tibial_slope_deg >= 12) == 73, sum(acl$graft_failure[acl$tibial_slope_deg >= 12]) == 11,
+  sum(acl$tibial_slope_deg < 12) == 277, sum(acl$graft_failure[acl$tibial_slope_deg < 12]) == 20,
+  round(slope_hr["tibial_slope_deg", c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.27, 1.09, 1.48),
+  round(summary(slope_cox)$coefficients["tibial_slope_deg", "Pr(>|z|)"], 3) == 0.002,
+  round(unname(summary(slope_cox)$logtest["test"]), 1) == 10.1, round(unname(summary(slope_cox)$logtest["pvalue"]), 3) == 0.002,
+  round(unname(summary(slope_cox)$concordance[1]), 2) == 0.67,
+  round(exp(5 * coef(slope_cox))[["tibial_slope_deg"]], 2) == 3.37,
+  round(exp(5 * confint(slope_cox))["tibial_slope_deg", ], 2) == c(1.57, 7.21),
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(coef(ex_age)[["age"]], 2) == 0.24, round(confint(ex_age)["age", ], 2) == c(0.11, 0.38),
+  summary(ex_age)$coefficients["age", "Pr(>|t|)"] < 0.001, round(summary(ex_age)$r.squared, 2) == 0.02,
+  round(exp(coef(ex_death))[[2]], 2) == 1.88, round(exp(confint(ex_death))[2, ], 2) == c(1.34, 2.67),
+  summary(ex_death)$coefficients[2, "Pr(>|z|)"] < 0.001,
+  nrow(ex_hoos) == 906, n_distinct(ex_hoos$case_id) == 270,
+  round(coef(ex_hoos_fit), 1) == c(87.9, 45.6, 53.4),
+  round(ex_hoos_ci["plateau", ], 1) == c(86.3, 89.4), round(ex_hoos_ci["start", ], 1) == c(44.2, 46.9),
+  round(log(2) * coef(ex_hoos_fit)[["tau"]]) == 37, round(log(2) * ex_hoos_ci["tau", ]) == c(33, 41)
+)
+```
+
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Wie stark verändert sich die Operationsdauer mit dem **Alter**? Passen Sie eine einfache lineare Regression an und berichten Sie die Steigung mit ihrem 95%-KI.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+age_time <- lm(op_time_min ~ age, data = cohort)
+summary(age_time)$coefficients
+confint(age_time)
+summary(age_time)$r.squared
+```
+
+## Python
+
+```{python}
+age_time = smf.ols("op_time_min ~ age", data=cohort).fit()
+print(age_time.params, age_time.conf_int(), age_time.rsquared, sep="\n")
+```
+:::
+
+> **Results:** The slope of operative time on age was 0.24 minutes per year (95% CI 0.11 to 0.38; p < 0.001; R² = 0.02).
+
+Das sind etwa 2.4 Minuten pro Jahrzehnt, und das Alter erklärt nur 2 % der Variation, gegenüber 20 % beim BMI.
+:::
+
+**2.** Eine Kollegin fragt, ob ältere Patientinnen und Patienten mit einer proximalen Femurfraktur häufiger innerhalb von 30 Tagen versterben. Welche Regression würden Sie verwenden, und was finden Sie?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+Die Zielgrösse ist Ja/Nein und der Prädiktor eine Messgrösse: **einfache logistische Regression**. 74 Todesfälle sind für einen Prädiktor mehr als genug.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+hip_fracture <- hip_fracture |> mutate(age_10 = age / 10)   # Alter in Jahrzehnten, damit das Odds Ratio pro 10 Jahre gilt
+death_model <- glm(death_30d ~ age_10, family = binomial, data = hip_fracture)
+exp(cbind(odds_ratio = coef(death_model), confint(death_model)))
+summary(death_model)$coefficients
+```
+
+## Python
+
+```{python}
+hip_fracture["age_10"] = hip_fracture["age"] / 10   # Alter in Jahrzehnten, damit das Odds Ratio pro 10 Jahre gilt
+death_model = smf.logit("death_30d ~ age_10", data=hip_fracture).fit(disp=False)
+death_ors = np.exp(pd.concat([death_model.params, death_model.conf_int()], axis=1))
+death_ors.columns = ["odds_ratio", "low", "high"]
+print(death_ors, death_model.pvalues, sep="\n")
+```
+:::
+
+> **Results:** The odds ratio for death within 30 days per 10 years of age was 1.88 (95% CI 1.34 to 2.67; p < 0.001).
+
+Das KI ist das Profil-Likelihood-KI von R.
+:::
+
+**3.** Passen Sie die Erholungskurve an den **HOOS JR** (Score für Hüft-Gelenkersatz, Kurzform) an, den Score nach Hüftgelenkersatz, und schreiben Sie den Results-Satz.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+hoos <- proms |>
+  filter(instrument == "HOOS JR", !is.na(prom_score)) |>
+  mutate(days = pmax(visit_days, 0))
+hip_recovery <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau),
+                    data = hoos, start = list(plateau = 85, start = 50, tau = 100))
+coef(hip_recovery)
+confint(hip_recovery)
+log(2) * confint(hip_recovery)["tau", ]
+c(scores = nrow(hoos), hips = n_distinct(hoos$case_id))
+```
+
+## Python
+
+```{python}
+hoos = proms[proms["instrument"] == "HOOS JR"].dropna(subset=["prom_score"]).copy()
+hoos["days"] = hoos["visit_days"].clip(lower=0)
+hip_estimates, hip_covariance = curve_fit(recovery_curve, hoos["days"], hoos["prom_score"], p0=[85, 50, 100])
+print(hip_estimates, np.sqrt(np.diag(hip_covariance)), np.log(2) * hip_estimates[2])
+print(len(hoos), hoos["case_id"].nunique())
+```
+:::
+
+> **Results:** In 270 hips (906 scores), the fitted curve gave an estimated HOOS JR of 45.6 points (95% CI 44.2 to 46.9) at surgery and a plateau of 87.9 points (95% CI 86.3 to 89.4); half of the change was reached at about 37 days (95% CI 33 to 41).
+
+Hüften scheinen sich schneller zu erholen als Knie (die Hälfte der Verbesserung nach etwa 5 Wochen statt nach 8). Um diesen Unterschied zu prüfen, passen Sie beide in einem Modell an ([Seite 12](12-predict-from-several.qmd#multiple-nonlinear-regression)).
 :::
