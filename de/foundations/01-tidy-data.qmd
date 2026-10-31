@@ -99,7 +99,7 @@ Die häufigsten unordentlichen Muster in Erhebungstabellen und die jeweilige Lö
 
 ## Aufgeräumte Daten erheben {#collecting}
 
-Am billigsten ist das Aufräumen, das gar nicht nötig wird. Bevor jemand eine einzige Krankengeschichte auswertet, schreiben Sie das **Datenwörterbuch**: Name, Bedeutung, Typ, Einheit und erlaubte Werte jeder Variable. Danach bauen Sie das Erhebungsblatt aus dem Wörterbuch.
+Am billigsten ist das Aufräumen, das gar nicht nötig wird. Bevor jemand auch nur aus einer Krankengeschichte Daten erhebt, schreiben Sie das **Datenwörterbuch**: Name, Bedeutung, Typ, Einheit und erlaubte Werte jeder Variable. Danach bauen Sie das Datenerhebungsblatt aus dem Datenwörterbuch.
 
 Diese Website enthält eine vorbereitete Vorlage, die Sie kopieren können: [`templates/data-collection-template.xlsx`](https://github.com/hfr-ortho/stats-formation/raw/main/templates/data-collection-template.xlsx). Sie hat vier Tabellenblätter:
 
@@ -314,7 +314,7 @@ check_agree(list(missing_bmi = sum(is.na(step3$bmi))), reticulate::py$chk)
 ```
 
 ::: {.callout-warning}
-## ⚠️ Achtung: `999` ist nur dann ein Code für fehlende Werte, wenn Ihr Wörterbuch das so festlegt
+## ⚠️ Achtung: `999` ist nur dann ein Code für fehlende Werte, wenn Ihr Datenwörterbuch das so festlegt
 In diesem Tabellenblatt bedeutet `999` in Zahlenspalten «fehlend». In einem anderen Blatt kann es ein echter Wert sein. Tragen Sie jeden Code für fehlende Werte ins Datenwörterbuch ein, *bevor* die Erhebung beginnt.
 :::
 
@@ -695,7 +695,7 @@ print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age"
 
 ### Wie eine Prüfung aussieht, die anschlägt {#what-a-failing-check-looks-like}
 
-Angenommen, wir hätten die Operationsdaten versehentlich mit dem Monat zuerst gelesen (amerikanischer Stil, wie in vielen Beispielen im Internet). Nichts stürzt ab. Zwei Prüfungen finden den Fehler: das Zählen der fehlenden Werte (Prüfung 2, auf die Datumsangaben angewendet) und eine neue Logikprüfung, ob jede präoperative PROM innerhalb eines Monats vor der Operation liegt.
+Angenommen, wir hätten die Datumsangaben der Operationen versehentlich mit dem Monat zuerst gelesen (amerikanischer Stil, wie in vielen Beispielen im Internet). Nichts stürzt ab. Zwei Prüfungen finden den Fehler: das Zählen der fehlenden Werte (Prüfung 2, auf die Datumsangaben angewendet) und eine neue Logikprüfung, ob jede präoperative PROM innerhalb eines Monats vor der Operation liegt.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -741,8 +741,8 @@ assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 
 Beim richtigen Einlesen fehlt nichts, und jede präoperative PROM liegt in ihrem Zeitfenster. Die Versionen mit dem Monat zuerst gehen auf verschiedene Arten schief:
 
-- **R** kann Datumsangaben wie `"13.01.15"` nicht mit dem Monat zuerst lesen (einen 13. Monat gibt es nicht), darum fehlen 30 Operationsdaten. Andere, etwa `"04.03.24"`, werden «erfolgreich» als 3. April statt als 4. März eingelesen, und die Fensterprüfung meldet 12 davon.
-- **pandas** liefert hier nie ein fehlendes Datum: Wenn der Monat zuerst unmöglich ist, wechselt es stillschweigend zum Tag zuerst. So kommt `"13.01.15"` durch Zufall richtig heraus, während `"04.03.24"` zum 3. April wird. Nur die Fensterprüfung bemerkt es: Sie meldet 12 Datumsangaben.
+- **R** kann Datumsangaben wie `"13.01.15"` nicht mit dem Monat zuerst lesen (einen 13. Monat gibt es nicht), darum fehlen 30 Datumsangaben der Operationen. Andere, etwa `"04.03.24"`, werden «erfolgreich» als 3. April statt als 4. März eingelesen, und die Prüfung des Zeitfensters meldet 12 davon.
+- **pandas** liefert hier nie ein fehlendes Datum: Wenn der Monat zuerst unmöglich ist, wechselt es stillschweigend zum Tag zuerst. So kommt `"13.01.15"` durch Zufall richtig heraus, während `"04.03.24"` zum 3. April wird. Nur die Prüfung des Zeitfensters bemerkt es: Sie meldet 12 Datumsangaben.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: eine einzige Prüfung genügt nie
