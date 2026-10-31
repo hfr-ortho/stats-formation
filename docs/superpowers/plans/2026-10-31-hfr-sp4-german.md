@@ -43,6 +43,10 @@
 - **Hüft-TP and Knie-TP** (Doc, 31.10.2026), not TEP.
 - **Hidden chunks stay byte-identical,** including English comments.
 
+## Deviations
+
+Reviewers found slips in the source, so `en/` and `fr/` carry a few corrected teaching sentences: hazard, not risk, in four sentences (pages 6 (two), 8 and 13); the hazard definition; page 8's p-value bullet; the omnibus sentence on page 9; degrees of freedom on page 10; a CI's unit on page 11; `accumulate` on page 15; procedures, not patients, on page 13; `8.47 times as high` on page 14; and `IQR 0 to 1` on page 2. `de/report/_metadata.yml` keeps the manuscript's "Table" and "Figure" labels.
+
 ---
 
 ### Task 1: Glossary, guide, tests and the spec for German
@@ -232,7 +236,7 @@ Expected: all pass; lychee 0 errors.
 - [ ] **Step 5: Prove the other languages didn't move**
 
 Run: `git diff --stat e95336b -- en fr _freeze/en _freeze/fr`
-Expected: nothing.
+Expected: only the corrected source sentences listed under Deviations.
 
 - [ ] **Step 6: Commit**
 

@@ -504,7 +504,7 @@ FUNCTION_WORDS = {
 # Names a reader would look up under another word than the rule finds.
 SORT_AS = {"Test d'adéquation du khi-deux": "khi-deux", "Vérification des risques proportionnels": "risques proportionnels"}
 # German: the Welch t-test is one of the t-tests, so it sits with them, not under "nach Welch".
-SORT_AS_DE = {"t-Test nach Welch": "t"}
+SORT_AS_DE = {"t-Test nach Welch": "t", "t-Test nach Student": "t"}
 
 
 def sort_key(row: str, generic: set, function_words: set, german: bool = False) -> str:
@@ -552,6 +552,7 @@ def test_german_sort_key_finds_the_distinctive_name():
     assert key("Paarweise Log-Rank-Tests (*x*)") == "log-rank"
     assert key("Paarweise exakte Tests nach Fisher (*x*)") == "fisher"
     assert key("t-Test nach Welch (*Welch's t test*)") == "t"
+    assert key("t-Test nach Student (*Student's t test*)") == "t"
     assert key("Exakter Test nach Welch (*x*)") == "welch"     # only the listed name is sorted as another
 
 
@@ -667,6 +668,9 @@ def typography_problems(tr: str) -> list[str]:
 
 
 GERMAN_PLAIN_SPACE_BEFORE_PERCENT = re.compile(r" %")
+# A digit glued to %. Compounds (95%-KI, 5%-Niveau) and printed output (95% CI) are fine, and so are English
+# model answers (a line that opens with a quote) and page 18's English manuscript (outside its html-only divs).
+GERMAN_GLUED_PERCENT = re.compile(r"\d%(?!-|\s*CI\b)")
 GERMAN_QUOTES = re.compile("[„“”‚‘]")
 GUILLEMET_PADDING = re.compile(r"«\s|\s»")
 
@@ -674,9 +678,11 @@ GUILLEMET_PADDING = re.compile(r"«\s|\s»")
 def german_typography_problems(tr: str) -> list[str]:
     """German prose wants a non-breaking space before % (the compound 95%-KI has none), « » quotes as
     in Swiss usage and no space inside them."""
+    english = set(split_by_format(tr)[1]) if HTML_ONLY in tr else set()
     return [f"{line.strip()[:70]!r}" for line, text in typography_lines(tr)
             if GERMAN_PLAIN_SPACE_BEFORE_PERCENT.search(text) or GERMAN_QUOTES.search(text)
-            or GUILLEMET_PADDING.search(text)]
+            or GUILLEMET_PADDING.search(text)
+            or (GERMAN_GLUED_PERCENT.search(text) and not line.startswith('"') and line not in english)]
 
 
 def test_german_typography():
@@ -1210,6 +1216,12 @@ def test_german_typography_rule():
     assert german_typography_problems("Das sogenannte « Modell ».\n")                # space inside « »
     assert german_typography_problems("Es sind 12\u00a0% im «Modell».\n") == []
     assert german_typography_problems("Das 95%-KI reicht von 1 bis 2.\n") == []
+    assert german_typography_problems("Ein Test auf dem 5%-Niveau.\n") == []
+    assert german_typography_problems("Es sind 57% der Fälle.\n")                   # digit glued to %
+    assert german_typography_problems('"Es waren 57% Frauen."\n') == []              # an English model answer
+    assert german_typography_problems(f"The 57% were women.\n\n{HTML_ONLY}\nText\n:::\n") == []          # the English manuscript
+    assert german_typography_problems(f"Manuskript.\n\n{HTML_ONLY}\nEs sind 57% der Fälle.\n:::\n")    # German prose inside the html div counts
+    assert german_typography_problems("Ausgabe: **95% CI 64.8 to 66.3**.\n") == []     # printed output stays verbatim
 
 
 def test_german_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
@@ -1224,7 +1236,7 @@ def test_german_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
 
 
 def test_german_prose_uses_sie():
-    # every German page, the home page included: it is exempt only from comparison with English
+    # every German page, the home page included (translated_pages() compares it with English as well)
     found = {str(tr.relative_to(ROOT)): duzen(tr.read_text(encoding="utf-8")) for tr in german_pages()}
     assert {k: v for k, v in found.items() if v} == {}
 
