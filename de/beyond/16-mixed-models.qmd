@@ -1,8 +1,574 @@
 ---
-title: "16 · Gemischte Modelle für wiederholte PROMs (in Vorbereitung)"
+title: "16 · Gemischte Modelle für wiederholte PROMs"
+description: "PROMs zu mehreren Kontrollen, auch bei Patientinnen und Patienten, die einzelne verpasst haben: zufällige Achsenabschnitte, Zeit als Kategorien oder als Kurve, Gruppe × Zeit und geschätzte Randmittel."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/beyond/16-mixed-models.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+PROMs (patientenberichtete Messinstrumente) werden bei mehreren Kontrollen erhoben, und Patientinnen und Patienten verpassen einige davon. [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) hat wiederholte Scores mit der ANOVA mit Messwiederholung analysiert, die nur Patientinnen und Patienten verwendet, die bei jeder Kontrolle gemessen wurden. Ein **lineares gemischtes Modell** verwendet jeden Score jeder Patientin und jedes Patienten und beantwortet die Fragen, die eine PROM-Studie üblicherweise stellt: Wie stark verbessern sich die Patientinnen und Patienten, bis wann, und unterscheidet sich die Erholung zwischen Gruppen?
+
+Die Beispiele verwenden den KOOS JR (Score für Knie-Gelenkersatz, Kurzform) bei den 330 Knie-TP. Hüften beantworten einen anderen Fragebogen (HOOS JR, Score für Hüft-Gelenkersatz, Kurzform), und ein Punkt auf dem einen ist nicht zwingend gleich viel wert wie ein Punkt auf dem anderen; deshalb werden die beiden nicht in einem Modell vermischt. Das letzte Beispiel, ob sich die Erholung zwischen Gruppen unterscheidet, verwendet den EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) aus der Studie zu Walker und Gips von [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), die ebenfalls vier Kontrollen hat.
+
+::: {.callout-note}
+## 💡 So funktioniert diese Seite
+Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages, Daten und Modelle, die zuvor erstellt wurden.
+
+Bis zum Abschnitt über [Patientinnen und Patienten mit beidseitiger Operation](#bilateral) wird jedes Knie als eigener Fall behandelt.
+:::
+
+## Warum nicht ANOVA mit Messwiederholung? {#why-mixed-models}
+
+Zählen Sie, für wie viele der vier Kontrollen jedes Knie einen Score hat:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(lmerTest)        # lmer() von lme4, plus p-Werte für die festen Effekte
+library(emmeans)         # geschätzte Randmittel
+library(splines)         # natürliche kubische Splines, für die Zeit als Kurve
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+
+knees <- proms |>
+  filter(instrument == "KOOS JR", !is.na(prom_score)) |>          # jeder vorhandene Knie-Score
+  mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+
+knees |>
+  count(case_id, name = "visits") |>            # Scores pro Knie
+  count(visits, name = "knees")                 # Knie mit 1, 2, 3 oder 4 Scores
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import patsy
+import matplotlib.pyplot as plt
+import statsmodels.formula.api as smf
+
+proms = pd.read_csv("data/proms_long.csv")
+
+knees = proms[(proms["instrument"] == "KOOS JR") & proms["prom_score"].notna()].copy()    # jeder vorhandene Knie-Score
+visits = ["preop", "6wk", "3mo", "1yr"]
+knees["visit"] = pd.Categorical(knees["visit"], categories=visits)               # präoperativ zuerst: die Referenz
+
+print(knees.groupby("case_id").size().value_counts().sort_index())   # Knie mit 1, 2, 3 oder 4 Scores
+```
+:::
+
+```{python}
+#| include: false
+per_knee = knees.groupby("case_id").size()
+chk = {"knees": float(per_knee.size), "complete": float((per_knee == 4).sum()), "scores": float(len(knees))}
+```
+
+```{r}
+#| include: false
+per_knee <- count(knees, case_id)
+check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores = nrow(knees)), reticulate::py$chk)
+```
+
+Alle 330 Knie haben mindestens einen Score, insgesamt 1146 Scores, aber nur 192 Knie haben alle vier. Die ANOVA mit Messwiederholung würde die übrigen 138 Knie (42 %) samt allen Scores, die sie geliefert haben, weglassen. Ein gemischtes Modell behält alle 1146 Scores.
+
+Patientinnen und Patienten wegzulassen ist nicht nur Verschwendung. Es kann das Resultat verzerren, je nachdem, warum Scores fehlen:
+- **Völlig zufällig fehlende Daten (MCAR):** Eine verpasste Kontrolle hat nichts mit der Erholung der Patientin oder des Patienten zu tun (die Klinik hat den Termin verschoben, die Person ist umgezogen). Beide Methoden sind unverzerrt; das gemischte Modell ist präziser, weil es mehr Daten verwendet.
+- **Zufällig fehlende Daten (MAR):** Das Fehlen hängt von Grössen ab, die Sie gemessen haben, etwa von einem früheren Score. Patientinnen und Patienten mit einem schlechten Score nach 6 Wochen kommen mit geringerer Wahrscheinlichkeit nach 3 Monaten wieder. Die ANOVA mit Messwiederholung ist dann verzerrt, weil die Personen, die sie behält, sich besser erholt haben; ein gemischtes Modell bleibt unverzerrt, solange das Modell beschreibt, wie die Scores eines Knies zusammenhängen, denn es nutzt die früheren Scores, um das Bild zu vervollständigen.
+- **Nicht zufällig fehlende Daten (MNAR):** Das Fehlen hängt vom Score ab, der nicht erhoben wurde (Patientinnen und Patienten bleiben fern, *weil* ihr Knie in dieser Woche schlechter ist). Aus den Daten allein lässt sich das nicht beheben. Nennen Sie es als Einschränkung.
+
+## Ein zufälliger Achsenabschnitt für jedes Knie {#random-intercept}
+
+Scores desselben Knies hängen zusammen: Ein Knie, das tief beginnt, bleibt tendenziell unter dem Durchschnitt. Ein gemischtes Modell berücksichtigt das mit einem **zufälligen Achsenabschnitt (Random Intercept)**: Jedes Knie erhält sein eigenes Ausgangsniveau, das gegenüber dem Durchschnitt nach oben oder unten verschoben ist. Die **festen Effekte** (hier die Kontrollen) beschreiben die durchschnittliche Person; die zufälligen Achsenabschnitte beschreiben, wie stark sich die Knie von diesem Durchschnitt unterscheiden.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+knee_model <- lmer(prom_score ~ visit + (1 | case_id), data = knees)   # (1 | case_id): ein Achsenabschnitt pro Knie
+print(summary(knee_model), correlation = FALSE)
+```
+
+## Python
+
+```{python}
+knee_model = smf.mixedlm("prom_score ~ visit", knees, groups="case_id").fit(reml=True)   # groups: ein Achsenabschnitt pro Knie
+print(knee_model.summary())
+```
+:::
+
+```{python}
+#| include: false
+fixed = knee_model.fe_params
+chk = {"intercept": float(fixed["Intercept"]), "visit_6wk": float(fixed["visit[T.6wk]"]), "visit_1yr": float(fixed["visit[T.1yr]"])}
+chk_sd = {"sd_knee": float(np.sqrt(knee_model.cov_re.iloc[0, 0])), "sd_residual": float(np.sqrt(knee_model.scale))}
+chk_se = {"se_1yr": float(knee_model.bse_fe["visit[T.1yr]"])}
+```
+
+```{r}
+#| include: false
+knee_sd <- as.data.frame(VarCorr(knee_model))$sdcor
+check_agree(list(intercept = fixef(knee_model)[["(Intercept)"]], visit_6wk = fixef(knee_model)[["visit6wk"]],
+                 visit_1yr = fixef(knee_model)[["visit1yr"]]),
+            reticulate::py$chk)
+# The two optimizers stop at slightly different variances: the SDs agree to about 1e-6.
+check_agree(list(sd_knee = knee_sd[1], sd_residual = knee_sd[2]), reticulate::py$chk_sd, tol = 1e-5)
+# The standard errors differ in the fourth significant figure: lme4 computes them with the variances
+# held fixed, statsmodels from the whole likelihood's Hessian (checked by hand while writing this
+# page). See the R vs Python box.
+check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_se, tol = 1e-3)
+```
+
+Ausgabe lesen:
+- **Feste Effekte:** Der durchschnittliche KOOS JR lag vor der Operation bei 50.0 (der Achsenabschnitt) und war um 12.5 Punkte höher nach 6 Wochen, um 24.2 nach 3 Monaten und um 33.9 nach 1 Jahr. Der Koeffizient jeder Kontrolle ist ihre Differenz zur präoperativen Kontrolle.
+- **Zufällige Effekte:** Die Ausgangsniveaus der Knie streuen um den Durchschnitt mit einer Standardabweichung (SD) von 8.8 Punkten (die Zeile «case_id (Intercept)» in R; die Zeile «case_id Var» in Python gibt die Varianz an, 8.84² = 78.1). Die Scores streuen ausserdem von Kontrolle zu Kontrolle innerhalb eines Knies mit einer Residual-SD von 8.6 Punkten.
+- **Wie viel der Variation zwischen den Knien liegt:** 78.1 / (78.1 + 73.5) = 0.52, der Intraklassenkorrelationskoeffizient (ICC; [Seite 17](17-agreement.qmd#icc) verwendet dieselbe Idee für Beurteilende). Etwa die Hälfte der Streuung der Scores kommt daher, dass sich die Knie voneinander unterscheiden; deshalb dürfen die Scores nicht als unabhängig behandelt werden.
+- **REML:** Beide Programme passen das Modell mit der restringierten Maximum-Likelihood-Methode (Restricted Maximum Likelihood) an, der üblichen Wahl für die Schätzung dieses Modells.
+
+::: {.callout-tip}
+## 🔀 R oder Python: Freiheitsgrade
+Die Schätzwerte stimmen überein. Die Standardfehler stimmen auf drei oder vier gültige Stellen überein: lme4 berechnet sie mit den auf ihren Schätzwerten festgehaltenen Varianzen von Knie und Residuum, statsmodels aus der Krümmung der gesamten Likelihood. Die p-Werte und KI weichen etwas stärker voneinander ab. lmerTest gibt jedem festen Effekt einen t-Test mit **Satterthwaite**-Freiheitsgraden, einer Näherung dafür, auf wie viel Information der Schätzwert beruht. statsmodels verwendet einen z-Test, als wären die Freiheitsgrade unendlich. Bei 330 Knien liegt der Unterschied in der dritten Dezimalstelle; bei einer kleinen Studie vertrauen Sie R.
+:::
+
+## Geschätzte Randmittel {#estimated-marginal-means}
+
+Berichten Sie den Schätzwert des Modells bei jeder Kontrolle mit seinem 95%-KI. Das sind die **geschätzten Randmittel** (Estimated Marginal Means, EMMs): der durchschnittliche Score, den das Modell bei jeder Kontrolle erwartet, unter Verwendung aller Knie, auch derjenigen mit verpassten Kontrollen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+knee_means <- emmeans(knee_model, ~ visit, lmer.df = "satterthwaite")
+knee_means
+# der geplante Vergleich: 1 Jahr minus präoperativ (ein Vergleich, daher keine Adjustierung; Seite 15)
+confint(contrast(knee_means, method = list("1yr - preop" = c(-1, 0, 0, 1))))
+```
+
+## Python
+
+```{python}
+def marginal_means(model, grid):
+    """The model's average score for each row of grid (fixed effects only), with its standard error and 95% CI."""
+    X = patsy.build_design_matrices([model.model.data.model_spec], grid, return_type="dataframe")[0]
+    beta = model.fe_params
+    cov = model.cov_params().loc[beta.index, beta.index]
+    means = grid.copy()
+    means["emmean"] = X @ beta
+    means["se"] = np.sqrt(np.diag(X @ cov @ X.T))
+    means["lower"] = means["emmean"] - 1.96 * means["se"]
+    means["upper"] = means["emmean"] + 1.96 * means["se"]
+    return means
+
+visit_grid = pd.DataFrame({"visit": pd.Categorical(visits, categories=visits)})
+knee_means = marginal_means(knee_model, visit_grid)
+print(knee_means.round(2))
+# der geplante Vergleich: 1 Jahr minus präoperativ
+print(knee_model.fe_params["visit[T.1yr]"], knee_model.conf_int().loc["visit[T.1yr]"].to_list())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"emm_pre": float(knee_means["emmean"].iloc[0]), "emm_1yr": float(knee_means["emmean"].iloc[3])}
+chk_se = {"se_pre": float(knee_means["se"].iloc[0]), "se_1yr": float(knee_means["se"].iloc[3])}
+```
+
+```{r}
+#| include: false
+knee_emm <- summary(knee_means)
+check_agree(list(emm_pre = knee_emm$emmean[1], emm_1yr = knee_emm$emmean[4]), reticulate::py$chk)
+# standard errors computed two ways, as in the check after the first model
+check_agree(list(se_pre = knee_emm$SE[1], se_1yr = knee_emm$SE[4]), reticulate::py$chk_se, tol = 1e-3)
+```
+
+- **emmean, lower.CL / upper.CL:** Der KOOS JR betrug im Mittel 50.0 (95%-KI 48.6 bis 51.3) vor der Operation, 62.5 nach 6 Wochen, 74.2 nach 3 Monaten und 83.9 (95%-KI 82.5 bis 85.3) nach 1 Jahr.
+- **Der Kontrast:** der geplante Vergleich, die Verbesserung von präoperativ bis 1 Jahr: 33.9 Punkte (95%-KI 32.5 bis 35.3). Wählen Sie solche Vergleiche im Voraus; ein Vergleich jedes Paars von Kontrollen würde eine Adjustierung erfordern ([Seite 15](15-post-hoc.qmd#planned-comparisons)).
+
+Die 192 Knie mit allen vier Scores liegen im Mittel bei 49.2 vor der Operation und bei 84.0 nach 1 Jahr. Das liegt nahe beim gemischten Modell, wie hier zu erwarten: In dieser synthetischen Kohorte wurden Kontrollen fast ausnahmslos zufällig verpasst, durch Zufall oder weil die Nachbeobachtung zu Ende war. Bei echten Patientinnen und Patienten können Sie sich nicht darauf verlassen, und die Antwort des gemischten Modells, die alle 330 Knie verwendet, ist diejenige, die Sie berichten sollten.
+
+## Zeit: Kategorien oder eine Kurve? {#time}
+
+Bisher hat jede Kontrolle ihren eigenen Mittelwert: **Zeit als Kategorien**. Das passt, wenn alle zu denselben wenigen geplanten Kontrollen gesehen werden, und es macht keine Annahme über den Verlauf der Erholung. Die Alternative ist **Zeit als Zahl**, die Tage seit der Operation, mit einer Kurve. Das eignet sich für viele oder unregelmässige Kontrollen, doch die Form der Kurve muss stimmen. Die Erholung verläuft nicht geradlinig, verwenden Sie daher einen natürlichen kubischen Spline ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) erklärt Splines):
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3.5
+curve_model <- lmer(prom_score ~ ns(visit_days, df = 3) + (1 | case_id), data = knees)
+
+days <- tibble(visit_days = c(-14, 42, 90, 365))           # die geplanten Kontrolltage
+on_days <- predict(curve_model, newdata = days, re.form = NA)   # re.form = NA: das durchschnittliche Knie
+on_days
+
+curve <- tibble(visit_days = -27:395)
+curve$prom_score <- predict(curve_model, newdata = curve, re.form = NA)
+ggplot(curve, aes(visit_days, prom_score)) +
+  geom_line() +
+  geom_point(data = summary(knee_means) |> mutate(visit_days = c(-14, 42, 90, 365)), aes(y = emmean)) +
+  labs(x = "Days since surgery", y = "KOOS JR")
+```
+
+## Python
+
+```{python}
+day_knots = list(knees["visit_days"].quantile([1/3, 2/3]))     # dieselben Knoten, die ns(df = 3) in R verwendet
+day_low, day_high = knees["visit_days"].min(), knees["visit_days"].max()
+curve_model = smf.mixedlm("prom_score ~ cr(visit_days, knots=day_knots, lower_bound=day_low, upper_bound=day_high,"
+                          " constraints='center')", knees, groups="case_id").fit(reml=True)
+
+days = pd.DataFrame({"visit_days": [-14, 42, 90, 365]})        # die geplanten Kontrolltage
+on_days = curve_model.predict(days)                            # das durchschnittliche Knie
+print(on_days.round(2))
+
+curve = pd.DataFrame({"visit_days": np.arange(-27, 396)})
+fig, ax = plt.subplots(figsize=(7, 3.5))
+ax.plot(curve["visit_days"], curve_model.predict(curve))
+ax.scatter(days["visit_days"], knee_means["emmean"])
+ax.set_xlabel("Days since surgery")
+ax.set_ylabel("KOOS JR")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+chk = {"day_42": float(on_days.iloc[1]), "day_365": float(on_days.iloc[3])}
+```
+
+```{r}
+#| include: false
+# the two optimizers stop at slightly different points
+check_agree(list(day_42 = on_days[[2]], day_365 = on_days[[4]]), reticulate::py$chk, tol = 1e-4)
+```
+
+Die Kurve verläuft nahe an den Mittelwerten der Kontrollen (den Punkten): 62.7 nach 6 Wochen und 84.1 nach 1 Jahr, gegenüber 62.5 und 83.9. Aber sehen Sie sich den Bereich zwischen 3 Monaten und 1 Jahr an. Dort wurde kein Knie bewertet, und die Kurve erfindet einen Gipfel von etwa 89 Punkten bei rund 8 Monaten und fällt dann ab. Bei wenigen festen Kontrollen hat eine Kurve zwischen ihnen nichts, woran sie sich orientieren kann. Kategorien sind einfacher, stellen keine solchen Behauptungen auf und werden auf der übrigen Seite verwendet.
+
+::: {.callout-warning}
+## ⚠️ Achtung: Eine Gerade für die Zeit
+`prom_score ~ visit_days` würde die Erholung zu einer Geraden zwingen: zwischen 3 Monaten und 1 Jahr gleich steil wie in den ersten 6 Wochen. Stellen Sie die Mittelwerte der Kontrollen immer zuerst grafisch dar. Wenn Sie die Zeit als Zahl verwenden, lassen Sie sie sich biegen.
+:::
+
+## Unterscheidet sich die Erholung zwischen Gruppen? {#group-by-time}
+
+Um zu fragen, ob sich die Erholung mit einem Walker von der Erholung mit einem Gips unterscheidet, fügen Sie den Studienarm und seine **Interaktion** mit der Kontrolle hinzu. Die Interaktion lässt jedem Studienarm sein eigenes Muster der Veränderung. Ihr Test fragt, ob sich die Muster unterscheiden, und das ist die eigentliche Frage; der Haupteffekt des Studienarms allein vergleicht nur die durchschnittlichen Niveaus. Das Modell verwendet alle 431 EFAS-Scores der 120 randomisierten Patientinnen und Patienten, obwohl nur 80 alle vier haben.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3.5
+trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE) |>
+  filter(!is.na(efas)) |>
+  mutate(visit = factor(visit, levels = c("6wk", "3mo", "6mo", "12mo")),
+         arm = factor(arm, levels = c("cast", "boot")))
+
+arm_model <- lmer(efas ~ visit * arm + (1 | patient_id), data = trial)
+arm_anova <- anova(arm_model)                           # F-Tests, Satterthwaite-Freiheitsgrade
+arm_anova
+
+arm_means <- emmeans(arm_model, ~ visit | arm, lmer.df = "satterthwaite")
+arm_means
+emmip(arm_model, arm ~ visit, CIs = TRUE) +            # die beiden Erholungsmuster, mit 95%-KI
+  labs(x = "Visit", y = "EFAS score")
+
+arm_gaps <- pairs(emmeans(arm_model, ~ arm | visit, lmer.df = "satterthwaite"), reverse = TRUE)   # Walker minus Gips
+confint(arm_gaps)                                  # 95%-KI
+summary(arm_gaps, by = NULL, adjust = "holm")      # Holm über alle vier Kontrollen, nicht innerhalb jeder
+```
+
+## Python
+
+```{python}
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
+
+trial = pd.read_csv("data/foot_ankle_rct_long.csv")
+trial = trial[trial["efas"].notna()].copy()
+trial_visits = ["6wk", "3mo", "6mo", "12mo"]
+trial["visit"] = pd.Categorical(trial["visit"], categories=trial_visits)       # 6 Wochen zuerst: die Referenz
+trial["arm"] = pd.Categorical(trial["arm"], categories=["cast", "boot"])        # Gips zuerst: die Referenz
+
+arm_model = smf.mixedlm("efas ~ visit * arm", trial, groups="patient_id").fit(reml=True)
+
+interaction = [name for name in arm_model.fe_params.index if ":" in name]     # die drei Terme Kontrolle x Studienarm
+arm_wald = arm_model.wald_test(" = 0, ".join(interaction) + " = 0", scalar=True)   # unterscheiden sich die Muster?
+print(arm_wald.statistic, arm_wald.pvalue)                                          # Chi-Quadrat mit 3 Freiheitsgraden, p-Wert
+
+arm_grid = pd.DataFrame([(visit, arm) for arm in ["cast", "boot"] for visit in trial_visits], columns=["visit", "arm"])
+arm_grid["visit"] = pd.Categorical(arm_grid["visit"], categories=trial_visits)
+arm_grid["arm"] = pd.Categorical(arm_grid["arm"], categories=["cast", "boot"])
+arm_means = marginal_means(arm_model, arm_grid)
+print(arm_means.round(2))
+
+fig, ax = plt.subplots(figsize=(7, 3.5))
+for arm, rows in arm_means.groupby("arm", observed=True):
+    ax.errorbar(rows["visit"].astype(str), rows["emmean"], yerr=1.96 * rows["se"], marker="o", capsize=3, label=arm)
+ax.set_xlabel("Visit")
+ax.set_ylabel("EFAS score")
+legend = ax.legend()
+plt.tight_layout()
+plt.show()
+
+def arm_difference(model, visit):
+    """Boot minus cast at one visit: the estimate and its standard error, from the fixed effects."""
+    two = pd.DataFrame({"visit": pd.Categorical([visit, visit], categories=trial_visits),
+                        "arm": pd.Categorical(["boot", "cast"], categories=["cast", "boot"])})
+    X = patsy.build_design_matrices([model.model.data.model_spec], two, return_type="dataframe")[0]
+    L = (X.iloc[0] - X.iloc[1]).to_numpy()                # der Kontrast: die Zeile des Walkers minus die Zeile des Gipses
+    beta = model.fe_params
+    cov = model.cov_params().loc[beta.index, beta.index].to_numpy()
+    return float(L @ beta.to_numpy()), float(np.sqrt(L @ cov @ L))
+
+gaps = pd.DataFrame([(visit, *arm_difference(arm_model, visit)) for visit in trial_visits],
+                    columns=["visit", "difference", "se"])
+gaps["lower"] = gaps["difference"] - 1.96 * gaps["se"]
+gaps["upper"] = gaps["difference"] + 1.96 * gaps["se"]
+gaps["p"] = 2 * stats.norm.sf(np.abs(gaps["difference"] / gaps["se"]))
+gaps["p_holm"] = multipletests(gaps["p"], method="holm")[1]       # Holm über alle vier Kontrollen
+print(gaps.round(3))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"emm_boot_3mo": float(arm_means["emmean"].iloc[5]), "emm_cast_12mo": float(arm_means["emmean"].iloc[3]),
+       "diff_3mo": float(gaps["difference"].iloc[1]), "diff_12mo": float(gaps["difference"].iloc[3])}
+chk_se = {"wald_per_df": float(arm_wald.statistic) / 3,
+          "se_diff_3mo": float(gaps["se"].iloc[1]), "se_diff_12mo": float(gaps["se"].iloc[3])}
+```
+
+```{r}
+#| include: false
+arm_emm <- summary(arm_means)
+arm_gap <- summary(arm_gaps, by = NULL, adjust = "holm")
+check_agree(list(emm_boot_3mo = arm_emm$emmean[6], emm_cast_12mo = arm_emm$emmean[4],
+                 diff_3mo = arm_gap$estimate[2], diff_12mo = arm_gap$estimate[4]), reticulate::py$chk)
+# R's F is the same Wald statistic divided by its 3 degrees of freedom; it inherits the
+# standard-error difference explained in the check after the first model
+check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = arm_gap$SE[2], se_diff_12mo = arm_gap$SE[4]),
+            reticulate::py$chk_se, tol = 1e-3)
+```
+
+- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. Der Wald-Test von Python liefert die ungeteilte Statistik, 77.15 mit 3 Freiheitsgraden, ebenfalls p < 0.001.
+- **Die EMMs und die Differenzen (Walker minus Gips)** zeigen, auf welche Weise. Nach 6 Wochen lag der Walker um 3.0 Punkte vorn, und nach 3 Monaten lag der Walker um 3.6 Punkte vorn (17.34 gegenüber 13.78). Nach 6 Monaten betrug der Abstand 0.4 Punkte, und nach 12 Monaten −0.4 Punkte (95%-KI −1.5 bis 0.7): Der Abstand hatte sich geschlossen.
+
+Diese Zahlen weichen etwas von denen auf [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) ab, wo nur die Scores nach 3 Monaten verwendet wurden: Dort lag das 95%-KI für die Differenz nach 3 Monaten bei 2.4 bis 4.8, hier bei 2.5 bis 4.6, hauptsächlich weil das Modell bei allen vier Kontrollen dieselbe Streuung annimmt (SD 2.9), während die Scores nach 3 Monaten etwas breiter streuen (SD 3.2 innerhalb jedes Studienarms). Zwei Vorbehalte. Die EFAS-Scores häufen sich bis 12 Monate gegen ihr Maximum (24 Punkte bei 7 von 55 Patientinnen und Patienten mit einem Walker und bei 8 von 47 mit einem Gips), daher sind die Mittelwerte des Modells dort nur Näherungen. Und im Gips-Arm fehlten mehr Kontrollen nach 12 Monaten (13 gegenüber 5): Das Modell behält die früheren Scores dieser Patientinnen und Patienten, was hilft, solange die verpassten Kontrollen [zufällig fehlen (MAR)](#why-mixed-models).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Lesen Sie eine Interaktion anhand der Mittelwerte
+Eine klare Interaktion besagt, dass sich der Abstand zwischen den Studienarmen im Zeitverlauf verändert. Sie besagt nicht, dass der Walker besser ist: Das hängt davon ab, wann Sie hinsehen. Nach 12 Monaten bedeutet ein Holm-adjustiertes p = 0.898, dass die Daten einen Unterschied nicht belegen können; es zeigt nicht, dass die Studienarme gleich sind, und das KI reicht weiterhin von 1.5 Punkten zugunsten des Gipses bis 0.7 zugunsten des Walkers. Berichten Sie die EMMs und die Differenz mit ihren KI, damit die Leserinnen und Leser beides sehen können.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: die Differenzen zwischen den Studienarmen
+Python berechnet die Differenzen aus den festen Effekten mit z-Tests, daher unterscheiden sich seine Holm-adjustierten p-Werte in der dritten Dezimalstelle (0.897 gegenüber 0.898).
+:::
+
+## Patientinnen und Patienten mit beidseitiger Operation {#bilateral}
+
+Bei 46 der Patientinnen und Patienten mit Knie-TP wurden beide Knie ersetzt, sodass 92 der 330 Knie paarweise vorkommen. Die beiden Knie gehören zur selben Person, ihre Scores können daher über das hinaus zusammenhängen, was der eigene Achsenabschnitt jedes Knies erfasst. Die übliche Lösung ist ein zweiter zufälliger Achsenabschnitt, für die Person, wobei die Knie in den Personen **verschachtelt** sind: in lme4 `(1 | patient_id/case_id)`; in statsmodels `groups="patient_id"` mit einer Varianzkomponente für `case_id`.
+
+In dieser Kohorte liegt der Achsenabschnitt auf Personenebene fast genau bei null (lme4 warnt, dass die Anpassung «singulär» ist); das obige Knie-Modell genügt daher. Passen Sie in Ihren Daten das verschachtelte Modell an und berichten Sie es, es sei denn, es ist singulär. [Seite 3](../foundations/03-distributions.qmd#paired) erklärt, warum beidseitig operierte Patientinnen und Patienten Sorgfalt erfordern, und [Seite 14](../survival/14-cox-regression.qmd#stratified-cox) zeigt die Version für die Überlebenszeitanalyse.
+
+## Resultate formulieren {#reporting}
+
+> **Methods:** KOOS JR scores before surgery and at 6 weeks, 3 months and 1 year were analyzed with a linear mixed model, with visit as a categorical fixed effect and a random intercept for each knee, fitted by restricted maximum likelihood. All available scores were used, including those from knees that missed a visit. The planned comparison was the change from before surgery to 1 year. Estimated marginal means are reported with 95% CIs.
+>
+> **Results:** Of 330 knees, 192 (58.2%) had all four scores; all 1146 scores were analyzed. The estimated mean KOOS JR was 50.0 (95% CI 48.6 to 51.3) before surgery and 83.9 (95% CI 82.5 to 85.3) at 1 year; change 33.9 points (95% CI 32.5 to 35.3).
+
+Für den Vergleich zwischen einem Walker und einem Gips:
+
+> **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with 95% CIs and Holm-adjusted p-values.
+>
+> **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+knee_vc <- as.data.frame(VarCorr(knee_model))
+knee_change <- summary(confint(contrast(knee_means, method = list("1yr - preop" = c(-1, 0, 0, 1)))))
+complete_pf <- proms |> select(case_id, visit, promis_pf) |> group_by(case_id) |> filter(all(!is.na(promis_pf))) |> ungroup() |>
+  mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr"))) |> group_by(visit) |> summarise(mean = mean(promis_pf))
+complete_means <- knees |> group_by(case_id) |> filter(n() == 4) |> ungroup() |> group_by(visit) |> summarise(mean = mean(prom_score))
+bilateral_knees <- knees |> distinct(patient_id, case_id) |> count(patient_id) |> filter(n == 2)
+hips <- proms |> filter(instrument == "HOOS JR", !is.na(prom_score)) |> mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+hip_emm <- summary(emmeans(lmer(prom_score ~ visit + (1 | case_id), data = hips), ~ visit, lmer.df = "satterthwaite"))
+pf_all <- proms |> filter(!is.na(promis_pf)) |> mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+pf_emm <- summary(emmeans(lmer(promis_pf ~ visit + (1 | case_id), data = pf_all), ~ visit, lmer.df = "satterthwaite"))
+arm_ci <- as.data.frame(confint(arm_gaps))
+page6_t <- t.test(efas ~ arm, data = mutate(filter(trial, visit == "3mo"), arm = factor(arm, levels = c("boot", "cast"))))   # page 6's test
+arm_sizes <- table(distinct(read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE), patient_id, arm)$arm)   # randomized per arm
+pain_anova <- anova(lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial))
+pain_emm <- summary(emmeans(lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial), ~ visit | arm, lmer.df = "satterthwaite"))
+# Python's Wald test for the pain interaction, recomputed here (the exercise solution runs later)
+reticulate::py_run_string("
+guard_fit = smf.mixedlm('pain_nrs ~ visit * arm', trial, groups='patient_id').fit(reml=True)
+guard_terms = [n for n in guard_fit.fe_params.index if ':' in n]
+guard_w = guard_fit.wald_test(' = 0, '.join(guard_terms) + ' = 0', scalar=True)
+guard_out = {'statistic': float(guard_w.statistic), 'pvalue': float(guard_w.pvalue)}")
+guard_pain <- reticulate::py$guard_out
+stopifnot(
+  nrow(per_knee) == 330, sum(per_knee$n == 4) == 192, nrow(knees) == 1146, 330 - 192 == 138,
+  round(100 * 138 / 330) == 42, round(100 * 192 / 330, 1) == 58.2,
+  round(fixef(knee_model)[2:4], 1) == c(12.5, 24.2, 33.9), round(fixef(knee_model)[[1]], 1) == 50.0,
+  round(knee_vc$sdcor, 1) == c(8.8, 8.6), round(knee_vc$vcov, 1) == c(78.1, 73.5),
+  round(knee_vc$vcov[1] / sum(knee_vc$vcov), 2) == 0.52,
+  round(knee_emm$emmean, 1) == c(50.0, 62.5, 74.2, 83.9),
+  round(c(knee_emm$lower.CL[1], knee_emm$upper.CL[1], knee_emm$lower.CL[4], knee_emm$upper.CL[4]), 1) == c(48.6, 51.3, 82.5, 85.3),
+  round(c(knee_change$estimate, knee_change$lower.CL, knee_change$upper.CL), 1) == c(33.9, 32.5, 35.3),
+  round(complete_means$mean[c(1, 4)], 1) == c(49.2, 84.0),
+  round(on_days[c(2, 4)], 1) == c(62.7, 84.1),
+  round(max(curve$prom_score)) == 89, curve$visit_days[which.max(curve$prom_score)] %/% 30 == 8,
+  # group by time: the boot vs cast trial
+  n_distinct(trial$patient_id) == 120, nrow(trial) == 431, sum(table(trial$patient_id) == 4) == 80,
+  round(100 * 80 / 120, 1) == 66.7,
+  round(arm_anova["visit:arm", "F value"], 2) == 25.73, round(arm_anova["visit:arm", "DenDF"]) == 310,
+  arm_anova["visit:arm", "NumDF"] == 3, arm_anova["visit:arm", "Pr(>F)"] < 0.001,
+  round(reticulate::py_eval("float(arm_wald.statistic)"), 2) == 77.15, reticulate::py_eval("float(arm_wald.pvalue)") < 0.001,
+  round(arm_emm$emmean[c(6, 2)], 2) == c(17.34, 13.78),
+  round(arm_emm$emmean[1:4], 1) == c(9.5, 13.8, 18.6, 20.6), round(arm_emm$emmean[5:8], 1) == c(12.4, 17.3, 19.0, 20.2),
+  round(c(arm_emm$lower.CL[6], arm_emm$upper.CL[6], arm_emm$lower.CL[2], arm_emm$upper.CL[2]), 1) == c(16.6, 18.1, 13.0, 14.5),
+  round(c(arm_emm$lower.CL[8], arm_emm$upper.CL[8], arm_emm$lower.CL[4], arm_emm$upper.CL[4]), 1) == c(19.4, 20.9, 19.8, 21.4),
+  round(arm_gap$estimate, 1) == c(3.0, 3.6, 0.4, -0.4),
+  round(arm_ci$lower.CL, 1) == c(1.9, 2.5, -0.7, -1.5), round(arm_ci$upper.CL, 1) == c(4.0, 4.6, 1.5, 0.7),
+  arm_gap$p.value[1:2] < 0.001, round(arm_gap$p.value[3:4], 3) == c(0.898, 0.898),
+  round(reticulate::py_eval("float(gaps['p_holm'].iloc[3])"), 3) == 0.897,
+  nrow(bilateral_knees) == 46,
+  with(filter(trial, visit == "12mo"), c(sum(efas == 24 & arm == "boot"), sum(arm == "boot"), sum(efas == 24 & arm == "cast"), sum(arm == "cast"))) == c(7, 55, 8, 47),
+  all(arm_sizes == 60), arm_sizes[["cast"]] - sum(trial$visit == "12mo" & trial$arm == "cast") == 13,
+  arm_sizes[["boot"]] - sum(trial$visit == "12mo" & trial$arm == "boot") == 5,
+  round(sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov)), 1) == 2.9,
+  round(sqrt(sum(tapply(trial$efas[trial$visit == "3mo"], trial$arm[trial$visit == "3mo"], function(x) (length(x) - 1) * var(x))) / (sum(trial$visit == "3mo") - 2)), 1) == 3.2,
+  round(page6_t$conf.int, 1) == c(2.4, 4.8), round(unname(page6_t$estimate[1] - page6_t$estimate[2]), 1) == 3.6,
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  n_distinct(hips$case_id) == 270, nrow(hips) == 906, sum(table(hips$case_id) == 4) == 136,
+  round(hip_emm$emmean, 1) == c(45.5, 68.6, 80.1, 88.2),
+  round(c(hip_emm$lower.CL[4], hip_emm$upper.CL[4]), 1) == c(86.7, 89.7),
+  n_distinct(pf_all$case_id) == 600, nrow(pf_all) == 2052,
+  round(pf_emm$emmean, 1) == c(36.1, 39.8, 44.9, 48.2),
+  round(complete_pf$mean, 1) == c(36.1, 39.4, 44.9, 48.2),
+  round(pain_anova["visit:arm", "F value"], 2) == 4.81, round(pain_anova["visit:arm", "DenDF"]) == 317,
+  round(pain_anova["visit:arm", "Pr(>F)"], 3) == 0.003,
+  round(guard_pain$statistic, 2) == 14.43, round(guard_pain$pvalue, 3) == 0.002,
+  round(c(pain_emm$emmean[1], pain_emm$lower.CL[1], pain_emm$upper.CL[1], pain_emm$emmean[5], pain_emm$lower.CL[5], pain_emm$upper.CL[5]), 1) == c(4.9, 4.5, 5.4, 3.7, 3.3, 4.2),
+  round(c(pain_emm$emmean[4], pain_emm$lower.CL[4], pain_emm$upper.CL[4], pain_emm$emmean[8], pain_emm$lower.CL[8], pain_emm$upper.CL[8]), 1) == c(1.6, 1.2, 2.1, 1.3, 0.8, 1.7)
+)
+```
+
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages, Daten und Funktionen, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Passen Sie dasselbe Modell mit zufälligem Achsenabschnitt an den HOOS JR bei den Hüft-TP an und berichten Sie den geschätzten Mittelwert bei jeder Kontrolle.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+hips <- proms |>
+  filter(instrument == "HOOS JR", !is.na(prom_score)) |>
+  mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+c(hips = n_distinct(hips$case_id), scores = nrow(hips), complete = sum(table(hips$case_id) == 4))
+
+hip_model <- lmer(prom_score ~ visit + (1 | case_id), data = hips)
+emmeans(hip_model, ~ visit, lmer.df = "satterthwaite")
+```
+
+## Python
+
+```{python}
+hips = proms[(proms["instrument"] == "HOOS JR") & proms["prom_score"].notna()].copy()
+hips["visit"] = pd.Categorical(hips["visit"], categories=visits)
+print(hips["case_id"].nunique(), len(hips), (hips.groupby("case_id").size() == 4).sum())
+
+hip_model = smf.mixedlm("prom_score ~ visit", hips, groups="case_id").fit(reml=True)
+print(marginal_means(hip_model, visit_grid).round(2))
+```
+:::
+
+> **Results:** Of 270 hips, 136 had all four scores; all 906 scores were used. The estimated mean HOOS JR was 45.5 before surgery, 68.6 at 6 weeks, 80.1 at 3 months and 88.2 (95% CI 86.7 to 89.7) at 1 year.
+:::
+
+**2.** [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) hat die körperliche Funktion PROMIS mit der ANOVA mit Messwiederholung bei den 328 Gelenkersatz-Operationen analysiert, die bei allen vier Kontrollen gemessen wurden. Passen Sie stattdessen ein gemischtes Modell mit jedem Score an. Wie viele Gelenkersatz-Operationen verwendet es, und verändern sich die Mittelwerte der Kontrollen?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+pf_all <- proms |>
+  filter(!is.na(promis_pf)) |>
+  mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+c(joint_replacements = n_distinct(pf_all$case_id), scores = nrow(pf_all))
+
+pf_model <- lmer(promis_pf ~ visit + (1 | case_id), data = pf_all)
+emmeans(pf_model, ~ visit, lmer.df = "satterthwaite")
+```
+
+## Python
+
+```{python}
+pf_all = proms[proms["promis_pf"].notna()].copy()
+pf_all["visit"] = pd.Categorical(pf_all["visit"], categories=visits)
+print(pf_all["case_id"].nunique(), len(pf_all))
+
+pf_model = smf.mixedlm("promis_pf ~ visit", pf_all, groups="case_id").fit(reml=True)
+print(marginal_means(pf_model, visit_grid).round(2))
+```
+:::
+
+Das gemischte Modell verwendet alle 600 Gelenkersatz-Operationen (2052 Scores) statt der 328 mit allen vier Scores. Seine Mittelwerte der Kontrollen, 36.1, 39.8, 44.9 und 48.2, sind fast dieselben wie die Mittelwerte von Seite 9 für diese 328 (36.1, 39.4, 44.9 und 48.2): In dieser synthetischen Kohorte wurden Kontrollen fast ausnahmslos zufällig verpasst, daher kostete das Weglassen unvollständiger Fälle Präzision, nicht Richtigkeit.
+:::
+
+**3.** Verändert sich der Schmerz mit einem Walker anders als mit einem Gips? Passen Sie das Modell Kontrolle × Studienarm für pain_nrs an und schreiben Sie den Results-Satz.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+pain_model <- lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial)    # trial: eine verpasste Kontrolle lässt beide Scores leer
+pain_anova <- anova(pain_model)
+pain_anova
+emmeans(pain_model, ~ visit | arm, lmer.df = "satterthwaite")
+```
+
+## Python
+
+```{python}
+pain_model = smf.mixedlm("pain_nrs ~ visit * arm", trial, groups="patient_id").fit(reml=True)
+pain_terms = [name for name in pain_model.fe_params.index if ":" in name]     # die drei Terme Kontrolle x Studienarm
+pain_wald = pain_model.wald_test(" = 0, ".join(pain_terms) + " = 0", scalar=True)
+print(pain_wald.statistic, pain_wald.pvalue)                                          # Chi-Quadrat mit 3 Freiheitsgraden, p-Wert
+print(marginal_means(pain_model, arm_grid).round(2))
+```
+:::
+
+> **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
+
+Der Wald-Test von Python liefert 14.43 mit 3 Freiheitsgraden, p = 0.002.
+
+Der Schmerz ist ein ganzzahliger Score, ein lineares Modell ist hier daher eine Näherung; bei vier Kontrollen und 120 Patientinnen und Patienten ist es eine vernünftige.
 :::
