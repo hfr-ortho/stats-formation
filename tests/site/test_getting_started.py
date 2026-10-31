@@ -88,7 +88,10 @@ def test_real_data_page_warns_about_derived_study_ids(site):
 
 
 def test_real_data_page_names_who_to_tell(site):
-    assert "data protection officer" in text_of(load(REAL))
+    text = text_of(load(REAL))
+    assert "Tell your project lead right away" in text
+    # HFR has no data protection officer.
+    assert "data protection officer" not in text
 
 
 def test_real_data_page_has_no_us_law(site):
