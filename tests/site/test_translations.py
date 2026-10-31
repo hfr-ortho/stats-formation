@@ -1,13 +1,16 @@
 """Translated pages teach the same code and quote the same numbers as the English ones (rule 21).
 
-`translated_pages("fr")` yields every French page that is no longer a "(en préparation)" stub, so these
-tests pass on stubs and start biting as pages arrive. The rules themselves are tested on small strings
+`translated_pages(lang)` yields every French or German page that is no longer a stub ("(en préparation)",
+"(in Vorbereitung)"), so these tests pass on stubs and start biting as pages arrive. The rules themselves are tested on small strings
 at the bottom, so we know they bite before any page exists."""
 
 import collections
 import csv
+import functools
 import re
 import unicodedata
+
+import pytest
 
 from sitelib import ROOT, SITE_ROOT, docx_text
 from test_sources import CHUNK, CONTENT_DIRS, EXECUTABLE_CHUNK, KNITR, front_matter
@@ -19,28 +22,49 @@ EXEC_INFO = re.compile(r"^\{(r|python)\b")
 HTML_ONLY = '::: {.content-visible when-format="html"}'
 
 # The six catalog steps (glossary rows "When to use it" ... "How to report it"), in spec §6 order.
+LANGS = ["fr", "de"]
 STEPS = {
-    "When to use it": "Quand l'utiliser",
-    "Look at the data first": "Regarder d'abord les données",
-    "Run it": "Exécuter l'analyse",
-    "Read the output": "Lire le résultat",
-    "Effect size and 95% CI": "Taille d'effet et IC à 95 %",
-    "How to report it": "Rédiger les résultats",
+    "fr": {
+        "When to use it": "Quand l'utiliser",
+        "Look at the data first": "Regarder d'abord les données",
+        "Run it": "Exécuter l'analyse",
+        "Read the output": "Lire le résultat",
+        "Effect size and 95% CI": "Taille d'effet et IC à 95 %",
+        "How to report it": "Rédiger les résultats",
+    },
+    "de": {
+        "When to use it": "Wann verwenden",
+        "Look at the data first": "Zuerst die Daten ansehen",
+        "Run it": "Analyse durchführen",
+        "Read the output": "Ausgabe lesen",
+        "Effect size and 95% CI": "Effektstärke und 95%-KI",
+        "How to report it": "Resultate formulieren",
+    },
 }
-# Headings and bold leads that legitimately read the same in English and French (besides glossary
-# rows whose French is the English term, which are read from docs/glossary.csv).
-SAME_IN_FRENCH = {"r", "python", "solution", "windows", "mac", "macos", "linux", "git", "positron",
-                  "kaplan-meier", "cox", "anova", "bonferroni", "holm", "benjamini-hochberg"}
+# Headings and bold leads that legitimately read the same in English and the translation (besides
+# glossary rows whose translation is the English term, which are read from docs/glossary.csv). German
+# has no "solution": its callout is titled "Lösung".
+SAME_AS_ENGLISH = {
+    "fr": {"r", "python", "solution", "windows", "mac", "macos", "linux", "git", "positron",
+           "kaplan-meier", "cox", "anova", "bonferroni", "holm", "benjamini-hochberg"},
+    "de": {"r", "python", "windows", "mac", "macos", "linux", "git", "positron",
+           "kaplan-meier", "cox", "anova", "median", "bonferroni", "holm", "benjamini-hochberg"},
+}
 
 
 # ---------------------------------------------------------------- pages
+
+# The German home page is written by hand and differs from the English one until Task 13 of sub-project 4
+# translates it; delete this set then.
+NOT_YET_COMPARABLE = {("de", "index.qmd")}
+
 
 def translated_pages(lang, root=ROOT):
     """(en_path, tr_path) for every page of `lang` that isn't a stub, with its English twin."""
     folders = [root / lang] + [root / lang / d for d in CONTENT_DIRS]
     for folder in folders:
         for tr in sorted(folder.glob("*.qmd")):
-            if ".coming-soon" in tr.read_text(encoding="utf-8"):
+            if ".coming-soon" in tr.read_text(encoding="utf-8") or (lang, tr.name) in NOT_YET_COMPARABLE and folder == root / lang:
                 continue
             yield root / "en" / tr.relative_to(root / lang), tr
 
@@ -335,12 +359,13 @@ def headings(text: str, level: int):
             for l in prose_lines(text) if l.startswith(mark)]
 
 
-def step_problems(en: str, tr: str) -> list[str]:
+def step_problems(en: str, tr: str, lang="fr") -> list[str]:
+    steps = STEPS[lang]
     a, b = sections(en), sections(tr)
     problems = []
     for key in a.keys() & b.keys():
-        want = [norm(STEPS[h]) for h in headings(a[key], 3) if h in STEPS]
-        got = [h for h in headings(b[key], 3) if h in {norm(v) for v in STEPS.values()}]
+        want = [norm(steps[h]) for h in headings(a[key], 3) if h in steps]
+        got = [h for h in headings(b[key], 3) if h in {norm(v) for v in steps.values()}]
         if want != got:
             problems.append(f"section '{key}': steps {got}, expected {want}")
     return problems
@@ -356,17 +381,17 @@ def titles(text: str) -> set[str]:
     return found
 
 
-def same_in_french() -> set[str]:
+def same_as_english(lang: str) -> set[str]:
     with GLOSSARY.open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
-    names = {r["en"].strip().lower() for r in rows if r["en"].strip().lower() == r["fr"].strip().lower()}
-    return names | SAME_IN_FRENCH
+    names = {r["en"].strip().lower() for r in rows if r["en"].strip().lower() == r[lang].strip().lower()}
+    return names | SAME_AS_ENGLISH[lang]
 
 
-def untranslated_titles(en: str, tr: str, allowed=None) -> list[str]:
+def untranslated_titles(en: str, tr: str, allowed=None, lang="fr") -> list[str]:
     """Headings and bold leads that read exactly as on the English page. Page 18's manuscript
     (outside the html-only divs) stays English, so its headings are exempt."""
-    allowed = same_in_french() if allowed is None else allowed
+    allowed = same_as_english(lang) if allowed is None else allowed
     en_visible = "\n".join(split_by_format(en)[0]) if HTML_ONLY in en else en
     return sorted(t for t in titles(tr) & titles(en_visible)
                   if t not in allowed and re.search(r"[a-zà-ÿ]{2,}", t))
@@ -419,8 +444,8 @@ def structure(text: str) -> list[tuple[str, str]]:
             found.append(("div", line.strip()))
         elif re.match(r"^## .*\{#([A-Za-z][\w:.-]*)", line):
             found.append(("section", re.match(r"^## .*\{#([A-Za-z][\w:.-]*)", line).group(1)))
-        elif line in ("## R", "## Python", "## Solution"):
-            found.append(("heading", line))
+        elif line in ("## R", "## Python", "## Solution", "## Lösung"):
+            found.append(("heading", "## Solution" if line == "## Lösung" else line))
     return found
 
 
@@ -454,15 +479,15 @@ def row_set_problems(en: str, tr: str) -> list[str]:
     def signature(rows):
         return collections.Counter((tuple(number_tokens(r)), tuple(INLINE.findall(r))) for r in rows)
     a, b = signature(table_rows(en)), signature(table_rows(tr))
-    return [] if a == b else [f"rows differ in numbers or inline code: only French {dict(b - a)}, only English {dict(a - b)}"]
+    return [] if a == b else [f"rows differ in numbers or inline code: only translation {dict(b - a)}, only English {dict(a - b)}"]
 
 
-def check_pages(check):
+def check_pages(check, lang):
     found = {}
-    for en, tr in translated_pages("fr"):
+    for en, tr in translated_pages(lang):
         en_text, tr_text = en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8")
         problems = []
-        if tr.name == A_TO_Z and tr.parent.name == "fr":
+        if tr.name == A_TO_Z and tr.parent.name == lang:
             if check in (code_problems, number_problems):
                 problems += row_set_problems(en_text, tr_text)
             en_text, tr_text = without_rows(en_text), without_rows(tr_text)
@@ -472,37 +497,62 @@ def check_pages(check):
     assert found == {}
 
 
-GENERIC = {"test", "tests", "estimateur", "ajustement", "limites", "courbe", "coefficient", "coefficients"}
-FUNCTION_WORDS = {"de", "du", "des", "la", "le", "les", "à", "pour", "un", "une", "et"}
+GENERIC = {
+    "fr": {"test", "tests", "estimateur", "ajustement", "limites", "courbe", "coefficient", "coefficients"},
+    "de": {"test", "tests", "schätzer", "anpassung", "kurve", "koeffizient"},
+}
+FUNCTION_WORDS = {
+    "fr": {"de", "du", "des", "la", "le", "les", "à", "pour", "un", "une", "et"},
+    "de": {"der", "die", "das", "des", "für", "von", "nach", "und"},
+}
 # Names a reader would look up under another word than the rule finds.
 SORT_AS = {"Test d'adéquation du khi-deux": "khi-deux", "Vérification des risques proportionnels": "risques proportionnels"}
 
 
-def sort_key(row: str) -> str:
-    """Where a French reader looks a row up: the proper name if the name has one (Fisher, Wilcoxon,
+def sort_key(row: str, generic: set, function_words: set, german: bool = False) -> str:
+    """Where a reader looks a row up: the proper name if the name has one (Fisher, Wilcoxon,
     Bland-Altman), otherwise its first word that isn't Test, Estimateur, Ajustement... or a function word
-    ("Régression logistique" stays under R, "Test t pour échantillons appariés" under t). Accents don't count."""
+    ("Régression logistique" stays under R, "Test t pour échantillons appariés" under t). Accents and
+    umlauts don't count. German capitalizes every noun, so there a proper name is the word after "nach"
+    ("Exakter Test nach Fisher"), and a trailing "-Test" or "-Schätzer" is dropped ("Wilcoxon-Rang-Test")."""
     name = row.split("|")[1].strip().split(" (*")[0]
     name = re.sub(r"\s*\([^)]*\)", "", name).replace("\u00a0", " ")
-    key = SORT_AS.get(name)
+    key = None if german else SORT_AS.get(name)
     if key is None:
         words = [re.sub(r"^[dDlL]['’]", "", w) for w in name.split()]
-        proper = [w for w in words[1:] if w[:1].isupper() and not w.isupper()]
-        rest = [w for w in words if w.lower() not in GENERIC | FUNCTION_WORDS and w]
+        words = [w.rsplit("-", 1)[0] if "-" in w and w.rsplit("-", 1)[1].lower() in generic else w for w in words]
+        if german:
+            after = [words[i + 1] for i, w in enumerate(words[:-1]) if w.lower() == "nach"]
+            proper = after[:1]
+        else:
+            proper = [w for w in words[1:] if w[:1].isupper() and not w.isupper()]
+        rest = [w for w in words if w.lower() not in generic | function_words and w]
         key = proper[0] if proper else rest[0]
     decomposed = unicodedata.normalize("NFD", key.casefold())
     return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
-def test_french_tests_a_z_is_sorted():
-    rows = table_rows((ROOT / "fr" / A_TO_Z).read_text(encoding="utf-8"))
-    keys = [sort_key(r) for r in rows]
+@pytest.mark.parametrize("lang", LANGS)
+def test_tests_a_z_is_sorted(lang):
+    rows = table_rows((ROOT / lang / A_TO_Z).read_text(encoding="utf-8"))
+    keys = [sort_key(r, GENERIC[lang], FUNCTION_WORDS[lang], german=lang == "de") for r in rows]
     assert keys == sorted(keys), [(a, b) for a, b in zip(keys, keys[1:]) if a > b]
+
+
+def test_german_sort_key_finds_the_distinctive_name():
+    def key(name):
+        return sort_key(f"| {name} | x | y |", GENERIC["de"], FUNCTION_WORDS["de"], german=True)
+    assert key("Exakter Test nach Fisher (*Fisher's exact test*)") == "fisher"
+    assert key("Wilcoxon-Vorzeichen-Rang-Test (*x*)") == "wilcoxon-vorzeichen-rang"
+    assert key("Mann-Whitney-Test (*x*)") == "mann-whitney"
+    assert key("t-Test für gepaarte Stichproben (*x*)") == "t"
+    assert key("Aalen-Johansen-Schätzer (*x*)") == "aalen-johansen"
+    assert key("Äquivalenz der Varianzen (*x*)") == "aquivalenz"
 
 
 def test_sort_key_finds_the_distinctive_name():
     def key(name):
-        return sort_key(f"| {name} | x | y |")
+        return sort_key(f"| {name} | x | y |", GENERIC["fr"], FUNCTION_WORDS["fr"])
     assert key("Test exact de Fisher (*Fisher's exact test*)") == "fisher"
     assert key("Test des rangs signés de Wilcoxon (*x*)") == "wilcoxon"
     assert key("Limites de concordance de Bland-Altman (*x*)") == "bland-altman"
@@ -520,37 +570,44 @@ def test_row_sets_ignore_order_but_not_numbers():
     assert row_set_problems(en, "| A | b | c |\n|--|--|--|\n| e | f | `y` |\n| g | h | 3 |\n")
 
 
-def test_translated_code_matches_english():
-    check_pages(code_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_translated_code_matches_english(lang):
+    check_pages(code_problems, lang)
 
 
-def test_translated_prose_quotes_the_same_numbers():
-    check_pages(number_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_translated_prose_quotes_the_same_numbers(lang):
+    check_pages(number_problems, lang)
 
 
-def test_methods_and_results_stay_in_english():
-    check_pages(reporting_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_methods_and_results_stay_in_english(lang):
+    check_pages(reporting_problems, lang)
 
 
-def test_page_18_manuscript_stays_in_english():
-    for en, tr in translated_pages("fr"):
+@pytest.mark.parametrize("lang", LANGS)
+def test_page_18_manuscript_stays_in_english(lang):
+    for en, tr in translated_pages(lang):
         if tr.name == "18-example-report.qmd":
             assert manuscript_problems(en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8")) == []
 
 
-def test_translated_page_structure_matches_english():
-    check_pages(structure_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_translated_page_structure_matches_english(lang):
+    check_pages(structure_problems, lang)
 
 
-def test_french_catalog_steps_are_in_order():
-    for en, tr in translated_pages("fr"):
+@pytest.mark.parametrize("lang", LANGS)
+def test_catalog_steps_are_in_order(lang):
+    for en, tr in translated_pages(lang):
         if tr.parent.name == "catalog":
-            problems = step_problems(en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8"))
+            problems = step_problems(en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8"), lang)
             assert problems == [], str(tr.relative_to(ROOT))
 
 
-def test_french_callouts_use_the_glossary_titles():
-    check_pages(untranslated_titles)
+@pytest.mark.parametrize("lang", LANGS)
+def test_callouts_use_the_glossary_titles(lang):
+    check_pages(functools.partial(untranslated_titles, lang=lang), lang)
 
 
 def test_french_prose_uses_vous():
@@ -559,15 +616,16 @@ def test_french_prose_uses_vous():
     assert {k: v for k, v in found.items() if v} == {}
 
 
-def test_no_page_loses_its_engine():
-    check_pages(front_matter_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_no_page_loses_its_engine(lang):
+    check_pages(front_matter_problems, lang)
 
 
-def test_glossary_has_a_french_term_for_every_row():
+def test_glossary_has_a_term_for_every_row():
     with GLOSSARY.open(encoding="utf-8", newline="") as f:
         rows = list(csv.DictReader(f))
     assert len(rows) >= 120
-    assert [r["en"] for r in rows if not r["en"].strip() or not r["fr"].strip()] == []
+    assert [r["en"] for r in rows if not all(r[c].strip() for c in ("en", "fr", "de"))] == []
 
 
 # ---------------------------------------------------------------- typography and comments
@@ -578,14 +636,13 @@ TABLE_SEPARATOR = re.compile(r"^\|[\s:|-]+\|?\s*$")
 TRANSLATED_KEYS = re.compile(r"^(title|subtitle|description):\s*(.*)$")
 
 
-def typography_problems(tr: str) -> list[str]:
-    """Plain spaces where French wants a non-breaking one (before ; : ? ! % » and after «), in translated
-    prose only. Code, inline code, URLs, link targets, `:::` fences, table separator rows, {attributes},
-    Methods/Results paragraphs and front-matter keys are left alone."""
+def typography_lines(tr: str):
+    """(line, cleaned text) for each line of translated prose. Code, inline code, URLs, link targets,
+    `:::` fences, table separator rows, {attributes}, Methods/Results paragraphs and front-matter keys
+    are left out or blanked."""
     reported = {line for p in reported_paragraphs(tr) for line in p.split("\n")}
     lines = [m.group(2) for l in front_matter(tr).split("\n") if (m := TRANSLATED_KEYS.match(l))]
     lines += [l for l in prose_lines(tr) if l not in reported]
-    problems = []
     for line in lines:
         if line.startswith(":::") or TABLE_SEPARATOR.match(line):
             continue
@@ -594,10 +651,33 @@ def typography_problems(tr: str) -> list[str]:
         text = re.sub(r"\]\([^)\s]*\)", "]", text)
         text = re.sub(r"<?https?://[^\s>)]*>?", "URL", text)
         text = re.sub(r"\{[^{}\n]*\}", "", text)
-        found = PLAIN_SPACE_BEFORE.findall(text) + PLAIN_SPACE_AFTER.findall(text)
-        if found:
-            problems.append(f"{line.strip()[:70]!r}")
-    return problems
+        yield line, text
+
+
+def typography_problems(tr: str) -> list[str]:
+    """Plain spaces where French wants a non-breaking one (before ; : ? ! % » and after «), in translated
+    prose only."""
+    return [f"{line.strip()[:70]!r}" for line, text in typography_lines(tr)
+            if PLAIN_SPACE_BEFORE.findall(text) + PLAIN_SPACE_AFTER.findall(text)]
+
+
+GERMAN_PLAIN_SPACE_BEFORE_PERCENT = re.compile(r" %")
+GERMAN_QUOTES = re.compile("[„“”‚‘]")
+GUILLEMET_PADDING = re.compile(r"«\s|\s»")
+
+
+def german_typography_problems(tr: str) -> list[str]:
+    """German prose wants a non-breaking space before % (the compound 95%-KI has none), « » quotes as
+    in Swiss usage and no space inside them."""
+    return [f"{line.strip()[:70]!r}" for line, text in typography_lines(tr)
+            if GERMAN_PLAIN_SPACE_BEFORE_PERCENT.search(text) or GERMAN_QUOTES.search(text)
+            or GUILLEMET_PADDING.search(text)]
+
+
+def test_german_typography():
+    found = {str(tr.relative_to(ROOT)): german_typography_problems(tr.read_text(encoding="utf-8"))
+             for _, tr in translated_pages("de")}
+    assert {k: v for k, v in found.items() if v} == {}
 
 
 def test_french_typography():
@@ -628,8 +708,9 @@ def comment_problems(en: str, tr: str) -> list[str]:
     return problems
 
 
-def test_visible_comments_are_translated():
-    check_pages(comment_problems)
+@pytest.mark.parametrize("lang", LANGS)
+def test_visible_comments_are_translated(lang):
+    check_pages(comment_problems, lang)
 
 
 # ---------------------------------------------------------------- rule tests
@@ -955,9 +1036,10 @@ FRENCH_BANNED = {
 }
 
 
-def banned_terms(tr: str) -> list[str]:
-    """Banned terms in French prose: code, inline code, Methods and Results lines and quoted English
+def banned_terms(tr: str, banned=None) -> list[str]:
+    """Banned terms in French (or, with `banned`, German) prose: code, inline code, Methods and Results lines and quoted English
     (inside « » or in italics) are left alone."""
+    banned = FRENCH_BANNED if banned is None else banned
     reported = {line for p in reported_paragraphs(tr) for line in p.split("\n")}
     found = []
     for line in prose_lines(tr):
@@ -968,7 +1050,7 @@ def banned_terms(tr: str) -> list[str]:
         text = re.sub(r"«[^»]*»", " ", text)
         text = re.sub(r"(?<!\*)\*(?!\*)[^*\n]+(?<!\*)\*(?!\*)", " ", text)     # italics, not **bold**
         text = re.sub(r"\]\([^)\s]*\)", "] ", text)
-        found += [name for name, rx in FRENCH_BANNED.items() if re.search(rx, text, re.IGNORECASE)]
+        found += [name for name, rx in banned.items() if re.search(rx, text, re.IGNORECASE)]
     return found
 
 
@@ -992,8 +1074,129 @@ def test_french_banned_terms():
     assert {k: v for k, v in found.items() if v} == {}
 
 
-def test_french_report_docx_has_the_same_text_as_english(site):
+@pytest.mark.parametrize("lang", LANGS)
+def test_report_docx_has_the_same_text_as_english(site, lang):
+    if lang == "de" and ".coming-soon" in (ROOT / "de" / "report" / "18-example-report.qmd").read_text(encoding="utf-8"):
+        pytest.skip("page 18 is still a German stub")
     english = SITE_ROOT / "en" / "report" / "18-example-report.docx"
-    french = SITE_ROOT / "fr" / "report" / "18-example-report.docx"
-    assert english.exists() and french.exists()
-    assert docx_text(french) == docx_text(english)
+    translated = SITE_ROOT / lang / "report" / "18-example-report.docx"
+    assert english.exists() and translated.exists()
+    assert docx_text(translated) == docx_text(english)
+
+
+# ---------------------------------------------------------------- German
+
+# Anglicisms and German-from-Germany terms the glossary and translation guide rule out. False friends
+# a pattern can't catch (eventuell, aktuell, konsistent) are in the guide.
+GERMAN_BANNED = {
+    "Sinn machen": r"\bSinn\s+mach\w*|\bmach(?:t|en|te|ten|e)\s+(?:\w+\s+)?Sinn\b",
+    "kontrollieren für": r"kontrollier\w* für",
+    "Krankenhaus": r"Krankenhaus",
+    "Entlassung": r"Entlassung",
+    "Hüftfraktur": r"Hüftfraktur",
+    "direkter anteriorer Zugang": r"direkt\w* anterior\w* Zugang",
+    "realisieren": r"\brealisier\w*",
+    "DAA": r"(?-i:\bDAA\b)",
+}
+DU = re.compile(r"\b(?:du|dein\w*|dich|dir|euch|euer)\b", re.IGNORECASE)
+DU_IMPERATIVE = re.compile(
+    r"(?:^|[.!?»]\s+)(?:(?:[-*]|\d+\.)\s+)?(Berechne|Schau|Öffne|Lies|Führe|Nimm|Prüfe|Gib|Starte|Speichere)\b(?![ \s]*:)",
+    re.MULTILINE)
+
+
+def duzen(tr: str) -> list[str]:
+    """Informal address in German prose (Methods/Results paragraphs, code and links are not German prose)."""
+    prose = "\n".join(prose_lines(tr))
+    for p in reported_paragraphs(tr):
+        prose = prose.replace(p, " ")
+    prose = re.sub(r"`[^`\n]*`", " ", prose)
+    prose = re.sub(r"\]\([^)\s]*\)", "] ", prose)
+    return DU.findall(prose) + DU_IMPERATIVE.findall(prose)
+
+
+def german_pages(root=ROOT):
+    return sorted((root / "de").rglob("*.qmd"))
+
+
+def test_german_decimal_comma_fails():
+    assert number_problems("The mean was 0.86.\n", "Der Mittelwert betrug 0,86.\n")
+
+
+def test_german_ordinals_and_months_compare_like_english():
+    assert number_problems("On January 5, 2015, the 1st visit.\n", "Am 5. Januar 2015, der 1. Besuch.\n") == []
+
+
+def test_loesung_counts_as_solution_in_structure():
+    assert structure("## Solution\n") == structure("## Lösung\n")
+    assert structure("## Solution\n") != structure("## Antwort\n")
+
+
+def test_loesung_is_not_an_untranslated_solution_but_solution_is():
+    en = "## Solution\n\n## Median\n\n## Run it\n"
+    assert untranslated_titles(en, "## Lösung\n\n## Median\n\n## Analyse durchführen\n", lang="de") == []
+    assert untranslated_titles(en, en, lang="de") == ["run it", "solution"]
+
+
+def test_german_steps_compare_through_the_glossary():
+    en = "## S {#s}\n### Effect size and 95% CI\n### Run it\n"
+    assert step_problems(en, "## S {#s}\n### Effektstärke und 95%-KI\n### Analyse durchführen\n", "de") == []
+    assert step_problems(en, "## S {#s}\n### Analyse durchführen\n### Effektstärke und 95%-KI\n", "de")
+
+
+def test_du_form_is_caught_but_not_sie():
+    assert duzen("Berechne deinen Mittelwert.\n")
+    assert duzen("Berechnen Sie Ihren Mittelwert.\n") == []
+    assert duzen("Du siehst es. Dir hilft das. Schau nach.\n- Lies die Ausgabe.\n") == [
+        "Du", "Dir", "Schau", "Lies"]
+    assert duzen("Schauen Sie nach. Lesen Sie.\n> **Results:** du dein\n") == []
+
+
+def test_german_typography_rule():
+    assert german_typography_problems("Es sind 12 % der Fälle.\n")                  # plain space
+    assert german_typography_problems("Das sogenannte „Modell“.\n")                  # Germany-style quotes
+    assert german_typography_problems("Das sogenannte « Modell ».\n")                # space inside « »
+    assert german_typography_problems("Es sind 12\u00a0% im «Modell».\n") == []
+    assert german_typography_problems("Das 95%-KI reicht von 1 bis 2.\n") == []
+
+
+def test_german_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
+    for bad in ["Das macht keinen Sinn.", "Es macht Sinn.", "Sinn machen", "für das Alter kontrollieren für",
+                "im Krankenhaus", "nach der Entlassung", "eine Hüftfraktur", "der direkte anteriore Zugang",
+                "wir realisieren das", "der DAA"]:
+        assert banned_terms(bad, GERMAN_BANNED), bad
+    for good in ["Das ergibt Sinn.", "im Spital", "nach dem Austritt", "proximale Femurfraktur",
+                 "der anteriore Zugang", "«im Krankenhaus» ist deutsch aus Deutschland", "`DAA`",
+                 "> **Results:** a Hüftfraktur", "Wir erkennen, dass das stimmt."]:
+        assert banned_terms(good, GERMAN_BANNED) == [], good
+
+
+def test_german_prose_uses_sie():
+    found = {str(tr.relative_to(ROOT)): duzen(tr.read_text(encoding="utf-8")) for _, tr in translated_pages("de")}
+    assert {k: v for k, v in found.items() if v} == {}
+
+
+def test_german_has_no_eszett():
+    files = german_pages() + [ROOT / "_quarto.yml"]
+    assert [str(f.relative_to(ROOT)) for f in files if "ß" in f.read_text(encoding="utf-8")] == []
+    with GLOSSARY.open(encoding="utf-8", newline="") as f:
+        assert [r["en"] for r in csv.DictReader(f) if "ß" in r["de"]] == []
+
+
+def test_german_banned_terms():
+    found = {str(tr.relative_to(ROOT)): banned_terms(tr.read_text(encoding="utf-8"), GERMAN_BANNED)
+             for _, tr in translated_pages("de")}
+    assert {k: v for k, v in found.items() if v} == {}
+
+
+def test_german_real_data_uses_the_swiss_law_names():
+    text = (ROOT / "de" / "getting-started" / "real-data.qmd").read_text(encoding="utf-8")
+    if ".coming-soon" in text:
+        pytest.skip("real-data is still a German stub")
+    for name in ("Humanforschungsgesetz", "KlinV-Mep", "CER-VD", "BASEC"):
+        assert name in text, name
+
+
+def test_german_names_no_data_protection_officer():
+    found = [str(p.relative_to(ROOT)) for p in german_pages()
+             if re.search(r"Datenschutzbeauftragt|Datenschutzberater", p.read_text(encoding="utf-8"))]
+    assert found == []

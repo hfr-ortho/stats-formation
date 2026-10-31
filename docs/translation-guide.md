@@ -19,7 +19,7 @@ For translating an English page into French (sub-project 3) or German (sub-proje
 - Display code blocks (` ```bash `, ` ```powershell `, ` ```python `, ` ```r `) are identical except for comments. A `{mermaid}` diagram keeps its ids and arrows; its node and edge labels are prose and translate.
 - The two results sentences that carry no **Results:** label (`en/foundations/03-distributions.qmd` after "TKA patients had a higher BMI", and `en/getting-started/using-this-site.qmd` after "KOOS JR at 1 year was a median") stay in English too.
 - Headings and bold leads must differ from the English ones (`## R`, `## Python`, `## Solution`, and names such as Windows or Kaplan-Meier excepted). Page 18's manuscript headings stay English; everything outside its `.content-visible when-format="html"` blocks is byte-identical to the English page.
-- The `:::` fence lines (including `collapse="true"` and `group="language"`), the `## R` / `## Python` / `## Solution` headings and the position of every chunk match the English page.
+- The `:::` fence lines (including `collapse="true"` and `group="language"`), the `## R` / `## Python` / `## Solution` headings (`## Lösung` in German) and the position of every chunk match the English page.
 
 ## Numbers
 
@@ -27,6 +27,7 @@ Copy every number exactly as the English has it: the decimal point stays a point
 
 - Keep numbers in the English order within a paragraph. The test compares each paragraph's numbers in sequence, with their sign and any leading `<`, `>`, `≤` or `≥` (`p < 0.05` is not `p > 0.05`; `−2` is not `2`). Keep the English paragraph breaks too: a list item, a heading and a table row each count as a paragraph.
 - Dates: month names translate (`January 2015` becomes `janvier 2015`); the day and the year stay. Ordinals keep their digits: `1st` becomes `1er`, `25th` becomes `25e`.
+  In German: `January 2015` becomes `Januar 2015`, `1st` becomes `1.`, `25th` becomes `25.`.
 - Inline code (`like this`) is compared span by span, in order: copy it exactly.
 - Numbers in visible code comments must match the English, in order.
 
@@ -38,6 +39,31 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - Use the glossary's headings: `Quand l'utiliser`, `Regarder d'abord les données`, `Exécuter l'analyse`, `Lire le résultat`, `Taille d'effet et IC à 95 %`, `Rédiger les résultats`; `**La question :**`; callouts `⚠️ Attention :`, `🔀 R ou Python :`, `💡`, `🔍 Sous le capot :`; `Exercices`; `Solution` stays.
 - THA/TKA are PTH/PTG in prose; say once per page that the code says `THA`, `TKA`.
 - Stubs: a translated page loses "(en préparation)" and its `.coming-soon` callout.
+
+## Style (German)
+
+- Swiss Standard German: "ss", never "ß" (Mass, gross, Grösse, Fuss, schliesslich, ausserdem). "Sie" and "Ihr", never "du". Plain, direct sentences for beginners in statistics and code; don't render word for word.
+- Gender-fair wording: the pair form ("Patientinnen und Patienten", "Assistenzärztinnen und Assistenzärzte") or a neutral word (Personen, Studierende, Teilnehmende, Forschungsassistierende). Turn singular examples into the plural. Compounds stay (Patientendaten, Patientengruppe). No star, colon or capital-I forms.
+- Swiss usage over German-from-Germany usage: Spital, Eintritt, Austritt, Rehospitalisation, Resultate, allfällig.
+- Quotation marks are « » with no inner spaces, never „ “. A non-breaking space (U+00A0) goes before `%` in translated prose, except in the compound `95%-KI`. Never in code, Methods or Results.
+- Use the glossary's headings: `Wann verwenden`, `Zuerst die Daten ansehen`, `Analyse durchführen`, `Ausgabe lesen`, `Effektstärke und 95%-KI`, `Resultate formulieren`; `**Die Frage:**`; callouts `⚠️ Achtung:`, `🔀 R oder Python:`, `💡`, `🔍 Unter der Haube:`; `Übungen`; the solution callout is titled `Lösung` and the tabset heading is `## Lösung` (the structure test reads it as `## Solution`).
+- THA and TKA are Hüft-TEP and Knie-TEP in prose; say once per page that the code says `THA`, `TKA`.
+- Laws use their official Swiss names: Humanforschungsgesetz (HFG), Humanforschungsverordnung (HFV), Verordnung über klinische Versuche (KlinV), KlinV-Mep, Datenschutzgesetz (DSG). HFR has no data protection officer: name none.
+- In `tests-a-z`, keep each test's English name in the first cell wherever it differs, in italics in parentheses: "t-Test für gepaarte Stichproben (*paired t test*)". The table is sorted by the distinctive name (Fisher under F, "t-Test für gepaarte Stichproben" under t).
+- Stubs: a translated page loses "(in Vorbereitung)" and its `.coming-soon` callout.
+
+## False friends and fixed choices (German)
+
+- Never "Sinn machen": write "Sinn ergeben" ("das ergibt Sinn").
+- Never "kontrollieren für": write "adjustiert für" or "unter Berücksichtigung von".
+- Never "Krankenhaus" (write "Spital"), "Entlassung" (write "Austritt"), "Hüftfraktur" (write "proximale Femurfraktur"), "realisieren" for to realize (write "erkennen", "merken").
+- Never "direkter anteriorer Zugang" or an abbreviation of it: it is "anteriorer Zugang".
+- "eventuell" means possibly, not eventually ("schliesslich", "am Ende"); "aktuell" means current, not actual ("tatsächlich"); "konsistent" is for consistent in the sense of firm, not consistent with ("übereinstimmend", "stimmig").
+- "signifikant" is reserved for statistical significance. A clinical meaning is "relevant" or "bedeutsam".
+- A "Hüft-TEP" is a total hip arthroplasty; the code and data say `THA`.
+- Numbers keep the English decimal point (`0.86`) and thousands comma (`1,200`), never `0,86` or `1'200`.
+- Gloss at first use, once per page: KI, SD, IQR, HR, OR, PROM, HOOS JR, KOOS JR. The glossary rows give the German form.
+- Fedlex's German text decides every law name; the glossary holds the names the project uses.
 
 ## False friends and fixed choices (French)
 

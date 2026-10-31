@@ -414,7 +414,9 @@ which replaces this outline where they differ.
   - Code, variable names, data, outputs and Methods/Results sentences stay in
     English; the page explains them in its own language.
   - Fixed section IDs stay English.
-- **Per page:** translate → render → tests → review by a native speaker. Tests
+- **Per page:** translate → render → tests; a native speaker reviews the
+  published site and sends corrections to Doc (Doc's decision, 31.10.2026,
+  because the reviewers don't use GitHub). Tests
   added for translated pages:
   - the R and Python chunks are identical to the English page once comments
     are stripped;
