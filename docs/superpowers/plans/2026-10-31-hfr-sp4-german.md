@@ -83,7 +83,7 @@ Every row. These choices are fixed:
 | length of stay; discharge; admission | Aufenthaltsdauer; Austritt; Eintritt |
 | readmission; revision | Rehospitalisation; Revision |
 | anterior approach | anteriorer Zugang |
-| PROM | PROM (patientenberichtetes Outcome-Mass) |
+| PROM | PROM (patientenberichtetes Messinstrument) |
 | Results sentence | Results-Satz |
 | foot and ankle | Fuss und Sprunggelenk |
 
