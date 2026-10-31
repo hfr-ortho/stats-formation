@@ -83,9 +83,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-adf1ad09c506ca6000c25a9dfd1ec516.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../site_libs/bootstrap/bootstrap-dark-6d4f66268d14a326bc1df422e652d080.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../site_libs/bootstrap/bootstrap-adf1ad09c506ca6000c25a9dfd1ec516.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-cb3951e60572a76adcf647b7eba53521.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-dark-362cd3b589d3e7a83bfcee632f9990c0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../site_libs/bootstrap/bootstrap-cb3951e60572a76adcf647b7eba53521.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -597,8 +597,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<!-- data-checksum: ffc54e2ad996e1e61ad10ca520e4d588 -->
-<p>Two things measured on the same patients: BMI and operative time, PROM improvement and satisfaction, ASA class and hypertension. The tests on this page don’t compare groups. They put <strong>one number on how strongly the two go together</strong>, with a 95% CI. If you want to <strong>predict</strong> one from the other, use regression (<a href="../../en/catalog/11-predict-from-one.html">page 11</a>).</p>
+<!-- data-checksum: f354a6da47f62ead35825a3d2b8ef6d9 -->
+<p>Two things measured on the same patients: femoral torsion on CT and on the modified Budin view, PROM improvement and satisfaction, ASA class and hypertension. The tests on this page don’t compare groups. They put <strong>one number on how strongly the two go together</strong>, with a 95% CI. If you want to <strong>predict</strong> one from the other, use regression (<a href="../../en/catalog/11-predict-from-one.html">page 11</a>).</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -609,13 +609,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Each section answers one question about the practice cohort. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section’s blocks in order, top to bottom.</p>
-<p>To keep the code short, the examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them (<a href="../../en/foundations/03-distributions.html#paired">page 3</a>) and say what you did.</p>
+<p>Each section answers one question about one of the practice’s datasets (hip imaging for Pearson, the joint replacement cohort otherwise). Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section’s blocks in order, top to bottom.</p>
+<p>To keep the code short, the joint replacement examples use every case, including the 80 patients who had both sides operated on. In a real study, decide how to handle them (<a href="../../en/foundations/03-distributions.html#paired">page 3</a>) and say what you did.</p>
 </div>
 </div>
 <section id="pearson" class="level2">
 <h2 class="anchored" data-anchor-id="pearson">Pearson correlation</h2>
-<p><strong>The question:</strong> How closely does operative time track BMI?</p>
+<p><strong>The question:</strong> How closely does femoral torsion on the modified Budin view track torsion on CT?</p>
 <section id="when-to-use-it" class="level3">
 <h3 class="anchored" data-anchor-id="when-to-use-it">When to use it</h3>
 <ul>
@@ -634,11 +634,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>imaging <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/hip_preservation_imaging.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)   <span class="co"># one row per hip</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cohort, <span class="fu">aes</span>(bmi, op_time_min)) <span class="sc">+</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.4</span>) <span class="sc">+</span>   <span class="co"># see-through points show where they pile up</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"BMI, kg/m²"</span>, <span class="at">y =</span> <span class="st">"Operative time, minutes"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(imaging, <span class="fu">aes</span>(torsion_ct_deg, torsion_budin_deg)) <span class="sc">+</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span>   <span class="co"># see-through points show where they pile up</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span>   <span class="co"># dashed line: the two methods read the same</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Femoral torsion on CT, degrees"</span>, <span class="at">y =</span> <span class="st">"Femoral torsion on Budin view, degrees"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -654,13 +655,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>cohort <span class="op">=</span> pd.read_csv(<span class="st">"data/cohort.csv"</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>imaging <span class="op">=</span> pd.read_csv(<span class="st">"data/hip_preservation_imaging.csv"</span>)   <span class="co"># one row per hip</span></span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="fl">3.5</span>))</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>ax.scatter(cohort[<span class="st">"bmi"</span>], cohort[<span class="st">"op_time_min"</span>], alpha<span class="op">=</span><span class="fl">0.4</span>)   <span class="co"># see-through points show where they pile up</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"BMI, kg/m²"</span>)</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Operative time, minutes"</span>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>ax.scatter(imaging[<span class="st">"torsion_ct_deg"</span>], imaging[<span class="st">"torsion_budin_deg"</span>], alpha<span class="op">=</span><span class="fl">0.6</span>)   <span class="co"># see-through points show where they pile up</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>ax.axline((<span class="dv">0</span>, <span class="dv">0</span>), slope<span class="op">=</span><span class="dv">1</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)   <span class="co"># dashed line: the two methods read the same</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Femoral torsion on CT, degrees"</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Femoral torsion on Budin view, degrees"</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -672,7 +674,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>The points drift upward from left to right, along a rough line, with no extreme outliers.</p>
+<p>The points follow a straight line, with no extreme outliers, but a flatter one than the dashed line where the two methods would read the same: the Budin reading runs a little above CT at low torsion and below it at high torsion. (Torsion can be negative: the femur is then retroverted.)</p>
 </section>
 <section id="run-it" class="level3">
 <h3 class="anchored" data-anchor-id="run-it">Run it</h3>
@@ -681,33 +683,33 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="tab-content" data-group="language">
 <div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>bmi_corr <span class="ot">&lt;-</span> <span class="fu">cor.test</span>(cohort<span class="sc">$</span>bmi, cohort<span class="sc">$</span>op_time_min)   <span class="co"># Pearson is the default</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>bmi_corr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>torsion_corr <span class="ot">&lt;-</span> <span class="fu">cor.test</span>(imaging<span class="sc">$</span>torsion_ct_deg, imaging<span class="sc">$</span>torsion_budin_deg)   <span class="co"># Pearson is the default</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>torsion_corr</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Pearson's product-moment correlation
 
-data:  cohort$bmi and cohort$op_time_min
-t = 12.385, df = 598, p-value &lt; 2.2e-16
+data:  imaging$torsion_ct_deg and imaging$torsion_budin_deg
+t = 14.732, df = 78, p-value &lt; 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- 0.3857355 0.5133091
+ 0.7861156 0.9065654
 sample estimates:
       cor 
-0.4518292 </code></pre>
+0.8576899 </code></pre>
 </div>
 </div>
 </div>
 <div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>bmi_corr <span class="op">=</span> stats.pearsonr(cohort[<span class="st">"bmi"</span>], cohort[<span class="st">"op_time_min"</span>])</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(bmi_corr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>torsion_corr <span class="op">=</span> stats.pearsonr(imaging[<span class="st">"torsion_ct_deg"</span>], imaging[<span class="st">"torsion_budin_deg"</span>])</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(torsion_corr)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>PearsonRResult(statistic=np.float64(0.45182923461553826), pvalue=np.float64(1.600468008421371e-31))</code></pre>
+<pre><code>PearsonRResult(statistic=np.float64(0.8576898583915415), pvalue=np.float64(3.0576926692219362e-24))</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(bmi_corr.confidence_interval(confidence_level<span class="op">=</span><span class="fl">0.95</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(torsion_corr.confidence_interval(confidence_level<span class="op">=</span><span class="fl">0.95</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>ConfidenceInterval(low=np.float64(0.3857355205072664), high=np.float64(0.5133090740097993))</code></pre>
+<pre><code>ConfidenceInterval(low=np.float64(0.786115630087847), high=np.float64(0.906565445098797))</code></pre>
 </div>
 </div>
 </div>
@@ -717,21 +719,21 @@ sample estimates:
 <section id="read-the-output" class="level3">
 <h3 class="anchored" data-anchor-id="read-the-output">Read the output</h3>
 <ul>
-<li><strong>cor</strong> (R) or <strong>statistic</strong> (Python): Pearson’s <strong>r = 0.45</strong>. It runs from −1 (a perfect falling line) through 0 (no straight-line relationship) to +1 (a perfect rising line).</li>
-<li><strong>t = 12.4, df = 598:</strong> the test statistic, with 600 procedures minus two degrees of freedom. Python doesn’t print it.</li>
-<li><strong>p &lt; 0.001</strong> (R prints <code>&lt; 2.2e-16</code>): a correlation this strong would be very unlikely if BMI and operative time were unrelated.</li>
-<li><strong>95% CI 0.39 to 0.51.</strong></li>
+<li><strong>cor</strong> (R) or <strong>statistic</strong> (Python): Pearson’s <strong>r = 0.86</strong>. It runs from −1 (a perfect falling line) through 0 (no straight-line relationship) to +1 (a perfect rising line).</li>
+<li><strong>t = 14.7, df = 78:</strong> the test statistic, with 80 hips minus two degrees of freedom. Python doesn’t print it.</li>
+<li><strong>p &lt; 0.001</strong> (R prints <code>&lt; 2.2e-16</code>): a correlation this strong would be very unlikely if torsion on CT and on the Budin view were unrelated.</li>
+<li><strong>95% CI 0.79 to 0.91.</strong></li>
 </ul>
 </section>
 <section id="effect-size-and-95-ci" class="level3">
 <h3 class="anchored" data-anchor-id="effect-size-and-95-ci">Effect size and 95% CI</h3>
-<p><strong>r is the effect size</strong>: r = 0.45 (95% CI 0.39 to 0.51). As a rough guide, 0.1 is small, 0.3 medium and 0.5 large. Squaring it gives the share of the variation in operative time that goes with BMI: r² = 0.20, about a fifth.</p>
+<p><strong>r is the effect size</strong>: r = 0.86 (95% CI 0.79 to 0.91). As a rough guide, 0.1 is small, 0.3 medium and 0.5 large. Squaring it gives the share of the variation in Budin torsion that goes with CT torsion: r² = 0.74, about three-quarters.</p>
 </section>
 <section id="how-to-report-it" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-report-it">How to report it</h3>
 <blockquote class="blockquote">
-<p><strong>Methods:</strong> The association between BMI and operative time was measured with Pearson’s correlation coefficient (r).</p>
-<p><strong>Results:</strong> The correlation between BMI and operative time was r = 0.45 (Pearson; 95% CI 0.39 to 0.51; p &lt; 0.001; n = 600 procedures).</p>
+<p><strong>Methods:</strong> The association between femoral torsion on CT and on the modified Budin view was measured with Pearson’s correlation coefficient (r).</p>
+<p><strong>Results:</strong> The correlation between femoral torsion on CT and on the modified Budin view was r = 0.86 (Pearson; 95% CI 0.79 to 0.91; p &lt; 0.001; n = 80 hips).</p>
 </blockquote>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -739,11 +741,12 @@ sample estimates:
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Warning</span>⚠️ Watch out: r only sees straight lines, and isn’t cause
+<span class="screen-reader-only">Warning</span>⚠️ Watch out: r only sees straight lines, isn’t cause, and isn’t agreement
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn’t say which causes which, or whether something else (procedure type, surgeon) drives both. To adjust for other variables, use <a href="../../en/catalog/12-predict-from-several.html#multiple-linear-regression">multiple regression</a>.</p>
+<p>A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn’t say which causes which, or whether something else (age, sex) drives both. To adjust for other variables, use <a href="../../en/catalog/12-predict-from-several.html#multiple-linear-regression">multiple regression</a>.</p>
+<p><strong>A high r isn’t agreement.</strong> Two methods can rise and fall together and still read different angles. Here r = 0.86, yet the Budin reading was up to 12.9° away from CT, and 95% of the differences would be expected from −10.2° to 7.8°. Even those limits hide a trend: in the 8 hips with 25° or more on CT, the Budin reading averaged 7.0° lower. To ask whether one method can replace the other, use <a href="../../en/beyond/17-agreement.html#bland-altman">Bland-Altman limits</a>.</p>
 </div>
 </div>
 </section>
@@ -1157,7 +1160,7 @@ X-squared = 23.181, df = 3, p-value = 3.702e-05</code></pre>
 <section id="exercises" class="level2">
 <h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
 <p>The solutions use the packages and data loaded in the sections above, so run the page from the top first.</p>
-<p><strong>1.</strong> How strongly is operative time linked with <strong>age</strong>? Report Pearson’s r with its 95% CI.</p>
+<p><strong>1.</strong> How strongly are the <strong>alpha angles</strong> on the Dunn 45° and frog-leg views linked? Report Pearson’s r with its 95% CI.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1175,37 +1178,37 @@ X-squared = 23.181, df = 3, p-value = 3.702e-05</code></pre>
 <div class="tab-content" data-group="language">
 <div id="tabset-9-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-9-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>(cohort<span class="sc">$</span>age, cohort<span class="sc">$</span>op_time_min)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cor.test</span>(imaging<span class="sc">$</span>alpha_dunn45_deg, imaging<span class="sc">$</span>alpha_frogleg_deg)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
     Pearson's product-moment correlation
 
-data:  cohort$age and cohort$op_time_min
-t = 3.4542, df = 598, p-value = 0.0005911
+data:  imaging$alpha_dunn45_deg and imaging$alpha_frogleg_deg
+t = 21.704, df = 78, p-value &lt; 2.2e-16
 alternative hypothesis: true correlation is not equal to 0
 95 percent confidence interval:
- 0.06049575 0.21747258
+ 0.8870636 0.9521860
 sample estimates:
       cor 
-0.1398629 </code></pre>
+0.9262514 </code></pre>
 </div>
 </div>
 </div>
 <div id="tabset-9-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-9-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>age_corr <span class="op">=</span> stats.pearsonr(cohort[<span class="st">"age"</span>], cohort[<span class="st">"op_time_min"</span>])</span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(age_corr, age_corr.confidence_interval(confidence_level<span class="op">=</span><span class="fl">0.95</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>alpha_corr <span class="op">=</span> stats.pearsonr(imaging[<span class="st">"alpha_dunn45_deg"</span>], imaging[<span class="st">"alpha_frogleg_deg"</span>])</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(alpha_corr, alpha_corr.confidence_interval(confidence_level<span class="op">=</span><span class="fl">0.95</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>PearsonRResult(statistic=np.float64(0.13986286334794956), pvalue=np.float64(0.000591061227095167)) ConfidenceInterval(low=np.float64(0.06049575269507875), high=np.float64(0.21747258144105114))</code></pre>
+<pre><code>PearsonRResult(statistic=np.float64(0.9262514344985832), pvalue=np.float64(8.571820443822622e-35)) ConfidenceInterval(low=np.float64(0.8870635909869046), high=np.float64(0.9521860127179869))</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
 <blockquote class="blockquote">
-<p><strong>Results:</strong> The correlation between age and operative time was r = 0.14 (Pearson; 95% CI 0.06 to 0.22; p &lt; 0.001).</p>
+<p><strong>Results:</strong> The correlation between the alpha angle on the Dunn 45° and frog-leg views was r = 0.93 (Pearson; 95% CI 0.89 to 0.95; p &lt; 0.001; n = 80 hips).</p>
 </blockquote>
-<p>The association is clear but weak: age goes with about 2% of the variation in operative time (r² = 0.02), against 20% for BMI.</p>
+<p>A strong correlation, yet the Dunn view read 3.7° higher on average (<a href="../../en/catalog/07-two-paired-groups.html#paired-t">page 7</a>): r can’t see a constant offset.</p>
 </div>
 </div>
 </div>

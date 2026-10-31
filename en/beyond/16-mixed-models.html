@@ -83,9 +83,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../../site_libs/bootstrap/bootstrap-adf1ad09c506ca6000c25a9dfd1ec516.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../../site_libs/bootstrap/bootstrap-dark-6d4f66268d14a326bc1df422e652d080.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../../site_libs/bootstrap/bootstrap-adf1ad09c506ca6000c25a9dfd1ec516.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-cb3951e60572a76adcf647b7eba53521.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../../site_libs/bootstrap/bootstrap-dark-362cd3b589d3e7a83bfcee632f9990c0.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../../site_libs/bootstrap/bootstrap-cb3951e60572a76adcf647b7eba53521.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -601,9 +601,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<!-- data-checksum: ffc54e2ad996e1e61ad10ca520e4d588 -->
+<!-- data-checksum: f354a6da47f62ead35825a3d2b8ef6d9 -->
 <p>PROMs are collected at several visits, and patients miss some of them. <a href="../../en/catalog/09-three-plus-matched.html#repeated-measures-anova">Page 9</a> analyzed repeated scores with repeated-measures ANOVA, which only uses patients measured at every visit. A <strong>linear mixed model</strong> uses every score from every patient, and answers the questions a PROM study usually asks: how much do patients improve, by when, and does recovery differ between groups?</p>
-<p>The examples use KOOS JR, the knee score, in the 330 total knee replacements. Hips answer a different questionnaire (HOOS JR), and a point on one isn’t guaranteed to equal a point on the other, so the two aren’t mixed in one model.</p>
+<p>The examples use KOOS JR, the knee score, in the 330 total knee replacements. Hips answer a different questionnaire (HOOS JR), and a point on one isn’t guaranteed to equal a point on the other, so the two aren’t mixed in one model. The last example, on whether recovery differs between groups, uses the EFAS score from the boot vs cast trial on <a href="../../en/catalog/06-two-unpaired-groups.html#unpaired-t">page 6</a>, which also has four visits.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -632,16 +632,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)         <span class="co"># natural cubic splines, for time as a curve</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>proms <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/proms_long.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>knees <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(instrument <span class="sc">==</span> <span class="st">"KOOS JR"</span>, <span class="sc">!</span><span class="fu">is.na</span>(prom_score)) <span class="sc">|&gt;</span>          <span class="co"># every knee score that exists</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(<span class="fu">select</span>(cohort, case_id, sex, age), <span class="at">by =</span> <span class="st">"case_id"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>knees <span class="sc">|&gt;</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(case_id, <span class="at">name =</span> <span class="st">"visits"</span>) <span class="sc">|&gt;</span>            <span class="co"># scores per knee</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(visits, <span class="at">name =</span> <span class="st">"knees"</span>)                 <span class="co"># knees with 1, 2, 3 or 4 scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>knees <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(instrument <span class="sc">==</span> <span class="st">"KOOS JR"</span>, <span class="sc">!</span><span class="fu">is.na</span>(prom_score)) <span class="sc">|&gt;</span>          <span class="co"># every knee score that exists</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>knees <span class="sc">|&gt;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(case_id, <span class="at">name =</span> <span class="st">"visits"</span>) <span class="sc">|&gt;</span>            <span class="co"># scores per knee</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(visits, <span class="at">name =</span> <span class="st">"knees"</span>)                 <span class="co"># knees with 1, 2, 3 or 4 scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 2
   visits knees
@@ -662,14 +660,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.formula.api <span class="im">as</span> smf</span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>proms <span class="op">=</span> pd.read_csv(<span class="st">"data/proms_long.csv"</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>cohort <span class="op">=</span> pd.read_csv(<span class="st">"data/cohort.csv"</span>)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>knees <span class="op">=</span> proms[(proms[<span class="st">"instrument"</span>] <span class="op">==</span> <span class="st">"KOOS JR"</span>) <span class="op">&amp;</span> proms[<span class="st">"prom_score"</span>].notna()]    <span class="co"># every knee score that exists</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>knees <span class="op">=</span> knees.merge(cohort[[<span class="st">"case_id"</span>, <span class="st">"sex"</span>, <span class="st">"age"</span>]], on<span class="op">=</span><span class="st">"case_id"</span>)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>visits <span class="op">=</span> [<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>]</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>knees[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(knees[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)               <span class="co"># pre-op first: the reference</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(knees.groupby(<span class="st">"case_id"</span>).size().value_counts().sort_index())   <span class="co"># knees with 1, 2, 3 or 4 scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>knees <span class="op">=</span> proms[(proms[<span class="st">"instrument"</span>] <span class="op">==</span> <span class="st">"KOOS JR"</span>) <span class="op">&amp;</span> proms[<span class="st">"prom_score"</span>].notna()].copy()    <span class="co"># every knee score that exists</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>visits <span class="op">=</span> [<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>]</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>knees[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(knees[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)               <span class="co"># pre-op first: the reference</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(knees.groupby(<span class="st">"case_id"</span>).size().value_counts().sort_index())   <span class="co"># knees with 1, 2, 3 or 4 scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>1      4
 2     28
@@ -920,46 +916,51 @@ dtype: float64</code></pre>
 </section>
 <section id="group-by-time" class="level2">
 <h2 class="anchored" data-anchor-id="group-by-time">Does recovery differ between groups?</h2>
-<p>To ask whether men and women recover differently, add sex and its <strong>interaction</strong> with visit. The interaction lets each sex have its own pattern of change. Its test asks whether the patterns differ, which is the question; the main effect of sex alone only compares the average levels.</p>
+<p>To ask whether recovery with a boot differs from recovery with a cast, add arm and its <strong>interaction</strong> with visit. The interaction lets each arm have its own pattern of change. Its test asks whether the patterns differ, which is the question; the main effect of arm alone only compares the average levels. The model uses all 431 EFAS scores from the 120 randomized patients, although only 80 have all four.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
 <div id="tabset-5-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>sex_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(prom_score <span class="sc">~</span> visit <span class="sc">*</span> sex <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> knees)</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>sex_anova <span class="ot">&lt;-</span> <span class="fu">anova</span>(sex_model)                           <span class="co"># F tests, Satterthwaite degrees of freedom</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>sex_anova</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>trial <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/foot_ankle_rct_long.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(efas)) <span class="sc">|&gt;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"6mo"</span>, <span class="st">"12mo"</span>)),</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">arm =</span> <span class="fu">factor</span>(arm, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"cast"</span>, <span class="st">"boot"</span>)))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>arm_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(efas <span class="sc">~</span> visit <span class="sc">*</span> arm <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient_id), <span class="at">data =</span> trial)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>arm_anova <span class="ot">&lt;-</span> <span class="fu">anova</span>(arm_model)                           <span class="co"># F tests, Satterthwaite degrees of freedom</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>arm_anova</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Type III Analysis of Variance Table with Satterthwaite's method
-          Sum Sq Mean Sq NumDF  DenDF  F value Pr(&gt;F)    
-visit     178113   59371     3 831.68 812.3992 &lt;2e-16 ***
-sex           52      52     1 327.09   0.7179 0.3975    
-visit:sex    458     153     3 831.68   2.0886 0.1002    
+          Sum Sq Mean Sq NumDF  DenDF F value    Pr(&gt;F)    
+visit     5573.3 1857.77     3 309.58 493.980 &lt; 2.2e-16 ***
+arm         51.0   50.99     1 117.26  13.557 0.0003512 ***
+visit:arm  290.3   96.75     3 309.58  25.727 6.924e-15 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>sex_means <span class="ot">&lt;-</span> <span class="fu">emmeans</span>(sex_model, <span class="sc">~</span> visit <span class="sc">|</span> sex, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>sex_means</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>arm_means <span class="ot">&lt;-</span> <span class="fu">emmeans</span>(arm_model, <span class="sc">~</span> visit <span class="sc">|</span> arm, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>arm_means</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>sex = Female:
+<pre><code>arm = cast:
  visit emmean    SE  df lower.CL upper.CL
- preop   49.6 0.967 696     47.7     51.5
- 6wk     61.2 0.990 733     59.2     63.1
- 3mo     74.7 1.020 788     72.7     76.7
- 1yr     83.4 1.040 808     81.3     85.4
+ 6wk     9.46 0.381 237     8.71     10.2
+ 3mo    13.78 0.387 247    13.02     14.5
+ 6mo    18.63 0.394 258    17.85     19.4
+ 12mo   20.60 0.406 278    19.81     21.4
 
-sex = Male:
+arm = boot:
  visit emmean    SE  df lower.CL upper.CL
- preop   50.4 0.981 710     48.5     52.3
- 6wk     63.9 1.000 746     62.0     65.9
- 3mo     73.8 1.000 746     71.8     75.8
- 1yr     84.4 1.040 802     82.4     86.4
+ 6wk    12.44 0.381 237    11.69     13.2
+ 3mo    17.34 0.383 240    16.58     18.1
+ 6mo    19.04 0.401 270    18.25     19.8
+ 12mo   20.18 0.387 247    19.42     20.9
 
 Degrees-of-freedom method: satterthwaite 
 Confidence level used: 0.95 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">emmip</span>(sex_model, sex <span class="sc">~</span> visit, <span class="at">CIs =</span> <span class="cn">TRUE</span>) <span class="sc">+</span>            <span class="co"># the two recovery patterns, with 95% CIs</span></span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Visit"</span>, <span class="at">y =</span> <span class="st">"KOOS JR"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">emmip</span>(arm_model, arm <span class="sc">~</span> visit, <span class="at">CIs =</span> <span class="cn">TRUE</span>) <span class="sc">+</span>            <span class="co"># the two recovery patterns, with 95% CIs</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Visit"</span>, <span class="at">y =</span> <span class="st">"EFAS score"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -967,41 +968,84 @@ Confidence level used: 0.95 </code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>arm_gaps <span class="ot">&lt;-</span> <span class="fu">pairs</span>(<span class="fu">emmeans</span>(arm_model, <span class="sc">~</span> arm <span class="sc">|</span> visit, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>), <span class="at">reverse =</span> <span class="cn">TRUE</span>)   <span class="co"># boot minus cast</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a><span class="fu">confint</span>(arm_gaps)                                  <span class="co"># 95% CIs</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>visit = 6wk:
+ contrast    estimate    SE  df lower.CL upper.CL
+ boot - cast    2.978 0.539 237    1.917    4.040
+
+visit = 3mo:
+ contrast    estimate    SE  df lower.CL upper.CL
+ boot - cast    3.553 0.545 244    2.480    4.625
+
+visit = 6mo:
+ contrast    estimate    SE  df lower.CL upper.CL
+ boot - cast    0.410 0.562 264   -0.696    1.516
+
+visit = 12mo:
+ contrast    estimate    SE  df lower.CL upper.CL
+ boot - cast   -0.425 0.561 263   -1.530    0.679
+
+Degrees-of-freedom method: satterthwaite 
+Confidence level used: 0.95 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(arm_gaps, <span class="at">by =</span> <span class="cn">NULL</span>, <span class="at">adjust =</span> <span class="st">"holm"</span>)      <span class="co"># Holm across all four visits, not within each</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> contrast    visit estimate    SE  df t.ratio p.value
+ boot - cast 6wk      2.978 0.539 237   5.527 &lt;0.0001
+ boot - cast 3mo      3.553 0.545 244   6.524 &lt;0.0001
+ boot - cast 6mo      0.410 0.562 264   0.731  0.8980
+ boot - cast 12mo    -0.425 0.561 263  -0.758  0.8980
+
+Degrees-of-freedom method: satterthwaite 
+P value adjustment: holm method for 4 tests </code></pre>
+</div>
 </div>
 </div>
 <div id="tabset-5-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sex_model <span class="op">=</span> smf.mixedlm(<span class="st">"prom_score ~ visit * sex"</span>, knees, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>interaction <span class="op">=</span> [name <span class="cf">for</span> name <span class="kw">in</span> sex_model.fe_params.index <span class="cf">if</span> <span class="st">":"</span> <span class="kw">in</span> name]     <span class="co"># the three visit x sex terms</span></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>sex_wald <span class="op">=</span> sex_model.wald_test(<span class="st">" = 0, "</span>.join(interaction) <span class="op">+</span> <span class="st">" = 0"</span>, scalar<span class="op">=</span><span class="va">True</span>)   <span class="co"># do the patterns differ?</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sex_wald.statistic, sex_wald.pvalue)                                          <span class="co"># chi-square on 3 df, p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> statsmodels.stats.multitest <span class="im">import</span> multipletests</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>trial <span class="op">=</span> pd.read_csv(<span class="st">"data/foot_ankle_rct_long.csv"</span>)</span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>trial <span class="op">=</span> trial[trial[<span class="st">"efas"</span>].notna()].copy()</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>trial_visits <span class="op">=</span> [<span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"6mo"</span>, <span class="st">"12mo"</span>]</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>trial[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(trial[<span class="st">"visit"</span>], categories<span class="op">=</span>trial_visits)       <span class="co"># 6 weeks first: the reference</span></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>trial[<span class="st">"arm"</span>] <span class="op">=</span> pd.Categorical(trial[<span class="st">"arm"</span>], categories<span class="op">=</span>[<span class="st">"cast"</span>, <span class="st">"boot"</span>])        <span class="co"># cast first: the reference</span></span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>arm_model <span class="op">=</span> smf.mixedlm(<span class="st">"efas ~ visit * arm"</span>, trial, groups<span class="op">=</span><span class="st">"patient_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>interaction <span class="op">=</span> [name <span class="cf">for</span> name <span class="kw">in</span> arm_model.fe_params.index <span class="cf">if</span> <span class="st">":"</span> <span class="kw">in</span> name]     <span class="co"># the three visit x arm terms</span></span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>arm_wald <span class="op">=</span> arm_model.wald_test(<span class="st">" = 0, "</span>.join(interaction) <span class="op">+</span> <span class="st">" = 0"</span>, scalar<span class="op">=</span><span class="va">True</span>)   <span class="co"># do the patterns differ?</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(arm_wald.statistic, arm_wald.pvalue)                                          <span class="co"># chi-square on 3 df, p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>6.2636809563597895 0.09946304267009223</code></pre>
+<pre><code>77.15287791633088 1.252001943749615e-16</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>sex_grid <span class="op">=</span> pd.DataFrame([(visit, sex) <span class="cf">for</span> sex <span class="kw">in</span> [<span class="st">"Female"</span>, <span class="st">"Male"</span>] <span class="cf">for</span> visit <span class="kw">in</span> visits], columns<span class="op">=</span>[<span class="st">"visit"</span>, <span class="st">"sex"</span>])</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>sex_grid[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(sex_grid[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>sex_means <span class="op">=</span> marginal_means(sex_model, sex_grid)</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sex_means.<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>arm_grid <span class="op">=</span> pd.DataFrame([(visit, arm) <span class="cf">for</span> arm <span class="kw">in</span> [<span class="st">"cast"</span>, <span class="st">"boot"</span>] <span class="cf">for</span> visit <span class="kw">in</span> trial_visits], columns<span class="op">=</span>[<span class="st">"visit"</span>, <span class="st">"arm"</span>])</span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>arm_grid[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(arm_grid[<span class="st">"visit"</span>], categories<span class="op">=</span>trial_visits)</span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>arm_grid[<span class="st">"arm"</span>] <span class="op">=</span> pd.Categorical(arm_grid[<span class="st">"arm"</span>], categories<span class="op">=</span>[<span class="st">"cast"</span>, <span class="st">"boot"</span>])</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>arm_means <span class="op">=</span> marginal_means(arm_model, arm_grid)</span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(arm_means.<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>   visit     sex  emmean    se  lower  upper
-0  preop  Female   49.59  0.97  47.69  51.48
-1    6wk  Female   61.18  0.99  59.24  63.12
-2    3mo  Female   74.69  1.02  72.69  76.69
-3    1yr  Female   83.36  1.04  81.33  85.39
-4  preop    Male   50.41  0.98  48.49  52.33
-5    6wk    Male   63.93  1.00  61.97  65.90
-6    3mo    Male   73.81  1.00  71.84  75.77
-7    1yr    Male   84.41  1.04  82.38  86.44</code></pre>
+<pre><code>  visit   arm  emmean    se  lower  upper
+0   6wk  cast    9.46  0.38   8.71  10.21
+1   3mo  cast   13.78  0.39  13.02  14.54
+2   6mo  cast   18.63  0.39  17.85  19.40
+3  12mo  cast   20.60  0.41  19.81  21.40
+4   6wk  boot   12.44  0.38  11.69  13.19
+5   3mo  boot   17.34  0.38  16.58  18.09
+6   6mo  boot   19.04  0.40  18.25  19.82
+7  12mo  boot   20.18  0.39  19.42  20.94</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">3.5</span>))</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> sex, rows <span class="kw">in</span> sex_means.groupby(<span class="st">"sex"</span>):</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    ax.errorbar(rows[<span class="st">"visit"</span>].astype(<span class="bu">str</span>), rows[<span class="st">"emmean"</span>], yerr<span class="op">=</span><span class="fl">1.96</span> <span class="op">*</span> rows[<span class="st">"se"</span>], marker<span class="op">=</span><span class="st">"o"</span>, capsize<span class="op">=</span><span class="dv">3</span>, label<span class="op">=</span>sex)</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Visit"</span>)</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"KOOS JR"</span>)</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>legend <span class="op">=</span> ax.legend()</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">3.5</span>))</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> arm, rows <span class="kw">in</span> arm_means.groupby(<span class="st">"arm"</span>, observed<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>    ax.errorbar(rows[<span class="st">"visit"</span>].astype(<span class="bu">str</span>), rows[<span class="st">"emmean"</span>], yerr<span class="op">=</span><span class="fl">1.96</span> <span class="op">*</span> rows[<span class="st">"se"</span>], marker<span class="op">=</span><span class="st">"o"</span>, capsize<span class="op">=</span><span class="dv">3</span>, label<span class="op">=</span>arm)</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Visit"</span>)</span>
+<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"EFAS score"</span>)</span>
+<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>legend <span class="op">=</span> ax.legend()</span>
+<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -1009,38 +1053,81 @@ Confidence level used: 0.95 </code></pre>
 </figure>
 </div>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> arm_difference(model, visit):</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Boot minus cast at one visit: the estimate and its standard error, from the fixed effects."""</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    two <span class="op">=</span> pd.DataFrame({<span class="st">"visit"</span>: pd.Categorical([visit, visit], categories<span class="op">=</span>trial_visits),</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>                        <span class="st">"arm"</span>: pd.Categorical([<span class="st">"boot"</span>, <span class="st">"cast"</span>], categories<span class="op">=</span>[<span class="st">"cast"</span>, <span class="st">"boot"</span>])})</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> patsy.build_design_matrices([model.model.data.model_spec], two, return_type<span class="op">=</span><span class="st">"dataframe"</span>)[<span class="dv">0</span>]</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    L <span class="op">=</span> (X.iloc[<span class="dv">0</span>] <span class="op">-</span> X.iloc[<span class="dv">1</span>]).to_numpy()                <span class="co"># the contrast: boot's row minus cast's row</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    beta <span class="op">=</span> model.fe_params</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>    cov <span class="op">=</span> model.cov_params().loc[beta.index, beta.index].to_numpy()</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="bu">float</span>(L <span class="op">@</span> beta.to_numpy()), <span class="bu">float</span>(np.sqrt(L <span class="op">@</span> cov <span class="op">@</span> L))</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>gaps <span class="op">=</span> pd.DataFrame([(visit, <span class="op">*</span>arm_difference(arm_model, visit)) <span class="cf">for</span> visit <span class="kw">in</span> trial_visits],</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>                    columns<span class="op">=</span>[<span class="st">"visit"</span>, <span class="st">"difference"</span>, <span class="st">"se"</span>])</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>gaps[<span class="st">"lower"</span>] <span class="op">=</span> gaps[<span class="st">"difference"</span>] <span class="op">-</span> <span class="fl">1.96</span> <span class="op">*</span> gaps[<span class="st">"se"</span>]</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>gaps[<span class="st">"upper"</span>] <span class="op">=</span> gaps[<span class="st">"difference"</span>] <span class="op">+</span> <span class="fl">1.96</span> <span class="op">*</span> gaps[<span class="st">"se"</span>]</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>gaps[<span class="st">"p"</span>] <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> stats.norm.sf(np.<span class="bu">abs</span>(gaps[<span class="st">"difference"</span>] <span class="op">/</span> gaps[<span class="st">"se"</span>]))</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>gaps[<span class="st">"p_holm"</span>] <span class="op">=</span> multipletests(gaps[<span class="st">"p"</span>], method<span class="op">=</span><span class="st">"holm"</span>)[<span class="dv">1</span>]       <span class="co"># Holm across all four visits</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(gaps.<span class="bu">round</span>(<span class="dv">3</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  visit  difference     se  lower  upper      p  p_holm
+0   6wk       2.978  0.539  1.922  4.034  0.000   0.000
+1   3mo       3.553  0.545  2.485  4.620  0.000   0.000
+2   6mo       0.410  0.562 -0.691  1.512  0.465   0.897
+3  12mo      -0.425  0.561 -1.524  0.674  0.448   0.897</code></pre>
+</div>
 </div>
 </div>
 </div>
 </div>
 <ul>
-<li><strong>visit:sex, F = 2.09 on 3 and 832 df, p = 0.100:</strong> no clear evidence that recovery differs between men and women. Python’s Wald test gives the undivided statistic, 6.26 on 3 degrees of freedom, with a chi-square p-value of 0.099.</li>
-<li><strong>The EMMs</strong> show why: the two patterns cross back and forth by a point or two. Men were 2.7 points ahead at 6 weeks (63.9 vs 61.2), women 0.9 points ahead at 3 months, and they were within about a point of each other at 1 year (84.4 vs 83.4).</li>
+<li><strong>visit:arm, F = 25.73 on 3 and 310 df, p &lt; 0.001:</strong> the patterns differ. Python’s Wald test gives the undivided statistic, 77.15 on 3 degrees of freedom, also p &lt; 0.001.</li>
+<li><strong>The EMMs and the differences (boot minus cast)</strong> show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.</li>
 </ul>
+<p>These numbers differ a little from <a href="../../en/catalog/06-two-unpaired-groups.html#unpaired-t">page 6</a>‘s, which used only the 3-month scores: there the 95% CI for the 3-month difference was 2.4 to 4.8, and here it’s 2.5 to 4.6, mostly because the model assumes the same spread at all four visits (SD 2.9), and the 3-month scores spread a little wider (SD 3.2 within each arm). Two cautions. EFAS scores crowd toward their maximum by 12 months (24 points for 7 of 55 patients with a boot and 8 of 47 with a cast), so the model’s means are approximate there. And the cast arm missed more 12-month visits (13 against 5): the model keeps those patients’ earlier scores, which helps as long as the missed visits are <a href="#why-mixed-models">missing at random</a>.</p>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Warning</span>⚠️ Watch out: a non-significant interaction isn’t “the same recovery”
+<span class="screen-reader-only">Warning</span>⚠️ Watch out: read an interaction through its means
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>p = 0.100 means the data can’t show a difference in recovery between the sexes; it doesn’t show the recoveries are the same. Report the EMMs with their CIs so readers can see how big a difference the data still allow.</p>
+<p>A clear interaction says the gap between the arms changes over time. It doesn’t say the boot is better: it depends on when you look. At 12 months, Holm-adjusted p = 0.898 means the data can’t show a difference; it doesn’t show the arms are the same, and the CI still runs from 1.5 points in the cast’s favor to 0.7 in the boot’s. Report the EMMs and the difference with their CIs so readers can see both.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>🔀 R vs Python: the differences between arms
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Python computes the differences from the fixed effects with z tests, so its Holm-adjusted p-values differ in the third decimal (0.897 against 0.898).</p>
 </div>
 </div>
 </section>
 <section id="bilateral" class="level2">
 <h2 class="anchored" data-anchor-id="bilateral">Bilateral patients</h2>
 <p>46 of the knee patients had both knees replaced, so 92 of the 330 knees come in pairs. The two knees share the same person, so their scores may be related beyond what each knee’s own intercept captures. The standard fix is a second random intercept, for the patient, with knees <strong>nested</strong> in patients: in lme4, <code>(1 | patient_id/case_id)</code>; in statsmodels, <code>groups="patient_id"</code> with a variance component for <code>case_id</code>.</p>
-<p>In this cohort the patient-level intercept comes out at almost exactly zero (lme4 warns that the fit is “singular”), so the simpler model above is enough. In your data, fit the nested model and report it unless it is singular. <a href="../../en/foundations/03-distributions.html#paired">Page 3</a> explains why bilateral patients need care, and <a href="../../en/survival/14-cox-regression.html#stratified-cox">page 14</a> shows the survival-analysis version.</p>
+<p>In this cohort the patient-level intercept comes out at almost exactly zero (lme4 warns that the fit is “singular”), so the knee model above is enough. In your data, fit the nested model and report it unless it is singular. <a href="../../en/foundations/03-distributions.html#paired">Page 3</a> explains why bilateral patients need care, and <a href="../../en/survival/14-cox-regression.html#stratified-cox">page 14</a> shows the survival-analysis version.</p>
 </section>
 <section id="reporting" class="level2">
 <h2 class="anchored" data-anchor-id="reporting">How to report it</h2>
 <blockquote class="blockquote">
-<p><strong>Methods:</strong> KOOS JR scores before surgery and at 6 weeks, 3 months and 1 year were analyzed with a linear mixed model, with visit as a categorical fixed effect and a random intercept for each knee, fitted by restricted maximum likelihood. All available scores were used, including those from knees that missed a visit. Differences between men and women in the pattern of recovery were tested with a visit × sex interaction (Satterthwaite degrees of freedom). The planned comparison was the change from before surgery to 1 year. Estimated marginal means are reported with 95% CIs.</p>
-<p><strong>Results:</strong> Of 330 knees, 192 (58.2%) had all four scores; all 1146 scores were analyzed. The estimated mean KOOS JR was 50.0 (95% CI 48.6 to 51.3) before surgery and 83.9 (95% CI 82.5 to 85.3) at 1 year; change 33.9 points (95% CI 32.5 to 35.3). For the visit × sex interaction, F(3, 832) = 2.09 (p = 0.100); at 1 year the estimated mean was 84.4 (95% CI 82.4 to 86.4) in men and 83.4 (95% CI 81.3 to 85.4) in women.</p>
+<p><strong>Methods:</strong> KOOS JR scores before surgery and at 6 weeks, 3 months and 1 year were analyzed with a linear mixed model, with visit as a categorical fixed effect and a random intercept for each knee, fitted by restricted maximum likelihood. All available scores were used, including those from knees that missed a visit. The planned comparison was the change from before surgery to 1 year. Estimated marginal means are reported with 95% CIs.</p>
+<p><strong>Results:</strong> Of 330 knees, 192 (58.2%) had all four scores; all 1146 scores were analyzed. The estimated mean KOOS JR was 50.0 (95% CI 48.6 to 51.3) before surgery and 83.9 (95% CI 82.5 to 85.3) at 1 year; change 33.9 points (95% CI 32.5 to 35.3).</p>
+</blockquote>
+<p>For the comparison between a boot and a cast:</p>
+<blockquote class="blockquote">
+<p><strong>Methods:</strong> EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with 95% CIs and Holm-adjusted p-values.</p>
+<p><strong>Results:</strong> Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p &lt; 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p &lt; 0.001).</p>
 </blockquote>
 </section>
 <section id="exercises" class="level2">
@@ -1048,7 +1135,7 @@ Confidence level used: 0.95 </code></pre>
 <p>The solutions use the packages, data and functions loaded in the sections above, so run the page from the top first.</p>
 <p><strong>1.</strong> Fit the same random-intercept model to HOOS JR in the total hip replacements and report the estimated mean at each visit.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1057,23 +1144,23 @@ Confidence level used: 0.95 </code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
 <div id="tabset-6-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-6-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>hips <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(instrument <span class="sc">==</span> <span class="st">"HOOS JR"</span>, <span class="sc">!</span><span class="fu">is.na</span>(prom_score)) <span class="sc">|&gt;</span></span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">hips =</span> <span class="fu">n_distinct</span>(hips<span class="sc">$</span>case_id), <span class="at">scores =</span> <span class="fu">nrow</span>(hips), <span class="at">complete =</span> <span class="fu">sum</span>(<span class="fu">table</span>(hips<span class="sc">$</span>case_id) <span class="sc">==</span> <span class="dv">4</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>hips <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(instrument <span class="sc">==</span> <span class="st">"HOOS JR"</span>, <span class="sc">!</span><span class="fu">is.na</span>(prom_score)) <span class="sc">|&gt;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">hips =</span> <span class="fu">n_distinct</span>(hips<span class="sc">$</span>case_id), <span class="at">scores =</span> <span class="fu">nrow</span>(hips), <span class="at">complete =</span> <span class="fu">sum</span>(<span class="fu">table</span>(hips<span class="sc">$</span>case_id) <span class="sc">==</span> <span class="dv">4</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>    hips   scores complete 
      270      906      136 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>hip_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(prom_score <span class="sc">~</span> visit <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> hips)</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="fu">emmeans</span>(hip_model, <span class="sc">~</span> visit, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>hip_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(prom_score <span class="sc">~</span> visit <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> hips)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">emmeans</span>(hip_model, <span class="sc">~</span> visit, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> visit emmean    SE  df lower.CL upper.CL
  preop   45.5 0.698 577     44.1     46.9
@@ -1088,14 +1175,14 @@ Confidence level used: 0.95 </code></pre>
 </div>
 <div id="tabset-6-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-6-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>hips <span class="op">=</span> proms[(proms[<span class="st">"instrument"</span>] <span class="op">==</span> <span class="st">"HOOS JR"</span>) <span class="op">&amp;</span> proms[<span class="st">"prom_score"</span>].notna()].copy()</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>hips[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(hips[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hips[<span class="st">"case_id"</span>].nunique(), <span class="bu">len</span>(hips), (hips.groupby(<span class="st">"case_id"</span>).size() <span class="op">==</span> <span class="dv">4</span>).<span class="bu">sum</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>hips <span class="op">=</span> proms[(proms[<span class="st">"instrument"</span>] <span class="op">==</span> <span class="st">"HOOS JR"</span>) <span class="op">&amp;</span> proms[<span class="st">"prom_score"</span>].notna()].copy()</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>hips[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(hips[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hips[<span class="st">"case_id"</span>].nunique(), <span class="bu">len</span>(hips), (hips.groupby(<span class="st">"case_id"</span>).size() <span class="op">==</span> <span class="dv">4</span>).<span class="bu">sum</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>270 906 136</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>hip_model <span class="op">=</span> smf.mixedlm(<span class="st">"prom_score ~ visit"</span>, hips, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(marginal_means(hip_model, visit_grid).<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>hip_model <span class="op">=</span> smf.mixedlm(<span class="st">"prom_score ~ visit"</span>, hips, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(marginal_means(hip_model, visit_grid).<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>   visit  emmean    se  lower  upper
 0  preop   45.50  0.70  44.13  46.86
@@ -1113,72 +1200,7 @@ Confidence level used: 0.95 </code></pre>
 </div>
 </div>
 </div>
-<p><strong>2.</strong> <a href="../../en/catalog/09-three-plus-matched.html#repeated-measures-anova">Page 9</a> analyzed the VR-12 physical component score (PCS) with repeated-measures ANOVA in the 328 joint replacements measured at all four visits. Fit a mixed model with every PCS score instead. How many joint replacements does it use, and do the visit means change?</p>
-<div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Tip</span>Solution
-</div>
-<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
-</div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse">
-<div class="callout-body-container callout-body">
-<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
-<div class="tab-content" data-group="language">
-<div id="tabset-7-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-7-1-tab">
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>pcs_all <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(vr12_pcs)) <span class="sc">|&gt;</span></span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">joint_replacements =</span> <span class="fu">n_distinct</span>(pcs_all<span class="sc">$</span>case_id), <span class="at">scores =</span> <span class="fu">nrow</span>(pcs_all))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>joint_replacements             scores 
-               600               2052 </code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>pcs_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(vr12_pcs <span class="sc">~</span> visit <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> pcs_all)</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="fu">emmeans</span>(pcs_model, <span class="sc">~</span> visit, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code> visit emmean    SE   df lower.CL upper.CL
- preop   31.2 0.265 2043     30.6     31.7
- 6wk     35.3 0.275 2044     34.8     35.8
- 3mo     41.0 0.285 2045     40.4     41.5
- 1yr     44.9 0.298 2046     44.3     45.5
-
-Degrees-of-freedom method: satterthwaite 
-Confidence level used: 0.95 </code></pre>
-</div>
-</div>
-</div>
-<div id="tabset-7-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-7-2-tab">
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>pcs_all <span class="op">=</span> proms[proms[<span class="st">"vr12_pcs"</span>].notna()].copy()</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>pcs_all[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(pcs_all[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)</span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pcs_all[<span class="st">"case_id"</span>].nunique(), <span class="bu">len</span>(pcs_all))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>600 2052</code></pre>
-</div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>pcs_model <span class="op">=</span> smf.mixedlm(<span class="st">"vr12_pcs ~ visit"</span>, pcs_all, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(marginal_means(pcs_model, visit_grid).<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>   visit  emmean    se  lower  upper
-0  preop   31.16  0.26  30.64  31.68
-1    6wk   35.29  0.28  34.75  35.83
-2    3mo   40.99  0.29  40.43  41.55
-3    1yr   44.87  0.30  44.28  45.45</code></pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-<p>The mixed model uses all 600 joint replacements (2052 scores) instead of the 328 with all four scores. Its visit means, 31.2, 35.3, 41.0 and 44.9, are almost the same as page 9’s means for those 328 (31.2, 34.9, 41.0 and 44.9): in this synthetic cohort visits were missed almost entirely at random, so dropping incomplete cases cost precision rather than accuracy.</p>
-</div>
-</div>
-</div>
-<p><strong>3.</strong> Does knee recovery differ by age group (under 65, 65 to 74, 75 and over)? Fit the visit × age group model and write the Results sentence.</p>
+<p><strong>2.</strong> <a href="../../en/catalog/09-three-plus-matched.html#repeated-measures-anova">Page 9</a> analyzed PROMIS physical function with repeated-measures ANOVA in the 328 joint replacements measured at all four visits. Fit a mixed model with every score instead. How many joint replacements does it use, and do the visit means change?</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1192,44 +1214,138 @@ Confidence level used: 0.95 </code></pre>
 <div id="callout-7" class="callout-7-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-7-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-7-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>pf_all <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(promis_pf)) <span class="sc">|&gt;</span></span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">visit =</span> <span class="fu">factor</span>(visit, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"preop"</span>, <span class="st">"6wk"</span>, <span class="st">"3mo"</span>, <span class="st">"1yr"</span>)))</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">joint_replacements =</span> <span class="fu">n_distinct</span>(pf_all<span class="sc">$</span>case_id), <span class="at">scores =</span> <span class="fu">nrow</span>(pf_all))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>joint_replacements             scores 
+               600               2052 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>pf_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(promis_pf <span class="sc">~</span> visit <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> pf_all)</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a><span class="fu">emmeans</span>(pf_model, <span class="sc">~</span> visit, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> visit emmean    SE   df lower.CL upper.CL
+ preop   36.1 0.233 2042     35.6     36.5
+ 6wk     39.8 0.243 2043     39.3     40.2
+ 3mo     44.9 0.251 2045     44.4     45.4
+ 1yr     48.2 0.262 2046     47.7     48.7
+
+Degrees-of-freedom method: satterthwaite 
+Confidence level used: 0.95 </code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-7-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-7-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>pf_all <span class="op">=</span> proms[proms[<span class="st">"promis_pf"</span>].notna()].copy()</span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>pf_all[<span class="st">"visit"</span>] <span class="op">=</span> pd.Categorical(pf_all[<span class="st">"visit"</span>], categories<span class="op">=</span>visits)</span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pf_all[<span class="st">"case_id"</span>].nunique(), <span class="bu">len</span>(pf_all))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>600 2052</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>pf_model <span class="op">=</span> smf.mixedlm(<span class="st">"promis_pf ~ visit"</span>, pf_all, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(marginal_means(pf_model, visit_grid).<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   visit  emmean    se  lower  upper
+0  preop   36.06  0.23  35.60  36.51
+1    6wk   39.76  0.24  39.29  40.24
+2    3mo   44.86  0.25  44.37  45.36
+3    1yr   48.17  0.26  47.66  48.68</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The mixed model uses all 600 joint replacements (2052 scores) instead of the 328 with all four scores. Its visit means, 36.1, 39.8, 44.9 and 48.2, are almost the same as page 9’s means for those 328 (36.1, 39.4, 44.9 and 48.2): in this synthetic cohort visits were missed almost entirely at random, so dropping incomplete cases cost precision rather than accuracy.</p>
+</div>
+</div>
+</div>
+<p><strong>3.</strong> Does pain change differently with a boot and with a cast? Fit the visit × arm model for pain_nrs and write the Results sentence.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Solution
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-8-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-1" role="tab" aria-controls="tabset-8-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-8-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-2" role="tab" aria-controls="tabset-8-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
 <div id="tabset-8-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-8-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>age_knees <span class="ot">&lt;-</span> knees <span class="sc">|&gt;</span></span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">age_group =</span> <span class="fu">cut</span>(age, <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">64</span>, <span class="dv">74</span>, <span class="cn">Inf</span>), <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"under 65"</span>, <span class="st">"65 to 74"</span>, <span class="st">"75 and over"</span>)))</span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>age_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(prom_score <span class="sc">~</span> visit <span class="sc">*</span> age_group <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> case_id), <span class="at">data =</span> age_knees)</span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(age_model)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>pain_model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(pain_nrs <span class="sc">~</span> visit <span class="sc">*</span> arm <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> patient_id), <span class="at">data =</span> trial)    <span class="co"># trial: a missed visit blanks both scores</span></span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a>pain_anova <span class="ot">&lt;-</span> <span class="fu">anova</span>(pain_model)</span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>pain_anova</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Type III Analysis of Variance Table with Satterthwaite's method
-                Sum Sq Mean Sq NumDF  DenDF  F value  Pr(&gt;F)    
-visit           147625   49208     3 832.26 669.5499 &lt; 2e-16 ***
-age_group          608     304     2 330.31   4.1342 0.01685 *  
-visit:age_group    443      74     6 831.31   1.0035 0.42163    
+          Sum Sq Mean Sq NumDF  DenDF F value    Pr(&gt;F)    
+visit     504.77 168.255     3 316.63 78.4703 &lt; 2.2e-16 ***
+arm         8.88   8.880     1 115.63  4.1413  0.044136 *  
+visit:arm  30.95  10.318     3 316.63  4.8118  0.002723 ** 
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="fu">emmeans</span>(pain_model, <span class="sc">~</span> visit <span class="sc">|</span> arm, <span class="at">lmer.df =</span> <span class="st">"satterthwaite"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>arm = cast:
+ visit emmean    SE  df lower.CL upper.CL
+ 6wk     4.94 0.215 384    4.513     5.36
+ 3mo     2.61 0.221 390    2.178     3.05
+ 6mo     1.95 0.226 395    1.500     2.39
+ 12mo    1.63 0.237 404    1.162     2.09
+
+arm = boot:
+ visit emmean    SE  df lower.CL upper.CL
+ 6wk     3.73 0.215 384    3.307     4.15
+ 3mo     2.27 0.217 385    1.848     2.70
+ 6mo     2.25 0.233 401    1.791     2.71
+ 12mo    1.27 0.221 390    0.833     1.70
+
+Degrees-of-freedom method: satterthwaite 
+Confidence level used: 0.95 </code></pre>
 </div>
 </div>
 </div>
 <div id="tabset-8-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-8-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>age_knees <span class="op">=</span> knees.copy()</span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>age_knees[<span class="st">"age_group"</span>] <span class="op">=</span> pd.cut(age_knees[<span class="st">"age"</span>], [<span class="dv">0</span>, <span class="dv">64</span>, <span class="dv">74</span>, <span class="dv">200</span>], labels<span class="op">=</span>[<span class="st">"under 65"</span>, <span class="st">"65 to 74"</span>, <span class="st">"75 and over"</span>])</span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>age_model <span class="op">=</span> smf.mixedlm(<span class="st">"prom_score ~ visit * age_group"</span>, age_knees, groups<span class="op">=</span><span class="st">"case_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>age_terms <span class="op">=</span> [name <span class="cf">for</span> name <span class="kw">in</span> age_model.fe_params.index <span class="cf">if</span> <span class="st">":"</span> <span class="kw">in</span> name]     <span class="co"># the six visit x age group terms</span></span>
-<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>age_wald <span class="op">=</span> age_model.wald_test(<span class="st">" = 0, "</span>.join(age_terms) <span class="op">+</span> <span class="st">" = 0"</span>, scalar<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(age_wald.statistic, age_wald.pvalue)                                          <span class="co"># chi-square on 6 df, p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>pain_model <span class="op">=</span> smf.mixedlm(<span class="st">"pain_nrs ~ visit * arm"</span>, trial, groups<span class="op">=</span><span class="st">"patient_id"</span>).fit(reml<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>pain_terms <span class="op">=</span> [name <span class="cf">for</span> name <span class="kw">in</span> pain_model.fe_params.index <span class="cf">if</span> <span class="st">":"</span> <span class="kw">in</span> name]     <span class="co"># the three visit x arm terms</span></span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>pain_wald <span class="op">=</span> pain_model.wald_test(<span class="st">" = 0, "</span>.join(pain_terms) <span class="op">+</span> <span class="st">" = 0"</span>, scalar<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pain_wald.statistic, pain_wald.pvalue)                                          <span class="co"># chi-square on 3 df, p-value</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>6.019943389602123 0.42095972160286327</code></pre>
+<pre><code>14.434304085899631 0.0023698201437420824</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(marginal_means(pain_model, arm_grid).<span class="bu">round</span>(<span class="dv">2</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  visit   arm  emmean    se  lower  upper
+0   6wk  cast    4.94  0.22   4.51   5.36
+1   3mo  cast    2.61  0.22   2.18   3.04
+2   6mo  cast    1.95  0.23   1.50   2.39
+3  12mo  cast    1.63  0.24   1.16   2.09
+4   6wk  boot    3.73  0.22   3.31   4.15
+5   3mo  boot    2.27  0.22   1.85   2.70
+6   6mo  boot    2.25  0.23   1.79   2.70
+7  12mo  boot    1.27  0.22   0.83   1.70</code></pre>
 </div>
 </div>
 </div>
 </div>
 </div>
 <blockquote class="blockquote">
-<p><strong>Results:</strong> For the visit × age group interaction in KOOS JR, F(6, 831) = 1.00 (p = 0.422).</p>
+<p><strong>Results:</strong> For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.</p>
 </blockquote>
-<p>There’s no clear evidence that knees recover differently by age group.</p>
+<p>Python’s Wald test gives 14.43 on 3 degrees of freedom, p = 0.002.</p>
+<p>Pain is a whole-number score, so a linear model is an approximation here; with four visits and 120 patients it’s a reasonable one.</p>
 </div>
 </div>
 </div>
