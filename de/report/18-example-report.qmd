@@ -1,8 +1,847 @@
 ---
-title: "18 · Beispiel-Studienbericht (in Vorbereitung)"
+title: "18 · Beispiel-Studienbericht"
+description: "Eine vollständige kleine Studie, von der rohen Erhebungstabelle bis zu den Methods und Results eines Manuskripts, mit einer Word-Version zum Herunterladen."
+engine: knitr
+format:
+  html: default
+  docx:
+    title: "Improvement in joint-specific scores one year after hip and knee replacement: a two-site cohort study"
+    subtitle: "Synthetic data for teaching. Every patient in this report is invented."
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/report/18-example-report.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+::: {.content-visible when-format="html"}
+Diese Seite führt die ganze Website in einer kleinen Studie zusammen, von der unordentlichen Erhebungstabelle bis zu den Methods und Results eines Manuskripts. Die Schritte 1 bis 7 leisten die Arbeit, in R und Python. Schritt 8 ist das Manuskript selbst, und es ist zugleich ein Word-Dokument: **MS Word** unter «Andere Formate» im rechten Seitenrand. Die Word-Datei enthält nur das Manuskript und wird bei jedem Erstellen der Website mit demselben Code neu gebaut. Das Manuskript bleibt auf Englisch, der Sprache, in der Sie es bei einer Fachzeitschrift einreichen würden; übersetzt sind nur der Begleittext und die Kommentare im Code. Der Code und das Manuskript sagen THA und TKA; im Begleittext sagen wir Hüft-TP und Knie-TP.
+
+::: {.callout-note}
+## 💡 So funktioniert diese Seite
+Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages und die Daten, die der erste Block lädt. Jeder Schritt verweist auf die Seite, die seine Methode erklärt.
+:::
+
+## 1 · Die Forschungsfrage {#question}
+
+Schreiben Sie die Frage auf, bevor Sie die Daten zur Zielgrösse ansehen, zusammen mit der primären Zielgrösse und der Analyse, die sie beantworten wird. Werden diese erst festgelegt, nachdem die Resultate bekannt sind, ist jeder p-Wert bedeutungslos ([Seite 15](../beyond/15-post-hoc.qmd#planned-comparisons)). Für diese Studie:
+
+- **Frage:** Verbessern sich Patientinnen und Patienten im ersten Jahr nach einer Knie-TP (TKA) gleich stark wie nach einer Hüft-TP (THA)?
+- **Primäre Zielgrösse:** die Veränderung des gelenkspezifischen Scores von vor der Operation bis 1 Jahr danach: HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) nach Hüft-TP, KOOS JR (Score für Knie-Gelenkersatz, Kurzform) nach Knie-TP, jeweils von 0 bis 100 skaliert, höher ist besser.
+- **Primäre Analyse:** die Differenz der mittleren Veränderung zwischen Hüft-TP und Knie-TP mit ihrem 95%-Konfidenzintervall (KI), aus dem t-Test nach Welch ([Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)), wenn die Veränderungen in jeder Gruppe ungefähr symmetrisch aussehen ([Seite 3](../foundations/03-distributions.qmd)). Andernfalls der Mann-Whitney-Test.
+- **Sekundäre Zielgrösse:** Revision einer beliebigen Komponente, als kumulative Inzidenz mit dem Tod als konkurrierendem Risiko ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)).
+
+::: {.callout-warning}
+## ⚠️ Achtung: zwei Fragebögen
+HOOS JR und KOOS JR sind verschiedene Fragebögen. Beide reichen von 0 bis 100, aber ein Gewinn von 10 Punkten auf dem einen bedeutet nicht zwingend dasselbe wie ein Gewinn von 10 Punkten auf dem anderen. Der Vergleich ist in der Literatur trotzdem verbreitet, aber halten Sie im Methods-Teil klar fest, dass er Punkte auf der jeweiligen Skala des Gelenks vergleicht. Ein stärkeres Design verwendet einen Score, den alle Patientinnen und Patienten ausfüllen, etwa die körperliche Funktion PROMIS-29+2.
+:::
+
+## 2 · Die rohe Arbeitsmappe aufräumen {#tidy}
+
+Die Daten stammen aus der Erhebungstabelle, die [Seite 1](../foundations/01-tidy-data.qmd#tidying) Schritt für Schritt aufräumt: 60 Fälle pro Standort, mit Banner-Zeilen, verbundenen Kopfzellen, gemischten Datumsformaten, fünf Schreibweisen für «fehlend» und Revisionen, die nur durch eine rote Füllung markiert sind. Der Code unten fasst die fünf Schritte von Seite 1 in einem Block zusammen; öffnen Sie ihn, um den Code zu sehen, und gehen Sie zu Seite 1 zurück, um zu erfahren, wozu jeder Schritt dient.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+library(readxl)
+library(tidyxl)
+library(gtsummary)
+library(survival)
+library(ggsurvfit)
+
+path <- "data/messy_abstraction_workbook.xlsx"
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "The tidying code from page 1"
+# Schritt 1: beide Tabellenblätter als Text lesen; die Gruppenkopfzeile nennt zuerst präoperativ, dann 1 Jahr
+read_site <- function(sheet) {
+  raw <- read_excel(path, sheet = sheet, skip = 3, col_types = "text", .name_repair = "minimal")
+  names(raw) <- str_trim(names(raw))
+  names(raw)[names(raw) == "Date"]  <- c("prom_preop_date", "prom_1yr_date")
+  names(raw)[names(raw) == "Score"] <- c("prom_preop", "prom_1yr")
+  raw |>
+    janitor::clean_names() |>
+    mutate(site = sheet)
+}
+raw <- bind_rows(read_site("Site A"), read_site("Site B"))   # die Tabellenblätter nach Spaltennamen untereinander legen
+
+# Schritte 2 und 3: Summenzeilen, Duplikate und Identifikatoren entfernen; nur eine Schreibweise für «fehlend»
+missing_codes <- c("N/A", "unk", "-", "999")
+step3 <- raw |>
+  filter(is.na(pt_name) | pt_name != "TOTAL") |>
+  distinct() |>
+  select(-pt_name, -mrn, -mua) |>
+  mutate(across(everything(), \(x) if_else(x %in% missing_codes, NA, x)))
+
+# Schritt 4: Revisionen sind nur durch eine rote Füllung der Zelle Study ID markiert
+cells <- xlsx_cells(path)
+fills <- xlsx_formats(path)$local$fill$patternFill$fgColor$rgb
+revised_ids <- cells |>
+  filter(fills[local_format_id] %in% "FFFF9999") |>
+  pull(character) |>
+  str_trim() |>
+  unique()
+
+# Schritt 5: jeder Spalte ihren echten Typ geben
+parse_messy_date <- function(x, day_first = TRUE) {
+  serial <- !is.na(x) & str_detect(x, "^\\d{5}$")
+  iso    <- !is.na(x) & str_detect(x, "^\\d{4}-\\d{2}-\\d{2}$")
+  rest   <- !is.na(x) & !serial & !iso
+  out <- as.Date(rep(NA, length(x)))
+  out[serial] <- janitor::excel_numeric_to_date(as.numeric(x[serial]))
+  out[iso]    <- ymd(x[iso])
+  out[rest]   <- if (day_first) dmy(x[rest], quiet = TRUE) else mdy(x[rest], quiet = TRUE)
+  out
+}
+
+tidy <- step3 |>
+  rename(procedure_text = procedure) |>
+  transmute(
+    case_id      = str_trim(study_id),
+    site,
+    surgery_date = parse_messy_date(dos),
+    age          = parse_number(age),
+    sex          = case_when(str_detect(sex, regex("^f", ignore_case = TRUE)) ~ "Female",
+                             str_detect(sex, regex("^m", ignore_case = TRUE)) ~ "Male"),
+    bmi          = parse_number(bmi),
+    asa          = as.integer(as.roman(str_remove(asa, "^ASA "))),
+    diabetes     = as.integer(str_detect(comorbidities, regex("\\bDM\\b", ignore_case = TRUE))),
+    hypertension = as.integer(str_detect(comorbidities, regex("\\bHTN\\b", ignore_case = TRUE))),
+    sleep_apnea  = as.integer(str_detect(comorbidities, regex("\\bOSA\\b", ignore_case = TRUE))),
+    procedure    = case_when(str_detect(procedure_text, regex("TKA|knee", ignore_case = TRUE)) ~ "TKA",
+                             str_detect(procedure_text, regex("THA|hip", ignore_case = TRUE)) ~ "THA"),
+    side         = case_when(str_detect(procedure_text, "\\b(L|Left)\\b") ~ "L",
+                             str_detect(procedure_text, "\\b(R|Right)\\b") ~ "R"),
+    los_days     = parse_number(los),
+    revised      = as.integer(case_id %in% revised_ids),
+    prom_preop_date = parse_messy_date(prom_preop_date),
+    prom_preop      = parse_number(prom_preop),
+    prom_1yr_date   = parse_messy_date(prom_1yr_date),
+    prom_1yr        = parse_number(prom_1yr)
+  ) |>
+  arrange(site, case_id)
+
+dim(tidy)
+```
+
+## Python
+
+```{python}
+import re
+import numpy as np
+import pandas as pd
+import openpyxl
+import matplotlib.pyplot as plt
+import pingouin as pg
+import statsmodels.formula.api as smf
+from scipy import stats
+from scipy.stats import norm
+from tableone import TableOne
+from lifelines import KaplanMeierFitter
+from lifelines.utils import qth_survival_times
+from statsmodels.duration.survfunc import CumIncidenceRight
+
+path = "data/messy_abstraction_workbook.xlsx"
+```
+
+```{python}
+#| code-fold: true
+#| code-summary: "The tidying code from page 1"
+# Schritt 1: beide Tabellenblätter als Text lesen; pandas nennt die wiederholten Kopfzeilen «Date.1» und «Score.1»
+def read_site(sheet):
+    raw = pd.read_excel(path, sheet_name=sheet, header=3, dtype=str)
+    names = [str(c).strip() for c in raw.columns]
+    pairs = {"Date": "prom_preop_date", "Score": "prom_preop",
+             "Date.1": "prom_1yr_date", "Score.1": "prom_1yr"}
+    names = [pairs.get(n, n) for n in names]
+    raw.columns = [re.sub(r"[^0-9a-z]+", "_", n.lower()).strip("_") for n in names]
+    return raw.assign(site=sheet)
+
+raw = pd.concat([read_site("Site A"), read_site("Site B")], ignore_index=True)   # nach Spaltennamen untereinander legen
+
+# Schritte 2 und 3: Summenzeilen, Duplikate und Identifikatoren entfernen; nur eine Schreibweise für «fehlend»
+step3 = (raw[raw["pt_name"] != "TOTAL"]
+         .drop_duplicates()
+         .drop(columns=["pt_name", "mrn", "mua"])
+         .replace(["N/A", "unk", "-", "999"], pd.NA))
+
+# Schritt 4: Revisionen sind nur durch eine rote Füllung der Zelle Study ID markiert
+revised_ids = set()
+for sheet in openpyxl.load_workbook(path).worksheets:
+    for row in sheet.iter_rows(min_row=5):
+        for cell in row:
+            if cell.fill.fgColor.rgb == "FFFF9999":
+                revised_ids.add(str(cell.value).strip())
+
+# Schritt 5: jeder Spalte ihren echten Typ geben
+def number(text):
+    return pd.to_numeric(text.str.extract(r"(\d+\.?\d*)")[0])
+
+def parse_messy_date(col, dayfirst=True):
+    iso = col.str.match(r"\d{4}-\d{2}-\d{2}", na=False)
+    swiss = col.notna() & ~iso
+    dates = pd.concat([pd.to_datetime(col[iso], format="ISO8601"),
+                       pd.to_datetime(col[swiss], format="mixed", dayfirst=dayfirst)])
+    return dates.reindex(col.index)
+
+asa_roman = {"I": "1", "II": "2", "III": "3", "IV": "4"}
+procedure_text = step3["procedure"]
+
+tidy = pd.DataFrame({
+    "case_id":      step3["study_id"].str.strip(),
+    "site":         step3["site"],
+    "surgery_date": parse_messy_date(step3["dos"]),
+    "age":          number(step3["age"]),
+    "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
+    "bmi":          number(step3["bmi"]),
+    "asa":          pd.to_numeric(step3["asa"].str.replace("ASA ", "").replace(asa_roman)),
+    "diabetes":     step3["comorbidities"].str.contains(r"\bDM\b", case=False).astype(int),
+    "hypertension": step3["comorbidities"].str.contains(r"\bHTN\b", case=False).astype(int),
+    "sleep_apnea":  step3["comorbidities"].str.contains(r"\bOSA\b", case=False).astype(int),
+    "procedure":    np.select([procedure_text.str.contains(r"TKA|knee", case=False),
+                               procedure_text.str.contains(r"THA|hip", case=False)],
+                              ["TKA", "THA"], default=None),
+    "side":         np.select([procedure_text.str.contains(r"\b(?:L|Left)\b"),
+                               procedure_text.str.contains(r"\b(?:R|Right)\b")],
+                              ["L", "R"], default=None),
+    "los_days":     number(step3["los"]),
+    "revised":      step3["study_id"].str.strip().isin(revised_ids).astype(int),
+    "prom_preop_date": parse_messy_date(step3["prom_preop_date"]),
+    "prom_preop":      number(step3["prom_preop"]),
+    "prom_1yr_date":   parse_messy_date(step3["prom_1yr_date"]),
+    "prom_1yr":        number(step3["prom_1yr"]),
+}).sort_values(["site", "case_id"]).reset_index(drop=True)
+
+print(tidy.shape)
+```
+:::
+
+```{r}
+#| include: false
+# Spec 8.4: the tidying must reproduce the answer key exactly, as on page 1.
+key <- read_csv("data/answer-keys/abstraction_workbook_tidy.csv", show_col_types = FALSE)
+stopifnot(isTRUE(all.equal(as.data.frame(tidy), as.data.frame(key), check.attributes = FALSE)))
+```
+
+```{python}
+#| include: false
+key = pd.read_csv("data/answer-keys/abstraction_workbook_tidy.csv",
+                  parse_dates=["surgery_date", "prom_preop_date", "prom_1yr_date"])
+pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
+```
+
+120 Fälle, 18 Spalten. Die Arbeitsmappe enthält keine Nachbeobachtung: Sie hält fest, ob eine Hüfte oder ein Knie revidiert wurde, aber nicht wann und nicht, ob die Person gestorben ist. Die Nachbeobachtung stammt aus dem Gelenkregister, verknüpft über die Studien-ID. In den Übungsdaten übernimmt `data/cohort.csv` die Rolle des Registers. Übernehmen Sie daraus nur die Spalten, die Sie brauchen:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+registry <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
+  select(case_id, patient_id, followup_years, event_status, revised_registry = revised,
+         surgery_date_registry = surgery_date, procedure_registry = procedure)   # diese drei, um die Verknüpfung zu prüfen
+
+study <- left_join(tidy, registry, by = "case_id")   # behält jeden Fall der Arbeitsmappe
+nrow(study)
+count(study, procedure)
+```
+
+## Python
+
+```{python}
+registry = (pd.read_csv("data/cohort.csv", parse_dates=["surgery_date"])
+            [["case_id", "patient_id", "followup_years", "event_status", "revised", "surgery_date", "procedure"]]
+            .rename(columns={"revised": "revised_registry", "surgery_date": "surgery_date_registry",
+                             "procedure": "procedure_registry"}))   # diese drei, um die Verknüpfung zu prüfen
+
+study = tidy.merge(registry, on="case_id", how="left")   # behält jeden Fall der Arbeitsmappe
+print(len(study))
+print(study["procedure"].value_counts().sort_index().to_string())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"rows": float(len(study)), "patients": float(study["patient_id"].nunique()),
+       "tha": float((study["procedure"] == "THA").sum()), "revised": float(study["revised"].sum()),
+       "mean_bmi": float(study["bmi"].mean())}
+```
+
+```{r}
+#| include: false
+check_agree(list(rows = nrow(study), patients = n_distinct(study$patient_id), tha = sum(study$procedure == "THA"),
+                 revised = sum(study$revised), mean_bmi = mean(study$bmi, na.rm = TRUE)), reticulate::py$chk)
+```
+
+53 Hüft-TP und 67 Knie-TP. Ein Left Join behält jeden Fall der Arbeitsmappe, auch wenn das Register keinen Eintrag dazu hat; der nächste Schritt prüft, dass keiner fehlt.
+
+## 3 · Das Aufräumen prüfen {#integrity}
+
+Prüfen Sie die aufgeräumten Daten vor jeder Analyse gegen das, was nachweislich stimmen muss ([Seite 1](../foundations/01-tidy-data.qmd#integrity)). Schreiben Sie jede Prüfung so, dass sie das **Skript anhält**, wenn sie fehlschlägt: Eine Prüfung, die nur etwas ausgibt, übersieht man leicht.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+# Eine Zeile pro Fall und 60 Fälle pro Standort im Erhebungsprotokoll
+stopifnot(n_distinct(study$case_id) == nrow(study), all(count(study, site)$n == 60))
+
+# Jeder Wert innerhalb des Bereichs im Datenwörterbuch (data/codebooks/abstraction_workbook_tidy.csv)
+in_range <- function(x, low, high) all(is.na(x) | (x >= low & x <= high))
+stopifnot(in_range(study$age, 40, 89), in_range(study$bmi, 18, 55), in_range(study$asa, 1, 4),
+          in_range(study$los_days, 0, 30), in_range(study$prom_preop, 0, 100), in_range(study$prom_1yr, 0, 100))
+
+# PROM-Daten innerhalb der Zeitfenster des Protokolls: präoperativ innerhalb von 30 Tagen vor der Operation, 1 Jahr bei 10 bis 14 Monaten
+stopifnot(in_range(as.numeric(study$surgery_date - study$prom_preop_date), 0, 30),
+          in_range(as.numeric(study$prom_1yr_date - study$surgery_date), 300, 425))
+
+# Jeder Fall im Register gefunden, und die Arbeitsmappe stimmt mit ihm beim Operationsdatum,
+# beim Eingriff und bei den Revisionen (den roten Füllungen) überein
+stopifnot(!anyNA(study$followup_years), all(study$surgery_date == study$surgery_date_registry),
+          all(study$procedure == study$procedure_registry), all(study$revised == study$revised_registry))
+
+# Eine Zeile pro Person: Bei niemandem in dieser Stichprobe wurden beide Hüften oder beide Knie ersetzt
+stopifnot(n_distinct(study$patient_id) == nrow(study))
+
+# Was fehlt: jetzt zählen, später berichten
+n_missing <- colSums(is.na(study))
+n_missing[n_missing > 0]
+```
+
+## Python
+
+```{python}
+# Eine Zeile pro Fall und 60 Fälle pro Standort im Erhebungsprotokoll
+assert study["case_id"].is_unique and (study["site"].value_counts() == 60).all()
+
+# Jeder Wert innerhalb des Bereichs im Datenwörterbuch (data/codebooks/abstraction_workbook_tidy.csv)
+def in_range(values, low, high):
+    return bool(values.dropna().between(low, high).all())
+
+assert in_range(study["age"], 40, 89) and in_range(study["bmi"], 18, 55) and in_range(study["asa"], 1, 4)
+assert in_range(study["los_days"], 0, 30) and in_range(study["prom_preop"], 0, 100) and in_range(study["prom_1yr"], 0, 100)
+
+# PROM-Daten innerhalb der Zeitfenster des Protokolls: präoperativ innerhalb von 30 Tagen vor der Operation, 1 Jahr bei 10 bis 14 Monaten
+assert in_range((study["surgery_date"] - study["prom_preop_date"]).dt.days, 0, 30)
+assert in_range((study["prom_1yr_date"] - study["surgery_date"]).dt.days, 300, 425)
+
+# Jeder Fall im Register gefunden, und die Arbeitsmappe stimmt mit ihm beim Operationsdatum,
+# beim Eingriff und bei den Revisionen (den roten Füllungen) überein
+assert study["followup_years"].notna().all() and (study["surgery_date"] == study["surgery_date_registry"]).all()
+assert (study["procedure"] == study["procedure_registry"]).all() and (study["revised"] == study["revised_registry"]).all()
+
+# Eine Zeile pro Person: Bei niemandem in dieser Stichprobe wurden beide Hüften oder beide Knie ersetzt
+assert study["patient_id"].nunique() == len(study)
+
+# Was fehlt: jetzt zählen, später berichten
+n_missing = study.isna().sum()
+print(n_missing[n_missing > 0].to_string())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"bmi": float(n_missing["bmi"]), "asa": float(n_missing["asa"]), "preop": float(n_missing["prom_preop"]),
+       "one_year": float(n_missing["prom_1yr"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(bmi = n_missing[["bmi"]], asa = n_missing[["asa"]], preop = n_missing[["prom_preop"]],
+                 one_year = n_missing[["prom_1yr"]]), reticulate::py$chk)
+```
+
+Alle Prüfungen waren erfolgreich, deshalb lief der Code weiter. Die Arbeitsmappe stimmt bei allen 120 Fällen mit dem Register in Operationsdatum, Eingriff und Revisionen überein. Der Abgleich einer Quelle mit einer anderen findet, was keine von beiden allein finden kann: eine rote Füllung, die beim Erheben vergessen ging, oder eine Studien-ID, die mit dem falschen Registereintrag verknüpft ist. Das Register zeigt ausserdem, dass die 120 Fälle 120 verschiedene Personen sind, jede Zeile ist also eine Person. Die fehlenden Werte sind das, was beim Erheben der Daten nicht zu finden war: 8 BMI, 3 ASA-Klassen, 3 Aufenthaltsdauern, 5 präoperative Scores und 22 Scores nach einem Jahr. Die Analyse muss festhalten, wie sie damit umgeht.
+
+## 4 · Tabelle 1 {#table-1}
+
+Tabelle 1 beschreibt die Patientinnen und Patienten vor der Operation, nach Eingriff getrennt ([Seite 2](../foundations/02-demographics.qmd#by-group)). Zeigen Sie bei einer Beobachtungsstudie **standardisierte Mittelwertsdifferenzen** (SMD) statt p-Werten ([Seite 2](../foundations/02-demographics.qmd#smd)): Die Frage ist, wie verschieden die Gruppen sind, nicht, ob die Differenz «signifikant» ist. Behalten Sie für jede Variable mit fehlenden Werten eine Zeile Missing.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+study <- study |> mutate(asa = factor(asa))   # die ASA-Klasse ist eine Kategorie
+
+table_one <- study |>
+  select(procedure, age, sex, bmi, asa, diabetes, hypertension, sleep_apnea, site, prom_preop) |>
+  tbl_summary(
+    by           = procedure,
+    statistic    = all_continuous() ~ "{mean} ({sd})",
+    digits       = all_continuous() ~ 1,
+    label        = list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
+                        diabetes ~ "Diabetes", hypertension ~ "Hypertension", sleep_apnea ~ "Sleep apnea",
+                        site ~ "Site", prom_preop ~ "Pre-op score (HOOS JR or KOOS JR), points"),
+    missing_text = "Missing"
+  ) |>                                                          # keine Spalte Overall: siehe unten
+  add_difference(test = everything() ~ "smd") |>
+  modify_table_body(~ mutate(.x, estimate = abs(estimate))) |>  # absolute SMD (Seite 2)
+  modify_column_hide(columns = conf.low) |>                     # und nicht die KI der SMD
+  remove_abbreviation("CI = Confidence Interval") |>
+  modify_header(estimate = "**SMD**")
+table_one
+```
+
+## Python
+
+```{python}
+study["asa"] = study["asa"].astype("Int64").astype("string")   # eine Kategorie; Leerwerte bleiben fehlend
+
+labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA class",
+          "diabetes": "Diabetes", "hypertension": "Hypertension", "sleep_apnea": "Sleep apnea",
+          "site": "Site", "prom_preop": "Pre-op score (HOOS JR or KOOS JR), points"}
+table_one = TableOne(study, columns=list(labels), groupby="procedure", overall=False,   # keine Spalte Overall: siehe unten
+                     categorical=["sex", "asa", "diabetes", "hypertension", "sleep_apnea", "site"],
+                     smd=True, missing=True, include_null=False, rename=labels)
+print(table_one.tabulate(tablefmt="github"))
+```
+:::
+
+```{python}
+#| include: false
+smd = table_one.smd_table.iloc[:, 0]
+chk = {v: abs(float(smd[v])) for v in labels}
+```
+
+```{r}
+#| include: false
+smd_r <- table_one$table_body |> filter(row_type == "label")
+# Continuous SMDs differ in the 3rd decimal: R's smd package divides the variances by n,
+# tableone by n - 1 (page 2's R vs Python box).
+check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
+```
+
+Am stärksten unterscheiden sich die Gruppen beim Geschlecht: 72 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49 % derjenigen mit Knie-TP (SMD 0.47). Schlafapnoe (0.31), ASA-Klasse (0.29) und der präoperative Score (0.26) unterscheiden sich weniger; eine SMD unter 0.1 wird üblicherweise als vernachlässigbarer Unterschied gelesen. Die Gruppe mit Knie-TP startete im Mittel 2.9 Punkte höher, was bei einer als Veränderung gemessenen Zielgrösse wichtig ist: Eine Gruppe, die höher startet, hat weniger Spielraum für eine Verbesserung.
+
+Es gibt keine Spalte Overall. Bei den meisten Zeilen wäre sie harmlos, beim präoperativen Score würde sie aber die Scores von HOOS JR und KOOS JR zusammen mitteln, und genau vor diesem Vergleich hat Schritt 1 gewarnt.
+
+::: {.callout-tip}
+## 🔀 R oder Python: SMD
+Die SMD stimmen auf zwei Dezimalstellen überein. Das Package smd von R teilt die Varianzen durch *n*, tableone durch *n* − 1; die SMD kontinuierlicher Variablen können sich daher in der dritten Dezimalstelle unterscheiden ([Seite 2](../foundations/02-demographics.qmd#smd)). Die versteckte Prüfung berücksichtigt das. Die beiden Packages subtrahieren die Gruppen ausserdem in entgegengesetzter Reihenfolge, deshalb unterscheiden sich ihre Vorzeichen: Die Tabelle in R zeigt Absolutwerte, wie es Seite 2 empfiehlt, die von tableone behalten ihr Vorzeichen.
+:::
+
+## 5 · Die Verteilungen prüfen {#distributions}
+
+Die primäre Zielgrösse ist die Veränderung vom präoperativen Score zum Score nach 1 Jahr, sie existiert also nur für Patientinnen und Patienten mit beiden. Sehen Sie sich ihre Form in jeder Gruppe an, bevor Sie den Test wählen ([Seite 3](../foundations/03-distributions.qmd)), und zählen Sie die Personen am oberen Ende der Skala.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 4.5
+analysed <- study |>
+  mutate(change = prom_1yr - prom_preop) |>   # die primäre Zielgrösse
+  filter(!is.na(change))                      # Patientinnen und Patienten mit beiden Scores
+
+ggplot(analysed, aes(change)) +
+  geom_histogram(binwidth = 5, boundary = 0) +
+  facet_wrap(~ procedure, ncol = 1) +
+  labs(x = "Change in score, pre-op to 1 year (points)", y = "Patients")
+
+change_summary <- analysed |>
+  group_by(procedure) |>
+  summarise(n = n(), mean = mean(change), sd = sd(change), at_ceiling = sum(prom_1yr == 100))
+change_summary
+```
+
+## Python
+
+```{python}
+analysed = study.assign(change=study["prom_1yr"] - study["prom_preop"])   # die primäre Zielgrösse
+analysed = analysed[analysed["change"].notna()]                           # Patientinnen und Patienten mit beiden Scores
+
+fig, axes = plt.subplots(2, 1, figsize=(7, 4.5), sharex=True)
+for ax, (procedure, rows) in zip(axes, analysed.groupby("procedure")):
+    ax.hist(rows["change"], bins=range(0, 80, 5))
+    ax.set_title(procedure)
+    ax.set_ylabel("Patients")
+axes[1].set_xlabel("Change in score, pre-op to 1 year (points)")
+plt.tight_layout()
+plt.show()
+
+summary = analysed.groupby("procedure").agg(n=("change", "size"), mean=("change", "mean"),
+                                            sd=("change", "std"), at_ceiling=("prom_1yr", lambda s: int((s == 100).sum())))
+print(summary.round(1).to_string())
+```
+:::
+
+```{python}
+#| include: false
+chk = {"n_tha": float(summary.loc["THA", "n"]), "n_tka": float(summary.loc["TKA", "n"]),
+       "mean_tha": float(summary.loc["THA", "mean"]), "sd_tka": float(summary.loc["TKA", "sd"]),
+       "ceiling_tha": float(summary.loc["THA", "at_ceiling"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(n_tha = change_summary$n[1], n_tka = change_summary$n[2], mean_tha = change_summary$mean[1],
+                 sd_tka = change_summary$sd[2], ceiling_tha = change_summary$at_ceiling[1]), reticulate::py$chk)
+```
+
+93 der 120 Patientinnen und Patienten haben beide Scores: 46 mit Hüft-TP und 47 mit Knie-TP. Innerhalb jeder Gruppe sind die Veränderungen ungefähr symmetrisch, ohne langen Ausläufer, und jede Gruppe hat mehr als 30 Personen, deshalb passt der t-Test nach Welch ([Seite 3](../foundations/03-distributions.qmd)).
+
+Für die Diskussion ist Folgendes festzuhalten: 15 der 46 Patientinnen und Patienten mit Hüft-TP (32.6 %) erreichten den Höchstwert 100 nach 1 Jahr, gegenüber 7 der 47 mit Knie-TP (14.9 %). Personen, die am oberen Ende der Skala anstossen, hätten sich bei einer grösseren Skala vielleicht noch stärker verbessert; deshalb wird die Verbesserung nach Hüft-TP, und mit ihr die Differenz zwischen den Gruppen, möglicherweise unterschätzt. Übung 1 prüft das Resultat mit einem rangbasierten Test.
+
+## 6 · Die primäre Analyse {#primary-analysis}
+
+Die vorab festgelegte Analyse: t-Test nach Welch für die Veränderung, mit der Mittelwertsdifferenz, ihrem 95%-KI und Hedges' g ([Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+primary <- t.test(change ~ procedure, data = analysed)   # der t-Test nach Welch ist der Standard von R
+primary
+
+primary_g <- effectsize::hedges_g(change ~ procedure, data = analysed)
+primary_g
+```
+
+## Python
+
+```{python}
+tha = analysed.loc[analysed["procedure"] == "THA", "change"]
+tka = analysed.loc[analysed["procedure"] == "TKA", "change"]
+
+primary = stats.ttest_ind(tha, tka, equal_var=False)   # equal_var=False: t-Test nach Welch
+primary_ci = primary.confidence_interval()
+print("t =", primary.statistic, " df =", primary.df, " p =", primary.pvalue)
+print("difference =", tha.mean() - tka.mean(), " 95% CI", primary_ci.low, "to", primary_ci.high)
+
+g = pg.compute_effsize(tha, tka, eftype="hedges")
+g_ci = pg.compute_esci(stat=g, nx=len(tha), ny=len(tka), eftype="hedges")   # sein 95%-KI, auf 2 Dezimalstellen
+print("Hedges' g =", g, " 95% CI", g_ci[0], "to", g_ci[1])
+```
+:::
+
+```{python}
+#| include: false
+chk = {"t": float(primary.statistic), "df": float(primary.df), "p": float(primary.pvalue),
+       "ci_low": float(primary_ci.low), "ci_high": float(primary_ci.high)}
+chk_g = {"g": float(g)}
+chk_g_ci = {"low": float(g_ci[0]), "high": float(g_ci[1])}
+```
+
+```{r}
+#| include: false
+check_agree(list(t = unname(primary$statistic), df = unname(primary$parameter), p = primary$p.value,
+                 ci_low = primary$conf.int[1], ci_high = primary$conf.int[2]), reticulate::py$chk)
+# effectsize corrects g for small samples exactly, pingouin with the usual approximation;
+# with 93 patients they differ in the sixth decimal (see the R vs Python box)
+check_agree(list(g = primary_g$Hedges_g), reticulate::py$chk_g, tol = 1e-5)
+# pingouin gets the CI from an approximate formula and rounds it to 2 decimals; effectsize uses the
+# noncentral t distribution. Here pingouin's CI is about 0.01 wider at each end, plus its rounding
+# (see the R vs Python box), so this check only catches gross errors such as the wrong n.
+check_agree(list(low = primary_g$CI_low, high = primary_g$CI_high), reticulate::py$chk_g_ci, tol = 0.02)
+```
+
+So lesen Sie die Ausgabe:
+- **Die Differenz:** Patientinnen und Patienten mit Hüft-TP verbesserten sich im Mittel um 42.4 Punkte, solche mit Knie-TP um 33.4, eine Differenz von 9.0 Punkten (95%-KI 3.5 bis 14.6). R stellt Hüft-TP an die erste Stelle, weil THA im Code alphabetisch vor TKA kommt; der Python-Code subtrahiert in derselben Reihenfolge.
+- **p = 0.002:** Wenn die beiden Eingriffe in Wahrheit gleich wirkten, träten Daten, die so extrem wären wie die beobachteten oder noch extremer, nur selten auf.
+- **Hedges' g = 0.66** (95%-KI 0.25 bis 1.08): die Differenz in Standardabweichungen. Beim Schätzwert ist sie mittel bis gross, aber das KI reicht von einer kleinen Differenz bis zu einer grossen.
+
+::: {.callout-tip}
+## 🔀 R oder Python: Hedges' g
+Hedges' g ist Cohens d, leicht verkleinert, um kleine Stichproben zu korrigieren. effectsize verwendet die exakte Korrektur, pingouin eine enge Näherung; bei 93 Personen unterscheiden sie sich deshalb in der sechsten Dezimalstelle. Für das KI verwendet `compute_esci()` von pingouin eine Näherungsformel und rundet auf 2 Dezimalstellen, daher ist sein KI, 0.24 bis 1.09, etwas breiter als das von effectsize, 0.25 bis 1.08, das aus der nichtzentralen t-Verteilung stammt. Geben Sie an, welches Sie verwendet haben; das Manuskript nennt das von R.
+:::
+
+## 7 · Revision: eine Überlebenszeitanalyse {#survival}
+
+Die sekundäre Zielgrösse ist die Revision. Zuerst: Wie lange wurden die Patientinnen und Patienten nachbeobachtet? Dann: Welcher Anteil wurde im Lauf der Zeit revidiert? 18 Personen starben während der Nachbeobachtung ohne Revision, der Tod ist also ein konkurrierendes Risiko: Die kumulative Inzidenz gibt den wahren Anteil der Patientinnen und Patienten mit einer Revision an, während 1 − Kaplan-Meier ihn überschätzen würde ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 5
+study <- study |>
+  mutate(status = factor(event_status, levels = c(0, 1, 2),
+                         labels = c("censored", "revision", "death")))   # censored muss an erster Stelle stehen
+table(study$status)
+
+# mediane Nachbeobachtungszeit und IQR: umgekehrte Kaplan-Meier-Methode
+reverse_km <- survfit(Surv(followup_years, event_status == 0) ~ 1, data = study)
+follow_up <- quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
+follow_up
+
+# die kumulative Inzidenz der Revision, mit dem Tod als konkurrierendem Risiko
+cif <- survfit2(Surv(followup_years, status) ~ 1, data = study, conf.type = "log-log")
+revision_rows <- tidy_survfit(cif, times = c(2, 5)) |>
+  filter(outcome == "revision") |>
+  select(time, estimate, conf.low, conf.high)
+revision_rows
+
+revision_plot <- cif |>
+  ggcuminc(outcome = "revision") +
+  add_confidence_interval() +
+  add_risktable(risktable_stats = "n.risk") +                # die Anzahl Personen unter Risiko, unter der Kurve
+  scale_ggsurvfit(x_scales = list(breaks = seq(0, 10, by = 2))) +
+  labs(x = "Years since surgery", y = "Cumulative incidence of revision")
+revision_plot
+```
+
+## Python
+
+```{python}
+print(study["event_status"].value_counts().sort_index().to_string())   # 0 = zensiert, 1 = Revision, 2 = Tod
+
+# mediane Nachbeobachtungszeit und IQR: umgekehrte Kaplan-Meier-Methode
+reverse_km = KaplanMeierFitter().fit(study["followup_years"], event_observed=(study["event_status"] == 0))
+follow_up = qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_).iloc[:, 0]   # 25., 50., 75. Perzentil
+print(follow_up.to_string())
+
+# die kumulative Inzidenz der Revision, mit dem Tod als konkurrierendem Risiko
+cif = CumIncidenceRight(study["followup_years"], study["event_status"])
+revision = pd.DataFrame({"cif": cif.cinc[0], "se": cif.cinc_se[0]}, index=cif.times)   # Ereignistyp 1
+
+z = norm.ppf(0.975)
+revision_rows = revision.loc[[revision.index[revision.index <= years][-1] for years in [2, 5]]]   # letzte Stufe vor jedem Zeitpunkt
+spread = np.exp(z * revision_rows["se"] / (revision_rows["cif"] * np.log(revision_rows["cif"])))  # das Log-Log-KI, wie in R
+revision_rows = revision_rows.assign(time=[2, 5], low=revision_rows["cif"] ** (1 / spread),
+                                     high=revision_rows["cif"] ** spread)
+print(revision_rows[["time", "cif", "low", "high"]].round(3).to_string(index=False))
+
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.step(revision.index, revision["cif"], where="post")
+ax.set_xlabel("Years since surgery")
+ax.set_ylabel("Cumulative incidence of revision")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+chk = {"q1": float(follow_up.iloc[0]), "median": float(follow_up.iloc[1]), "q3": float(follow_up.iloc[2]),
+       "cif_2": float(revision_rows["cif"].iloc[0]), "cif_5": float(revision_rows["cif"].iloc[1]),
+       "low_5": float(revision_rows["low"].iloc[1]), "high_5": float(revision_rows["high"].iloc[1])}
+```
+
+```{r}
+#| include: false
+check_agree(list(q1 = follow_up[[1]], median = follow_up[[2]], q3 = follow_up[[3]],
+                 cif_2 = revision_rows$estimate[1], cif_5 = revision_rows$estimate[2],
+                 low_5 = revision_rows$conf.low[2], high_5 = revision_rows$conf.high[2]),
+            reticulate::py$chk)
+```
+
+Die mediane Nachbeobachtungszeit betrug 6.05 Jahre (Interquartilsabstand, IQR, 4.16 bis 8.27). 18 Personen hatten eine Revision, und 18 starben ohne Revision. Die kumulative Inzidenz der Revision betrug 3.4 % (95%-KI 1.1 % bis 7.8 %) nach 2 Jahren und 12.6 % (95%-KI 7.0 % bis 19.8 %) nach 5 Jahren. Bei 18 Revisionen sind die KI breit: Diese Kohorte kann Revisionen beschreiben, aber nicht zwischen den Eingriffen vergleichen. Die Anzahl Personen unter Risiko unter dem Diagramm von R zeigt, wie schnell die Daten dünner werden: 17 Personen wurden nach 8 Jahren noch nachbeobachtet und 5 nach 10 Jahren, das Ende der Kurve beruht also auf sehr wenigen Personen. Veröffentlichen Sie diese Zahlen zusammen mit der Kurve ([Seite 13](../survival/13-kaplan-meier.qmd#kaplan-meier)).
+
+::: {.callout-tip}
+## 🔀 R oder Python: die kumulative Inzidenz
+`survfit()` von R schätzt sie, sobald der Status drei Stufen hat. `CumIncidenceRight()` von statsmodels liefert dieselben Schätzwerte und ihre Standardfehler, aber kein KI; der Python-Code baut deshalb das Log-Log-KI von R von Hand nach ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)).
+:::
+
+## 8 · Das Manuskript {#manuscript}
+
+Alles von hier bis zu den Übungen ist das Manuskript, und das ist der Inhalt der Word-Version. Jede Zahl darin stammt aus dem Code oben, und eine versteckte Prüfung bricht das Rendern ab, wenn Text und Code einmal nicht mehr übereinstimmen.
+
+::: {.callout-note}
+## 💡 So sieht «fertig» aus
+- Die Frage, die Zielgrösse und die Analyse wurden festgehalten, bevor die Analyse lief.
+- Das Aufräumen ist geprüft, und eine fehlgeschlagene Prüfung hält das Skript an.
+- Fehlende Daten werden gezählt und berichtet, nicht stillschweigend weggelassen.
+- Jeder Schätzwert hat ein 95%-KI, und der Methods-Teil nennt jeden Test.
+- Das Manuskript wird aus derselben Datei erzeugt wie die Analyse. Ändern sich die Daten, aktualisieren sich Tabelle 1 und Abbildung 1 von selbst, und die versteckte Prüfung hält das Rendern an, bis jede Zahl im Text von Hand angepasst ist.
+:::
+
+Das Manuskript endet bei den Results. Die Diskussion schreiben die Autorinnen und Autoren selbst; bei dieser Studie müsste sie den Deckeneffekt nach 1 Jahr behandeln, die Patientinnen und Patienten, die in der Analyse fehlen, die beiden Fragebögen und die Frage, ob eine Differenz von 9 Punkten für Patientinnen und Patienten von Bedeutung ist.
+:::
+
+## Aim {#aim}
+
+To compare the improvement in joint-specific patient-reported scores from before surgery to 1 year after primary total hip arthroplasty (THA) and total knee arthroplasty (TKA), and to describe the cumulative incidence of revision.
+
+## Methods {#methods}
+
+**Patients and data.** We studied 120 primary THAs and TKAs performed at two sites (60 at each) between January 2015 and November 2024. Patients' characteristics, the procedure and patient-reported scores were abstracted from the medical record into a standard sheet. Follow-up for revision and death came from the joint registry, linked by study ID.
+
+**Outcomes.** The primary outcome was the change in the joint-specific score from before surgery to 1 year: the HOOS JR after THA and the KOOS JR after TKA, each scored from 0 to 100 (higher is better). Because the two are different instruments, the comparison is of points on each joint's own scale. The secondary outcome was revision of any component.
+
+**Statistical analysis.** Continuous variables are reported as mean (SD) and categorical variables as n (%); differences between procedures at baseline are described with standardized mean differences. The change in score was compared between procedures with Welch's t test in patients with both scores, and summarized as the mean difference with its 95% CI and Hedges' g. For revision, time was measured from the date of surgery to revision, death without revision (a competing event) or the end of registry follow-up (censored). Median follow-up was estimated with the reverse Kaplan-Meier method. The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk. Tests were two-sided. Analyses used R 4.6 and Python 3.13.
+
+## Results {#results}
+
+Of the 120 patients, 53 (44.2%) had a THA and 67 (55.8%) a TKA (@tbl-baseline). Women made up 38 of 53 THA patients (71.7%) and 33 of 67 TKA patients (49.3%; SMD 0.47). The mean pre-op score was 48.1 points (SD 11.5) in THA patients and 51.0 points (SD 11.8) in TKA patients (SMD 0.26).
+
+Both scores were available for 93 patients (77.5%): 46 of 53 after THA (86.8%) and 47 of 67 after TKA (70.1%). The mean change in score was 42.4 points (SD 13.0) after THA and 33.4 points (SD 13.9) after TKA (difference 9.0 points, 95% CI 3.5 to 14.6; Hedges' g 0.66, 95% CI 0.25 to 1.08; p = 0.002). At 1 year, 15 of 46 THA patients (32.6%) and 7 of 47 TKA patients (14.9%) had the maximum score.
+
+Over a median follow-up of 6.05 years (IQR 4.16 to 8.27), 18 patients had a revision and 18 died without one. The cumulative incidence of revision was 3.4% (95% CI 1.1% to 7.8%) at 2 years and 12.6% (95% CI 7.0% to 19.8%) at 5 years (@fig-revision).
+
+```{r}
+#| echo: false
+#| label: tbl-baseline
+#| tbl-cap: "Patients' characteristics before surgery, by procedure. Mean (SD) or n (%); SMD, absolute standardized mean difference."
+as_flex_table(table_one)
+```
+
+```{r}
+#| echo: false
+#| label: fig-revision
+#| fig-cap: "Cumulative incidence of revision, with death as a competing risk. The shaded band is the 95% CI."
+#| fig-height: 5
+revision_plot
+```
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+smd_of <- function(v) round(abs(smd_r$estimate[smd_r$variable == v]), 2)
+sex_counts <- table(study$procedure, study$sex)
+ceiling_counts <- analysed |> group_by(procedure) |> summarise(n = sum(prom_1yr == 100), pct = 100 * mean(prom_1yr == 100))
+both_counts <- study |> group_by(procedure) |> summarise(n = n(), both = sum(!is.na(prom_1yr - prom_preop)))
+pre_means <- study |> group_by(procedure) |> summarise(mean = mean(prom_preop, na.rm = TRUE), sd = sd(prom_preop, na.rm = TRUE))
+ancova <- lm(prom_1yr ~ prom_preop + procedure, data = analysed)
+ancova_ci <- confint(ancova)["procedureTKA", ]
+rank_check <- wilcox.test(change ~ procedure, data = analysed, exact = FALSE, conf.int = TRUE)
+missing_test <- fisher.test(table(study$procedure, is.na(study$prom_1yr - study$prom_preop)))
+stopifnot(
+  nrow(study) == 120, all(table(study$site) == 60), ncol(tidy) == 18,
+  format(min(study$surgery_date), "%B %Y") == "January 2015", format(max(study$surgery_date), "%B %Y") == "November 2024",
+  as.vector(table(study$procedure)) == c(53, 67), round(100 * 53 / 120, 1) == 44.2, round(100 * 67 / 120, 1) == 55.8,
+  n_missing[c("bmi", "asa", "los_days", "prom_preop", "prom_1yr")] == c(8, 3, 3, 5, 22),
+  sex_counts["THA", "Female"] == 38, sex_counts["TKA", "Female"] == 33,
+  round(100 * 38 / 53, 1) == 71.7, round(100 * 33 / 67, 1) == 49.3, round(100 * 38 / 53) == 72, round(100 * 33 / 67) == 49,
+  smd_of("sex") == 0.47, smd_of("sleep_apnea") == 0.31, smd_of("asa") == 0.29, smd_of("prom_preop") == 0.26,
+  round(pre_means$mean, 1) == c(48.1, 51.0), round(pre_means$sd, 1) == c(11.5, 11.8), round(round(pre_means$mean[2], 1) - round(pre_means$mean[1], 1), 1) == 2.9,
+  nrow(analysed) == 93, round(100 * 93 / 120, 1) == 77.5,
+  both_counts$both == c(46, 47), round(100 * both_counts$both / both_counts$n, 1) == c(86.8, 70.1),
+  round(change_summary$mean, 1) == c(42.4, 33.4), round(change_summary$sd, 1) == c(13.0, 13.9),
+  round(diff(rev(primary$estimate)), 1) == 9.0, round(primary$conf.int, 1) == c(3.5, 14.6),
+  round(primary$p.value, 3) == 0.002,
+  round(primary_g$Hedges_g, 2) == 0.66, round(c(primary_g$CI_low, primary_g$CI_high), 2) == c(0.25, 1.08),
+  round(reticulate::py$g_ci, 2) == c(0.24, 1.09),
+  ceiling_counts$n == c(15, 7), round(ceiling_counts$pct, 1) == c(32.6, 14.9),
+  table(study$event_status) == c(84, 18, 18),
+  sum(study$followup_years >= 8) == 17, sum(study$followup_years >= 10) == 5,
+  round(unname(follow_up), 2) == c(4.16, 6.05, 8.27),
+  round(100 * revision_rows$estimate, 1) == c(3.4, 12.6),
+  round(100 * revision_rows$conf.low, 1) == c(1.1, 7.0), round(100 * revision_rows$conf.high, 1) == c(7.8, 19.8),
+  R.version$major == "4", startsWith(R.version$minor, "6"),
+  reticulate::py_config()$version == "3.13",
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(unname(rank_check$estimate), 1) == 9.5, round(rank_check$conf.int, 1) == c(3.6, 15.2),
+  round(rank_check$p.value, 3) == 0.003,
+  round(coef(ancova)[["procedureTKA"]], 1) == -7.4, round(ancova_ci, 1) == c(-11.9, -2.9),
+  round(summary(ancova)$coefficients["procedureTKA", "Pr(>|t|)"], 3) == 0.002,
+  table(study$procedure, is.na(study$prom_1yr - study$prom_preop))[, "TRUE"] == c(7, 20),
+  round(100 * c(7 / 53, 20 / 67), 1) == c(13.2, 29.9),
+  tapply(is.na(study$prom_preop), study$procedure, sum) == c(0, 5),
+  tapply(is.na(study$prom_1yr), study$procedure, sum) == c(7, 15), round(100 * 15 / 67, 1) == 22.4,
+  round(fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value, 3) == 0.239,
+  round(missing_test$p.value, 3) == 0.046
+)
+```
+
+::: {.content-visible when-format="html"}
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages, Daten und Objekte aus den Schritten oben. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Fünfzehn Personen mit Hüft-TP erreichten nach 1 Jahr den Höchstwert. Prüfen Sie das primäre Resultat mit einem Test, der Ränge statt Mittelwerte verwendet: dem Mann-Whitney-Test und der Hodges-Lehmann-Differenz ([Seite 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)). Ändert sich die Schlussfolgerung?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+wilcox.test(change ~ procedure, data = analysed, exact = FALSE, conf.int = TRUE)
+```
+
+## Python
+
+```{python}
+rank_check = stats.mannwhitneyu(tha, tka, alternative="two-sided", method="asymptotic", use_continuity=True)
+print(rank_check.statistic, rank_check.pvalue)
+print(np.median(np.subtract.outer(tha.to_numpy(), tka.to_numpy())))   # die Hodges-Lehmann-Differenz
+```
+:::
+
+> **Results:** The Hodges-Lehmann difference in the change was 9.5 points (95% CI 3.6 to 15.2; p = 0.003).
+
+Die Schlussfolgerung ändert sich nicht: 9.5 Punkte liegen nahe bei den 9.0 aus dem t-Test. Python ergibt denselben Schätzwert und denselben p-Wert; sein KI braucht einen Bootstrap ([Seite 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)).
+:::
+
+**2.** Gutachterinnen und Gutachter schreiben: «Patientinnen und Patienten mit Knie-TP starteten mit höheren Scores und hatten deshalb weniger Spielraum für eine Verbesserung. Adjustieren Sie für den präoperativen Score.» Welche Analyse beantwortet das, und was zeigt sie?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+Regressieren Sie den Score nach 1 Jahr auf den Eingriff und den präoperativen Score ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Der Koeffizient des Eingriffs ist die Differenz nach 1 Jahr zwischen Personen, die mit demselben Score gestartet sind.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+adjusted <- lm(prom_1yr ~ prom_preop + procedure, data = analysed)
+summary(adjusted)$coefficients
+confint(adjusted)
+```
+
+## Python
+
+```{python}
+adjusted = smf.ols("prom_1yr ~ prom_preop + procedure", data=analysed).fit()
+print(adjusted.params.round(3).to_string())
+print(adjusted.conf_int().round(3).to_string())
+print(adjusted.pvalues.round(3).to_string())
+```
+:::
+
+> **Results:** Adjusted for the pre-op score, the difference in the 1-year score between TKA and THA was −7.4 points (95% CI −11.9 to −2.9; p = 0.002).
+
+Die Differenz schrumpft gegenüber den unadjustierten 9.0 Punkten ein wenig, verschwindet aber nicht; der höhere Ausgangswert erklärt also nur einen Teil davon.
+:::
+
+**3.** Bei 27 Personen fehlt der Score für die Veränderung, die primäre Analyse lässt sie deshalb aus. Wurden Personen nach dem einen Eingriff häufiger ausgelassen als nach dem anderen, und welcher Score fehlte? Prüfen Sie das mit einem Test und formulieren Sie den Results-Satz.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+no_change_score <- is.na(study$prom_1yr - study$prom_preop)
+table(study$procedure, no_change_score)
+fisher.test(table(study$procedure, no_change_score))$p.value
+
+# welcher Score fehlte?
+study |>
+  group_by(procedure) |>
+  summarise(no_preop = sum(is.na(prom_preop)), no_1yr = sum(is.na(prom_1yr)))
+fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value   # nur der Score nach 1 Jahr
+```
+
+## Python
+
+```{python}
+no_change_score = (study["prom_1yr"] - study["prom_preop"]).isna().rename("no_change_score")
+missing_table = pd.crosstab(study["procedure"], no_change_score)
+print(missing_table.to_string())
+print(stats.fisher_exact(missing_table).pvalue)
+
+# welcher Score fehlte?
+print(study[["prom_preop", "prom_1yr"]].isna().groupby(study["procedure"]).sum().to_string())
+print(stats.fisher_exact(pd.crosstab(study["procedure"], study["prom_1yr"].isna())).pvalue)   # nur der Score nach 1 Jahr
+```
+:::
+
+> **Results:** The change score was missing for 7 of 53 THA patients (13.2%) and 20 of 67 TKA patients (29.9%; Fisher's exact test p = 0.046): all 7 THA patients and 15 TKA patients had no 1-year score, and the other 5 TKA patients had no pre-op score. The 1-year score alone was missing for 7 THA patients (13.2%) and 15 TKA patients (22.4%; p = 0.239).
+
+Wenn die ausgelassenen Personen einen anderen Verlauf hatten als die analysierten, ist der Vergleich verzerrt; die Diskussion sollte das festhalten.
+:::
 :::
