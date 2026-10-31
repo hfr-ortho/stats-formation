@@ -47,7 +47,7 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - Swiss usage over German-from-Germany usage: Spital, Eintritt, Austritt, Rehospitalisation, Resultate, allfällig.
 - Quotation marks are « » with no inner spaces, never „ “. A non-breaking space (U+00A0) goes before `%` in translated prose, except in the compound `95%-KI`. Never in code, Methods or Results.
 - Use the glossary's headings: `Wann verwenden`, `Zuerst die Daten ansehen`, `Analyse durchführen`, `Ausgabe lesen`, `Effektstärke und 95%-KI`, `Resultate formulieren`; `**Die Frage:**`; callouts `⚠️ Achtung:`, `🔀 R oder Python:`, `💡`, `🔍 Unter der Haube:`; `Übungen`; the solution callout is titled `Lösung` and the tabset heading is `## Lösung` (the structure test reads it as `## Solution`).
-- THA and TKA are Hüft-TEP and Knie-TEP in prose; say once per page that the code says `THA`, `TKA`.
+- THA and TKA are Hüft-TP and Knie-TP in prose; say once per page that the code says `THA`, `TKA`.
 - Laws use their official Swiss names: Humanforschungsgesetz (HFG), Humanforschungsverordnung (HFV), Verordnung über klinische Versuche (KlinV), KlinV-Mep, Datenschutzgesetz (DSG). HFR has no data protection officer: name none.
 - In `tests-a-z`, keep each test's English name in the first cell wherever it differs, in italics in parentheses: "t-Test für gepaarte Stichproben (*paired t test*)". The table is sorted by the distinctive name (Fisher under F, "t-Test für gepaarte Stichproben" under t).
 - Stubs: a translated page loses "(in Vorbereitung)" and its `.coming-soon` callout.
@@ -60,8 +60,10 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - Never "direkter anteriorer Zugang" or an abbreviation of it: it is "anteriorer Zugang".
 - "eventuell" means possibly, not eventually ("schliesslich", "am Ende"); "aktuell" means current, not actual ("tatsächlich"); "konsistent" is for consistent in the sense of firm, not consistent with ("übereinstimmend", "stimmig").
 - "signifikant" is reserved for statistical significance. A clinical meaning is "relevant" or "bedeutsam".
-- A "Hüft-TEP" is a total hip arthroplasty; the code and data say `THA`.
+- A "Hüft-TP" is a total hip arthroplasty; the code and data say `THA`.
 - Numbers keep the English decimal point (`0.86`) and thousands comma (`1,200`), never `0,86` or `1'200`.
+- Fixed terms: `Results-Satz` (the sentence after **Results:**), `Eintritt` (admission), `Austritt` (discharge), `Kontrolle` for a visit (`Studienvisite` in a trial, never bare `Visite`), `normalverteilt` for Gaussian, `Hüft-TP`/`Knie-TP`.
+- Pair forms: Forschungsassistierende, Medizinstudierende, beurteilende Person (plural Beurteilende), Assistenzärztinnen und Assistenzärzte.
 - Gloss at first use, once per page: KI, SD, IQR, HR, OR, PROM, HOOS JR, KOOS JR. The glossary rows give the German form.
 - Fedlex's German text decides every law name; the glossary holds the names the project uses.
 

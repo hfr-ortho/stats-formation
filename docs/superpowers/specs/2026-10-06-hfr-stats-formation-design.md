@@ -431,7 +431,7 @@ which replaces this outline where they differ.
 |------|------|
 | Translation volume (about 83,000 words, twice) | Glossary first; page by page; code-parity tests make sure translation never changes code; native review per part |
 | Public use of the HFR logo without approval | Doc decides on communications sign-off before the repo goes public (§4.7) |
-| Legal accuracy of the real-data page | Doc's review, possibly with the data protection officer, before publishing |
+| Legal accuracy of the real-data page | Doc's review before publishing (HFR has no data protection officer) |
 | A Quarto update changes sidebar selection or breaks the switcher | Quarto pinned at 1.9.37 in CI; the language tests catch a wrong sidebar or missing switcher |
 | Divergence from TJS | TJS history kept; fixes carried over by cherry-pick; each carried-over prose change also needs re-translation once sub-projects 3–4 are done |
 | `_freeze/` triples | About 21 MB; acceptable for a git repo |

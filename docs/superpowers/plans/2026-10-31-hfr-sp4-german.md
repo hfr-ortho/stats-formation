@@ -40,6 +40,7 @@
 - **Gender-fair wording.** The German site already writes "Patientinnen und Patienten" and "Forschungsassistierende", as Swiss public bodies do. Use the pair form or a neutral word (Personen, Studierende, Teilnehmende); turn singular examples into the plural. Compounds stay (Patientendaten, Patientengruppe). No star, colon or capital-I forms. Stiff sentences are a fair cost; a page that reads as Germany-style generic masculine on a Swiss hospital's public site is not.
 - **`Solution` becomes `Lösung`.** French could keep the word; German can't. Rule 6 and the guide follow.
 - **Swiss usage over German-from-Germany usage:** Spital, Eintritt, Austritt, Rehospitalisation, Resultate, allfällig.
+- **Hüft-TP and Knie-TP** (Doc, 31.10.2026), not TEP.
 - **Hidden chunks stay byte-identical,** including English comments.
 
 ---
@@ -72,7 +73,7 @@ Every row. These choices are fixed:
 | mixed model; random intercept | gemischtes Modell; zufälliger Achsenabschnitt (Random Intercept) |
 | tidy data | aufgeräumte Daten (Tidy Data) |
 | resident | Assistenzärztin, Assistenzarzt |
-| THA; TKA | Hüft-TEP; Knie-TEP in prose; `THA`, `TKA` in code (say so once per page) |
+| THA; TKA | Hüft-TP; Knie-TP in prose; `THA`, `TKA` in code (say so once per page) |
 | ACL reconstruction; graft | VKB-Rekonstruktion (vorderes Kreuzband); Transplantat |
 | BPTB; hamstring | BPTB (Patellarsehne); Hamstrings |
 | posterior tibial slope; femoral torsion | posteriorer tibialer Slope; Femurtorsion |

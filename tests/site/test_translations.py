@@ -48,7 +48,8 @@ SAME_AS_ENGLISH = {
     "fr": {"r", "python", "solution", "windows", "mac", "macos", "linux", "git", "positron",
            "kaplan-meier", "cox", "anova", "bonferroni", "holm", "benjamini-hochberg"},
     "de": {"r", "python", "windows", "mac", "macos", "linux", "git", "positron",
-           "kaplan-meier", "cox", "anova", "median", "bonferroni", "holm", "benjamini-hochberg"},
+           "kaplan-meier", "cox", "anova", "median", "bonferroni", "holm", "benjamini-hochberg",
+           "koos jr", "hoos jr"},
 }
 
 
@@ -64,7 +65,7 @@ def translated_pages(lang, root=ROOT):
     folders = [root / lang] + [root / lang / d for d in CONTENT_DIRS]
     for folder in folders:
         for tr in sorted(folder.glob("*.qmd")):
-            if ".coming-soon" in tr.read_text(encoding="utf-8") or (lang, tr.name) in NOT_YET_COMPARABLE and folder == root / lang:
+            if ".coming-soon" in tr.read_text(encoding="utf-8") or ((lang, tr.name) in NOT_YET_COMPARABLE and folder == root / lang):
                 continue
             yield root / "en" / tr.relative_to(root / lang), tr
 
@@ -520,8 +521,8 @@ def sort_key(row: str, generic: set, function_words: set, german: bool = False) 
     key = None if german else SORT_AS.get(name)
     if key is None:
         words = [re.sub(r"^[dDlL]['’]", "", w) for w in name.split()]
-        words = [w.rsplit("-", 1)[0] if "-" in w and w.rsplit("-", 1)[1].lower() in generic else w for w in words]
         if german:
+            words = [w.rsplit("-", 1)[0] if "-" in w and w.rsplit("-", 1)[1].lower() in generic else w for w in words]
             after = [words[i + 1] for i, w in enumerate(words[:-1]) if w.lower() == "nach"]
             proper = after[:1]
         else:
@@ -1114,6 +1115,31 @@ def duzen(tr: str) -> list[str]:
     return DU.findall(prose) + DU_IMPERATIVE.findall(prose)
 
 
+GENDER_FORMS = re.compile(r"\w[*:]innen\b|\w[*:]in\b|\w[a-zäöü]Innen\b|\w[a-zäöü]In\b|\w_innen\b")
+
+
+def gender_form_problems(tr: str) -> list[str]:
+    """Star, colon, underscore or capital-I forms (Patient*innen, Patient:innen, PatientInnen) in prose.
+    The site writes pairs or neutral words. Code and inline code are left alone."""
+    prose = "\n".join(prose_lines(tr))
+    prose = re.sub(r"`[^`\n]*`", " ", prose)
+    prose = re.sub(r"\]\([^)\s]*\)", "] ", prose)
+    return GENDER_FORMS.findall(prose)
+
+
+def test_gender_form_rule_bites_and_spares_pairs_and_code():
+    for bad in ["Patient*innen", "Patient:innen", "PatientInnen", "Ärzt*in", "Teilnehmer_innen"]:
+        assert gender_form_problems(bad), bad
+    for good in ["Patientinnen und Patienten", "Studierende", "`Patient*innen`", "```r\nx <- 1 * innen\n```",
+                 "Wir sehen 3 : innen und Innenräume", "Die Ärztinnen, Medizin: in der Praxis"]:
+        assert gender_form_problems(good) == [], good
+
+
+def test_german_pages_use_no_gender_star_colon_or_capital_i():
+    found = {str(p.relative_to(ROOT)): gender_form_problems(p.read_text(encoding="utf-8")) for p in german_pages()}
+    assert {k: v for k, v in found.items() if v} == {}
+
+
 def german_pages(root=ROOT):
     return sorted((root / "de").rglob("*.qmd"))
 
@@ -1171,7 +1197,8 @@ def test_german_banned_terms_rule_finds_the_calques_and_spares_the_good_forms():
 
 
 def test_german_prose_uses_sie():
-    found = {str(tr.relative_to(ROOT)): duzen(tr.read_text(encoding="utf-8")) for _, tr in translated_pages("de")}
+    # every German page, the home page included: it is exempt only from comparison with English
+    found = {str(tr.relative_to(ROOT)): duzen(tr.read_text(encoding="utf-8")) for tr in german_pages()}
     assert {k: v for k, v in found.items() if v} == {}
 
 
@@ -1184,7 +1211,7 @@ def test_german_has_no_eszett():
 
 def test_german_banned_terms():
     found = {str(tr.relative_to(ROOT)): banned_terms(tr.read_text(encoding="utf-8"), GERMAN_BANNED)
-             for _, tr in translated_pages("de")}
+             for tr in german_pages()}
     assert {k: v for k, v in found.items() if v} == {}
 
 
@@ -1198,5 +1225,5 @@ def test_german_real_data_uses_the_swiss_law_names():
 
 def test_german_names_no_data_protection_officer():
     found = [str(p.relative_to(ROOT)) for p in german_pages()
-             if re.search(r"Datenschutzbeauftragt|Datenschutzberater", p.read_text(encoding="utf-8"))]
+             if re.search(r"Datenschutz-?beauftragt|Datenschutzberater|Datenschutzverantwortlich", p.read_text(encoding="utf-8"))]
     assert found == []
