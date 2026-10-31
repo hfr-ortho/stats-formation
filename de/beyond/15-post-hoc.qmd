@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Ein Test für drei oder mehr Gruppen stellt eine einzige Frage: «Gibt es irgendeinen Unterschied zwischen ihnen?». Lautet die Antwort ja, fragt man als Nächstes, welche Gruppen sich voneinander unterscheiden. Dafür müssen mehrere Tests gleichzeitig durchgeführt werden, und jeder zusätzliche Test ist eine weitere Gelegenheit für ein falsch positives Resultat. Diese Seite zeigt, wie Sie Gruppen paarweise vergleichen und dabei die Wahrscheinlichkeit falsch positiver Resultate unter Kontrolle halten. Die meisten Abschnitte «Nach …» greifen ein Beispiel von [Seite 8](../catalog/08-three-plus-unmatched.qmd), [Seite 9](../catalog/09-three-plus-matched.qmd) oder [Seite 13](../survival/13-kaplan-meier.qmd) wieder auf.
+Ein Test für drei oder mehr Gruppen stellt eine einzige Frage: «Gibt es irgendeinen Unterschied zwischen ihnen?». Lautet die Antwort ja, fragt man als Nächstes, welche Gruppen sich voneinander unterscheiden. Dafür müssen mehrere Tests gleichzeitig durchgeführt werden, und jeder zusätzliche Test ist eine weitere Gelegenheit für ein falsch positives Resultat. Diese Seite zeigt, wie Sie Gruppen paarweise vergleichen und dabei die Wahrscheinlichkeit falsch positiver Resultate im Griff behalten. Die meisten Abschnitte «Nach …» greifen ein Beispiel von [Seite 8](../catalog/08-three-plus-unmatched.qmd), [Seite 9](../catalog/09-three-plus-matched.qmd) oder [Seite 13](../survival/13-kaplan-meier.qmd) wieder auf.
 
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
@@ -27,7 +27,7 @@ Wie auf den Seiten, aus denen diese Beispiele stammen, verwenden die Beispiele z
 
 ## Warum viele Tests in die Irre führen {#why-adjust}
 
-Ein Test auf dem 5 %-Niveau liefert mit einer Wahrscheinlichkeit von 5 % ein falsch positives Resultat, wenn in Wahrheit kein Unterschied besteht. Führen Sie mehrere Tests durch, steigt diese Wahrscheinlichkeit. Die Wahrscheinlichkeit für **mindestens ein** falsch positives Resultat in einer Menge von Tests ist die **familienweise Fehlerrate** (Family-wise Error Rate). Für unabhängige Tests auf dem 5 %-Niveau beträgt sie 1 − 0.95^k^, wobei k die Anzahl der Tests ist:
+Ein Test auf dem 5%-Niveau liefert mit einer Wahrscheinlichkeit von 5 % ein falsch positives Resultat, wenn in Wahrheit kein Unterschied besteht. Wenn Sie mehrere Tests durchführen, steigt diese Wahrscheinlichkeit. Die Wahrscheinlichkeit für **mindestens ein** falsch positives Resultat in einer Menge von Tests ist die **familienweise Fehlerrate** (Family-wise Error Rate). Für unabhängige Tests auf dem 5%-Niveau beträgt sie 1 − 0.95^k^, wobei k die Anzahl der Tests ist:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -83,10 +83,10 @@ chance <- false_positives$chance_of_a_false_positive
 check_agree(list(six = chance[tests == 6], twenty = chance[tests == 20]), reticulate::py$chk)
 ```
 
-Vier Gruppen ergeben sechs Paare. Sechs unabhängige Tests auf dem 5 %-Niveau ergeben eine Wahrscheinlichkeit von 26 % für mindestens einen Fehlalarm, selbst wenn gar nichts vorliegt; bei zwanzig Tests sind es 64 %. Paarweise Vergleiche sind nicht unabhängig, weil jede Gruppe in drei der sechs Paare vorkommt. Bei vier gleich grossen Gruppen ist die Wahrscheinlichkeit deshalb etwas tiefer: rund 20 %. Das ist immer noch das Vierfache der 5 %, die Sie zulassen wollten. Beim Vergleich von Paaren ist daher eine **Adjustierung** nötig: eine strengere Regel, die die Wahrscheinlichkeit für irgendein falsch positives Resultat über die gesamte Menge der Vergleiche bei 5 % hält.
+Vier Gruppen ergeben sechs Paare. Sechs unabhängige Tests auf dem 5%-Niveau ergeben eine Wahrscheinlichkeit von 26 % für mindestens einen Fehlalarm, selbst wenn gar nichts vorliegt; bei zwanzig Tests sind es 64 %. Paarweise Vergleiche sind nicht unabhängig, weil jede Gruppe in drei der sechs Paare vorkommt. Bei vier gleich grossen Gruppen ist die Wahrscheinlichkeit deshalb etwas tiefer: rund 20 %. Das ist immer noch das Vierfache der 5 %, die Sie zulassen wollten. Beim Vergleich von Paaren ist daher eine **Adjustierung** nötig: eine strengere Regel, die die Wahrscheinlichkeit für irgendein falsch positives Resultat über die gesamte Menge der Vergleiche bei 5 % hält.
 
 ::: {.callout-note}
-## 💡 In einfachen Worten
+## 💡 Einfach erklärt
 Wer ein Lotterielos kauft, verliert fast sicher. Wer zwanzig kauft, hat eine grössere Chance, irgendetwas zu gewinnen. Jeder p-Wert unter 0.05 ist ein kleiner «Gewinn», und bei genügend Tests taucht allein durch Zufall einer auf. Das Adjustieren der p-Werte macht jeden Gewinn schwerer erreichbar, sodass die Gesamtwahrscheinlichkeit dort bleibt, wo Sie sie festgelegt haben.
 :::
 
@@ -152,12 +152,12 @@ Verfolgen Sie den Vergleich ASA 1 gegen ASA 2 quer durch die Zeile:
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Entscheiden Sie über die Adjustierung, bevor Sie die p-Werte sehen
-Wenn Sie diejenige Adjustierung wählen, bei der Ihr Lieblingsresultat signifikant bleibt, ist das p-Hacking. Entscheiden Sie im Voraus: Holm (oder eine für den Test entwickelte Methode wie Tukey weiter unten) für Vergleiche, die Sie als Befunde berichten, Benjamini-Hochberg nur für exploratives Screening. Geben Sie in den Methods an, welche Adjustierung Sie verwendet haben und wie viele Vergleiche sie abdeckte.
+Wenn Sie diejenige Adjustierung wählen, bei der Ihr Lieblingsresultat signifikant bleibt, ist das p-Hacking. Entscheiden Sie im Voraus: Holm (oder eine für den Test entwickelte Methode wie Tukey weiter unten) für Vergleiche, die Sie als Befunde berichten, Benjamini-Hochberg nur für exploratives Screening. Geben Sie im Methodenteil an, welche Adjustierung Sie verwendet haben und wie viele Vergleiche sie abdeckte.
 :::
 
 ## Nach der ANOVA: Tukey-HSD und Games-Howell {#after-anova}
 
-Nach einer einfaktoriellen ANOVA vergleicht der **Tukey-Test der ehrlich signifikanten Differenz** (Tukey's honestly significant difference, HSD) jedes Paar von Gruppenmittelwerten. Er adjustiert für alle Paare zugleich und gibt jeder Differenz ein KI, das ebenfalls adjustiert ist. Wie die ANOVA setzt er ähnliche Streuungen der Gruppen voraus. Wenn sie nicht ähnlich sind (die grösste Standardabweichung (SD) ist mehr als etwa doppelt so gross wie die kleinste), verwenden Sie **Games-Howell**, die Version des Tukey-Tests nach Welch.
+Nach einer einfaktoriellen ANOVA vergleicht der **Tukey-Test der ehrlich signifikanten Differenz** (Tukey's honestly significant difference, HSD) jedes Paar von Gruppenmittelwerten. Er adjustiert für alle Paare zugleich und gibt jeder Differenz ein Konfidenzintervall (KI), das ebenfalls adjustiert ist. Wie die ANOVA setzt er ähnliche Streuungen der Gruppen voraus. Wenn sie nicht ähnlich sind (die grösste Standardabweichung (SD) ist mehr als etwa doppelt so gross wie die kleinste), verwenden Sie **Games-Howell**, die Version des Tukey-Tests nach Welch.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -372,7 +372,7 @@ pingouin sortiert die Kontrollen alphabetisch und zieht die zweite von der erste
 
 ## Nach Friedman: paarweise Wilcoxon- oder Conover-Tests {#after-friedman}
 
-Nach einem Friedman-Test vergleichen Sie Paare von Kontrollen mit **Wilcoxon-Vorzeichen-Rang-Tests** und der Adjustierung nach Holm oder mit dem **Conover-Test**, der die Ränge des Friedman-Tests wiederverwendet (wie der Dunn-Test nach Kruskal-Wallis) und oft eine höhere Teststärke hat. [Seite 9](../catalog/09-three-plus-matched.qmd#friedman) hat gezeigt, dass sich der EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) zwischen 6 Wochen, 3 Monaten und 12 Monaten verändert hat, bei 50 Patientinnen und Patienten mit einem Walker:
+Nach einem Friedman-Test vergleichen Sie Paare von Studienvisiten mit **Wilcoxon-Vorzeichen-Rang-Tests** und der Adjustierung nach Holm oder mit dem **Conover-Test**, der die Ränge des Friedman-Tests wiederverwendet (wie der Dunn-Test nach Kruskal-Wallis) und oft eine höhere Teststärke hat. [Seite 9](../catalog/09-three-plus-matched.qmd#friedman) hat gezeigt, dass sich der EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) zwischen 6 Wochen, 3 Monaten und 12 Monaten verändert hat, bei 50 Patientinnen und Patienten mit einem Walker:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -382,7 +382,7 @@ efas_boot <- trial |>
   filter(arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |>
   select(patient_id, visit, efas) |>
   group_by(patient_id) |>
-  filter(all(!is.na(efas))) |>                         # Patientinnen und Patienten mit Scores bei allen drei Kontrollen
+  filter(all(!is.na(efas))) |>                         # Patientinnen und Patienten mit Scores bei allen drei Studienvisiten
   ungroup() |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "12mo"))) |>
   arrange(patient_id, visit)
@@ -402,7 +402,7 @@ signif(efas_conover$p.value, 3)          # die Ausgabe von efas_conover selbst z
 visits = ["6wk", "3mo", "12mo"]
 efas_boot = trial[(trial["arm"] == "boot") & trial["visit"].isin(visits)]
 efas_wide = efas_boot.pivot(index="patient_id", columns="visit", values="efas")[visits].dropna()
-print(len(efas_wide))                                    # Patientinnen und Patienten mit Scores bei allen drei Kontrollen
+print(len(efas_wide))                                    # Patientinnen und Patienten mit Scores bei allen drei Studienvisiten
 
 wilcoxon = {}
 for a, b in [("6wk", "3mo"), ("6wk", "12mo"), ("3mo", "12mo")]:
@@ -440,9 +440,9 @@ Alle drei Paare unterscheiden sich (adjustiertes p < 0.001 mit beiden Methoden):
 `wilcox.test()` in R meldet V, die Summe der positiven Ränge; scipy meldet die kleinere der beiden Rangsummen. Hier ist beides dieselbe Zahl, weil der spätere Wert bei den meisten Patientinnen und Patienten höher liegt. Der Conover-Test braucht in R das Package PMCMRplus und in Python scikit-posthocs; beide liefern dieselben p-Werte. Gibt man das Resultat von PMCMRplus aus, erscheint jeder p-Wert unter 2 × 10⁻¹⁶ nur als «<2e-16»; geben Sie daher seine Tabelle `$p.value` aus, um sie zu sehen.
 :::
 
-## Nach dem Q-Test nach Cochran: paarweise McNemar-Tests {#after-cochran-q}
+## Nach dem Cochran-Q-Test: paarweise McNemar-Tests {#after-cochran-q}
 
-Nach dem Q-Test nach Cochran vergleichen Sie Paare von Kontrollen mit dem **McNemar-Test** und adjustieren nach Holm. [Seite 9](../catalog/09-three-plus-matched.qmd#cochran-q) hat gezeigt, dass sich die Benutzung von Gehhilfen im Lauf des Jahres verändert hat, bei 328 Patientinnen und Patienten, die bei allen vier Kontrollen beurteilt wurden:
+Nach dem Cochran-Q-Test vergleichen Sie Paare von Kontrollen mit dem **McNemar-Test** und adjustieren nach Holm. [Seite 9](../catalog/09-three-plus-matched.qmd#cochran-q) hat gezeigt, dass sich die Benutzung von Gehhilfen im Lauf des Jahres verändert hat, bei 328 Patientinnen und Patienten, die bei allen vier Kontrollen beurteilt wurden:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -574,7 +574,7 @@ Was zu tun ist:
 1. **Entscheiden Sie, bevor Sie die Daten ansehen,** welche Vergleiche Sie durchführen: jedes Paar oder einige geplante.
 2. **Wenn Ihre Frage Paare betrifft, gehen Sie direkt zu einer adjustierten paarweisen Methode.** Der Gesamttest ist optional; berichten Sie ihn, wenn Ihre Leserinnen und Leser ihn erwarten.
 3. **Führen Sie nie unadjustierte paarweise Tests durch, die Sie nicht geplant haben,** was auch immer der Gesamttest ergibt.
-4. **Sagen Sie in den Methods, was Sie getan haben.**
+4. **Sagen Sie im Methodenteil, was Sie getan haben.**
 
 ## Geplante Vergleiche und wie man sie berichtet {#planned-comparisons}
 
@@ -588,7 +588,7 @@ Alles andere ist **explorativ**: Vergleiche, die nach dem Ansehen der Daten gew�
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Berichten Sie jeden Vergleich, den Sie durchgeführt haben
-Zehn Vergleiche durchzuführen und nur die zwei signifikanten zu berichten, verbirgt, wie viele Chancen Sie hatten. Geben Sie die Anzahl der Vergleiche und die Adjustierung in den Methods an und legen Sie die vollständigen paarweisen Resultate in einer Tabelle oder einem Anhang vor.
+Zehn Vergleiche durchzuführen und nur die zwei signifikanten zu berichten, verbirgt, wie viele Chancen Sie hatten. Geben Sie die Anzahl der Vergleiche und die Adjustierung im Methodenteil an und legen Sie die vollständigen paarweisen Resultate in einer Tabelle oder einem Anhang vor.
 :::
 
 ```{r}

@@ -19,7 +19,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 Fast jede klinische Arbeit beginnt mit **Tabelle 1**: Wer wurde untersucht? Gutachterinnen und Gutachter lesen sie zuerst, um zu beurteilen, ob Ihre Patientinnen und Patienten den eigenen ähneln und ob Ihre Gruppen von Anfang an vergleichbar waren. Diese Seite baut eine solche Tabelle von Grund auf.
 
 ::: {.callout-note}
-## 💡 In einfachen Worten
+## 💡 Einfach erklärt
 Tabelle 1 *beschreibt* Ihre Patientinnen und Patienten. Sie beantwortet Ihre Forschungsfrage nicht. Sie soll den Leserinnen und Lesern erlauben zu beurteilen, auf wen sich Ihre Resultate übertragen lassen und ob Ihre Gruppen zu Beginn ähnlich waren.
 :::
 
@@ -127,15 +127,15 @@ Legen Sie den Typ jeder Variable selbst fest (`type =` in R, `categorical =` in 
 
 ## Mittelwert (SD) oder Median (IQR)? {#which-summary}
 
-- **Ungefähr symmetrische** stetige Variablen (Alter, BMI): Mittelwert (SD, Standardabweichung).
-- **Schiefe oder begrenzte** Variablen (Aufenthaltsdauer, die meisten PROM, also patientenberichtete Messinstrumente): Median (IQR, Interquartilsabstand). Eine Person mit 30 Tagen Aufenthalt verschiebt den Mittelwert viel stärker als den Median.
+- **Ungefähr symmetrische** kontinuierliche Variablen (Alter, BMI): Mittelwert (SD, Standardabweichung).
+- **Schiefe oder begrenzte** Variablen (Aufenthaltsdauer, die meisten PROMs, also patientenberichtete Messinstrumente): Median (IQR, Interquartilsabstand). Eine Person mit 30 Tagen Aufenthalt verschiebt den Mittelwert viel stärker als den Median.
 - **Kategorien**: n (%).
 
 Woran erkennen Sie, ob eine Variable schief ist? Sehen Sie sie sich an: [Verteilungen und Testwahl](03-distributions.qmd) zeigt, wie. Die Aufenthaltsdauer ist stark rechtsschief, deshalb erhält sie einen Median.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Quartile
-gtsummary und tableone berechnen Quartile nach unterschiedlichen Formeln (in R-Begriffen `quantile()` Typ 2 und Typ 7). Bei ganzzahligen Daten können die Resultate voneinander abweichen. An der Aufenthaltsdauer sehen Sie den Unterschied: Das obere Quartil der Hüft-TP beträgt in R 2 Tage und in Python 1.8. Keines von beiden ist falsch. Nennen Sie im Methods-Teil, welche Software Sie verwendet haben.
+gtsummary und tableone berechnen Quartile nach unterschiedlichen Formeln (in R-Begriffen `quantile()` Typ 2 und Typ 7). Bei ganzzahligen Daten können die Resultate voneinander abweichen. An der Aufenthaltsdauer sehen Sie den Unterschied: Das obere Quartil der Hüft-TP beträgt in R 2 Tage und in Python 1.8. Keines von beiden ist falsch. Nennen Sie im Methodenteil, welche Software Sie verwendet haben.
 :::
 
 ## Gruppen vergleichen {#by-group}
@@ -193,11 +193,11 @@ p_r <- by_procedure$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 ```
 
-Jeder p-Wert stammt aus einem Test, den Sie im Katalog kennenlernen: dem [t-Test nach Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) für die symmetrischen stetigen Variablen, einem [rangbasierten Test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) für die Aufenthaltsdauer (der Kruskal-Wallis-Test mit zwei Gruppen ist der Mann-Whitney-Test) und dem [Chi-Quadrat-Test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) für die Kategorien.
+Jeder p-Wert stammt aus einem Test, den Sie im Katalog kennenlernen: dem [t-Test nach Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) für die symmetrischen kontinuierlichen Variablen, einem [rangbasierten Test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) für die Aufenthaltsdauer (der Kruskal-Wallis-Test mit zwei Gruppen ist der Mann-Whitney-Test) und dem [Chi-Quadrat-Test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) für die Kategorien.
 
 ## p-Werte oder standardisierte Mittelwertsdifferenzen? {#smd}
 
-Sehen Sie sich das Geschlecht in der Tabelle oben an: 66 % der Hüft-TP-Gruppe sind Frauen, in der Knie-TP-Gruppe 50 %, p < 0.001. Ist das ein echter Unterschied zwischen Hüft- und Knie-Operierten?
+Sehen Sie sich das Geschlecht in der Tabelle oben an: 66 % der Hüft-TP-Gruppe sind Frauen, in der Knie-TP-Gruppe 50 %, p < 0.001. Ist das ein echter Unterschied zwischen Patientinnen und Patienten mit Hüft-TP und mit Knie-TP?
 
 In diesem Übungsdatensatz kennen wir die Antwort, denn wir haben das Programm geschrieben, das ihn erzeugt hat: Das Geschlecht wurde **völlig unabhängig** vom Eingriff gezogen. Der Unterschied ist reiner Zufall. (In echten Arthroplastik-Kohorten sind Frauen bei Knie-TP üblicherweise *häufiger* vertreten.) Das ist das erste Problem von p-Werten in Tabelle 1: Über eine lange Tabelle hinweg tauchen zufällige Unterschiede auf.
 
@@ -258,7 +258,7 @@ Geschlecht (SMD 0.31) und BMI (0.33) sind die deutlichen Ungleichgewichte. Alter
 ::: {.callout-tip}
 ## 🔀 R oder Python: Die SMDs weichen leicht voneinander ab
 - **Vorzeichen.** gtsummary zieht Knie-TP von Hüft-TP ab, tableone zieht Hüft-TP von Knie-TP ab. Geben Sie den Absolutwert an oder sagen Sie, welche Gruppe von welcher abgezogen wurde.
-- **Vierte Dezimalstelle.** Bei stetigen Variablen teilt das R-Paket `smd` die Varianzen durch *n*, tableone dagegen durch *n − 1* (die übliche Lehrbuchformel). Das Alter ergibt in R 0.1048 und in Python 0.1046. Kategoriale SMDs stimmen genau überein.
+- **Vierte Dezimalstelle.** Bei kontinuierlichen Variablen teilt das R-Package `smd` die Varianzen durch *n*, tableone dagegen durch *n − 1* (die übliche Lehrbuchformel). Das Alter ergibt in R 0.1048 und in Python 0.1046. Kategoriale SMDs stimmen genau überein.
 :::
 
 **Was sollten Sie angeben?**
@@ -268,7 +268,7 @@ Geschlecht (SMD 0.31) und BMI (0.33) sind die deutlichen Ungleichgewichte. Alter
 
 ## Fehlende Daten {#missing}
 
-Die aufgeräumte Version des unordentlichen Arbeitsblatts von [Seite 1](01-tidy-data.qmd) enthält einige BMI-Werte, ASA-Klassen und Aufenthaltsdauern, die bei der Erhebung aus der Krankengeschichte nicht auffindbar waren. Fehlende Werte müssen in Tabelle 1 sichtbar sein. Lassen Sie sie nie stillschweigend weg.
+Die aufgeräumte Version der unordentlichen Arbeitsmappe von [Seite 1](01-tidy-data.qmd) enthält einige BMI-Werte, ASA-Klassen und Aufenthaltsdauern, die bei der Erhebung aus der Krankengeschichte nicht auffindbar waren. Fehlende Werte müssen in Tabelle 1 sichtbar sein. Lassen Sie sie nie stillschweigend weg.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -312,7 +312,7 @@ check_agree(list(missing_bmi = sum(is.na(abstraction$bmi)),
                  missing_asa = sum(is.na(abstraction$asa))), reticulate::py$chk)
 ```
 
-R fügt unter jeder Variable mit fehlenden Werten eine Zeile «Missing» hinzu, Python eine Spalte «Missing». In beiden Fällen beziehen sich die Prozentwerte auf die Patientinnen und Patienten mit einem Wert, und die Leserinnen und Leser sehen, wie viele ausgelassen wurden.
+R fügt unter jeder Variable mit fehlenden Werten eine Zeile «Missing» hinzu, Python eine Spalte «Missing». In beiden Fällen beziehen sich die Prozentsätze auf die Patientinnen und Patienten mit einem Wert, und die Leserinnen und Leser sehen, wie viele ausgelassen wurden.
 
 ## Export nach Word {#export}
 
@@ -437,7 +437,7 @@ SMDs. Das Matching soll die Gruppen einander angleichen. Sie auf Unterschiede zu
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-"We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0–1) day."
+"We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
 Prüfen Sie jede Zahl an Ihrer eigenen Tabelle: Mittelwert und SD für das Alter, n (%) für das Geschlecht, Median (IQR) für die Aufenthaltsdauer.
 :::

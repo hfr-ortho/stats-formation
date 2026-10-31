@@ -27,11 +27,11 @@ Daten sind **aufgeräumt** (*tidy*), wenn:
 3. jede **Art von Beobachtungseinheit** ihre eigene Tabelle hat.
 
 ::: {.callout-note}
-## 💡 In einfachen Worten
+## 💡 Einfach erklärt
 Eine Angabe pro Zelle, eine Beobachtung pro Zeile, und nie zwei Arten von Zeilen in derselben Tabelle. Eine Tabelle, die für Menschen leicht zu lesen ist, lässt sich oft schlecht mit dem Computer auswerten, und umgekehrt. Statistiksoftware braucht die zweite Art.
 :::
 
-Hier ein typisches Beispiel für ein nicht aufgeräumtes Tabellenblatt mit PROM (patientenberichtetes Messinstrument): eine Zeile pro Patientin oder Patient und eine Spalte für jede Kontrolle. Die *Kontrolle* ist eine Variable, steckt aber in den Spaltennamen.
+Hier ein typisches Beispiel für ein nicht aufgeräumtes Tabellenblatt mit PROM-Scores (PROM: patientenberichtetes Messinstrument): eine Zeile pro Patientin oder Patient und eine Spalte für jede Kontrolle. Die *Kontrolle* ist eine Variable, steckt aber in den Spaltennamen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -83,7 +83,7 @@ chk = {"rows": float(len(long)), "mean": float(long["prom_score"].mean())}
 check_agree(list(rows = nrow(long), mean = mean(long$prom_score, na.rm = TRUE)), reticulate::py$chk)
 ```
 
-Im Langformat ist die Frage «Fehlt der Score nach 6 Wochen?» einfach eine Zeile mit einer Lücke, und der «Durchschnitts-Score bei jeder Kontrolle» ist eine einzige Codezeile. Im Breitformat bedeutet jede neue Kontrolle eine neue Spalte und umgeschriebenen Code.
+Im Langformat ist die Frage «Fehlt der Score nach 6 Wochen?» einfach eine Zeile mit einer Lücke, und der «mittlere Score bei jeder Kontrolle» ist eine einzige Codezeile. Im Breitformat bedeutet jede neue Kontrolle eine neue Spalte und umgeschriebenen Code.
 
 Die häufigsten unordentlichen Muster in Erhebungstabellen und die jeweilige Lösung:
 
@@ -156,7 +156,7 @@ Echte Erhebungstabellen halten sich selten an diese Regeln. `data/messy_abstract
 - zwei Reiter, **Site A** und **Site B**, deren Spalten nicht übereinstimmen (Site B hat in der Mitte eine zusätzliche Spalte `MUA`)
 - zwei Kopfzeilen oberhalb der Tabelle (Banner-Zeilen) und eine Zeile mit verbundenen Gruppenüberschriften über der eigentlichen Kopfzeile
 - eine Zeile **TOTAL** am Ende jedes Reiters
-- zwei Spalten `Date` und zwei Spalten `Score` (präoperative PROM und PROM nach 1 Jahr)
+- zwei Spalten `Date` und zwei Spalten `Score` (präoperativer PROM-Score und PROM-Score nach 1 Jahr)
 - gemischte Datumsformate, Einheiten in Zahlenzellen, ASA-Klassen in römischen Ziffern, fünf Schreibweisen für «fehlend»
 - Revisionen, die nur durch eine rote Füllung der Zelle mit der Studien-ID markiert sind
 - doppelte Zeilen
@@ -232,7 +232,7 @@ check_agree(list(rows = nrow(raw)), reticulate::py$chk)
 
 126 Zeilen: 60 Patientinnen und Patienten pro Reiter, dazu in jedem je 2 Duplikate und eine Summenzeile. Weil wir die Reiter **nach Spaltennamen** untereinander gestellt haben, hat die zusätzliche Spalte `MUA` von Site B nichts verschoben. Bei den Zeilen von Site A fehlt `mua` einfach. Wären die Zellen nach Position kopiert worden, stünden die LOS-Werte unter der falschen Überschrift.
 
-In R rufen wir `janitor::clean_names()` mit dem Paketnamen davor auf, statt janitor mit `library()` zu laden. Beim Laden von janitor werden die eigenen Funktionen `chisq.test()` und `fisher.test()` von R durch die Versionen aus janitor *überdeckt*. Bei gewöhnlichen Tabellen geben sie dieselben Antworten, aber die Meldung über das Überdecken verwirrt, und es wird schwerer zu erkennen, welche Funktion Sie tatsächlich aufrufen.
+In R rufen wir `janitor::clean_names()` mit dem Package-Namen davor auf, statt janitor mit `library()` zu laden. Beim Laden von janitor werden die eigenen Funktionen `chisq.test()` und `fisher.test()` von R durch die Versionen aus janitor *überdeckt*. Bei gewöhnlichen Tabellen geben sie dieselben Antworten, aber die Meldung über das Überdecken verwirrt, und es wird schwerer zu erkennen, welche Funktion Sie tatsächlich aufrufen.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: dieselbe Excel-Datei, anders eingelesen
@@ -695,7 +695,7 @@ print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age"
 
 ### Wie eine Prüfung aussieht, die anschlägt {#what-a-failing-check-looks-like}
 
-Angenommen, wir hätten die Datumsangaben der Operationen versehentlich mit dem Monat zuerst gelesen (amerikanischer Stil, wie in vielen Beispielen im Internet). Nichts stürzt ab. Zwei Prüfungen finden den Fehler: das Zählen der fehlenden Werte (Prüfung 2, auf die Datumsangaben angewendet) und eine neue Logikprüfung, ob jede präoperative PROM innerhalb eines Monats vor der Operation liegt.
+Angenommen, wir hätten die Datumsangaben der Operationen versehentlich mit dem Monat zuerst gelesen (amerikanischer Stil, wie in vielen Beispielen im Internet). Nichts stürzt ab. Zwei Prüfungen finden den Fehler: das Zählen der fehlenden Werte (Prüfung 2, auf die Datumsangaben angewendet) und eine neue Logikprüfung, ob jeder präoperative PROM-Score innerhalb eines Monats vor der Operation liegt.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -739,7 +739,7 @@ print(pd.Series({
 assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 ```
 
-Beim richtigen Einlesen fehlt nichts, und jede präoperative PROM liegt in ihrem Zeitfenster. Die Versionen mit dem Monat zuerst gehen auf verschiedene Arten schief:
+Beim richtigen Einlesen fehlt nichts, und jeder präoperative PROM-Score liegt in ihrem Zeitfenster. Die Versionen mit dem Monat zuerst gehen auf verschiedene Arten schief:
 
 - **R** kann Datumsangaben wie `"13.01.15"` nicht mit dem Monat zuerst lesen (einen 13. Monat gibt es nicht), darum fehlen 30 Datumsangaben der Operationen. Andere, etwa `"04.03.24"`, werden «erfolgreich» als 3. April statt als 4. März eingelesen, und die Prüfung des Zeitfensters meldet 12 davon.
 - **pandas** liefert hier nie ein fehlendes Datum: Wenn der Monat zuerst unmöglich ist, wechselt es stillschweigend zum Tag zuerst. So kommt `"13.01.15"` durch Zufall richtig heraus, während `"04.03.24"` zum 3. April wird. Nur die Prüfung des Zeitfensters bemerkt es: Sie meldet 12 Datumsangaben.
@@ -822,7 +822,7 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 Nicht aufgeräumt: *Seite* und *Kontrolle* stecken in den Spaltennamen. Eine Zeile sollte ein Knie bei einer Kontrolle sein, mit den Spalten `patient_id`, `side`, `visit`, `koos`. Formen Sie die Tabelle mit `pivot_longer()` (R) oder `melt()` (Python) um und teilen Sie dabei jeden Spaltennamen in Seite und Kontrolle auf, wie wir es beim Umfrage-Export getan haben.
 :::
 
-**3.** Bei wie vielen Fällen ist eine PROM nach 1 Jahr erfasst, aber keine präoperative PROM? Warum ist das für eine Analyse der Verbesserung wichtig?
+**3.** Bei wie vielen Fällen ist ein PROM-Score nach 1 Jahr erfasst, aber kein präoperativer PROM-Score? Warum ist das für eine Analyse der Verbesserung wichtig?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung

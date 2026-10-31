@@ -503,6 +503,8 @@ FUNCTION_WORDS = {
 }
 # Names a reader would look up under another word than the rule finds.
 SORT_AS = {"Test d'adéquation du khi-deux": "khi-deux", "Vérification des risques proportionnels": "risques proportionnels"}
+# German: the Welch t-test is one of the t-tests, so it sits with them, not under "nach Welch".
+SORT_AS_DE = {"t-Test nach Welch": "t"}
 
 
 def sort_key(row: str, generic: set, function_words: set, german: bool = False) -> str:
@@ -513,7 +515,7 @@ def sort_key(row: str, generic: set, function_words: set, german: bool = False) 
     ("Exakter Test nach Fisher"), and a trailing "-Test" or "-Schätzer" is dropped ("Wilcoxon-Rang-Test")."""
     name = row.split("|")[1].strip().split(" (*")[0]
     name = re.sub(r"\s*\([^)]*\)", "", name).replace("\u00a0", " ")
-    key = None if german else SORT_AS.get(name)
+    key = (SORT_AS_DE if german else SORT_AS).get(name)
     if key is None:
         words = [re.sub(r"^[dDlL]['’]", "", w) for w in name.split()]
         if german:
@@ -549,6 +551,8 @@ def test_german_sort_key_finds_the_distinctive_name():
     assert key("Anteil mit 95%-KI (*x*)") == "anteil"
     assert key("Paarweise Log-Rank-Tests (*x*)") == "log-rank"
     assert key("Paarweise exakte Tests nach Fisher (*x*)") == "fisher"
+    assert key("t-Test nach Welch (*Welch's t test*)") == "t"
+    assert key("Exakter Test nach Welch (*x*)") == "welch"     # only the listed name is sorted as another
 
 
 def test_sort_key_finds_the_distinctive_name():
@@ -679,6 +683,31 @@ def test_german_typography():
     found = {str(tr.relative_to(ROOT)): german_typography_problems(tr.read_text(encoding="utf-8"))
              for _, tr in translated_pages("de")}
     assert {k: v for k, v in found.items() if v} == {}
+
+
+GERMAN_KI = re.compile(r"(?<![A-Za-z])KI(?![A-Za-z])")
+
+
+def ki_unglossed(tr: str) -> bool:
+    """True if the prose says KI (or 95%-KI) but never spells out Konfidenzintervall. KI is an odd
+    abbreviation for a German beginner, so each page glosses it once (the glossary row)."""
+    prose = "\n".join(text for _, text in typography_lines(tr))
+    return bool(GERMAN_KI.search(prose)) and "Konfidenzintervall" not in tr
+
+
+def test_german_pages_gloss_ki():
+    found = [str(tr.relative_to(ROOT)) for _, tr in translated_pages("de")
+             if ki_unglossed(tr.read_text(encoding="utf-8"))]
+    assert found == []
+
+
+def test_ki_rule_bites_on_an_unglossed_abbreviation():
+    head = "---\ntitle: T\n---\n\n"
+    assert ki_unglossed(head + "Das 95%-KI ist breit.\n")
+    assert ki_unglossed(head + "Das KI ist breit.\n")
+    assert not ki_unglossed(head + "Das Konfidenzintervall (KI) ist breit.\n")
+    assert not ki_unglossed(head + "Das 95%-KI (Konfidenzintervall) ist breit.\n")
+    assert not ki_unglossed(head + "Der Kiosk und `KI` im Code.\n")
 
 
 def test_french_typography():

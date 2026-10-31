@@ -18,7 +18,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 PROMs (patientenberichtete Messinstrumente) werden bei mehreren Kontrollen erhoben, und Patientinnen und Patienten verpassen einige davon. [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) hat wiederholte Scores mit der ANOVA mit Messwiederholung analysiert, die nur Patientinnen und Patienten verwendet, die bei jeder Kontrolle gemessen wurden. Ein **lineares gemischtes Modell** verwendet jeden Score jeder Patientin und jedes Patienten und beantwortet die Fragen, die eine PROM-Studie üblicherweise stellt: Wie stark verbessern sich die Patientinnen und Patienten, bis wann, und unterscheidet sich die Erholung zwischen Gruppen?
 
-Die Beispiele verwenden den KOOS JR (Score für Knie-Gelenkersatz, Kurzform) bei den 330 Knie-TP. Hüften beantworten einen anderen Fragebogen (HOOS JR, Score für Hüft-Gelenkersatz, Kurzform), und ein Punkt auf dem einen ist nicht zwingend gleich viel wert wie ein Punkt auf dem anderen; deshalb werden die beiden nicht in einem Modell vermischt. Das letzte Beispiel, ob sich die Erholung zwischen Gruppen unterscheidet, verwendet den EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) aus der Studie zu Walker und Gips von [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), die ebenfalls vier Kontrollen hat.
+Die Beispiele verwenden den KOOS JR (Score für Knie-Gelenkersatz, Kurzform) bei den 330 Knie-TP. Bei Hüften wird ein anderer Fragebogen beantwortet (HOOS JR, Score für Hüft-Gelenkersatz, Kurzform), und ein Punkt auf dem einen ist nicht zwingend gleich viel wert wie ein Punkt auf dem anderen; deshalb werden die beiden nicht in einem Modell vermischt. Das letzte Beispiel, ob sich die Erholung zwischen Gruppen unterscheidet, verwendet den EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) aus der Studie zu Walker und Gips von [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), die ebenfalls vier Studienvisiten hat.
 
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
@@ -86,13 +86,13 @@ check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores
 Alle 330 Knie haben mindestens einen Score, insgesamt 1146 Scores, aber nur 192 Knie haben alle vier. Die ANOVA mit Messwiederholung würde die übrigen 138 Knie (42 %) samt allen Scores, die sie geliefert haben, weglassen. Ein gemischtes Modell behält alle 1146 Scores.
 
 Patientinnen und Patienten wegzulassen ist nicht nur Verschwendung. Es kann das Resultat verzerren, je nachdem, warum Scores fehlen:
-- **Völlig zufällig fehlende Daten (MCAR):** Eine verpasste Kontrolle hat nichts mit der Erholung der Patientin oder des Patienten zu tun (die Klinik hat den Termin verschoben, die Person ist umgezogen). Beide Methoden sind unverzerrt; das gemischte Modell ist präziser, weil es mehr Daten verwendet.
+- **Völlig zufällig fehlende Daten (MCAR):** Eine verpasste Kontrolle hat nichts mit der Erholung der Patientin oder des Patienten zu tun (das Spital hat den Termin verschoben, die Person ist umgezogen). Beide Methoden sind unverzerrt; das gemischte Modell ist präziser, weil es mehr Daten verwendet.
 - **Zufällig fehlende Daten (MAR):** Das Fehlen hängt von Grössen ab, die Sie gemessen haben, etwa von einem früheren Score. Patientinnen und Patienten mit einem schlechten Score nach 6 Wochen kommen mit geringerer Wahrscheinlichkeit nach 3 Monaten wieder. Die ANOVA mit Messwiederholung ist dann verzerrt, weil die Personen, die sie behält, sich besser erholt haben; ein gemischtes Modell bleibt unverzerrt, solange das Modell beschreibt, wie die Scores eines Knies zusammenhängen, denn es nutzt die früheren Scores, um das Bild zu vervollständigen.
 - **Nicht zufällig fehlende Daten (MNAR):** Das Fehlen hängt vom Score ab, der nicht erhoben wurde (Patientinnen und Patienten bleiben fern, *weil* ihr Knie in dieser Woche schlechter ist). Aus den Daten allein lässt sich das nicht beheben. Nennen Sie es als Einschränkung.
 
 ## Ein zufälliger Achsenabschnitt für jedes Knie {#random-intercept}
 
-Scores desselben Knies hängen zusammen: Ein Knie, das tief beginnt, bleibt tendenziell unter dem Durchschnitt. Ein gemischtes Modell berücksichtigt das mit einem **zufälligen Achsenabschnitt (Random Intercept)**: Jedes Knie erhält sein eigenes Ausgangsniveau, das gegenüber dem Durchschnitt nach oben oder unten verschoben ist. Die **festen Effekte** (hier die Kontrollen) beschreiben die durchschnittliche Person; die zufälligen Achsenabschnitte beschreiben, wie stark sich die Knie von diesem Durchschnitt unterscheiden.
+Scores desselben Knies hängen zusammen: Ein Knie, das tief beginnt, bleibt tendenziell unter dem Mittelwert. Ein gemischtes Modell berücksichtigt das mit einem **zufälligen Achsenabschnitt (Random Intercept)**: Jedes Knie erhält sein eigenes Ausgangsniveau, das gegenüber dem Mittelwert nach oben oder unten verschoben ist. Die **festen Effekte** (hier die Kontrollen) beschreiben die durchschnittliche Person; die zufälligen Achsenabschnitte beschreiben, wie stark sich die Knie von diesem Mittelwert unterscheiden.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -133,19 +133,19 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 ```
 
 Ausgabe lesen:
-- **Feste Effekte:** Der durchschnittliche KOOS JR lag vor der Operation bei 50.0 (der Achsenabschnitt) und war um 12.5 Punkte höher nach 6 Wochen, um 24.2 nach 3 Monaten und um 33.9 nach 1 Jahr. Der Koeffizient jeder Kontrolle ist ihre Differenz zur präoperativen Kontrolle.
-- **Zufällige Effekte:** Die Ausgangsniveaus der Knie streuen um den Durchschnitt mit einer Standardabweichung (SD) von 8.8 Punkten (die Zeile «case_id (Intercept)» in R; die Zeile «case_id Var» in Python gibt die Varianz an, 8.84² = 78.1). Die Scores streuen ausserdem von Kontrolle zu Kontrolle innerhalb eines Knies mit einer Residual-SD von 8.6 Punkten.
+- **Feste Effekte:** Der mittlere KOOS JR lag vor der Operation bei 50.0 (der Achsenabschnitt) und war um 12.5 Punkte höher nach 6 Wochen, um 24.2 nach 3 Monaten und um 33.9 nach 1 Jahr. Der Koeffizient jeder Kontrolle ist ihre Differenz zur präoperativen Kontrolle.
+- **Zufällige Effekte:** Die Ausgangsniveaus der Knie streuen um den Mittelwert mit einer Standardabweichung (SD) von 8.8 Punkten (die Zeile «case_id (Intercept)» in R; die Zeile «case_id Var» in Python gibt die Varianz an, 8.84² = 78.1). Die Scores streuen ausserdem von Kontrolle zu Kontrolle innerhalb eines Knies mit einer Residual-SD von 8.6 Punkten.
 - **Wie viel der Variation zwischen den Knien liegt:** 78.1 / (78.1 + 73.5) = 0.52, der Intraklassenkorrelationskoeffizient (ICC; [Seite 17](17-agreement.qmd#icc) verwendet dieselbe Idee für Beurteilende). Etwa die Hälfte der Streuung der Scores kommt daher, dass sich die Knie voneinander unterscheiden; deshalb dürfen die Scores nicht als unabhängig behandelt werden.
 - **REML:** Beide Programme passen das Modell mit der restringierten Maximum-Likelihood-Methode (Restricted Maximum Likelihood) an, der üblichen Wahl für die Schätzung dieses Modells.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Freiheitsgrade
-Die Schätzwerte stimmen überein. Die Standardfehler stimmen auf drei oder vier gültige Stellen überein: lme4 berechnet sie mit den auf ihren Schätzwerten festgehaltenen Varianzen von Knie und Residuum, statsmodels aus der Krümmung der gesamten Likelihood. Die p-Werte und KI weichen etwas stärker voneinander ab. lmerTest gibt jedem festen Effekt einen t-Test mit **Satterthwaite**-Freiheitsgraden, einer Näherung dafür, auf wie viel Information der Schätzwert beruht. statsmodels verwendet einen z-Test, als wären die Freiheitsgrade unendlich. Bei 330 Knien liegt der Unterschied in der dritten Dezimalstelle; bei einer kleinen Studie vertrauen Sie R.
+Die Schätzwerte stimmen überein. Die Standardfehler stimmen auf drei oder vier gültige Stellen überein: lme4 berechnet sie mit den auf ihren Schätzwerten festgehaltenen Varianzen von Knie und Residuum, statsmodels aus der Krümmung der gesamten Likelihood. Die p-Werte und Konfidenzintervalle (KI) weichen etwas stärker voneinander ab. lmerTest gibt jedem festen Effekt einen t-Test mit **Satterthwaite**-Freiheitsgraden, einer Näherung dafür, auf wie viel Information der Schätzwert beruht. statsmodels verwendet einen z-Test, als wären die Freiheitsgrade unendlich. Bei 330 Knien liegt der Unterschied in der dritten Dezimalstelle; bei einer kleinen Studie vertrauen Sie R.
 :::
 
 ## Geschätzte Randmittel {#estimated-marginal-means}
 
-Berichten Sie den Schätzwert des Modells bei jeder Kontrolle mit seinem 95%-KI. Das sind die **geschätzten Randmittel** (Estimated Marginal Means, EMMs): der durchschnittliche Score, den das Modell bei jeder Kontrolle erwartet, unter Verwendung aller Knie, auch derjenigen mit verpassten Kontrollen.
+Berichten Sie den Schätzwert des Modells bei jeder Kontrolle mit seinem 95%-KI. Das sind die **geschätzten Randmittel** (Estimated Marginal Means, EMMs): der mittlere Score, den das Modell bei jeder Kontrolle erwartet, unter Verwendung aller Knie, auch derjenigen mit verpassten Kontrollen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -265,7 +265,7 @@ Die Kurve verläuft nahe an den Mittelwerten der Kontrollen (den Punkten): 62.7 
 
 ## Unterscheidet sich die Erholung zwischen Gruppen? {#group-by-time}
 
-Um zu fragen, ob sich die Erholung mit einem Walker von der Erholung mit einem Gips unterscheidet, fügen Sie den Studienarm und seine **Interaktion** mit der Kontrolle hinzu. Die Interaktion lässt jedem Studienarm sein eigenes Muster der Veränderung. Ihr Test fragt, ob sich die Muster unterscheiden, und das ist die eigentliche Frage; der Haupteffekt des Studienarms allein vergleicht nur die durchschnittlichen Niveaus. Das Modell verwendet alle 431 EFAS-Scores der 120 randomisierten Patientinnen und Patienten, obwohl nur 80 alle vier haben.
+Um zu fragen, ob sich die Erholung mit einem Walker von der Erholung mit einem Gips unterscheidet, fügen Sie den Studienarm und seine **Interaktion** mit der Studienvisite hinzu. Die Interaktion lässt jedem Studienarm sein eigenes Muster der Veränderung. Ihr Test fragt, ob sich die Muster unterscheiden, und das ist die eigentliche Frage; der Haupteffekt des Studienarms allein vergleicht nur die mittleren Niveaus. Das Modell verwendet alle 431 EFAS-Scores der 120 randomisierten Patientinnen und Patienten, obwohl nur 80 alle vier haben.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -288,7 +288,7 @@ emmip(arm_model, arm ~ visit, CIs = TRUE) +            # die beiden Erholungsmus
 
 arm_gaps <- pairs(emmeans(arm_model, ~ arm | visit, lmer.df = "satterthwaite"), reverse = TRUE)   # Walker minus Gips
 confint(arm_gaps)                                  # 95%-KI
-summary(arm_gaps, by = NULL, adjust = "holm")      # Holm über alle vier Kontrollen, nicht innerhalb jeder
+summary(arm_gaps, by = NULL, adjust = "holm")      # Holm über alle vier Studienvisiten, nicht innerhalb jeder
 ```
 
 ## Python
@@ -305,7 +305,7 @@ trial["arm"] = pd.Categorical(trial["arm"], categories=["cast", "boot"])        
 
 arm_model = smf.mixedlm("efas ~ visit * arm", trial, groups="patient_id").fit(reml=True)
 
-interaction = [name for name in arm_model.fe_params.index if ":" in name]     # die drei Terme Kontrolle x Studienarm
+interaction = [name for name in arm_model.fe_params.index if ":" in name]     # die drei Terme Studienvisite x Studienarm
 arm_wald = arm_model.wald_test(" = 0, ".join(interaction) + " = 0", scalar=True)   # unterscheiden sich die Muster?
 print(arm_wald.statistic, arm_wald.pvalue)                                          # Chi-Quadrat mit 3 Freiheitsgraden, p-Wert
 
@@ -339,7 +339,7 @@ gaps = pd.DataFrame([(visit, *arm_difference(arm_model, visit)) for visit in tri
 gaps["lower"] = gaps["difference"] - 1.96 * gaps["se"]
 gaps["upper"] = gaps["difference"] + 1.96 * gaps["se"]
 gaps["p"] = 2 * stats.norm.sf(np.abs(gaps["difference"] / gaps["se"]))
-gaps["p_holm"] = multipletests(gaps["p"], method="holm")[1]       # Holm über alle vier Kontrollen
+gaps["p_holm"] = multipletests(gaps["p"], method="holm")[1]       # Holm über alle vier Studienvisiten
 print(gaps.round(3))
 ```
 :::
@@ -367,7 +367,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 - **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. Der Wald-Test von Python liefert die ungeteilte Statistik, 77.15 mit 3 Freiheitsgraden, ebenfalls p < 0.001.
 - **Die EMMs und die Differenzen (Walker minus Gips)** zeigen, auf welche Weise. Nach 6 Wochen lag der Walker um 3.0 Punkte vorn, und nach 3 Monaten lag der Walker um 3.6 Punkte vorn (17.34 gegenüber 13.78). Nach 6 Monaten betrug der Abstand 0.4 Punkte, und nach 12 Monaten −0.4 Punkte (95%-KI −1.5 bis 0.7): Der Abstand hatte sich geschlossen.
 
-Diese Zahlen weichen etwas von denen auf [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) ab, wo nur die Scores nach 3 Monaten verwendet wurden: Dort lag das 95%-KI für die Differenz nach 3 Monaten bei 2.4 bis 4.8, hier bei 2.5 bis 4.6, hauptsächlich weil das Modell bei allen vier Kontrollen dieselbe Streuung annimmt (SD 2.9), während die Scores nach 3 Monaten etwas breiter streuen (SD 3.2 innerhalb jedes Studienarms). Zwei Vorbehalte. Die EFAS-Scores häufen sich bis 12 Monate gegen ihr Maximum (24 Punkte bei 7 von 55 Patientinnen und Patienten mit einem Walker und bei 8 von 47 mit einem Gips), daher sind die Mittelwerte des Modells dort nur Näherungen. Und im Gips-Arm fehlten mehr Kontrollen nach 12 Monaten (13 gegenüber 5): Das Modell behält die früheren Scores dieser Patientinnen und Patienten, was hilft, solange die verpassten Kontrollen [zufällig fehlen (MAR)](#why-mixed-models).
+Diese Zahlen weichen etwas von denen auf [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) ab, wo nur die Scores nach 3 Monaten verwendet wurden: Dort lag das 95%-KI für die Differenz nach 3 Monaten bei 2.4 bis 4.8, hier bei 2.5 bis 4.6, hauptsächlich weil das Modell bei allen vier Studienvisiten dieselbe Streuung annimmt (SD 2.9), während die Scores nach 3 Monaten etwas breiter streuen (SD 3.2 innerhalb jedes Studienarms). Zwei Vorbehalte. Die EFAS-Scores häufen sich bis 12 Monate gegen ihr Maximum (24 Punkte bei 7 von 55 Patientinnen und Patienten mit einem Walker und bei 8 von 47 mit einem Gips), daher sind die Mittelwerte des Modells dort nur Näherungen. Und im Gips-Arm fehlten mehr Studienvisiten nach 12 Monaten (13 gegenüber 5): Das Modell behält die früheren Scores dieser Patientinnen und Patienten, was hilft, solange die verpassten Studienvisiten [zufällig fehlen (MAR)](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Lesen Sie eine Interaktion anhand der Mittelwerte
@@ -507,7 +507,7 @@ print(marginal_means(hip_model, visit_grid).round(2))
 > **Results:** Of 270 hips, 136 had all four scores; all 906 scores were used. The estimated mean HOOS JR was 45.5 before surgery, 68.6 at 6 weeks, 80.1 at 3 months and 88.2 (95% CI 86.7 to 89.7) at 1 year.
 :::
 
-**2.** [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) hat die körperliche Funktion PROMIS mit der ANOVA mit Messwiederholung bei den 328 Gelenkersatz-Operationen analysiert, die bei allen vier Kontrollen gemessen wurden. Passen Sie stattdessen ein gemischtes Modell mit jedem Score an. Wie viele Gelenkersatz-Operationen verwendet es, und verändern sich die Mittelwerte der Kontrollen?
+**2.** [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) hat die körperliche Funktion PROMIS mit der ANOVA mit Messwiederholung bei den 328 Gelenkersätzen analysiert, die bei allen vier Kontrollen gemessen wurden. Passen Sie stattdessen ein gemischtes Modell mit jedem Score an. Wie viele Gelenkersätze verwendet es, und verändern sich die Mittelwerte der Kontrollen?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -537,10 +537,10 @@ print(marginal_means(pf_model, visit_grid).round(2))
 ```
 :::
 
-Das gemischte Modell verwendet alle 600 Gelenkersatz-Operationen (2052 Scores) statt der 328 mit allen vier Scores. Seine Mittelwerte der Kontrollen, 36.1, 39.8, 44.9 und 48.2, sind fast dieselben wie die Mittelwerte von Seite 9 für diese 328 (36.1, 39.4, 44.9 und 48.2): In dieser synthetischen Kohorte wurden Kontrollen fast ausnahmslos zufällig verpasst, daher kostete das Weglassen unvollständiger Fälle Präzision, nicht Richtigkeit.
+Das gemischte Modell verwendet alle 600 Gelenkersätze (2052 Scores) statt der 328 mit allen vier Scores. Seine Mittelwerte der Kontrollen, 36.1, 39.8, 44.9 und 48.2, sind fast dieselben wie die Mittelwerte von Seite 9 für diese 328 (36.1, 39.4, 44.9 und 48.2): In dieser synthetischen Kohorte wurden Kontrollen fast ausnahmslos zufällig verpasst, daher kostete das Weglassen unvollständiger Fälle Präzision, nicht Richtigkeit.
 :::
 
-**3.** Verändert sich der Schmerz mit einem Walker anders als mit einem Gips? Passen Sie das Modell Kontrolle × Studienarm für pain_nrs an und schreiben Sie den Results-Satz.
+**3.** Verändert sich der Schmerz mit einem Walker anders als mit einem Gips? Passen Sie das Modell Studienvisite × Studienarm für pain_nrs an und schreiben Sie den Results-Satz.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -549,7 +549,7 @@ Das gemischte Modell verwendet alle 600 Gelenkersatz-Operationen (2052 Scores) s
 ## R
 
 ```{r}
-pain_model <- lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial)    # trial: eine verpasste Kontrolle lässt beide Scores leer
+pain_model <- lmer(pain_nrs ~ visit * arm + (1 | patient_id), data = trial)    # trial: eine verpasste Studienvisite lässt beide Scores leer
 pain_anova <- anova(pain_model)
 pain_anova
 emmeans(pain_model, ~ visit | arm, lmer.df = "satterthwaite")
@@ -559,7 +559,7 @@ emmeans(pain_model, ~ visit | arm, lmer.df = "satterthwaite")
 
 ```{python}
 pain_model = smf.mixedlm("pain_nrs ~ visit * arm", trial, groups="patient_id").fit(reml=True)
-pain_terms = [name for name in pain_model.fe_params.index if ":" in name]     # die drei Terme Kontrolle x Studienarm
+pain_terms = [name for name in pain_model.fe_params.index if ":" in name]     # die drei Terme Studienvisite x Studienarm
 pain_wald = pain_model.wald_test(" = 0, ".join(pain_terms) + " = 0", scalar=True)
 print(pain_wald.statistic, pain_wald.pvalue)                                          # Chi-Quadrat mit 3 Freiheitsgraden, p-Wert
 print(marginal_means(pain_model, arm_grid).round(2))
@@ -570,5 +570,5 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 Der Wald-Test von Python liefert 14.43 mit 3 Freiheitsgraden, p = 0.002.
 
-Der Schmerz ist ein ganzzahliger Score, ein lineares Modell ist hier daher eine Näherung; bei vier Kontrollen und 120 Patientinnen und Patienten ist es eine vernünftige.
+Der Schmerz ist ein ganzzahliger Score, ein lineares Modell ist hier daher eine Näherung; bei vier Studienvisiten und 120 Patientinnen und Patienten ist es eine vernünftige.
 :::

@@ -62,10 +62,14 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - "signifikant" is reserved for statistical significance. A clinical meaning is "relevant" or "bedeutsam".
 - A "Hüft-TP" is a total hip arthroplasty; the code and data say `THA`.
 - Numbers keep the English decimal point (`0.86`) and thousands comma (`1,200`), never `0,86` or `1'200`.
-- Fixed terms: `Results-Satz` (the sentence after **Results:**), `Eintritt` (admission), `Austritt` (discharge), `Kontrolle` for a visit (`Studienvisite` in a trial, never bare `Visite`), `normalverteilt` for Gaussian, `Hüft-TP`/`Knie-TP`.
+- Fixed terms: `Results-Satz` (the sentence after **Results:**), `Eintritt` (admission), `Austritt` (discharge), `Kontrolle` for a visit (`Studienvisite` for the trial on pages 6, 9, 15 and 16, never bare `Visite`), `normalverteilt` for Gaussian, `Hüft-TP`/`Knie-TP`.
+- Section names in prose: `im Methodenteil` and `der Resultatteil`, never `Methods-Teil`, `in den Methods`, `in den Methoden` or `Resultate-Abschnitt`. Page 18's manuscript sections stay «Methods und Results».
+- The plain-language callout is titled `Einfach erklärt` on every page, never `In einfachen Worten`.
+- PROM is masculine (`der PROM`) and the plural is `PROMs`; one value is a `PROM-Score` (`präoperativer PROM-Score`).
+- `kontinuierlich` for a continuous variable; `stetig` only as the adverb (steadily).
 - Pair forms: Forschungsassistierende, Medizinstudierende, beurteilende Person (plural Beurteilende), Assistenzärztinnen und Assistenzärzte.
 - In "Ausgabe lesen", a term the output prints stays bold and verbatim (`95% CI 64.8 to 66.3`); a derived label is German (`95%-KI für den Median 41 bis 43`).
-- Gloss at first use, once per page: KI, SD, IQR, HR, OR, PROM, HOOS JR, KOOS JR. The glossary rows give the German form.
+- Gloss at first use, once per page (a test checks KI: `Konfidenzintervall` must appear on every page whose prose uses KI): KI, SD, IQR, HR, OR, PROM, HOOS JR, KOOS JR. The glossary rows give the German form.
 - Fedlex's German text decides every law name; the glossary holds the names the project uses.
 
 ## False friends and fixed choices (French)
