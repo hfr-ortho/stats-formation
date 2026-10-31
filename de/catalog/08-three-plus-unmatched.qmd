@@ -1,8 +1,767 @@
 ---
-title: "8 · Drei oder mehr unverbundene Gruppen vergleichen (in Vorbereitung)"
+title: "8 · Drei oder mehr unabhängige Gruppen vergleichen"
+description: "Einfaktorielle ANOVA, Kruskal-Wallis-Test, Chi-Quadrat-Test und Cox-Regression: drei oder mehr Gruppen aus verschiedenen Patientinnen und Patienten."
+engine: knitr
+toc-depth: 2
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/catalog/08-three-plus-unmatched.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Drei oder mehr Gruppen aus **verschiedenen** Patientinnen und Patienten: die vier ASA-Klassen, die drei Chirurginnen und Chirurgen, drei Arten von Transplantaten für das vordere Kreuzband (VKB), die Implantate A, B und C. Sie könnten jedes Gruppenpaar mit den Tests auf [Seite 6](06-two-unpaired-groups.qmd) vergleichen, aber jeder zusätzliche Test ist eine weitere Gelegenheit für ein falsch positives Resultat. Die Tests auf dieser Seite stellen zuerst eine einzige Frage: **Gibt es überhaupt einen Unterschied zwischen den Gruppen?** Lautet die Antwort ja, zeigt [Welche Gruppen unterscheiden sich?](#which-groups-differ) den nächsten Schritt.
+
+::: {.callout-note}
+## 💡 So funktioniert jeder Abschnitt dieser Seite
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur Gelenkersatz-Kohorte oder (beim Chi-Quadrat-Test) zu den VKB-Rekonstruktionen. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+
+Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
+:::
+
+## Einfaktorielle ANOVA {#one-way-anova}
+
+**Die Frage:** Unterscheidet sich das Alter bei der Operation zwischen den ASA-Klassen 1 bis 4?
+
+### Wann verwenden
+
+- Die Zielgrösse ist ein **Messwert**, der zwischen **drei oder mehr unabhängigen Gruppen** verglichen wird.
+- Innerhalb **jeder Gruppe** ist sie ungefähr normalverteilt, oder jede Gruppe ist ausreichend gross und nicht stark schief ([Seite 3](../foundations/03-distributions.qmd#within-groups)).
+- Die Gruppen haben **ähnliche Streuungen**: Als Faustregel ist die grösste Standardabweichung (SD) höchstens etwa doppelt so gross wie die kleinste. Ist das nicht der Fall, verwenden Sie die **Welch-ANOVA** (siehe den Kasten «R oder Python»), besonders bei ungleich grossen Gruppen.
+- Ist die Zielgrösse schief, begrenzt oder ordinal → verwenden Sie den [Kruskal-Wallis-Test](#kruskal-wallis).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
+  mutate(asa = factor(asa))   # die ASA-Klasse ist eine Gruppe, keine Zahl
+
+ggplot(cohort, aes(asa, age)) +
+  geom_boxplot() +
+  labs(x = "ASA class", y = "Age at surgery, years")
+
+cohort |>
+  group_by(asa) |>
+  summarise(n = n(), mean = mean(age), sd = sd(age))
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import pingouin as pg
+import matplotlib.pyplot as plt
+from scipy import stats
+
+cohort = pd.read_csv("data/cohort.csv")
+ages = [group["age"] for asa, group in cohort.groupby("asa")]   # eine Liste mit den Altersangaben pro ASA-Klasse
+
+fig, ax = plt.subplots(figsize=(6, 3))
+parts = ax.boxplot(ages, tick_labels=["1", "2", "3", "4"])   # mit einem Namen für den Rückgabewert erscheint er nicht in der Ausgabe
+ax.set_xlabel("ASA class")
+ax.set_ylabel("Age at surgery, years")
+plt.show()
+
+print(cohort.groupby("asa")["age"].agg(["count", "mean", "std"]))
+```
+:::
+
+Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen alle nahe bei 9 Jahren, die Streuungen sind also ähnlich. Die Gruppen sind jedoch sehr unterschiedlich gross: 300 Eingriffe bei ASA 2, nur 18 bei ASA 4.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+age_anova <- aov(age ~ asa, data = cohort)   # aov() berechnet die klassische einfaktorielle ANOVA
+summary(age_anova)
+```
+
+## Python
+
+```{python}
+age_anova = pg.anova(data=cohort, dv="age", between="asa", detailed=True)   # klassische einfaktorielle ANOVA
+print(age_anova)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"f": float(age_anova.loc[0, "F"]), "ss_between": float(age_anova.loc[0, "SS"]),
+       "ss_within": float(age_anova.loc[1, "SS"]), "df_within": float(age_anova.loc[1, "DF"])}
+```
+
+```{r}
+#| include: false
+age_table <- summary(age_anova)[[1]]
+check_agree(list(f = age_table[1, "F value"], ss_between = age_table[1, "Sum Sq"],
+                 ss_within = age_table[2, "Sum Sq"], df_within = age_table[2, "Df"]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **Zeile asa:** die Variation **zwischen** den Gruppenmittelwerten. **Df = 3** (vier Gruppen minus eins), **Sum Sq = 5727**.
+- **Residuals** (R) oder **Within** (Python): die Variation der Patientinnen und Patienten **innerhalb** ihrer Gruppen. **Df = 596** (600 Eingriffe minus vier Gruppen).
+- **F = 23.9:** die Variation zwischen den Gruppen, geteilt durch die Variation innerhalb der Gruppen, jeweils pro Freiheitsgrad. Hätten die Gruppen denselben Mittelwert, läge F nahe bei 1.
+- **p < 0.001** (R gibt `1.28e-14` aus): Eine so unterschiedliche Altersverteilung zwischen den Gruppen wäre sehr unwahrscheinlich, wenn jede ASA-Klasse dasselbe mittlere Alter hätte.
+
+### Effektstärke und 95%-KI
+
+**Omega-Quadrat (ω²)** ist der Anteil der Variation des Alters, den die ASA-Klasse erklärt, korrigiert um die leichte systematische Überschätzung des einfacheren Eta-Quadrats (η²). Als grobe Richtschnur: 0.01 ist klein, 0.06 mittel und 0.14 gross.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+effectsize::omega_squared(age_anova, partial = FALSE)   # einfaches (nicht partielles) Omega-Quadrat
+```
+
+## Python
+
+```{python}
+# Omega-Quadrat aus der ANOVA-Tabelle: (SS zwischen - df zwischen × MS innerhalb) / (SS total + MS innerhalb)
+ss_between, ss_within = age_anova.loc[0, "SS"], age_anova.loc[1, "SS"]
+df_between, ms_within = age_anova.loc[0, "DF"], age_anova.loc[1, "MS"]
+omega2 = (ss_between - df_between * ms_within) / (ss_between + ss_within + ms_within)
+print(omega2)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"omega2": float(omega2)}
+```
+
+```{r}
+#| include: false
+age_omega <- effectsize::omega_squared(age_anova, partial = FALSE)
+check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
+```
+
+ω² = 0.10: Die ASA-Klasse erklärt etwa ein Zehntel der Variation des Alters, ein mittlerer Effekt. R gibt ausserdem ein einseitiges 95%-KI (Konfidenzintervall) aus (0.06 bis 1.00): ω² kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy und pingouin berechnen dieses KI nicht. Die ANOVA sagt nicht, *welche* Klassen sich unterscheiden: siehe [Welche Gruppen unterscheiden sich?](#which-groups-differ).
+
+### Resultate formulieren
+
+> **Methods:** Age was compared across ASA classes with one-way analysis of variance (ANOVA), with omega squared (ω²) as the effect size.
+>
+> **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, one-sided 95% CI 0.06 to 1.00).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Die ANOVA sagt nicht, welche Gruppen sich unterscheiden
+Eine signifikante ANOVA bedeutet, dass sich mindestens ein Gruppenmittelwert von einem anderen unterscheidet, nicht, dass sich jede Gruppe von jeder anderen unterscheidet. Schliessen Sie keine Reihe unadjustierter t-Tests an: Damit kehrt das Problem der falsch positiven Resultate zurück, das die ANOVA vermeiden sollte. Verwenden Sie einen Post-hoc-Test ([Seite 15](../beyond/15-post-hoc.qmd#after-anova)).
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: klassische ANOVA oder Welch-ANOVA
+- Die **klassische ANOVA** setzt voraus, dass die Gruppen dieselbe Streuung haben. `aov()` in R, `f_oneway()` in scipy und `anova()` in pingouin führen sie standardmässig aus.
+- Die **Welch-ANOVA** setzt gleiche Streuungen nicht voraus. `oneway.test()` in R führt standardmässig die **Welch**-Version aus (für die klassische Version ergänzen Sie `var.equal = TRUE`), also das Gegenteil von `aov()`. In Python verwenden Sie `pg.welch_anova()` oder `stats.f_oneway(..., equal_var=False)`.
+- Hier sind die Standardabweichungen ähnlich, und die Welch-ANOVA stimmt überein: F = 23.5, p < 0.001.
+:::
+
+```{python}
+#| include: false
+welch = pg.welch_anova(data=cohort, dv="age", between="asa")
+chk = {"f": float(welch.loc[0, "F"]), "df_denom": float(welch.loc[0, "ddof2"])}
+```
+
+```{r}
+#| include: false
+welch <- oneway.test(age ~ asa, data = cohort)
+check_agree(list(f = unname(welch$statistic), df_denom = unname(welch$parameter[2])), reticulate::py$chk)
+```
+
+## Kruskal-Wallis-Test {#kruskal-wallis}
+
+**Die Frage:** Unterscheidet sich die Zufriedenheit 1 Jahr nach der Operation zwischen den Chirurginnen und Chirurgen S1, S2 und S3?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **ordinal** (Zufriedenheit von 1 bis 5), **schief** oder hat einen **Decken- oder Bodeneffekt** und wird zwischen **drei oder mehr unabhängigen Gruppen** verglichen.
+- Wie der [Mann-Whitney-Test](06-two-unpaired-groups.qmd#mann-whitney) arbeitet er mit Rängen: Er fragt, ob die Werte in einigen Gruppen tendenziell grösser sind als in anderen.
+- Bei zwei Gruppen liefert er im Wesentlichen dasselbe Resultat wie der Mann-Whitney-Test.
+- Ist die Zielgrösse ein ungefähr normalverteilter Messwert → verwenden Sie die [einfaktorielle ANOVA](#one-way-anova).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+satisfied <- cohort |> filter(!is.na(satisfaction_1yr))   # Patientinnen und Patienten, die geantwortet haben
+
+count(satisfied, surgeon, satisfaction_1yr) |>
+  pivot_wider(names_from = satisfaction_1yr, values_from = n)   # eine Zeile pro Chirurgin oder Chirurg
+
+satisfied |>
+  group_by(surgeon) |>
+  summarise(n = n(), median = median(satisfaction_1yr),
+            q1 = quantile(satisfaction_1yr, 0.25), q3 = quantile(satisfaction_1yr, 0.75))
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+
+cohort = pd.read_csv("data/cohort.csv")
+satisfied = cohort.dropna(subset=["satisfaction_1yr"])   # Patientinnen und Patienten, die geantwortet haben
+
+print(pd.crosstab(satisfied["surgeon"], satisfied["satisfaction_1yr"]))
+print(satisfied.groupby("surgeon")["satisfaction_1yr"].describe()[["count", "25%", "50%", "75%"]])
+```
+:::
+
+Die Zufriedenheit wurde bei 502 der 600 Eingriffe angegeben. Bei jeder Chirurgin und jedem Chirurgen waren die meisten zufrieden (4) oder sehr zufrieden (5), und die drei Verteilungen sehen sich sehr ähnlich.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+satisfaction_test <- kruskal.test(satisfaction_1yr ~ surgeon, data = satisfied)
+satisfaction_test
+```
+
+## Python
+
+```{python}
+scores = [group["satisfaction_1yr"] for surgeon, group in satisfied.groupby("surgeon")]   # eine Liste pro Chirurgin oder Chirurg
+satisfaction_test = stats.kruskal(*scores)
+print(satisfaction_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"h": float(satisfaction_test.statistic), "p": float(satisfaction_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(h = unname(satisfaction_test$statistic), p = satisfaction_test$p.value), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **Kruskal-Wallis chi-squared = 0.68** (R) oder **statistic** (Python): die H-Statistik. Sie misst, wie weit die mittleren Ränge der Gruppen auseinanderliegen. Beide Programme korrigieren sie für die vielen gebundenen Scores.
+- **df = 2:** drei Gruppen minus eins.
+- **p = 0.713:** Eine so ähnliche oder noch ähnlichere Zufriedenheit wäre sehr häufig, wenn die Patientinnen und Patienten aller Chirurginnen und Chirurgen gleich zufrieden wären.
+
+### Effektstärke und 95%-KI
+
+**Epsilon-Quadrat (ε²)** ist das rangbasierte Gegenstück zu ω²: der Anteil der Variation der Ränge, den die Gruppen erklären, von 0 bis 1. Es ist H geteilt durch (n − 1).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+set.seed(2026)   # sein KI stammt aus einem Bootstrap (zufälliges Neuziehen); mit einem Seed ist es wiederholbar
+effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied)
+```
+
+## Python
+
+```{python}
+epsilon2 = satisfaction_test.statistic / (len(satisfied) - 1)   # H / (n - 1)
+print(epsilon2)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"epsilon2": float(epsilon2)}
+```
+
+```{r}
+#| include: false
+set.seed(2026)
+satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied)
+check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
+```
+
+ε² = 0.001: Die Chirurgin oder der Chirurg erklärt im Wesentlichen nichts von der Variation der Zufriedenheit. Das einseitige KI von R reicht von 0.00 bis 1.00; es stammt aus einem Bootstrap, weshalb der Code einen Seed setzt. scipy hat dafür keine Funktion.
+
+### Resultate formulieren
+
+> **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) as the effect size.
+>
+> **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Fehlende Antworten fehlen nicht zufällig
+Bei 98 Eingriffen fehlt die Zufriedenheit. Wenn unzufriedene Patientinnen und Patienten seltener geantwortet haben, erscheinen alle Chirurginnen und Chirurgen besser, als sie sind, und auch der Vergleich kann verzerrt sein. Berichten Sie immer, wie viele Personen in jeder Gruppe geantwortet haben, und prüfen Sie, ob sich der Anteil der Nichtantwortenden zwischen den Gruppen unterscheidet.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Bindungen und Datenformat
+`kruskal.test()` und `stats.kruskal()` korrigieren H beide für Bindungen, stimmen also auch bei einer 5-Punkte-Skala voller gebundener Scores überein. R nimmt eine Formel (`outcome ~ group`); scipy nimmt pro Gruppe eine Liste mit Werten, weshalb der Python-Code zuerst `scores` aufbaut.
+:::
+
+## Chi-Quadrat-Test {#chi-square}
+
+**Die Frage:** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Knochen-Patellarsehnen-Knochen-Transplantaten (BPTB), Hamstring-Transplantaten und Quadrizepssehnen-Transplantaten?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **kategorial** (hier Ja/Nein) und wird zwischen **drei oder mehr unabhängigen Gruppen** verglichen: eine r × c-Tabelle.
+- Jede **erwartete** Häufigkeit sollte mindestens 5 betragen. Fassen Sie sonst Kategorien zusammen, die inhaltlich zusammenpassen, oder verwenden Sie den exakten Test nach Fisher; `fisher.test()` in R führt ihn auch bei grösseren Tabellen exakt aus. `stats.fisher_exact()` in scipy akzeptiert zwar grössere Tabellen, schätzt deren p-Wert aber durch zufälliges Neuziehen, sodass er sich von Durchlauf zu Durchlauf etwas ändert, wenn Sie keinen Seed angeben.
+- Bei zwei Gruppen und einer Ja/Nein-Zielgrösse → [exakter Test nach Fisher](06-two-unpaired-groups.qmd#fisher-chi-square).
+
+### Zuerst die Daten ansehen
+
+Die VKB-Daten enthalten eine Zeile pro primärer Rekonstruktion; `rts_12mo` ist 1, wenn die Person 12 Monate nach der Operation wieder ihre Sportart von vor der Verletzung ausübte.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+acl <- read_csv("data/acl_cohort.csv", show_col_types = FALSE)
+
+rts_table <- table(
+  graft    = factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+  returned = factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no"))
+)
+rts_table
+prop.table(rts_table, margin = 1)   # Zeilenprozente: Rückkehr zum Sport mit jedem Transplantat
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+from scipy.stats.contingency import association
+
+acl = pd.read_csv("data/acl_cohort.csv")
+
+rts_table = pd.crosstab(acl["graft"], acl["rts_12mo"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]   # zuerst «yes»
+print(rts_table)
+print(pd.crosstab(acl["graft"], acl["rts_12mo"], normalize="index"))   # Zeilenprozente
+```
+:::
+
+Nach 12 Monaten waren 65.1 % der BPTB-Rekonstruktionen, 43.5 % der Hamstring- und 32.8 % der Quadrizepssehnen-Rekonstruktionen wieder bei ihrer Sportart.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+rts_test <- chisq.test(rts_table)
+rts_test$expected      # alle mindestens 5, der Chi-Quadrat-Test ist also zulässig
+rts_test
+```
+
+## Python
+
+```{python}
+rts_test = stats.chi2_contingency(rts_table)
+print(rts_test.expected_freq)   # alle mindestens 5, der Chi-Quadrat-Test ist also zulässig
+print(rts_test.statistic, rts_test.dof, rts_test.pvalue)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"chisq": float(rts_test.statistic), "df": float(rts_test.dof), "p": float(rts_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(chisq = unname(rts_test$statistic), df = unname(rts_test$parameter),
+                 p = rts_test$p.value), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **Erwartete Häufigkeiten:** was jede Zelle enthielte, wenn die Rückkehr zum Sport mit jedem Transplantat gleich wäre. Die kleinste ist 33.1, der Test ist also zulässig.
+- **X-squared = 22.24, df = 2:** die Chi-Quadrat-Statistik, mit (3 Transplantate − 1) × (2 Zielgrössen − 1) = 2 Freiheitsgraden.
+- **p < 0.001:** So grosse Unterschiede wären sehr unwahrscheinlich, wenn alle drei Transplantate dieselbe Rate der Rückkehr zum Sport hätten.
+
+### Effektstärke und 95%-KI
+
+**Cramérs V** misst die Stärke des Zusammenhangs in einer Tabelle, von 0 (keiner) bis 1 (perfekt). Bei einer Tabelle mit 2 Spalten ist etwa 0.1 klein, 0.3 mittel und 0.5 gross.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+effectsize::cramers_v(rts_table, adjust = FALSE)   # siehe den Kasten «R oder Python»
+```
+
+## Python
+
+```{python}
+print(association(rts_table, method="cramer"))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"v": float(association(rts_table, method="cramer"))}
+```
+
+```{r}
+#| include: false
+rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
+check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
+```
+
+V = 0.25, ein Zusammenhang zwischen klein und mittel. Bei Ja/Nein-Zielgrössen ist die Rate in jeder Gruppe (mit ihrem KI, wie auf [Seite 4](04-describe-one-group.qmd#proportion)) meist aussagekräftiger als V. Und bedenken Sie, was der Test nicht sagt: welche Transplantate sich unterscheiden (siehe unten [Welche Gruppen unterscheiden sich?](#which-groups-differ)) und warum. Die Transplantate wurden nicht zufällig zugeteilt, ein Unterschied kann also von den Patientinnen und Patienten statt vom Transplantat kommen; [Seite 12](12-predict-from-several.qmd#multiple-logistic-regression) zeigt, wie Sie für andere Faktoren adjustieren.
+
+### Resultate formulieren
+
+> **Methods:** Return to sport at 12 months was compared across graft types with the chi-square test, with Cramér's V as the effect size.
+>
+> **Results:** Return to sport at 12 months followed 84 of 129 BPTB reconstructions (65.1%), 67 of 154 hamstring reconstructions (43.5%) and 22 of 67 quadriceps reconstructions (32.8%) (χ² = 22.24, df = 2, p < 0.001; Cramér's V = 0.25, one-sided 95% CI 0.16 to 1.00).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Hier gibt es keine Yates-Korrektur, und prüfen Sie die erwarteten Häufigkeiten
+Die Stetigkeitskorrektur nach Yates ([Seite 6](06-two-unpaired-groups.qmd#fisher-chi-square)) gilt nur für 2 × 2-Tabellen, beide Programme verzichten bei dieser 3 × 2-Tabelle also darauf. Die Regel für die erwarteten Häufigkeiten gilt weiterhin: Übung 3 zeigt eine Tabelle, die sie verletzt, und was dann zu tun ist.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: zwei Versionen von Cramérs V
+`cramers_v()` aus effectsize wendet standardmässig eine **Korrektur der systematischen Abweichung bei kleinen Stichproben** an (hier 0.24). `association()` aus scipy tut das nicht (0.25). Wir setzen in R `adjust = FALSE`, damit beide übereinstimmen. Beides ist zulässig; geben Sie an, welche Version Sie berichten.
+:::
+
+## Cox-Regression {#cox}
+
+**Die Frage:** Unterscheidet sich das Revisionsrisiko zwischen den Implantaten A, B und C?
+
+### Wann verwenden
+
+- Die Zielgrösse ist die **Zeit bis zu einem Ereignis** (Revision), verglichen zwischen **drei oder mehr unabhängigen Gruppen**.
+- Der **Log-Rank-Test** lässt sich auf drei oder mehr Gruppen erweitern und beantwortet die Frage «Unterscheiden sich die Kurven?». Die **Cox-Regression** liefert zusätzlich für jede Gruppe ein Hazard Ratio (HR) gegenüber einer Referenzgruppe und kann für andere Variablen adjustieren.
+- Sie setzt voraus, dass das Risiko jeder Gruppe über die Zeit ein gleichbleibendes Vielfaches des Risikos der Referenzgruppe ist (**proportionale Hazards**). [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards) zeigt, wie Sie das prüfen, und behandelt die Cox-Regression ausführlich.
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 4.5
+library(tidyverse)
+library(survival)
+library(ggsurvfit)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+
+survfit2(Surv(followup_years, revised) ~ implant, data = cohort, conf.type = "log-log") |>
+  ggsurvfit() +
+  add_risktable() +
+  scale_ggsurvfit() +
+  labs(x = "Years since surgery", y = "Revision-free survival")
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from lifelines import KaplanMeierFitter, CoxPHFitter
+from lifelines.statistics import multivariate_logrank_test
+from lifelines.plotting import add_at_risk_counts
+
+cohort = pd.read_csv("data/cohort.csv")
+
+fig, ax = plt.subplots(figsize=(7, 4.5))
+curves = []
+for implant, group in cohort.groupby("implant"):
+    km = KaplanMeierFitter(label=implant).fit(group["followup_years"], group["revised"])
+    km.plot_survival_function(ax=ax, ci_show=False)
+    curves.append(km)
+ax.set_xlabel("Years since surgery")
+ax.set_ylabel("Revision-free survival")
+add_at_risk_counts(*curves, ax=ax)
+plt.tight_layout()
+plt.show()
+```
+:::
+
+Die Implantate A und B verlaufen fast gleich; Implantat C fällt von beiden ab.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+implant_cox <- coxph(Surv(followup_years, revised) ~ implant, data = cohort)   # Implantat A ist die Referenz
+summary(implant_cox)
+```
+
+## Python
+
+```{python}
+implant_cox = CoxPHFitter().fit(
+    cohort[["followup_years", "revised", "implant"]],
+    duration_col="followup_years", event_col="revised", formula="implant",   # Implantat A ist die Referenz
+    fit_options={"precision": 1e-9},   # erst anhalten, wenn das Modell ganz konvergiert ist; siehe den Kasten «R oder Python»
+)
+print(implant_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
+print(implant_cox.log_likelihood_ratio_test().test_statistic)            # Gesamttest, alle Implantate
+print(multivariate_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"]).test_statistic)
+```
+:::
+
+```{python}
+#| include: false
+rows = implant_cox.summary
+chk = {"hr_b": float(rows.loc["implant[T.B]", "exp(coef)"]), "hr_c": float(rows.loc["implant[T.C]", "exp(coef)"]),
+       "low_c": float(rows.loc["implant[T.C]", "exp(coef) lower 95%"]),
+       "high_c": float(rows.loc["implant[T.C]", "exp(coef) upper 95%"]),
+       "lr": float(implant_cox.log_likelihood_ratio_test().test_statistic),
+       "logrank": float(multivariate_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"]).test_statistic)}
+```
+
+```{r}
+#| include: false
+implant_hr <- summary(implant_cox)$conf.int
+implant_logrank <- survdiff(Surv(followup_years, revised) ~ implant, data = cohort)
+check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["implantC", "exp(coef)"],
+                 low_c = implant_hr["implantC", "lower .95"], high_c = implant_hr["implantC", "upper .95"],
+                 lr = unname(summary(implant_cox)$logtest["test"]), logrank = implant_logrank$chisq),
+            reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **exp(coef):** das Hazard Ratio jedes Implantats gegenüber Implantat A, der Referenz. Implantat B: 0.82; Implantat C: 3.07.
+- **lower .95 / upper .95:** die 95%-KI. Dasjenige von Implantat B (0.45 bis 1.50) schliesst 1 ein, die Daten sind also mit keinem Unterschied zu A vereinbar. Dasjenige von Implantat C (1.85 bis 5.09) tut das nicht.
+- **Pr(>|z|):** der p-Wert für jedes Implantat gegenüber A (p = 0.514 für B, p < 0.001 für C).
+- **Likelihood ratio test = 27.6 on 2 df, p < 0.001:** der Gesamttest, ob das Implantat überhaupt eine Rolle spielt, das Cox-Gegenstück zum F-Test der ANOVA. Python gibt ihn als zweite Zahl aus.
+- **Score (logrank) test = 33.5:** der Log-Rank-Test für alle drei Implantate, den Python zuletzt ausgibt. (Der Score-Test der Cox-Regression und der Log-Rank-Test behandeln gleiche Revisionszeitpunkte etwas verschieden, sie stimmen also auf eine Dezimalstelle überein, nicht exakt.)
+
+### Effektstärke und 95%-KI
+
+Die **Hazard Ratios** mit ihren 95%-KI sind die Effektstärken: Mit Implantat C war der Hazard einer Revision (die momentane Ereignisrate) etwa dreimal so hoch wie mit Implantat A (3.07, 95%-KI 1.85 bis 5.09), während sich Implantat B nicht deutlich von A unterschied (0.82, 95%-KI 0.45 bis 1.50).
+
+### Resultate formulieren
+
+> **Methods:** Revision-free survival was compared across implants with Cox proportional hazards regression, with implant A as the reference.
+>
+> **Results:** Compared with implant A, the hazard ratio for revision was 3.07 (95% CI 1.85 to 5.09) for implant C and 0.82 (95% CI 0.45 to 1.50) for implant B (likelihood ratio test for implant type, χ² = 27.6, df = 2, p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Die Referenzgruppe prägt das Bild
+Jedes Hazard Ratio hier bezieht sich auf Implantat A, die Ausgabe vergleicht B also nicht direkt mit C. Wählen Sie die Referenzgruppe bewusst (das Standardimplantat, die grösste Gruppe) und sagen Sie, welche es ist. Und wie auf [Seite 4](04-describe-one-group.qmd#kaplan-meier) gelten Todesfälle hier als zensiert; [Seite 13](../survival/13-kaplan-meier.qmd#competing-risks) behandelt konkurrierende Risiken.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Konvergenz und Referenzgruppe
+Beide Programme verwenden die alphabetisch erste Gruppe (A) als Referenz und behandeln gleiche Revisionszeitpunkte mit der Methode von Efron. Die Standard-Konvergenzregel von lifelines hört hier etwas zu früh auf (ein Hazard Ratio von 0.81713 für Implantat B statt 0.81709), daher verschärfen wir sie mit `fit_options={"precision": 1e-9}`.
+:::
+
+## Welche Gruppen unterscheiden sich? {#which-groups-differ}
+
+Die obigen Tests beantworten die Frage «Gibt es überhaupt einen Unterschied zwischen den Gruppen?». Lautet die Antwort ja, ist die nächste Frage, welche Gruppen sich voneinander unterscheiden. Wenn Sie jedes Paar mit einem gewöhnlichen Test vergleichen, steigt die Wahrscheinlichkeit eines falsch positiven Resultats: Bei vier ASA-Klassen gibt es sechs Paare, und sechs Tests mit p < 0.05 ergeben ungefähr eine Wahrscheinlichkeit von einem Viertel für mindestens einen Fehlalarm, selbst wenn gar nichts vorliegt.
+
+**Post-hoc-Tests** vergleichen die Paare und halten dabei die Gesamtfehlerrate bei 5 %:
+
+| Nach | Verwenden | Seite |
+|---|---|---|
+| Einfaktorielle ANOVA | Tukey-HSD-Test (Games-Howell-Test, wenn sich die Streuungen unterscheiden) | [15](../beyond/15-post-hoc.qmd#after-anova) |
+| Kruskal-Wallis | Dunn-Test mit Holm-Adjustierung | [15](../beyond/15-post-hoc.qmd#after-kruskal-wallis) |
+| Chi-Quadrat | Paarweise exakte Tests nach Fisher oder Chi-Quadrat-Tests mit Holm-Adjustierung | [15](../beyond/15-post-hoc.qmd#after-chi-square) |
+| Cox-Regression | Hazard Ratios gegenüber einer gewählten Referenz oder Kontraste zwischen Gruppen | [14](../survival/14-cox-regression.qmd) |
+
+Der Tukey-HSD-Test begrenzt falsch positive Resultate von sich aus, und ebenso der Dunn-Test und andere paarweise Tests, sobald die Holm-Adjustierung angewendet wird; keiner von ihnen braucht daher zuerst einen signifikanten Gesamttest. Legen Sie vor dem Ansehen der Daten fest, welche Vergleiche Sie durchführen, und sagen Sie das in Ihren Methods ([Seite 15](../beyond/15-post-hoc.qmd#overall-test-first)).
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+age_by_asa <- cohort |> group_by(asa) |> summarise(n = n(), mean = mean(age), sd = sd(age))
+satisfied_n <- sum(!is.na(cohort$satisfaction_1yr))
+ex_failure <- table(factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+                    factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no")))
+ex_expected <- suppressWarnings(chisq.test(ex_failure))$expected
+set.seed(2026)
+los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)   # as in exercise 2's solution
+sat_quartiles <- satisfied |> group_by(surgeon) |>
+  summarise(median = median(satisfaction_1yr), q1 = quantile(satisfaction_1yr, 0.25), q3 = quantile(satisfaction_1yr, 0.75))
+stopifnot(
+  sum(table(cohort$patient_id) == 2) == 80,
+  age_by_asa$n == c(36, 300, 246, 18),
+  round(age_by_asa$mean[c(1, 4)], 1) == c(59.8, 73.7), round(age_by_asa$sd[c(1, 4)], 1) == c(8.7, 9.3),
+  round(age_by_asa$sd) == c(9, 9, 9, 9),
+  age_table[1, "Df"] == 3, round(age_table[1, "Sum Sq"]) == 5727, age_table[2, "Df"] == 596,
+  round(age_table[1, "F value"], 1) == 23.9, age_table[1, "Pr(>F)"] < 0.001,
+  signif(age_table[1, "Pr(>F)"], 3) == 1.28e-14,
+  round(age_omega$Omega2, 2) == 0.10, round(age_omega$CI_low, 2) == 0.06,
+  round(unname(welch$statistic), 1) == 23.5, welch$p.value < 0.001,
+  satisfied_n == 502, sum(is.na(cohort$satisfaction_1yr)) == 98,
+  round(unname(satisfaction_test$statistic), 2) == 0.68, unname(satisfaction_test$parameter) == 2,
+  round(satisfaction_test$p.value, 3) == 0.713,
+  round(satisfaction_eps$rank_epsilon_squared, 3) == 0.001,
+  sat_quartiles$median == c(4, 5, 5), sat_quartiles$q1 == c(4, 4, 4), sat_quartiles$q3 == c(5, 5, 5),
+  rts_table[, "yes"] == c(84, 67, 22), rowSums(rts_table) == c(129, 154, 67),
+  round(100 * prop.table(rts_table, 1)[, "yes"], 1) == c(65.1, 43.5, 32.8),
+  round(min(rts_test$expected), 1) == 33.1,
+  round(unname(rts_test$statistic), 2) == 22.24, unname(rts_test$parameter) == 2, rts_test$p.value < 0.001,
+  round(rts_v$Cramers_v, 2) == 0.25, round(rts_v$CI_low, 2) == 0.16, rts_v$CI_high == 1,
+  round(effectsize::cramers_v(rts_table)$Cramers_v, 2) == 0.24,
+  round(implant_hr[, "exp(coef)"], 2) == c(0.82, 3.07),
+  round(implant_hr["implantB", c("lower .95", "upper .95")], 2) == c(0.45, 1.50),
+  round(implant_hr["implantC", c("lower .95", "upper .95")], 2) == c(1.85, 5.09),
+  round(summary(implant_cox)$coefficients[, "Pr(>|z|)"], 3)[1] == 0.514, round(implant_logrank$chisq, 1) == 33.5,
+  round(satisfaction_eps$CI_low, 2) == 0,
+  summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
+  round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
+  round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,
+  round(reticulate::py_eval("float(np.exp(CoxPHFitter().fit(cohort[['followup_years', 'revised', 'implant']], duration_col='followup_years', event_col='revised', formula='implant').params_.iloc[0]))"), 5) == 0.81713,
+  round(implant_hr["implantB", "exp(coef)"], 5) == 0.81709,
+  choose(4, 2) == 6, round(1 - 0.95^6, 2) == 0.26,
+  # exercise solutions (recomputed here: the guard runs before the solution chunks)
+  round(summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][1, "F value"], 1) == 31.1,
+  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE)$Omega2, 2) == 0.13,
+  round(tapply(cohort$bmi, cohort$asa, mean)[c(1, 4)], 1) == c(26.3, 36.2), round(tapply(cohort$bmi, cohort$asa, sd)[c(1, 4)], 1) == c(4.9, 3.3),
+  summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][, "Df"] == c(3, 596),
+  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE)$CI_low, 2) == 0.09,
+  round(kruskal.test(los_days ~ surgeon, data = cohort)$p.value, 3) == 0.694,
+  round(unname(kruskal.test(los_days ~ surgeon, data = cohort)$statistic), 2) == 0.73,
+  round(los_eps$CI_low, 2) == 0,
+  round(effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, ci = NULL)$rank_epsilon_squared, 3) == 0.001,
+  ex_failure[, "yes"] == c(6, 6, 3), rowSums(ex_failure) == c(129, 154, 67),
+  round(100 * prop.table(ex_failure, 1)[, "yes"], 1) == c(4.7, 3.9, 4.5),
+  round(ex_expected[3, "yes"], 1) == 2.9, sum(ex_expected < 5) == 1,
+  round(fisher.test(ex_failure)$p.value, 3) == 0.943,
+  round(reticulate::py_eval("float(stats.fisher_exact(pd.crosstab(acl['graft'], acl['failure_2y']).loc[['BPTB', 'hamstring', 'quadriceps'], [1, 0]].to_numpy(), method=stats.PermutationMethod(rng=np.random.default_rng(2026))).pvalue)"), 4) == 0.9405
+)
+```
+
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Unterscheidet sich der **BMI** (Body-Mass-Index) zwischen den ASA-Klassen? Führen Sie eine einfaktorielle ANOVA durch und berichten Sie ω².
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_data <- cohort |> mutate(asa = factor(asa))
+bmi_anova <- aov(bmi ~ asa, data = bmi_data)
+summary(bmi_anova)
+effectsize::omega_squared(bmi_anova, partial = FALSE)
+bmi_data |> group_by(asa) |> summarise(mean = mean(bmi), sd = sd(bmi))
+```
+
+## Python
+
+```{python}
+bmi_anova = pg.anova(data=cohort, dv="bmi", between="asa", detailed=True)
+print(bmi_anova)
+ss_b, ss_w, df_b, ms_w = bmi_anova.loc[0, "SS"], bmi_anova.loc[1, "SS"], bmi_anova.loc[0, "DF"], bmi_anova.loc[1, "MS"]
+print((ss_b - df_b * ms_w) / (ss_b + ss_w + ms_w))
+print(cohort.groupby("asa")["bmi"].agg(["mean", "std"]))
+```
+:::
+
+> **Results:** Mean BMI was 26.3 kg/m² (SD 4.9) in ASA 1 and 36.2 kg/m² (SD 3.3) in ASA 4 (F(3, 596) = 31.1, p < 0.001; ω² = 0.13, one-sided 95% CI 0.09 to 1.00).
+
+Das überrascht nicht: Die Adipositas ist eines der Dinge, die Anästhesistinnen und Anästhesisten bei der Vergabe einer ASA-Klasse berücksichtigen.
+:::
+
+**2.** Eine Kollegin fragt, ob sich die **Aufenthaltsdauer** zwischen den drei Chirurginnen und Chirurgen unterscheidet. Welchen Test würden Sie verwenden, und was finden Sie?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+Die Aufenthaltsdauer ist stark rechtsschief mit vielen Bindungen ([Seite 3](../foundations/03-distributions.qmd#transform)), und es gibt drei unabhängige Gruppen: der **Kruskal-Wallis-Test**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+kruskal.test(los_days ~ surgeon, data = cohort)
+set.seed(2026)
+effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)
+```
+
+## Python
+
+```{python}
+stays = [group["los_days"] for surgeon, group in cohort.groupby("surgeon")]
+los_test = stats.kruskal(*stays)
+print(los_test, los_test.statistic / (len(cohort) - 1))
+```
+:::
+
+> **Results:** Across the three surgeons, Kruskal-Wallis H = 0.73 (df = 2, p = 0.694; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+
+Es gibt keinen klaren Hinweis darauf, dass sich die Aufenthaltsdauer zwischen den Chirurginnen und Chirurgen unterscheidet.
+:::
+
+**3.** Unterscheidet sich die Häufigkeit von Transplantatversagen innerhalb von 2 Jahren zwischen den drei Transplantaten? Prüfen Sie zuerst die erwarteten Häufigkeiten. Was tun Sie, und was finden Sie?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+failure_table <- table(
+  graft  = factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
+  failed = factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no"))
+)
+failure_table
+# R warnt hier ebenfalls: «Chi-squared approximation may be incorrect»
+chisq.test(failure_table)$expected   # eine erwartete Häufigkeit liegt unter 5
+fisher.test(failure_table)           # exakt, auch bei einer 3 x 2-Tabelle
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+failure_table = pd.crosstab(acl["graft"], acl["failure_2y"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]
+print(failure_table)
+print(stats.chi2_contingency(failure_table).expected_freq)   # eine erwartete Häufigkeit liegt unter 5
+
+# Bei Tabellen, die grösser sind als 2 x 2, schätzt scipy den p-Wert nach Fisher durch zufälliges Neuziehen; mit einem Seed ist er wiederholbar
+failure_fisher = stats.fisher_exact(failure_table.to_numpy(),
+                                    method=stats.PermutationMethod(rng=np.random.default_rng(2026)))
+print(failure_fisher.pvalue)
+```
+:::
+
+Bei einem Quadrizepssehnen-Transplantat beträgt die erwartete Anzahl Versagen 2.9, also unter 5, sodass der Chi-Quadrat-Test nicht zuverlässig ist; R weist selbst darauf hin, mit der Warnung «Chi-squared approximation may be incorrect». Das Zusammenfassen von Transplantaten würde die Frage verändern, verwenden Sie daher den exakten Test nach Fisher auf die ganze 3 × 2-Tabelle. `fisher.test()` in R berechnet ihn exakt (p = 0.943); scipy schätzt ihn aus 9,999 zufälligen Tabellen (0.9405 mit diesem Seed), nahe an R, aber nicht identisch.
+
+> **Results:** Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher's exact test p = 0.943).
+
+Nennen Sie in Ihren Methods, welchen Test Sie für diese Tabelle verwendet haben und warum.
 :::
