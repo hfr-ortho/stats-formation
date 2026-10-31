@@ -1,8 +1,180 @@
 ---
-title: "Installieren & einrichten (in Vorbereitung)"
+title: "Installieren & einrichten"
+description: "Alles, was Sie auf Ihrem Computer brauchen, um die Beispiele auszuführen: R, Python, Git, Positron und dieses Repository."
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/getting-started/setup.qmd).
+Das dauert beim ersten Mal 30–45 Minuten, und Sie machen es nur einmal pro Computer. Gehen Sie die Schritte der Reihe nach durch. Jeder Schritt endet mit einer kurzen Kontrolle.
+
+::: {.callout-note}
+## 💡 Einfach erklärt
+**R** und **Python** sind die Programmiersprachen, die die Statistik rechnen. **Positron** ist die App, in die Sie den Code tippen. **Git** lädt dieses Repository (einen Ordner mit Code und Daten) herunter und hält Änderungen fest. **uv** installiert Python und seine Zusatzpakete (Packages).
 :::
+
+::: {.callout-tip}
+## Sie möchten nur lesen?
+Um diese Website zu lesen, müssen Sie nichts installieren. Installieren Sie erst, wenn Sie den Code selbst ausführen möchten.
+:::
+
+## 1. R installieren {#install-r}
+
+1. Öffnen Sie <https://cloud.r-project.org>.
+2. Klicken Sie auf **Download R for macOS** oder **Download R for Windows**.
+   - **Mac:** Wählen Sie das Installationsprogramm für Ihren Chip. Apple-Menü → **About This Mac** (auf Deutsch **Über diesen Mac**): «Apple M…» bedeutet *Apple silicon (arm64)*, «Intel» bedeutet *Intel (x86_64)*.
+   - **Windows:** Klicken Sie auf **base** und dann auf den Download-Link oben auf der Seite.
+3. Öffnen Sie die heruntergeladene Datei und übernehmen Sie die Standardeinstellungen.
+
+**Kontrolle:** Positron findet R in Schritt 4. Auf einem Mac können Sie auch das Terminal öffnen und `R --version` eingeben.
+
+## 2. uv und Python installieren {#install-uv-and-python}
+
+**Mac:** Öffnen Sie das Terminal und führen Sie aus:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows:** Öffnen Sie PowerShell und führen Sie aus:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Schliessen Sie das Fenster, öffnen Sie ein neues und installieren Sie Python:
+
+```bash
+uv python install 3.13
+```
+
+**Kontrolle:** `uv --version` gibt eine Versionsnummer aus.
+
+## 3. Git installieren {#install-git}
+
+- **Mac:** Führen Sie im Terminal `xcode-select --install` aus und klicken Sie auf **Install**. Das installiert die Kommandozeilen-Werkzeuge von Apple, zu denen Git gehört.
+- **Windows:** Laden Sie Git von <https://git-scm.com/downloads> herunter und übernehmen Sie die Standardeinstellungen.
+
+**Kontrolle:** `git --version` gibt eine Versionsnummer aus.
+
+## 4. Positron installieren {#install-positron}
+
+Laden Sie Positron von <https://positron.posit.co> herunter und installieren Sie es wie jede andere App. Positron führt R und Python nebeneinander aus. Möchten Sie lieber RStudio oder VS Code verwenden? Siehe [Andere Editoren](#other-editors).
+
+## 5. Dieses Repository herunterladen {#get-this-repository}
+
+Legen Sie im Terminal (Mac) oder in PowerShell (Windows) einen Ordner `projects` an und laden Sie das Repository («klonen») in diesen Ordner herunter:
+
+```bash
+mkdir -p ~/projects
+cd ~/projects
+git clone https://github.com/hfr-ortho/stats-formation.git
+```
+
+Verwenden Sie einen Ordner, der **nicht** mit der Cloud synchronisiert wird. `Documents` und `Desktop` werden oft von iCloud (Mac) oder OneDrive (Windows) synchronisiert. Die Synchronisierung verlangsamt die R- und Python-Umgebungen, die die Schritte 6 und 7 anlegen, und kann sie beschädigen.
+
+Wählen Sie dann in Positron **File → Open Folder…** und öffnen Sie `stats-formation`.
+
+## 6. Die R-Packages installieren {#install-the-r-packages}
+
+Starten Sie in Positron eine R-Konsole: Wählen Sie in der Sprachauswahl oben rechts im Bereich **Console** die Option **R**. Weil R im Repository-Ordner startet, schaltet es die Package-Liste dieses Projekts ein. Führen Sie dann aus:
+
+```r
+renv::restore()
+```
+
+Antworten Sie mit **Y**, wenn Sie gefragt werden. Das installiert jedes R-Package, das die Tutorials verwenden, in genau den Versionen, die wir getestet haben. Es dauert einige Minuten.
+
+## 7. Die Python-Packages installieren {#install-the-python-packages}
+
+Öffnen Sie das Terminal von Positron (**Terminal → New Terminal**). Es öffnet sich im Repository-Ordner. Führen Sie aus:
+
+```bash
+uv sync
+```
+
+Das legt im Ordner `.venv` eine eigene Python-Umgebung mit jedem Package an, das die Tutorials verwenden. Sagen Sie Positron dann, dass es diese verwenden soll: Wählen Sie in der Sprachauswahl im Bereich **Console** das Python, dessen Pfad `.venv` enthält.
+
+## 8. Prüfen, ob alles funktioniert {#check-that-everything-works}
+
+Führen Sie im Terminal von Positron beide Prüfungen aus:
+
+```bash
+Rscript scripts/check_setup.R
+uv run python scripts/check_setup.py
+```
+
+Jede Prüfung endet mit `All good - you are ready.` Steht in einer Zeile `PROBLEM`, sagt sie Ihnen, was zu tun ist. Beheben Sie das Problem und führen Sie die Prüfung erneut aus.
+
+Wenn unter Windows `Rscript` «not recognized» meldet, führen Sie die R-Prüfung stattdessen in der R-Konsole von Positron aus:
+
+```r
+source("scripts/check_setup.R")
+```
+
+## Die Daten ohne Klonen lesen {#reading-the-data-without-cloning}
+
+Sie können Schritt 5 (Klonen) überspringen und die Übungsdaten direkt von GitHub lesen. Die Packages brauchen Sie trotzdem, installieren Sie sie also zuerst.
+
+::: {.panel-tabset group="language"}
+## R
+
+```r
+install.packages(c("readr", "readxl"))   # einmalig
+
+cohort <- readr::read_csv("https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/cohort.csv")
+```
+
+## Python
+
+Starten Sie Python mit den Packages, die es braucht. In einem Terminal:
+
+```bash
+uv run --with pandas --with openpyxl python
+```
+
+Dann:
+
+```python
+import pandas as pd
+
+cohort = pd.read_csv("https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/cohort.csv")
+```
+:::
+
+Jede CSV-Datei funktioniert auf dieselbe Weise. Ersetzen Sie in jedem Beispiel `"data/"` durch `"https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/"`.
+
+Excel-Dateien sind anders. `read_excel()` in R kann keine Webadresse lesen, laden Sie die Datei also zuerst herunter. `pd.read_excel()` in Python kann die Adresse direkt lesen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```r
+url <- "https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/messy_abstraction_workbook.xlsx"
+path <- tempfile(fileext = ".xlsx")
+download.file(url, path, mode = "wb")   # "wb" hält die Datei unter Windows unversehrt
+site_a <- readxl::read_excel(path, sheet = "Site A")
+```
+
+## Python
+
+```python
+url = "https://raw.githubusercontent.com/hfr-ortho/stats-formation/main/data/messy_abstraction_workbook.xlsx"
+site_a = pd.read_excel(url, sheet_name="Site A")
+```
+:::
+
+## Fehlerbehebung {#troubleshooting}
+
+| Sie sehen | Tun Sie Folgendes |
+|------|------|
+| `You have not agreed to the Xcode license` (Mac, bei `renv::restore()`) | Führen Sie im Terminal `sudo xcodebuild -license accept` aus und geben Sie Ihr Mac-Passwort ein. Führen Sie dann `renv::restore()` erneut aus. |
+| `there is no package called 'renv'` | Führen Sie in der R-Konsole `install.packages("renv")` aus. Starten Sie R neu (**Session → Restart R**) und führen Sie `renv::restore()` erneut aus. |
+| `uv: command not found` oder «not recognized» | Schliessen Sie das Terminalfenster, öffnen Sie ein neues und versuchen Sie es erneut. |
+| `git: command not found` | Wiederholen Sie Schritt 3. |
+| Python findet in Positron `pandas` nicht | Wählen Sie in der Sprachauswahl der Console das Python aus `.venv` (Schritt 7) und starten Sie die Konsole neu. |
+| Alles andere | Kopieren Sie die ganze Fehlermeldung und schicken Sie sie Ihrer Projektleitung. |
+
+## Andere Editoren {#other-editors}
+
+- **RStudio** (<https://posit.co/download/rstudio-desktop/>) eignet sich hervorragend für R. Es kann auch Python ausführen, aber Positron ist einfacher, wenn Sie beide verwenden.
+- **VS Code** (<https://code.visualstudio.com>) funktioniert ebenfalls: Installieren Sie die Erweiterungen für R und Python.
+
+Alles andere auf dieser Seite bleibt gleich.

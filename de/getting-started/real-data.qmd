@@ -1,8 +1,95 @@
 ---
-title: "Mit echten HFR-Daten arbeiten (in Vorbereitung)"
+title: "Mit echten HFR-Daten arbeiten"
+description: "Patientendaten schützen: die Schweizer Regeln, was Patientinnen und Patienten identifiziert, wo die HFR-Daten liegen und welche Kontrollen Sie vor jedem Commit durchführen."
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/getting-started/real-data.qmd).
+Alles auf dieser Website verwendet erfundene Daten. Ihr echtes Projekt tut das nicht. Diese Seite behandelt die Regeln, die Patientinnen und Patienten und das Freiburger Spital (HFR) schützen. Lesen Sie sie, bevor Sie einen echten Datensatz öffnen.
+
+::: {.callout-warning}
+## ⚠️ Die eine Regel
+**Patientendaten gehören nie in ein Git-Repository.** Das gilt auch für private Repositories, Commits, GitHub-Issues, Screenshots und Chat-Nachrichten. Das Repository dieser Website ist **öffentlich**: Alles, was hier in einen Commit gelangt, kann von jeder Person im Internet gelesen werden, für immer. Kopieren Sie nie echte Daten irgendwohin in diesen Tutorial-Ordner, auch nicht nach `data/` oder `scratch/`.
 :::
+
+## Die Schweizer Regeln {#swiss-rules}
+
+Für jedes Forschungsprojekt des HFR, das Patientendaten verwendet, gelten zwei Regelwerke:
+
+- **Das Humanforschungsgesetz** (HFG; auf Englisch HRA, auf Französisch LRH) und seine Verordnungen. Forschung mit Gesundheitsdaten braucht die Bewilligung der kantonalen Ethikkommission, bevor jemand die Daten anfasst. Für das HFR ist das die CER-VD, und jedes Projekt erhält bei der Einreichung eine BASEC-Nummer. Klinische Versuche, zum Beispiel randomisierte Studien, fallen zusätzlich unter die Verordnung über klinische Versuche (KlinV; auf Englisch ClinO, auf Französisch OClin), und Versuche mit Medizinprodukten, etwa Implantaten, unter ihr Gegenstück für Medizinprodukte (KlinV-Mep; auf Englisch ClinO-MD, auf Französisch OClin-Dim).
+- **Das Datenschutzrecht.** Gesundheitsdaten sind besonders schützenswerte Personendaten. Das HFR ist ein Kantonsspital, deshalb gilt für es das Datenschutzgesetz des Kantons Freiburg, neben den eigenen Regeln des Humanforschungsgesetzes für Forschungsdaten.
+
+Ihre Projektleitung hat die Bewilligung und das Protokoll. Lesen Sie beides, bevor Sie anfangen: Darin steht, welche Daten Sie verwenden dürfen und wie.
+
+### Codiert, nicht anonym {#coded}
+
+Studien am HFR arbeiten mit **codierten** Daten. Jede Patientin und jeder Patient erhält einen Studiencode (zum Beispiel `C0001`), und ein getrennter **Codierungsschlüssel** ordnet die Codes wieder den Patientinnen und Patienten zu. Den Codierungsschlüssel verwahrt getrennt von den Studiendaten die Person, die im Gesuch an die Ethikkommission dafür genannt ist und die nicht am Projekt beteiligt ist, und nie in einem Repository.
+
+«Codiert» (im Gesetz: «verschlüsselt») und «anonym» bedeuten im Schweizer Recht Verschiedenes. Daten sind nur dann anonym, wenn sie sich nicht mehr auf eine Person zurückführen lassen. Daten mit einem Codierungsschlüssel sind deshalb nie anonym. Verwenden Sie in allem, was Sie schreiben, das Wort «codiert», auch in E-Mails, Protokollen und Methoden-Abschnitten.
+
+### Generalkonsent {#general-consent}
+
+Das HFR bittet Patientinnen und Patienten um einen **Generalkonsent** zur Weiterverwendung ihrer Daten für die Forschung. In einer retrospektiven Studie, die bereits während der Behandlung erhobene Daten verwendet, werden nur Patientinnen und Patienten mit unterschriebenem Generalkonsent eingeschlossen, es sei denn, die Ethikkommission hat für Ihr Projekt etwas anderes bewilligt. Patientinnen und Patienten, die **abgelehnt** haben, werden nie eingeschlossen und nicht erneut angefragt. Eine prospektive Studie bittet jede Patientin und jeden Patienten um die Einwilligung zu dieser Studie.
+
+## Was Patientinnen und Patienten identifiziert {#identifiers}
+
+**Direkte Identifikatoren** verlassen die klinischen Systeme nie:
+
+- Namen, Initialen, Geburtsdatum, Adresse, Telefonnummern, E-Mail-Adressen
+- die AHV-Nummer (`756.…`), Patientennummern und Fallnummern des HFR
+- Serien- und Chargennummern von Implantaten
+- Fotos von Patientinnen und Patienten sowie Bilder mit eingebrannten Namen
+
+**Quasi-Identifikatoren** identifizieren in Kombination. In einer kleinen Kohorte können Alter + Geschlecht + Operationsdatum + Spital auf eine einzelne Person hinweisen. Vergröbern Sie sie, bevor die Daten die gesicherte Umgebung verlassen:
+
+- das Alter in Bereichen, mit «90 und älter» für die ganz Alten
+- den Operationsmonat oder das Operationsjahr oder «Tage seit der Operation» statt des Datums
+- «ein Schweizer Regionalspital» statt des Namens des Spitals, wo das Protokoll es erlaubt
+
+## Fallstricke am HFR {#traps}
+
+- **Operationsdaten sind Datumsangaben.** Verwenden Sie stattdessen «Tage seit der Operation» oder das Operationsjahr.
+- **Sehr alte Patientinnen und Patienten.** In einer kleinen Kohorte kann ein Alter von 97 Jahren jemanden identifizieren. Fassen Sie sie als «90 und älter» zusammen.
+- **Studien-IDs, die aus Patientenangaben gebildet sind.** Eine Studien-ID aus Initialen, einer Patientennummer oder einem Geburtsdatum (wie `JS-0412`) ist weiterhin ein Identifikator. Verwenden Sie beliebige Codes wie `C0001`.
+- **Patientennummern verstecken sich in Dateinamen.** Achten Sie auf Namen wie `12345678_xray.png` oder `extraction_AHV.xlsx`.
+- **Implantat-Etiketten.** Chargen- und Seriennummern sind Identifikatoren des Produkts.
+- **Röntgenbilder.** DICOM-Dateien tragen den Namen, die Patientennummer und Datumsangaben der Patientin oder des Patienten im Dateikopf, und manche Bilder haben sie fest in die Pixel eingebrannt.
+- **Freitext-Spalten mit «Notizen».** Dort sammeln sich Namen, Telefonnummern und Datumsangaben.
+- **Screenshots der Krankengeschichte.** Auch sie sind Patientendaten.
+
+## Wo die HFR-Daten liegen {#where}
+
+- Halten Sie die Studiendaten in der REDCap-Datenbank des Projekts: HFR Ortho empfiehlt jedem Projekt, seine Daten dort zu halten. Kopieren Sie sie nirgendwo anders hin.
+- Der Analysecode liegt in einem privaten Repository in der GitHub-Organisation von HFR Ortho. Das Repository liest die Daten zur Laufzeit aus Ordnern, die Git ignoriert (`data/raw/`, `db/`, `exports/`) und die *vor dem ersten Commit* in `.gitignore` aufgeführt sind.
+- Der Codierungsschlüssel bleibt bei der Person, die im Gesuch an die Ethikkommission dafür genannt ist und die nicht am Projekt beteiligt ist, nie in einem Repository.
+- Was die gesicherte Umgebung verlässt, ist aggregiert: Tabellen, Abbildungen und Modellresultate. Ihr Protokoll kann verlangen, kleine Fallzahlen auszublenden.
+
+## Wie HFR-Projekte im Code mit Daten umgehen {#in-code}
+
+Diese Regeln stammen aus den Projekt-Repositories von HFR Ortho. [Aufgeräumte Daten](../foundations/01-tidy-data.qmd) übt jede einzelne.
+
+1. **Lesen Sie zunächst alles als Text.** Datumsangaben treffen in mehreren Formaten ein, Zahlen enthalten verirrten Text, und Listen stehen in einzelnen Zellen. Wandeln Sie Typen in einem bewussten, festgehaltenen Schritt um, nie stillschweigend beim Einlesen.
+2. **Ordnen Sie Spalten nach Namen zu, nicht nach Position.** Zwei Tabellenblätter derselben Arbeitsmappe können unterschiedliche Spalten haben.
+3. **Prüfen Sie, was Sie geändert haben.** Vergleichen Sie nach jedem Bereinigungsschritt die Anzahl der Zeilen und die Zusammenfassungen vorher und nachher.
+
+## Tools mit künstlicher Intelligenz {#ai}
+
+**Fügen Sie nie echte Patientendaten in einen Chatbot mit künstlicher Intelligenz oder auf irgendeiner Website ein.** Das gilt auch für ChatGPT, Claude, Copilot und Online-«Datenbereinigungstools». Die einzige Ausnahme ist ein Tool, das das HFR für Patientendaten freigegeben hat; fragen Sie Ihre Projektleitung. Die synthetischen Daten dieser Website dürfen Sie überall einfügen.
+
+## Vor jedem Commit {#before-commit}
+
+Führen Sie diese beiden Befehle aus und lesen Sie die Ausgabe:
+
+```bash
+git status
+git diff --staged
+```
+
+Prüfen Sie, dass keine Datendatei, kein Export und kein Screenshot aufgeführt ist. Sehen Sie eine, nehmen Sie sie mit `git restore --staged <file>` wieder aus dem Staging-Bereich.
+
+## Wenn etwas schiefgeht {#incident}
+
+Wenn Patientendaten in einen Commit, einen Push oder ein Issue gelangen:
+
+1. **Halt.** Versuchen Sie nicht, es mit einem weiteren Commit zu beheben. Git bewahrt den Verlauf auf.
+2. **Informieren Sie sofort Ihre Projektleitung.** Die Daten müssen aus dem Verlauf gelöscht werden, und Ihre Projektleitung entscheidet, ob der Vorfall gemeldet werden muss und an wen.
+
+Schnell zu melden ist immer richtig, und niemand wird verärgert sein, dass Sie es getan haben.

@@ -1,8 +1,146 @@
 ---
-title: "So benutzen Sie diese Website (in Vorbereitung)"
+title: "So benutzen Sie diese Website"
+description: "R oder Python wählen, die Beispiele selbst ausführen, die Hinweiskästen, wie Resultate berichtet werden und wie die Übungen funktionieren."
+engine: knitr
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/getting-started/using-this-site.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+## R oder Python einmal wählen {#pick-r-or-python-once}
+
+Jedes Beispiel auf dieser Website steht zweimal da: einmal in **R** und einmal in **Python**. Beide geben dieselbe Antwort. Klicken Sie auf einen Reiter, um zu wählen. Die Website merkt sich Ihre Wahl auf jeder Seite, Sie wählen also nur einmal. (Die Links EN, DE und FR oben auf der Seite ändern die Sprache des Texts, nicht die des Codes.)
+
+Hier ein kleines Beispiel: das Alter von fünf erfundenen Patientinnen und Patienten, ihr Mittelwert und ihre Standardabweichung (SD).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ages <- c(64, 71, 58, 69, 75)   # Alter von fünf erfundenen Patientinnen und Patienten
+
+mean_age <- mean(ages)           # der Durchschnitt
+sd_age <- sd(ages)               # die Standardabweichung
+
+mean_age
+sd_age
+```
+
+## Python
+
+```{python}
+import pandas as pd
+
+ages = pd.Series([64, 71, 58, 69, 75])   # Alter von fünf erfundenen Patientinnen und Patienten
+
+mean_age = ages.mean()                    # der Durchschnitt
+sd_age = ages.std()                       # die Standardabweichung
+
+print(mean_age)
+print(sd_age)
+```
 :::
+
+```{r}
+#| include: false
+check_agree(
+  list(mean = mean_age, sd = sd_age),
+  list(mean = reticulate::py$mean_age, sd = reticulate::py$sd_age)
+)
+```
+
+Beide geben ein mittleres Alter von 67.4 Jahren mit einer SD von 6.6 Jahren an.
+
+::: {.callout-tip}
+## 🔀 R oder Python: die Falle bei der Standardabweichung
+Python kennt zwei gebräuchliche Arten, eine SD zu berechnen, und sie liefern unterschiedliche Werte. `pandas` (`ages.std()`) teilt durch *n − 1*, wie `sd()` in R. `numpy` (`np.std(ages)`) teilt durch *n*, ausser Sie schreiben `np.std(ages, ddof=1)`. Medizinische Publikationen berichten die Version mit *n − 1*. Wo sich die Standardwerte der beiden Sprachen unterscheiden, legt diese Website sie ausdrücklich fest und erklärt in einem Kasten wie diesem, warum.
+:::
+
+Im Hintergrund prüft jede Seite, dass die Antworten von R und Python übereinstimmen. Stimmen sie je nicht überein, wird die Website gar nicht erst erstellt. Sie können sich also darauf verlassen, dass beide Reiter dasselbe sagen.
+
+## Den Code selbst ausführen {#running-the-code-yourself}
+
+1. Öffnen Sie den Repository-Ordner in Positron (siehe [Installieren & einrichten](setup.qmd)).
+2. Speichern Sie Übungsdateien im Ordner `scratch/`, zum Beispiel `scratch/practice.R` oder `scratch/practice.py`. Git ignoriert alles in `scratch/`, Übungsdateien können also nie versehentlich in einen Commit gelangen.
+3. Kopieren Sie Code mit der Kopierschaltfläche, die oben rechts in jedem Codeblock erscheint.
+4. Führen Sie eine Zeile mit **Cmd+Enter** (Mac) oder **Ctrl+Enter** (Windows) aus. Positron schickt sie an die Konsole.
+
+Datenpfade wie `data/cohort.csv` beziehen sich auf den obersten Ordner des Repositorys. Positron startet dort, wenn Sie den Ordner öffnen, die Pfade funktionieren also ohne weiteres.
+
+## Die Hinweiskästen {#the-boxes-youll-see}
+
+::: {.callout-note}
+## 💡 Einfach erklärt
+Die Idee ohne Fachjargon. Wenn Sie bei einer Seite den Faden verlieren, lesen Sie zuerst diese Kästen.
+:::
+
+::: {.callout-warning}
+## ⚠️ Achtung
+Fehler, die wir oft sehen, und wie Sie sie vermeiden.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python
+Wo sich die Standardwerte der beiden Sprachen unterscheiden und was diese Website dagegen tut.
+:::
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube
+Die Mathematik, für Neugierige. Diese Kästen sind zunächst geschlossen: Klicken Sie, um sie zu öffnen. Um einen Test richtig anzuwenden, brauchen Sie sie nie.
+:::
+
+## Wie Resultate berichtet werden {#how-results-are-reported}
+
+Jeder Abschnitt «Resultate formulieren» auf dieser Website folgt denselben Regeln. Sie entsprechen dem, was die Gutachterinnen und Gutachter von Fachzeitschriften wie JBJS, *The Bone & Joint Journal* und *CORR* erwarten.
+
+| Was | Berichten als | Beispiel |
+|------|------|------|
+| Kontinuierlich, ungefähr symmetrisch | Mittelwert (SD) | Alter 67.4 (6.6) Jahre |
+| Kontinuierlich, schief verteilt | Median (IQR) | Aufenthaltsdauer 1 (0 bis 2) Tage |
+| Kategorien | n (%) | 312 (52 %) weiblich |
+| p-Werte | drei Dezimalstellen; nie «p = 0.000» oder «p = 1.000» | p = 0.017; p < 0.001; p > 0.999 |
+| Effektschätzungen | mit einem 95%-Konfidenzintervall (KI) | Differenz 1.6 kg/m² (95%-KI 0.7 bis 2.5) |
+
+Die Beispiele in der Tabelle sind Illustrationen, keine Resultate aus unseren Daten. [Demografie (Tabelle 1)](../foundations/02-demographics.qmd) zeigt das vollständige Layout der Tabelle 1.
+
+**Results-Sätze nennen die Zahlen und hören dann auf:** den Wert jeder Gruppe, den Schätzwert mit seinem 95%-KI und den p-Wert. Lassen Sie Wörter weg, die die Zahlen interpretieren, etwa «similar», «higher than», «more often», «improved», «significant», «no clear evidence», oder Etiketten wie «good» oder «moderate». Zu sagen, was die Zahlen bedeuten, ist Aufgabe der Diskussion. Ein Beispiel:
+
+> KOOS JR at 1 year was a median of 87 points (IQR 76 to 94) in men and 85 (IQR 73 to 94) in women (Hodges-Lehmann difference 1 point, 95% CI −2 to 4; p = 0.432).
+
+Im Text rund um jeden Results-Satz interpretiert diese Website die Zahlen durchaus, denn so lernen Sie, eine Ausgabe zu lesen. Der Results-Satz selbst ist der Teil, den Sie in ein Manuskript übernehmen.
+
+## Übungen {#exercises}
+
+Jede Seite endet mit zwei bis vier kurzen Übungen zu den Übungsdaten. Sie werden in drei Stufen schwieriger: dieselbe Analyse mit einer anderen Variable durchführen, für ein kurzes Szenario den richtigen Test wählen und dann den Results-Satz schreiben. Die Lösungen sind in beiden Sprachen verborgen. Versuchen Sie es zuerst selbst und prüfen Sie dann.
+
+**Probieren Sie es aus:** Bestimmen Sie mit denselben fünf Altersangaben den **Median**.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```r
+ages <- c(64, 71, 58, 69, 75)
+median(ages)   # 69
+```
+
+## Python
+
+```python
+import pandas as pd
+
+ages = pd.Series([64, 71, 58, 69, 75])
+ages.median()   # 69.0
+```
+:::
+
+:::
+
+## Hilfe bekommen {#getting-help}
+
+- Etwas auf dieser Website ist falsch oder unklar? [Eröffnen Sie ein Issue](https://github.com/hfr-ortho/stats-formation/issues) auf GitHub.
+- Eine Frage zu Ihrem eigenen Projekt? Fragen Sie Ihre Projektleitung.

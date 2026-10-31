@@ -504,7 +504,7 @@ GENERIC = {
 }
 FUNCTION_WORDS = {
     "fr": {"de", "du", "des", "la", "le", "les", "à", "pour", "un", "une", "et"},
-    "de": {"der", "die", "das", "des", "für", "von", "nach", "und"},
+    "de": {"der", "die", "das", "des", "für", "von", "nach", "und", "paarweise"},
 }
 # Names a reader would look up under another word than the rule finds.
 SORT_AS = {"Test d'adéquation du khi-deux": "khi-deux", "Vérification des risques proportionnels": "risques proportionnels"}
@@ -524,7 +524,7 @@ def sort_key(row: str, generic: set, function_words: set, german: bool = False) 
         if german:
             words = [w.rsplit("-", 1)[0] if "-" in w and w.rsplit("-", 1)[1].lower() in generic else w for w in words]
             after = [words[i + 1] for i, w in enumerate(words[:-1]) if w.lower() == "nach"]
-            proper = after[:1]
+            proper = after[:1] or [w for w in words if w.isalpha() and w.isupper() and len(w) > 2]    # "Einfaktorielle ANOVA" under ANOVA
         else:
             proper = [w for w in words[1:] if w[:1].isupper() and not w.isupper()]
         rest = [w for w in words if w.lower() not in generic | function_words and w]
@@ -549,6 +549,11 @@ def test_german_sort_key_finds_the_distinctive_name():
     assert key("t-Test für gepaarte Stichproben (*x*)") == "t"
     assert key("Aalen-Johansen-Schätzer (*x*)") == "aalen-johansen"
     assert key("Äquivalenz der Varianzen (*x*)") == "aquivalenz"
+    assert key("Einfaktorielle ANOVA (*x*)") == "anova"
+    assert key("ANOVA mit Messwiederholung (*x*)") == "anova"
+    assert key("Anteil mit 95%-KI (*x*)") == "anteil"
+    assert key("Paarweise Log-Rank-Tests (*x*)") == "log-rank"
+    assert key("Paarweise exakte Tests nach Fisher (*x*)") == "fisher"
 
 
 def test_sort_key_finds_the_distinctive_name():
