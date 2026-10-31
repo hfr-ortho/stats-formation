@@ -154,7 +154,7 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 
 ### Effektstärke und 95%-KI
 
-Das **partielle Eta-Quadrat (η²~p~)** ist der Anteil der Variation innerhalb der Personen, den die Kontrollen erklären. Als grobe Richtschnur: 0.01 ist klein, 0.06 mittel und 0.14 gross. Das **generalisierte Eta-Quadrat** (ges = 0.417 in R) berücksichtigt auch die Unterschiede *zwischen* den Personen, wodurch es mit Studiendesigns ohne Messwiederholung vergleichbar wird; berichten Sie es, wenn Leserinnen und Leser Studien mit unterschiedlichem Design vergleichen. Zur Effektstärke gehört ein Konfidenzintervall (KI).
+Das **partielle Eta-Quadrat (η²~p~)** ist der Anteil der Variation innerhalb der Personen, den die Kontrollen erklären. Als grobe Richtschnur: 0.01 ist klein, 0.06 mittel und 0.14 gross. Das **generalisierte Eta-Quadrat** (ges = 0.417 in R) berücksichtigt auch die Unterschiede *zwischen* den Personen, wodurch es mit Studiendesigns ohne Messwiederholung vergleichbar wird; berichten Sie es, wenn Leserinnen und Leser Studien mit unterschiedlichem Design vergleichen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -181,7 +181,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin berechnet dafür kein KI
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Ein signifikantes F sagt nicht, welche Kontrollen sich unterscheiden
-Die ANOVA sagt, dass sich die körperliche Funktion im Lauf des Jahres irgendwann verändert hat. Um zu sagen, *wann*, vergleichen Sie die Kontrollen mit gepaarten Tests und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Und denken Sie an die Fehlenden: Die 246 Personen ohne vollständige Daten können sich anders erholt haben.
+Die ANOVA sagt, dass die Mittelwerte der Kontrollen nicht alle gleich sind. Um zu sagen, *wann*, vergleichen Sie die Kontrollen mit gepaarten Tests und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Und denken Sie an die Fehlenden: Die 246 Personen ohne vollständige Daten können sich anders erholt haben.
 :::
 
 ::: {.callout-tip}
@@ -331,7 +331,7 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85: ein grosser Effekt. Die meisten Personen verbesserten sich von einer Studienvisite zur nächsten. Das KI von R stammt aus einem Bootstrap, weshalb der Code einen Seed setzt; pingouin berechnet keines.
+W = 0.85: ein grosser Effekt. Die meisten Personen verbesserten sich von einer Studienvisite zur nächsten. Das Konfidenzintervall (KI) von R stammt aus einem Bootstrap, weshalb der Code einen Seed setzt; pingouin berechnet keines.
 
 ### Resultate formulieren
 
@@ -346,12 +346,12 @@ Er verwendet nur die Rangfolge der Studienvisiten bei jeder Person. Eine Person,
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Datenformate
-`friedman.test()` in R nimmt eine Formel, `outcome ~ visit | patient`, auf Daten im langen Format. `friedman()` in pingouin nimmt ebenfalls Daten im langen Format; `friedmanchisquare()` in scipy will dagegen Daten im breiten Format mit einer Spalte pro Studienvisite. Alle drei korrigieren für gleiche Scores innerhalb einer Person, stimmen also überein.
+`friedman.test()` in R nimmt eine Formel, `outcome ~ visit | patient`, auf Daten im langen Format. `friedman()` in pingouin nimmt ebenfalls Daten im langen Format; `friedmanchisquare()` in scipy will dagegen Daten im breiten Format mit einer Spalte pro Studienvisite. Alle drei korrigieren für gebundene Scores innerhalb einer Person, stimmen also überein.
 :::
 
 ## Cochran-Q-Test {#cochran-q}
 
-**Die Frage:** Verändert sich der Gebrauch von Gehhilfen im ersten Jahr nach der Operation?
+**Die Frage:** Verändert sich die Benutzung von Gehhilfen im ersten Jahr nach der Operation?
 
 ### Wann verwenden
 
@@ -473,7 +473,7 @@ check_agree(c(setNames(as.list(aid_ci[1, ]), paste0("low_", visit_names)),
               setNames(as.list(aid_ci[2, ]), paste0("high_", visit_names))), reticulate::py$chk)
 ```
 
-Der Gebrauch stieg um 24.4 Prozentpunkte von vor der Operation bis 6 Wochen und lag nach 1 Jahr deutlich unter dem Wert vor der Operation (24.4 Punkte tiefer).
+Die Benutzung stieg um 24.4 Prozentpunkte von vor der Operation bis 6 Wochen und lag nach 1 Jahr deutlich unter dem Wert vor der Operation (24.4 Punkte tiefer).
 
 ### Resultate formulieren
 
@@ -483,7 +483,7 @@ Der Gebrauch stieg um 24.4 Prozentpunkte von vor der Operation bis 6 Wochen und 
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Q sagt nichts über die Richtung
-Der Gebrauch ging zuerst **hinauf** und dann **hinunter**. Der Cochran-Q-Test sagt nur, dass er nicht bei jeder Kontrolle gleich war. Um zu sagen, welche Veränderungen echt sind, vergleichen Sie Paare von Kontrollen mit dem McNemar-Test und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-cochran-q)).
+Die Benutzung ging zuerst **hinauf** und dann **hinunter**. Der Cochran-Q-Test sagt nur, dass sie nicht bei jeder Kontrolle gleich war. Um zu sagen, welche Veränderungen tatsächlich bestehen, vergleichen Sie Paare von Kontrollen mit dem McNemar-Test und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-cochran-q)).
 :::
 
 ::: {.callout-tip}
@@ -594,7 +594,7 @@ Die **Hazard Ratios** mit ihren 95%-KI: Innerhalb gematchter Gruppen war der Haz
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: nur 24 Ereignisse
-Ein Cox-Modell braucht Ereignisse, nicht nur Patientinnen und Patienten. Bei 24 Revisionen auf drei Implantate sind die KI breit, und das Modell trägt keine Adjustierung für weitere Variablen. [Seite 14](../survival/14-cox-regression.qmd#choosing-covariates) behandelt, wie viele Ereignisse ein Modell braucht.
+Ein Cox-Modell braucht Ereignisse, nicht nur Patientinnen und Patienten. Bei 24 Revisionen auf drei Implantate sind die KI breit, und das Modell lässt keine Adjustierung für weitere Variablen zu. [Seite 14](../survival/14-cox-regression.qmd#choosing-covariates) behandelt, wie viele Ereignisse ein Modell braucht.
 :::
 
 ::: {.callout-tip}
@@ -690,7 +690,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Wiederholen Sie die ANOVA mit Messwiederholung für die körperliche Funktion PROMIS nur bei den Hüftgelenkersätzen (`instrument == "HOOS JR"`; der HOOS JR ist der Score für Hüft-Gelenkersatz, Kurzform).
+**1.** Wiederholen Sie die ANOVA mit Messwiederholung für die körperliche Funktion PROMIS nur bei den Hüftgelenkersätzen (`instrument == "HOOS JR"`; der HOOS JR ist der Score für Hüftgelenkersatz, Kurzform).
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -727,7 +727,7 @@ print(pf_hips.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[["preop", "
 > **Results:** Among 136 hip replacements with all four measurements, mean PROMIS physical function was 36.8 (SD 5.8) before surgery, 38.7 (SD 5.3) at 6 weeks, 45.5 (SD 5.2) at 3 months and 47.9 (SD 5.8) at 1 year (F(3, 405) = 128.4, p < 0.001; η²~p~ = 0.49, one-sided 95% CI 0.43 to 1.00; Mauchly's test of sphericity p = 0.247).
 :::
 
-**2.** Eine Kollegin möchte wissen, ob sich der Schmerz mit einem Walker zwischen 6 Wochen, 3 Monaten und 12 Monaten weiter verändert. Welchen Test würden Sie verwenden, und was finden Sie?
+**2.** Kolleginnen und Kollegen möchten wissen, ob sich der Schmerz mit einem Walker zwischen 6 Wochen, 3 Monaten und 12 Monaten weiter verändert. Welchen Test würden Sie verwenden, und was finden Sie?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -767,7 +767,7 @@ print(pain_boot.groupby("visit")["pain_nrs"].describe()[["25%", "50%", "75%"]].l
 > **Results:** Among 50 patients in the boot arm with all three scores, median pain was 3.5 (IQR 3 to 4) at 6 weeks, 2 (IQR 1 to 3) at 3 months and 1 (IQR 0 to 2) at 12 months (Friedman χ² = 53.9, df = 2, p < 0.001; Kendall's W = 0.54, one-sided 95% CI 0.42 to 1.00).
 :::
 
-**3.** Wenn Sie die präoperative Kontrolle weglassen: Verändert sich der Gebrauch von Gehhilfen zwischen 6 Wochen, 3 Monaten und 1 Jahr? Führen Sie den Test durch und schreiben Sie den Results-Satz.
+**3.** Wenn Sie die präoperative Kontrolle weglassen: Verändert sich die Benutzung von Gehhilfen zwischen 6 Wochen, 3 Monaten und 1 Jahr? Führen Sie den Test durch und schreiben Sie den Results-Satz.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
