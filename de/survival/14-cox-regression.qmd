@@ -28,12 +28,12 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages, Daten und Modelle, die weiter oben erstellt wurden.
 
-Bis zum Abschnitt über [beidseitig operierte Patientinnen und Patienten](#stratified-cox) behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Im Code heissen Hüft-TP und Knie-TP THA und TKA.
+Bis zum Abschnitt über [beidseitig operierte Patientinnen und Patienten](#stratified-cox) behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Im Code heisst die Hüft-TP THA, die Knie-TP TKA.
 :::
 
 ## Das Hazard Ratio {#hazard-ratio}
 
-Der **Hazard** (momentane Ereignisrate) ist die Revisionsrate zu einem bestimmten Zeitpunkt unter den Implantaten, die noch eingesetzt sind: die Wahrscheinlichkeit, dass ein nicht revidiertes Implantat im nächsten kurzen Zeitintervall revidiert wird. Er kann im Lauf der Zeit steigen oder sinken. Das **Hazard Ratio** (HR) teilt den Hazard der einen Gruppe durch den der anderen. Ein Cox-Modell setzt voraus, dass dieses Verhältnis über die gesamte Nachbeobachtung gleich bleibt, auch wenn sich die Hazards selbst verändern: Die Hazards sind **proportional**.
+Der **Hazard** (momentane Ereignisrate) ist die Revisionsrate zu einem bestimmten Zeitpunkt unter den Implantaten, die noch eingesetzt sind: die Wahrscheinlichkeit pro Zeiteinheit, dass ein nicht revidiertes Implantat in diesem Moment revidiert wird. Er kann im Lauf der Zeit steigen oder sinken. Das **Hazard Ratio** (HR) teilt den Hazard der einen Gruppe durch den der anderen. Ein Cox-Modell setzt voraus, dass dieses Verhältnis über die gesamte Nachbeobachtung gleich bleibt, auch wenn sich die Hazards selbst verändern: Die Hazards sind **proportional**.
 
 Hier ist das Cox-Modell nur für das Implantat, mit Implantat A als Referenz:
 
@@ -154,7 +154,7 @@ check_agree(list(risk_A = risk_5[1], risk_B = risk_5[2], risk_C = risk_5[3]), re
 Bei einer Studie, die Implantate vergleicht, gibt es eine Frage: Ist das Revisionsrisiko mit Implantat C höher als mit Implantat A? Die übrigen Prädiktoren im Modell sollen diesen Vergleich fair machen. Diese **Kovariaten** werden festgelegt, bevor Sie die Resultate ansehen, aus einem Grund, den Sie aufschreiben können:
 
 - **Für Störfaktoren (Confounder) adjustieren:** Faktoren, die sowohl beeinflussen, welches Implantat jemand erhält, als auch das Revisionsrisiko. Alter, Geschlecht und BMI (Body-Mass-Index) sind beim Gelenkersatz die üblichen: Chirurginnen und Chirurgen wählen Implantate möglicherweise bei älteren, schwereren oder weiblichen Personen anders aus, und diese Faktoren können das Revisionsrisiko verändern.
-- **Adjustieren Sie nicht für das, was das Implantat verursacht.** Eine Luxation oder eine Reoperation, die auf die Implantatwahl folgt, gehört zum Effekt des Implantats und ist kein Grund für ihn. Wer dafür adjustiert, verdeckt den Effekt, den Sie messen wollen.
+- **Adjustieren Sie nicht für das, was das Implantat verursacht.** Eine Luxation oder eine Reoperation, die auf die Implantatwahl folgt, gehört zum Effekt des Implantats und ist kein Grund für ihn. Wenn Sie dafür adjustieren, verdecken Sie den Effekt, den Sie messen wollen.
 - **Wählen Sie Kovariaten nicht anhand der Daten aus.** Wenn Sie nur die Prädiktoren mit p < 0.2 in univariablen Modellen behalten oder ein schrittweises Verfahren (Stepwise) auswählen lassen, wirken p-Werte und KI sicherer, als sie sind, und in jeder Stichprobe ergeben sich andere Antworten.
 
 **Ereignisse begrenzen das Modell.** Ein Cox-Modell braucht etwa **10 Ereignisse pro Term**, wobei ein Term ein Koeffizient ist: Ein Prädiktor mit zwei Stufen wie das Geschlecht ist ein Term, das Implantat (B und C gegenüber A) sind zwei, und ein Spline mit 3 Freiheitsgraden sind drei. Die Übungskohorte hat 81 Revisionen, genug für etwa acht Terme. Implantat, Alter, Geschlecht und BMI brauchen fünf, etwa 16 Ereignisse pro Term. Bei weniger Ereignissen adjustieren Sie für weniger Faktoren und geben das an.
@@ -210,7 +210,7 @@ Das Modell gibt auch Hazard Ratios für Alter, Geschlecht und BMI aus. Der Hazar
 
 ## Ist der Effekt eine gerade Linie? {#linearity}
 
-Ein gemessener Prädiktor wie das Alter geht als gerade Linie ins Modell ein: Je zusätzliche 10 Jahre multipliziert sich der Hazard mit demselben Faktor, ob von 50 auf 60 oder von 75 auf 85. Zur Prüfung lassen Sie den Effekt mit einem **natürlichen kubischen Spline** biegen ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) erklärt Splines) und vergleichen die beiden Modelle mit einem Likelihood-Quotienten-Test:
+Ein gemessener Prädiktor wie das Alter geht als gerade Linie ins Modell ein: Pro zusätzliche 10 Jahre multipliziert sich der Hazard mit demselben Faktor, ob von 50 auf 60 oder von 75 auf 85. Zur Prüfung lassen Sie den Effekt sich mit einem **natürlichen kubischen Spline** krümmen ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) erklärt Splines) und vergleichen die beiden Modelle mit einem Likelihood-Quotienten-Test:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -375,7 +375,7 @@ Bei vielen Ereignissen erkennt der Test Veränderungen, die zu klein sind, um ei
 
 Es gibt zwei übliche Lösungen. Welche passt, hängt davon ab, ob Sie das Hazard Ratio des Prädiktors brauchen, der die Voraussetzung verletzt.
 
-**1. Stratifizieren, wenn es nur eine Adjustierung ist.** Angenommen, die Frage betrifft das Implantat bei Hüft-TP, und der Zugang ist nur eine Kovariate. Ein nach Zugang **stratifiziertes** Cox-Modell gibt jedem Zugang sein eigenes Basisrisiko (Baseline-Hazard) beliebiger Form und schätzt die Hazard Ratios der Implantate innerhalb der Zugänge. Der Zugang erhält kein eigenes Hazard Ratio, sodass sein nicht proportionaler Effekt keine Rolle mehr spielt.
+**1. Stratifizieren, wenn es nur eine Adjustierung ist.** Angenommen, die Frage betrifft das Implantat bei Hüft-TP, und der Zugang ist nur eine Kovariate. Ein nach Zugang **stratifiziertes** Cox-Modell gibt jedem Zugang seinen eigenen Baseline-Hazard beliebiger Form und schätzt die Hazard Ratios der Implantate innerhalb der Zugänge. Der Zugang erhält kein eigenes Hazard Ratio, sodass sein nicht proportionaler Effekt keine Rolle mehr spielt.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -480,9 +480,9 @@ check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early 
             reticulate::py$chk)
 ```
 
-In den ersten 6 Monaten war der Hazard einer Revision nach dem posterioren Zugang 8.47-mal so hoch (95%-KI 1.93 bis 37.3). Nach 6 Monaten betrug der Schätzwert 0.43 (95%-KI 0.16 bis 1.16), was unpräzise ist. Das KI für den frühen Effekt ist breit, weil es auf 16 frühen Revisionen beruht.
+In den ersten 6 Monaten war der Hazard einer Revision nach dem posterioren Zugang 8.47-mal so hoch (95%-KI 1.93 bis 37.3). Nach 6 Monaten betrug der Schätzwert 0.43 (95%-KI 0.16 bis 1.16), was wenig präzise ist. Das KI für den frühen Effekt ist breit, weil es auf 16 frühen Revisionen beruht.
 
-Wählen Sie den Zeitpunkt der Aufteilung vorab, aus klinischen Überlegungen: hier der Zeitraum mit dem höchsten Luxationsrisiko nach Hüftgelenkersatz. Mehrere Zeitpunkte auszuprobieren, bis einer ein auffälliges Resultat liefert, ist Data Dredging (Datenfischen). R kann ein Hazard Ratio auch gleichmässig mit der Zeit verändern lassen (das Argument `tt()` von `coxph()`), was die Wahl eines Zeitpunkts vermeidet.
+Wählen Sie den Zeitpunkt der Aufteilung vorab, aus klinischen Überlegungen: hier das Ende des Zeitraums mit dem höchsten Luxationsrisiko nach Hüftgelenkersatz. Mehrere Zeitpunkte auszuprobieren, bis einer ein auffälliges Resultat liefert, ist Data Dredging (Datenfischen). R kann ein Hazard Ratio auch stetig mit der Zeit verändern lassen (das Argument `tt()` von `coxph()`), was die Wahl eines Zeitpunkts vermeidet.
 
 > **Methods:** Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.
 >
@@ -494,10 +494,10 @@ Ein Cox-Modell setzt voraus, dass jede Zeile eine unabhängige Person ist. Zwei 
 
 **Gematchte Gruppen.** Wenn jede Person mit Implantat C mit ähnlichen Personen gematcht wird, die andere Implantate erhielten, gehören die gematchten Personen zusammen. Ein **nach gematchter Gruppe stratifiziertes** Cox-Modell, `strata(set_id)`, vergleicht die Implantate nur innerhalb der Gruppen. Die Entscheidungstabelle nennt das *bedingte Regression mit proportionalen Hazards*. [Seite 7](../catalog/07-two-paired-groups.qmd#stratified-cox) behandelt gematchte Paare und [Seite 9](../catalog/09-three-plus-matched.qmd#stratified-cox) gematchte Gruppen von je drei Personen.
 
-**Beidseitig operierte Patientinnen und Patienten.** In der Kohorte hatten 80 Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz. Ihre beiden Gelenke teilen denselben Knochen, dieselbe Aktivität und dieselbe Chirurgin oder denselben Chirurgen, ihre Zielgrössen sind also nicht unabhängig, und wenn man sie als unabhängig behandelt, werden die KI zu schmal. Es gibt drei übliche Möglichkeiten:
+**Beidseitig operierte Patientinnen und Patienten.** In der Kohorte hatten 80 Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz. Ihre beiden Gelenke gehören zur selben Person: dieselbe Knochenqualität, dieselbe Aktivität, dieselbe Chirurgin oder derselbe Chirurg. Ihre Zielgrössen sind also nicht unabhängig, und wenn man sie als unabhängig behandelt, werden die KI zu schmal. Es gibt drei übliche Möglichkeiten:
 
-- **Beide Gelenke behalten und robuste Standardfehler verwenden**, bei denen die Gelenke derselben Person zusammengefasst werden (*clustered on patient*). Die Hazard Ratios ändern sich nicht; die KI berücksichtigen die Paarung der beiden Gelenke. Das ist die übliche Wahl.
-- **Nach Patient stratifizieren**, `strata(patient_id)`, um die beiden Seiten jeder Person zu vergleichen. Nur Personen, deren beide Gelenke sich im Prädiktor unterscheiden und die eine Revision hatten, tragen etwas bei, sodass das Resultat selten genau genug ist.
+- **Beide Gelenke behalten und robuste Standardfehler verwenden**, die nach Person geclustert sind (*clustered on patient*). Die Hazard Ratios ändern sich nicht; die KI berücksichtigen die Paarung der beiden Gelenke. Das ist die übliche Wahl.
+- **Nach Person stratifizieren**, `strata(patient_id)`, um die beiden Seiten jeder Person zu vergleichen. Nur Personen, deren beide Gelenke sich im Prädiktor unterscheiden und die eine Revision hatten, tragen etwas bei, sodass das Resultat selten präzise genug ist.
 - **Ein Gelenk pro Person behalten**, etwa das zuerst operierte. Einfach, aber es wirft Daten weg.
 
 ::: {.panel-tabset group="language"}
@@ -505,7 +505,7 @@ Ein Cox-Modell setzt voraus, dass jede Zeile eine unabhängige Person ist. Zwei 
 
 ```{r}
 clustered_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5,
-                         data = cohort, cluster = patient_id)    # robuste Standardfehler, nach Patient zusammengefasst
+                         data = cohort, cluster = patient_id)    # robuste Standardfehler, nach Person geclustert
 summary(clustered_model)$coefficients[, c("exp(coef)", "se(coef)", "robust se", "Pr(>|z|)")]
 summary(clustered_model)$conf.int["implantC", ]
 ```
@@ -516,7 +516,7 @@ summary(clustered_model)$conf.int["implantC", ]
 clustered_model = CoxPHFitter().fit(
     cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "patient_id"]],
     duration_col="followup_years", event_col="revised", formula="implant + age_10 + sex + bmi_5",
-    cluster_col="patient_id",                              # robuste Standardfehler, nach Patient zusammengefasst
+    cluster_col="patient_id",                              # robuste Standardfehler, nach Person geclustert
     fit_options={"precision": 1e-12},
 )
 print(clustered_model.summary[["exp(coef)", "se(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]])
@@ -542,7 +542,7 @@ check_agree(list(se_b = robust_se[["implantB"]], se_c = robust_se[["implantC"]],
 ```
 
 - **exp(coef):** unverändert: Das Hazard Ratio von Implantat C ist weiterhin 3.19.
-- **se(coef) / robust se:** R gibt beide aus; lifelines gibt bei der Zusammenfassung nach Patient nur den robusten aus. Hier sind sie fast gleich (0.259 und 0.258 für Implantat C), sodass sich das KI kaum verändert (1.92 bis 5.28). Nur 20 der 80 beidseitig operierten Personen hatten eine Revision, die Paarung spielt in dieser Kohorte also wenig Rolle. In Ihren Daten kann sie viel mehr ausmachen: Prüfen Sie das und sagen Sie in den Methoden, was Sie getan haben.
+- **se(coef) / robust se:** R gibt beide aus; lifelines gibt beim Clustern nur den robusten aus. Hier sind sie fast gleich (0.259 und 0.258 für Implantat C), sodass sich das KI kaum verändert (1.92 bis 5.28). Nur 20 der 80 beidseitig operierten Personen hatten eine Revision, die Paarung spielt in dieser Kohorte also wenig Rolle. In Ihren Daten kann sie viel mehr ausmachen: Prüfen Sie das und sagen Sie in den Methoden, was Sie getan haben.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: robuste Standardfehler
@@ -574,7 +574,7 @@ Vergleichen Sie es mit dem ursachenspezifischen Modell:
 
 Berichten Sie das ursachenspezifische Modell, um Implantate zu vergleichen, und das Fine-Gray-Modell, wenn die Frage lautet, wie viele Personen revidiert werden. Viele Publikationen berichten beide und sagen, welches welches ist.
 
-`crr()` kann beidseitig operierte Patientinnen und Patienten nicht berücksichtigen. Wenn viele Ihrer Personen auf beiden Seiten einen Gelenkersatz hatten, bereitet die Funktion `finegray()` des Packages survival die Daten für ein Fine-Gray-Modell vor, das `coxph()` mit `cluster = patient_id` anpassen kann.
+`crr()` kann beidseitig operierte Patientinnen und Patienten nicht berücksichtigen. Wenn viele Ihrer Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz hatten, bereitet die Funktion `finegray()` des Packages survival die Daten für ein Fine-Gray-Modell vor, das `coxph()` mit `cluster = patient_id` anpassen kann.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Ein Subdistribution Hazard Ratio ist kein Hazard Ratio
@@ -583,7 +583,7 @@ Das SHR hat keine einfache Bedeutung als Rate: Personen, die verstorben sind, bl
 
 ## Ein Cox-Modell berichten {#reporting}
 
-Die meisten Publikationen stellen Cox-Modelle als Tabelle dar: eine Zeile pro Prädiktor, mit den univariablen und den multivariablen Hazard Ratios nebeneinander. Beide Spalten verwenden robuste Standardfehler, die nach Patient zusammengefasst werden ([oben](#stratified-cox)), sodass ihre KI die beidseitig operierten Patientinnen und Patienten berücksichtigen.
+Die meisten Publikationen stellen Cox-Modelle als Tabelle dar: eine Zeile pro Prädiktor, mit den univariablen und den multivariablen Hazard Ratios nebeneinander. Beide Spalten verwenden robuste Standardfehler, nach Person geclustert ([oben](#stratified-cox)), sodass ihre KI die beidseitig operierten Patientinnen und Patienten berücksichtigen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -599,7 +599,7 @@ univariable_table <- cohort |>
   select(followup_years, revised, implant, age_10, sex, bmi_5, patient_id) |>
   tbl_uvregression(method = coxph, y = Surv(followup_years, revised), exponentiate = TRUE,
                    include = c(implant, age_10, sex, bmi_5),
-                   method.args = list(cluster = patient_id),       # robuste Standardfehler, nach Patient zusammengefasst
+                   method.args = list(cluster = patient_id),       # robuste Standardfehler, nach Person geclustert
                    label = hr_labels, pvalue_fun = label_style_pvalue(digits = 3))
 multivariable_table <- clustered_model |>                   # robuste Standardfehler, für die beidseitig operierten Patientinnen und Patienten
   tbl_regression(exponentiate = TRUE, label = hr_labels, pvalue_fun = label_style_pvalue(digits = 3))
@@ -621,7 +621,7 @@ univariable = []
 for term in ["implant", "age_10", "sex", "bmi_5"]:
     one_predictor = CoxPHFitter().fit(cohort[["followup_years", "revised", term, "patient_id"]],
                                       duration_col="followup_years", event_col="revised", formula=term,
-                                      cluster_col="patient_id",      # robuste Standardfehler, nach Patient zusammengefasst
+                                      cluster_col="patient_id",      # robuste Standardfehler, nach Person geclustert
                                       fit_options={"precision": 1e-12})
     univariable.append(hr_with_ci(one_predictor))
 
@@ -743,7 +743,7 @@ print(asa_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95
 
 > **Results:** The hazard ratio for revision per ASA class was 1.38 (95% CI 0.99 to 1.93; p = 0.060).
 
-Der Schätzwert ist unpräzise: Die Daten sind sowohl mit keinem Zusammenhang als auch mit einem Hazard vereinbar, der sich pro Klasse fast verdoppelt.
+Der Schätzwert ist wenig präzise: Die Daten sind sowohl mit keinem Zusammenhang als auch mit einem Hazard vereinbar, der sich pro Klasse fast verdoppelt.
 :::
 
 **2.** Prüfen Sie mit einem natürlichen kubischen Spline mit 3 Freiheitsgraden, ob der Effekt des BMI im adjustierten Modell eine gerade Linie ist.
@@ -783,7 +783,7 @@ print(bmi_lr, chi2.sf(bmi_lr, df=2))
 Es gibt keinen klaren Hinweis, dass sich der Effekt des BMI krümmt, also bleibt die gerade Linie bestehen.
 :::
 
-**3.** Hüft-TP und Knie-TP können unterschiedliche Basisrisiken (Baseline-Hazard) für eine Revision haben. Passen Sie das adjustierte Modell erneut an, stratifiziert nach Eingriff. Ändert sich das Hazard Ratio von Implantat C? Schreiben Sie den Results-Satz.
+**3.** Hüft-TP und Knie-TP können unterschiedliche Baseline-Hazards für eine Revision haben. Passen Sie das adjustierte Modell erneut an, stratifiziert nach Eingriff. Ändert sich das Hazard Ratio von Implantat C? Schreiben Sie den Results-Satz.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung

@@ -32,7 +32,7 @@ Die Seiten [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalo
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages und Daten, die weiter oben geladen wurden.
 
-Damit der Code kurz bleibt, verwenden die Beispiele alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 14](14-cox-regression.qmd#stratified-cox)), und halten Sie fest, was Sie getan haben. Im Code heissen Hüft-TP und Knie-TP THA und TKA.
+Damit der Code kurz bleibt, verwenden die Beispiele alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 14](14-cox-regression.qmd#stratified-cox)), und halten Sie fest, was Sie getan haben. Im Code heisst die Hüft-TP THA, die Knie-TP TKA.
 :::
 
 ## Was Zensierung bedeutet {#censoring}
@@ -135,8 +135,8 @@ Kaplan-Meier setzt voraus, dass eine zensierte Person dasselbe zukünftige Risik
 
 Jede Überlebenszeitanalyse braucht zwei Definitionen, die festgelegt werden, bevor Sie die Resultate ansehen:
 
-- **Zeitpunkt null**, wenn die Uhr zu laufen beginnt. Beim Überleben des Implantats ist das das **Operationsdatum**: Alle Personen starten im selben klinischen Moment. Würde man stattdessen bei der ersten Kontrolle in der Sprechstunde beginnen, blieben Revisionen unberücksichtigt, die vor dieser Kontrolle stattfanden.
-- **Das Ereignis**, was die Uhr anhält. Hier ist es die **Revision aus irgendeinem Grund**: jede Reoperation, bei der eine Komponente entfernt oder ausgetauscht wird. Andere Studien verwenden die aseptische Revision oder jede Reoperation. Wählen Sie vorab eines aus und definieren Sie es in den Methoden.
+- **Zeitpunkt null**: der Moment, in dem die Uhr zu laufen beginnt. Beim Überleben des Implantats ist das das **Operationsdatum**: Alle Personen starten im selben klinischen Moment. Würde man stattdessen bei der ersten Kontrolle in der Sprechstunde beginnen, blieben Revisionen unberücksichtigt, die vor dieser Kontrolle stattfanden.
+- **Das Ereignis**: das, was die Uhr anhält. Hier ist es die **Revision jeglicher Ursache**: jede Reoperation, bei der eine Komponente entfernt oder ausgetauscht wird. Andere Studien verwenden die aseptische Revision oder jede Reoperation. Wählen Sie vorab eines aus und definieren Sie es in den Methoden.
 
 Echte Daten liegen selten als «Jahre nachbeobachtet» und «revidiert: ja/nein» vor. Sie bilden diese Spalten aus Datumsangaben. Die Übungskohorte hat sie schon: `followup_years` und `event_status`, wobei 0 zensiert, 1 revidiert und 2 verstorben ohne Revision bedeutet. So erstellen Sie sie aus einer Tabelle mit Datumsangaben, für vier erfundene Patientinnen und Patienten:
 
@@ -227,7 +227,7 @@ Jetzt die Übungskohorte: 600 Eingriffe, jeder nachbeobachtet von der Operation 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
-               conf.type = "log-log")              # die KI-Methode von lifelines
+               conf.type = "log-log")              # die Konfidenzintervall-Methode von lifelines
 
 km |>
   ggsurvfit() +
@@ -276,13 +276,13 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 
 So lesen Sie die Kurve:
 - **Die Stufen:** Die Kurve beginnt bei 100 % und fällt bei jeder Revision. Die Stufen werden später grösser, weil jede Revision dann einen grösseren Anteil der wenigen Personen ausmacht, die noch unter Risiko sind.
-- **Die Striche** markieren zensierte Personen. Sie verschieben die Kurve nicht; sie verlassen die Gruppe unter Risiko.
+- **Die Striche** markieren zensierte Personen. Diese Personen verschieben die Kurve nicht; sie verlassen die Gruppe unter Risiko.
 - **Das schattierte Band** ist das 95%-KI (Konfidenzintervall). Es wird breiter, wenn Personen ausscheiden.
-- **Die Tabelle unter der Abbildung** zeigt die Anzahl Personen, die zu jedem Zeitpunkt noch nachbeobachtet werden (**unter Risiko**): 600 bei der Operation, 332 nach 4 Jahren und 84 nach 8 Jahren, und die bisherigen Revisionen. Veröffentlichen Sie die Anzahl Personen unter Risiko immer zusammen mit der Kurve: Sie zeigt den Lesenden, wie viel Vertrauen jeder Teil der Kurve verdient.
+- **Die Tabelle unter der Abbildung** zeigt die Anzahl Eingriffe, die zu jedem Zeitpunkt noch nachbeobachtet werden (**unter Risiko**): 600 bei der Operation, 332 nach 4 Jahren und 84 nach 8 Jahren, und die bisherigen Revisionen. Veröffentlichen Sie die Anzahl Personen unter Risiko immer zusammen mit der Kurve: Sie zeigt den Lesenden, wie viel Vertrauen jeder Teil der Kurve verdient.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: das Ende der Kurve
-Nach 10 Jahren werden nur noch 21 Eingriffe nachbeobachtet, sodass jede späte Revision die Kurve stark verschiebt. Ziehen Sie aus dem rechten Ende der Kurve keine Schlüsse. Als Faustregel hört man auf, die Kurve zu zeichnen, wenn weniger als etwa 10 % der Personen (hier 60) unter Risiko sind.
+Nach 10 Jahren werden nur noch 21 Eingriffe nachbeobachtet, sodass jede späte Revision die Kurve stark verschiebt. Ziehen Sie aus dem rechten Ende der Kurve keine Schlüsse. Als Faustregel hört man auf, die Kurve zu zeichnen, wenn weniger als etwa 10 % der Eingriffe (hier 60) unter Risiko sind.
 :::
 
 ::: {.callout-tip}
@@ -499,7 +499,7 @@ check_agree(list(surv_anterior = approach_6m$surv[1], low_anterior = approach_6m
 
 Der Log-Rank-Test addiert die Differenzen über die gesamte Nachbeobachtung. Eine grosse Differenz in den ersten Monaten wird durch die Jahre danach verdünnt, in denen sich die Gruppen kaum unterscheiden, und der Test kann einen realen Unterschied übersehen. [Seite 14](14-cox-regression.qmd#proportional-hazards) zeigt, wie Sie das erkennen und wie Sie es modellieren.
 
-**Drei oder mehr Gruppen.** Derselbe Test vergleicht beliebig viele Gruppen. Unterscheidet sich die Häufigkeit von Revisionen zwischen den Implantaten A, B und C?
+**Drei oder mehr Gruppen.** Derselbe Test vergleicht beliebig viele Gruppen. Unterscheidet sich das revisionsfreie Überleben zwischen den Implantaten A, B und C?
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -538,7 +538,7 @@ check_agree(list(chisq = implant_logrank$chisq, p = implant_logrank$pvalue), ret
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Zeichnen Sie die Kurven immer, bevor Sie dem Test trauen
-Der Log-Rank-Test hat die grösste Teststärke, wenn das Risiko der einen Gruppe zu jedem Zeitpunkt ein gleichbleibendes Vielfaches des Risikos der anderen ist. Wenn sich die Kurven kreuzen, wie hier beim chirurgischen Zugang, kann ein nicht signifikanter Test einen realen Unterschied verbergen. Und vergleichen Sie Gruppen nicht zu einem von Hand ausgewählten Zeitpunkt, um ein signifikantes Resultat zu erhalten: Legen Sie Ihre Zeitpunkte fest, bevor Sie die Daten ansehen.
+Der Log-Rank-Test hat die grösste Teststärke, wenn der Hazard der einen Gruppe über die Zeit ein gleichbleibendes Vielfaches des Hazards der anderen ist (proportionale Hazards). Wenn sich die Kurven kreuzen, wie hier beim chirurgischen Zugang, kann ein nicht signifikanter Test einen realen Unterschied verbergen. Und vergleichen Sie Gruppen nicht zu einem gezielt ausgewählten Zeitpunkt, um ein signifikantes Resultat zu erhalten: Legen Sie Ihre Zeitpunkte fest, bevor Sie die Daten ansehen.
 :::
 
 ::: {.callout-tip}
@@ -725,7 +725,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Vergleichen Sie das Überleben ohne Revision zwischen Hüft-TP (THA) und Knie-TP (TKA). Geben Sie für jeden Eingriff das Überleben des Implantats nach 5 Jahren mit seinem 95%-KI an, und den Log-Rank-Test.
+**1.** Vergleichen Sie das revisionsfreie Überleben zwischen Hüft-TP (THA) und Knie-TP (TKA). Geben Sie für jeden Eingriff das Überleben des Implantats nach 5 Jahren mit seinem 95%-KI an, und den Log-Rank-Test.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -757,7 +757,7 @@ print(procedure_logrank.test_statistic, procedure_logrank.p_value)
 > **Results:** Survivorship free of revision at 5 years was 86.9% (95% CI 81.4% to 90.8%) after THA and 85.9% (95% CI 80.9% to 89.6%) after TKA (log-rank χ² = 0.01, df = 1, p = 0.937).
 :::
 
-**2.** Chirurginnen und Chirurgen fragen: «Welcher Anteil meiner Patientinnen und Patienten ab 75 Jahren braucht innerhalb von 5 Jahren eine Revision?» Welcher Schätzwert beantwortet diese Frage? Berechnen Sie ihn und vergleichen Sie ihn mit 1 − Kaplan-Meier.
+**2.** Chirurginnen und Chirurgen fragen: «Welcher Anteil unserer Patientinnen und Patienten ab 75 Jahren braucht innerhalb von 5 Jahren eine Revision?» Welcher Schätzwert beantwortet diese Frage? Berechnen Sie ihn und vergleichen Sie ihn mit 1 − Kaplan-Meier.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
