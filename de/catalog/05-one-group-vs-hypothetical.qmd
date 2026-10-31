@@ -1,8 +1,711 @@
 ---
-title: "5 · Eine Gruppe mit einem hypothetischen Wert vergleichen (in Vorbereitung)"
+title: "5 · Eine Gruppe mit einem hypothetischen Wert vergleichen"
+description: "t-Test für eine Stichprobe, Wilcoxon-Vorzeichen-Rang-Test, Chi-Quadrat-Anpassungstest und Binomialtest: Unterscheidet sich unsere Gruppe von einem Zielwert oder einem veröffentlichten Wert?"
+engine: knitr
+toc-depth: 2
 ---
 
-::: {.callout-note .coming-soon}
-## Noch nicht übersetzt
-Diese Seite wird gerade übersetzt. Bis dahin finden Sie sie [auf Englisch](../../en/catalog/05-one-group-vs-hypothetical.qmd).
+```{r}
+#| include: false
+source("R/check_agree.R")
+```
+
+```{r}
+#| echo: false
+#| output: asis
+# Stamp the data version into the page; tests/site/test_freshness.py checks it.
+cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
+```
+
+Manchmal gibt es nur eine Patientengruppe, und verglichen wird mit einer Zahl, die von **ausserhalb** Ihrer Daten stammt: einem Zielwert des Spitals, einem von einem Register veröffentlichten Wert, einem Richtwert aus einem Qualitätsbericht. Unterscheidet sich unsere Gruppe von dieser Zahl?
+
+::: {.callout-note}
+## 💡 So funktioniert jeder Abschnitt dieser Seite
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur Gelenkersatz-Kohorte, zu ihren patientenberichteten Outcomes oder (beim Binomialtest) zu den Daten zur proximalen Femurfraktur. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus. Die «hypothetischen» Werte unten sind für den Unterricht erfunden; es sind keine echten Registerzahlen oder Zielwerte.
+
+Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
+:::
+
+::: {.callout-warning}
+## ⚠️ Achtung: Der Wert muss von ausserhalb Ihrer Daten stammen
+Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen Sie, woher er stammt. Ein Wert, der nach Ansicht der Resultate gewählt wird («unser Mittelwert ist 84; testen wir gegen 90»), macht den p-Wert bedeutungslos. Stammt der Vergleichswert von einer anderen Patientengruppe, deren Daten Sie haben, vergleichen Sie stattdessen die beiden Gruppen ([Seite 6](06-two-unpaired-groups.qmd)).
+:::
+
+## t-Test für eine Stichprobe {#one-sample-t}
+
+**Die Frage:** Der Operationssaal plant für jeden primären Gelenkersatz 90 Minuten ein. Unterscheidet sich unsere durchschnittliche Operationsdauer von 90 Minuten?
+
+### Wann verwenden
+
+- Die Zielgrösse ist ein **Messwert** (Minuten, kg/m², Punkte).
+- Sie ist **ungefähr normalverteilt**, oder die Stichprobe ist gross (etwa 30 oder mehr) und nicht stark schief ([Seite 3](../foundations/03-distributions.qmd#robustness)).
+- Jede Person wird einmal gezählt, und die Personen sind voneinander unabhängig.
+- Sind die Daten schief, begrenzt oder ordinal → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+
+ggplot(cohort, aes(op_time_min)) +
+  geom_histogram(binwidth = 5) +
+  geom_vline(xintercept = 90, linetype = "dashed") +   # die eingeplante Zeit
+  labs(x = "Operative time, minutes", y = "Patients")
+```
+
+## Python
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+
+cohort = pd.read_csv("data/cohort.csv")
+
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(cohort["op_time_min"], bins=range(45, 145, 5))
+ax.axvline(90, linestyle="--")                        # die eingeplante Zeit
+ax.set_xlabel("Operative time, minutes")
+ax.set_ylabel("Patients")
+plt.show()
+```
+:::
+
+Ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der gestrichelten Linie bei 90 Minuten liegt.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+op_test <- t.test(cohort$op_time_min, mu = 90)   # mu = der hypothetische Mittelwert
+op_test
+```
+
+## Python
+
+```{python}
+op_test = stats.ttest_1samp(cohort["op_time_min"], popmean=90)   # popmean = der hypothetische Mittelwert
+print(op_test)
+print(cohort["op_time_min"].mean(), op_test.confidence_interval())
+```
+:::
+
+```{python}
+#| include: false
+op_ci = op_test.confidence_interval()
+chk = {"t": float(op_test.statistic), "df": float(op_test.df), "p": float(op_test.pvalue),
+       "ci_low": float(op_ci.low), "ci_high": float(op_ci.high)}
+```
+
+```{r}
+#| include: false
+check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), p = op_test$p.value,
+                 ci_low = op_test$conf.int[1], ci_high = op_test$conf.int[2]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **t = −8.23:** der beobachtete Mittelwert liegt 8.2 Standardfehler unter 90. Das Vorzeichen sagt, auf welcher Seite.
+- **df = 599:** Freiheitsgrade, n − 1.
+- **p < 0.001:** Ein Mittelwert, der so weit von 90 entfernt ist, wäre sehr unwahrscheinlich, wenn der wahre Durchschnitt 90 Minuten betrüge.
+- **mean of x = 84.48:** unsere durchschnittliche Operationsdauer.
+- **95%-KI 83.2 bis 85.8:** das KI für unseren **Mittelwert**, nicht für die Differenz zu 90.
+
+### Effektstärke und 95%-KI
+
+Die Effektstärke ist einfach die Differenz zum hypothetischen Wert: Ziehen Sie 90 vom Mittelwert und von beiden Enden seines KI ab.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+op_test$estimate - 90    # Mittelwertsdifferenz
+op_test$conf.int - 90    # ihr 95%-KI
+```
+
+## Python
+
+```{python}
+print(cohort["op_time_min"].mean() - 90)                        # Mittelwertsdifferenz
+print(op_test.confidence_interval().low - 90, op_test.confidence_interval().high - 90)   # ihr 95%-KI
+```
+:::
+
+```{python}
+#| include: false
+chk = {"diff": float(cohort["op_time_min"].mean() - 90),
+       "diff_low": float(op_ci.low - 90), "diff_high": float(op_ci.high - 90)}
+```
+
+```{r}
+#| include: false
+check_agree(list(diff = unname(op_test$estimate - 90), diff_low = op_test$conf.int[1] - 90,
+                 diff_high = op_test$conf.int[2] - 90), reticulate::py$chk)
+```
+
+Die Operationen dauerten im Durchschnitt 5.5 Minuten weniger als die eingeplanten 90 (95%-KI 4.2 bis 6.8 Minuten weniger). Ob das etwas ausmacht, ist eine Planungsfrage und keine statistische: Über einen Tag mit vier Gelenkersätzen summiert es sich auf etwa 20 Minuten.
+
+### Resultate formulieren
+
+> **Methods:** Mean operative time was compared with the 90 minutes booked per case using a one-sample t test.
+>
+> **Results:** Mean operative time was 84.5 minutes (SD 16.4); the booked time was 90 minutes (difference −5.5 minutes, 95% CI −6.8 to −4.2; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Ein veröffentlichter Mittelwert hat seine eigene Unsicherheit
+Ein Test für eine Stichprobe behandelt den hypothetischen Wert als exakt. Ein Registermittelwert ist selbst ein Schätzwert mit einem KI. Vergleichen Sie Ihre Patientinnen und Patienten mit einer veröffentlichten Serie, deren KI breit ist, sagen Sie das, und deuten Sie einen kleinen Unterschied nicht zu stark.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: wofür das KI ein KI ist
+Sowohl `t.test(x, mu = 90)` in R als auch `ttest_1samp(x, popmean=90)` in scipy geben das KI für den **Mittelwert** an (83.2 bis 85.8), nicht für die Differenz zu 90. Ziehen Sie den hypothetischen Wert selbst ab, wie oben.
+:::
+
+## Wilcoxon-Vorzeichen-Rang-Test {#wilcoxon-signed-rank}
+
+**Die Frage:** Angenommen, unser Zielwert 1 Jahr nach einem Kniegelenkersatz ist ein KOOS JR (Score für Knie-Gelenkersatz, Kurzform) von 80 Punkten. Weicht der Score einer typischen Person von 80 ab?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **schief** oder hat einen **Decken- oder Bodeneffekt**, sodass ein Mittelwert die Daten nicht gut zusammenfasst ([Seite 3](../foundations/03-distributions.qmd#transform)).
+- Der Test ordnet, wie weit jede Person über oder unter dem hypothetischen Wert liegt. Er setzt keine Normalverteilung voraus, braucht aber Abstände, die sich vergleichen lassen; die Zielgrösse muss also ein Messwert sein.
+- Zählen Sie bei einer **ordinalen** Skala (Zufriedenheit von 1 bis 5) die Personen über und unter dem Wert und vergleichen Sie die beiden Anzahlen mit einem [Binomialtest](#binomial-test). Das heisst **Vorzeichentest**.
+- Genau genommen prüft der Test den **Pseudomedian** (den Hodges-Lehmann-Schätzer unten), der nur bei einer symmetrischen Verteilung dem Median entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
+- Sind die Daten ungefähr normalverteilt → ist der [t-Test für eine Stichprobe](#one-sample-t) vertrauter und etwas teststärker.
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+#| fig-height: 3
+library(tidyverse)
+
+proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
+koos_1yr <- proms |>
+  filter(instrument == "KOOS JR", visit == "1yr", !is.na(prom_score)) |>
+  pull(prom_score)
+
+ggplot(tibble(score = koos_1yr), aes(score)) +
+  geom_histogram(binwidth = 2.5) +
+  geom_vline(xintercept = 80, linetype = "dashed") +   # der Zielwert
+  labs(x = "KOOS JR at 1 year (100 = best)", y = "Patients")
+```
+
+## Python
+
+```{python}
+import numpy as np
+import pandas as pd
+import pingouin as pg
+import matplotlib.pyplot as plt
+from scipy import stats
+
+proms = pd.read_csv("data/proms_long.csv")
+koos_1yr = proms.loc[(proms["instrument"] == "KOOS JR") & (proms["visit"] == "1yr"),
+                     "prom_score"].dropna()
+
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(koos_1yr, bins=np.arange(35, 102.5, 2.5))
+ax.axvline(80, linestyle="--")                         # der Zielwert
+ax.set_xlabel("KOOS JR at 1 year (100 = best)")
+ax.set_ylabel("Patients")
+plt.show()
+```
+:::
+
+Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der rangbasierte Test ist die sicherere Wahl.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+koos_test <- wilcox.test(koos_1yr, mu = 80,
+                         exact = FALSE, correct = FALSE,   # siehe den Kasten «R oder Python»
+                         conf.int = TRUE)                  # ergänzt den Hodges-Lehmann-Schätzer und das KI
+koos_test
+```
+
+## Python
+
+```{python}
+# pg.wilcoxon() führt den Test von scipy aus und ergänzt die biseriale Rangkorrelation als Effektstärke
+koos_test = pg.wilcoxon(koos_1yr - 80, method="approx", correction=False)   # siehe den Kasten «R oder Python»
+print(koos_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"p": float(koos_test["p_val"].iloc[0]),
+       "log_p": float(np.log(koos_test["p_val"].iloc[0]))}   # tiny p-values: compare them on a log scale too
+```
+
+```{r}
+#| include: false
+check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **V = 22698** (R) oder **W_val = 11231.5** (Python): die Teststatistik, eine Summe von Rängen. Die beiden Programme melden verschiedene Summen (siehe den Kasten «R oder Python»); die p-Werte sind gleich.
+- **p < 0.001:** Scores, die so weit von 80 entfernt liegen, wären sehr unwahrscheinlich, wenn die typische Person tatsächlich 80 erzielte.
+- **(pseudo)median 84.35, 95%-KI 82.7 bis 86.1** (nur R): der Hodges-Lehmann-Schätzer für die Mitte der Scores, mit seinem KI.
+- **RBC = 0.34** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
+
+### Effektstärke und 95%-KI
+
+Zwei Effektstärken sind hier nützlich:
+
+- Der **Hodges-Lehmann-Schätzer** (der Pseudomedian): eine Mitte der Scores, in Punkten. Er ist der Median aller Mittelwerte von Paaren von Scores und wird daher vom Deckeneffekt weniger beeinflusst als ein Mittelwert.
+- Die **biseriale Rangkorrelation (r)**: von −1 (alle Personen unter 80) über 0 (ausgeglichen) bis +1 (alle Personen über 80). Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+koos_test$estimate                                   # Hodges-Lehmann-Schätzer
+koos_test$conf.int                                   # sein 95%-KI
+
+effectsize::rank_biserial(koos_1yr, mu = 80)         # biseriale Rangkorrelation r und 95%-KI
+```
+
+## Python
+
+```{python}
+# Hodges-Lehmann-Schätzer: der Median der Mittelwerte aller Paare von Scores
+def hodges_lehmann(x):
+    x = np.asarray(x)
+    i, j = np.triu_indices(len(x))          # alle Paare, auch jeder Score mit sich selbst
+    return np.median((x[i] + x[j]) / 2)
+
+print(hodges_lehmann(koos_1yr))
+
+# scipy hat dafür kein KI, also ein Bootstrap: auf 9999 neu gezogenen Datensätzen neu berechnen
+boot = stats.bootstrap((koos_1yr.to_numpy(),), hodges_lehmann, vectorized=False,
+                       rng=np.random.default_rng(2026))
+print(boot.confidence_interval)
+
+print(koos_test["RBC"])                               # biseriale Rangkorrelation r
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hl": float(hodges_lehmann(koos_1yr)), "rbc": float(koos_test["RBC"].iloc[0])}
+```
+
+```{r}
+#| include: false
+koos_rb <- effectsize::rank_biserial(koos_1yr, mu = 80)
+check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial), reticulate::py$chk,
+            tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
+```
+
+Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehmann-Schätzer 84.4), und die biseriale Rangkorrelation r von 0.34 ist ein mittlerer Effekt: Deutlich mehr Personen erzielten mehr als 80 als weniger.
+
+### Resultate formulieren
+
+> **Methods:** Because 1-year KOOS JR scores showed a ceiling effect, they were compared with the 80-point target using a Wilcoxon signed-rank test, with the Hodges-Lehmann estimate and its 95% CI as the effect size.
+>
+> **Results:** The median 1-year KOOS JR was 85.8 points (IQR 74.7 to 93.9); the target was 80 points (Hodges-Lehmann estimate 84.4, 95% CI 82.7 to 86.1; rank-biserial r = 0.34; p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: zwei verschiedene «Wilcoxon»-Tests
+Der **Wilcoxon-Vorzeichen-Rang-Test** (dieser hier) vergleicht eine Gruppe mit einem Wert oder zwei **gepaarte** Messungen ([Seite 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). Der **Wilcoxon-Rangsummentest** vergleicht zwei **unabhängige** Gruppen; er ist dasselbe wie der [Mann-Whitney-Test](06-two-unpaired-groups.qmd#mann-whitney). Schreiben Sie immer den vollen Namen.
+
+Ausserdem: Personen, die **genau** 80 erzielen, tragen keine Information über die Richtung und fallen aus dem Test heraus.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Standardwerte beim Wilcoxon-Test
+- **Die Teststatistik.** R meldet V, die Summe der Ränge der Personen **über** 80 (22698.5, ausgegeben als 22698). scipy (und pingouin) melden die **kleinere** der beiden Summen (11231.5). Die beiden Summen ergeben zusammen immer n(n + 1)/2, hier 260 × 261 / 2 = 33,930; sie tragen also dieselbe Information und liefern denselben p-Wert.
+- **Exakt oder näherungsweise.** Bei kleinen Stichproben ohne Bindungen berechnen beide Programme einen exakten p-Wert; sonst verwenden sie eine Normalapproximation. R wendet auf die Näherung standardmässig eine **Stetigkeitskorrektur** an; scipy nicht. Wir setzen `exact = FALSE, correct = FALSE` in R und `method="approx", correction=False` in Python, damit beide übereinstimmen.
+- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests. scipy hat dafür keine Funktion, darum verwendet der Python-Code einen Bootstrap, also eine andere Methode, und die beiden KI weichen leicht voneinander ab (82.75 bis 86.10 in R, 82.70 bis 86.05 mit dem Bootstrap).
+:::
+
+## Chi-Quadrat-Anpassungstest {#chi-square-gof}
+
+**Die Frage:** Angenommen, ein nationales Register meldet für seine Patientinnen und Patienten folgende Verteilung: 10 % ASA-Klasse 1, 55 % Klasse 2, 33 % Klasse 3 und 2 % Klasse 4. Ist unsere Verteilung der ASA-Klassen gleich?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **kategorial** mit zwei oder mehr Kategorien, und Sie haben für jede Kategorie hypothetische Anteile.
+- Jede Person fällt in genau eine Kategorie und wird einmal gezählt.
+- Die **erwartete Häufigkeit** in jeder Kategorie (Gesamtzahl × hypothetischer Anteil) sollte mindestens 5 betragen. Fassen Sie sonst kleine Kategorien zusammen, oder verwenden Sie bei nur zwei Kategorien den [Binomialtest](#binomial-test).
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
+registry <- c(0.10, 0.55, 0.33, 0.02)                 # die hypothetischen Anteile, ASA 1 bis 4
+
+asa_counts <- table(cohort$asa)
+tibble(asa = names(asa_counts), observed = as.vector(asa_counts),
+       expected = sum(asa_counts) * registry)
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+
+cohort = pd.read_csv("data/cohort.csv")
+registry = [0.10, 0.55, 0.33, 0.02]                   # die hypothetischen Anteile, ASA 1 bis 4
+
+asa_counts = cohort["asa"].value_counts().sort_index()
+print(pd.DataFrame({"observed": asa_counts, "expected": asa_counts.sum() * pd.Series(registry, index=asa_counts.index)}))
+```
+:::
+
+Alle vier erwarteten Häufigkeiten betragen mindestens 5 (die kleinste ist 12). Wir haben weniger Personen mit ASA 1 und mehr Personen mit ASA 3, als das Register erwarten liesse.
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+asa_test <- chisq.test(asa_counts, p = registry)   # p = die hypothetischen Anteile
+asa_test
+```
+
+## Python
+
+```{python}
+expected = asa_counts.sum() * pd.Series(registry, index=asa_counts.index)
+asa_test = stats.chisquare(asa_counts, f_exp=expected)   # f_exp = die erwarteten HÄUFIGKEITEN
+print(asa_test)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"chisq": float(asa_test.statistic), "p": float(asa_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **X-squared = 26.96:** die Chi-Quadrat-Statistik, die aufsummiert, wie weit jede beobachtete Häufigkeit von ihrer erwarteten Häufigkeit entfernt ist.
+- **df = 3:** Freiheitsgrade, die Anzahl Kategorien minus 1.
+- **p < 0.001:** Eine Verteilung, die sich so stark von jener des Registers unterscheidet, wäre sehr unwahrscheinlich, wenn unsere Patientinnen und Patienten aus derselben Verteilung stammten.
+
+### Effektstärke und 95%-KI
+
+Der Test sagt, dass sich die Verteilung unterscheidet, nicht wo. Sehen Sie sich den beobachteten Prozentsatz jeder Kategorie mit einem 95%-KI neben dem des Registers an.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+asa_ci <- sapply(asa_counts, function(k) prop.test(k, sum(asa_counts), correct = FALSE)$conf.int)
+
+tibble(asa = names(asa_counts),
+       observed_pct = 100 * as.vector(asa_counts) / sum(asa_counts),
+       ci_low = 100 * asa_ci[1, ], ci_high = 100 * asa_ci[2, ],   # Wilson-KI, wie auf Seite 4
+       registry_pct = 100 * registry)
+```
+
+## Python
+
+```{python}
+n = asa_counts.sum()
+cis = [stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k in asa_counts]
+
+print(pd.DataFrame({
+    "observed_pct": 100 * asa_counts / n,
+    "ci_low": [100 * ci.low for ci in cis],                     # Wilson-KI, wie auf Seite 4
+    "ci_high": [100 * ci.high for ci in cis],
+    "registry_pct": [100 * p for p in registry],
+}, index=asa_counts.index))
+```
+:::
+
+```{python}
+#| include: false
+chk = {f"low_{k}": float(ci.low) for k, ci in zip(asa_counts.index, cis)} | \
+      {f"high_{k}": float(ci.high) for k, ci in zip(asa_counts.index, cis)}
+```
+
+```{r}
+#| include: false
+check_agree(c(setNames(as.list(asa_ci[1, ]), paste0("low_", names(asa_counts))),
+              setNames(as.list(asa_ci[2, ]), paste0("high_", names(asa_counts)))), reticulate::py$chk)
+```
+
+ASA 3 macht den grössten Unterschied: 41.0 % unserer Patientinnen und Patienten (95%-KI 37.1 % bis 45.0 %) gegenüber 33 % im Register. Das KI schliesst 33 % nicht ein.
+
+### Resultate formulieren
+
+> **Methods:** The distribution of ASA classes was compared with the registry's using a chi-square goodness-of-fit test.
+>
+> **Results:** ASA class 3 accounted for 41.0% of our patients (95% CI 37.1% to 45.0%) and 33% of the registry's, and ASA class 1 for 6.0% and 10% (χ² = 27.0, df = 3, p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Häufigkeiten, nicht Prozentsätze
+Der Test braucht die **Anzahl** der Personen in jeder Kategorie. Geben Sie ihm Prozentsätze («6, 50, 41, 3»), erhalten Sie einen falschen p-Wert, denn die Genauigkeit des Tests hängt davon ab, wie viele Personen es sind.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: Anteile oder Häufigkeiten
+`chisq.test(counts, p = ...)` in R erwartet die hypothetischen **Anteile** (sie müssen zusammen 1 ergeben). `chisquare(counts, f_exp=...)` in scipy erwartet die erwarteten **Häufigkeiten** (sie müssen zusammen die beobachtete Gesamtzahl ergeben). Derselbe Test, andere Eingaben.
+:::
+
+## Binomialtest {#binomial-test}
+
+**Die Frage:** Angenommen, das Ziel lautet, dass 90 % der Patientinnen und Patienten mit proximaler Femurfraktur innerhalb von 48 Stunden nach dem Eintritt operiert werden. Unterscheidet sich unser Anteil davon?
+
+### Wann verwenden
+
+- Die Zielgrösse ist **Ja/Nein**, und Sie vergleichen den Anteil einer Gruppe mit einem hypothetischen Anteil.
+- Jede Person wird einmal gezählt.
+- Der Binomialtest ist **exakt**: Er funktioniert bei jeder Stichprobengrösse, auch bei wenigen Ereignissen. (Der Chi-Quadrat-Anpassungstest mit zwei Kategorien ist seine Näherung für grosse Stichproben.)
+
+### Zuerst die Daten ansehen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+library(tidyverse)
+
+hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
+
+count(hip_fracture, surgery_within_48h)   # 1 = innerhalb von 48 Stunden nach dem Eintritt operiert
+```
+
+## Python
+
+```{python}
+import pandas as pd
+from scipy import stats
+
+hip_fracture = pd.read_csv("data/hip_fracture.csv")
+
+print(hip_fracture["surgery_within_48h"].value_counts(dropna=False))   # 1 = innerhalb von 48 Stunden nach dem Eintritt operiert
+```
+:::
+
+1,034 Patientinnen und Patienten wurden innerhalb von 48 Stunden operiert, und es fehlt kein Wert. (Die Spalte wird aus `hours_to_surgery` berechnet.)
+
+### Analyse durchführen
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+within_48h <- sum(hip_fracture$surgery_within_48h == 1)
+patients   <- nrow(hip_fracture)
+
+surgery_test <- binom.test(within_48h, patients, p = 0.90)   # p = der hypothetische Anteil
+surgery_test
+```
+
+## Python
+
+```{python}
+within_48h = int((hip_fracture["surgery_within_48h"] == 1).sum())
+patients = len(hip_fracture)
+
+surgery_test = stats.binomtest(within_48h, patients, p=0.90)   # p = der hypothetische Anteil
+print(surgery_test)
+print(surgery_test.proportion_ci(method="exact"))
+```
+:::
+
+```{python}
+#| include: false
+surgery_ci = surgery_test.proportion_ci(method="exact")
+chk = {"p": float(surgery_test.pvalue), "estimate": float(surgery_test.statistic),
+       "ci_low": float(surgery_ci.low), "ci_high": float(surgery_ci.high)}
+```
+
+```{r}
+#| include: false
+check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estimate),
+                 ci_low = surgery_test$conf.int[1], ci_high = surgery_test$conf.int[2]), reticulate::py$chk)
+```
+
+### Ausgabe lesen
+
+- **number of successes = 1034, number of trials = 1200:** 1,034 Patientinnen und Patienten, die innerhalb von 48 Stunden operiert wurden («successes» ist einfach das Wort der Software für das, was Sie gezählt haben).
+- **p < 0.001:** Ein Anteil, der so weit von 90 % entfernt ist, wäre sehr unwahrscheinlich, wenn unser wahrer Anteil 90 % betrüge.
+- **probability of success = 0.862:** unser Anteil, 86.2 %.
+- **95%-KI 0.841 bis 0.881:** unser wahrer Anteil liegt plausibel irgendwo zwischen 84.1 % und 88.1 %. Das ist das exakte Intervall (nach Clopper-Pearson).
+
+### Effektstärke und 95%-KI
+
+Die Effektstärke ist die Differenz zum Zielwert: 86.2 % − 90 % = −3.8 Prozentpunkte. Ihr 95%-KI ist das KI für unseren Anteil minus 90 %: −5.9 bis −1.9 Prozentpunkte. Es schliesst 0 aus, was zum p-Wert unter 0.05 passt. In Personen: Bei 90 % wären 1,080 der 1,200 innerhalb von 48 Stunden operiert worden, 46 mehr, als es tatsächlich waren.
+
+### Resultate formulieren
+
+> **Methods:** The proportion of patients operated on within 48 hours of admission was compared with the target of 90% using an exact binomial test. 95% CIs for proportions are exact (Clopper-Pearson).
+>
+> **Results:** Within 48 hours of admission, 1,034 of 1,200 patients (86.2%; 95% CI 84.1% to 88.1%) were operated on; the target was 90% (binomial test p < 0.001).
+
+::: {.callout-warning}
+## ⚠️ Achtung: Legen Sie vor dem Ansehen fest, ob einseitig oder zweiseitig
+Ein Zielwert legt eine einseitige Frage nahe: Liegen wir *unter* 90 %? Ein einseitiger Test halbiert den p-Wert ungefähr; wählt man ihn erst, nachdem man gesehen hat, auf welcher Seite des Zielwerts man gelandet ist, wird der p-Wert zu klein. Verwenden Sie einen einseitigen Test nur, wenn das Protokoll ihn vor Eingang der Daten festgelegt hat und ein Resultat auf der anderen Seite tatsächlich nichts ändern würde. Berichten Sie sonst den zweiseitigen Test, wie hier.
+:::
+
+::: {.callout-tip}
+## 🔀 R oder Python: exakte KI
+`binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das Wilson-Intervall, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht. Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
+:::
+
+```{r}
+#| include: false
+# Prose guard: numbers quoted in the text above. If the data change, update the text.
+asa_pct <- 100 * as.vector(asa_counts) / sum(asa_counts)
+stopifnot(
+  sum(table(cohort$patient_id) == 2) == 80,
+  round(unname(op_test$statistic), 2) == -8.23, unname(op_test$parameter) == 599, op_test$p.value < 0.001,
+  round(unname(op_test$estimate), 2) == 84.48, round(mean(cohort$op_time_min), 1) == 84.5,
+  round(sd(cohort$op_time_min), 1) == 16.4,
+  round(op_test$conf.int, 1) == c(83.2, 85.8),
+  round(unname(op_test$estimate) - 90, 1) == -5.5, round(op_test$conf.int - 90, 1) == c(-6.8, -4.2),
+  length(koos_1yr) == 260,
+  unname(koos_test$statistic) == 22698.5, koos_test$p.value < 0.001,
+  sum(koos_1yr != 80) == 260, 260 * 261 / 2 - unname(koos_test$statistic) == 11231.5,
+  round(unname(koos_test$estimate), 2) == 84.35, round(unname(koos_test$estimate), 1) == 84.4,
+  round(koos_test$conf.int, 1) == c(82.7, 86.1), round(koos_test$conf.int, 2) == c(82.75, 86.10),
+  round(reticulate::py_eval("[float(boot.confidence_interval.low), float(boot.confidence_interval.high)]"), 2) == c(82.70, 86.05),
+  round(koos_rb$r_rank_biserial, 2) == 0.34,
+  round(median(koos_1yr), 1) == 85.8, round(quantile(koos_1yr, c(0.25, 0.75)), 1) == c(74.7, 93.9),
+  as.vector(asa_counts) == c(36, 300, 246, 18),
+  min(sum(asa_counts) * registry) == 12,
+  round(unname(asa_test$statistic), 2) == 26.96, round(unname(asa_test$statistic), 1) == 27.0,
+  unname(asa_test$parameter) == 3, asa_test$p.value < 0.001,
+  round(asa_pct, 1) == c(6.0, 50.0, 41.0, 3.0),
+  round(100 * asa_ci[, "3"], 1) == c(37.1, 45.0),
+  within_48h == 1034, patients == 1200, !anyNA(hip_fracture$surgery_within_48h),
+  surgery_test$p.value < 0.001,
+  round(unname(surgery_test$estimate), 3) == 0.862, round(100 * unname(surgery_test$estimate), 1) == 86.2,
+  round(surgery_test$conf.int, 3) == c(0.841, 0.881), round(100 * surgery_test$conf.int, 1) == c(84.1, 88.1),
+  round(100 * (unname(surgery_test$estimate) - 0.90), 1) == -3.8,
+  round(100 * (surgery_test$conf.int - 0.90), 1) == c(-5.9, -1.9),
+  0.90 * patients == 1080, 0.90 * patients - within_48h == 46,
+  round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
+  # exercise solutions
+  round(mean(cohort$age), 1) == 65.5, round(mean(cohort$age) - 66, 1) == -0.5,
+  round(t.test(cohort$age, mu = 66)$conf.int - 66, 1) == c(-1.2, 0.3),
+  round(t.test(cohort$age, mu = 66)$p.value, 3) == 0.213,
+  sum(hip_fracture$death_30d == 1) == 74,
+  round(binom.test(74, 1200, p = 0.07)$p.value, 3) == 0.282,
+  round(100 * binom.test(74, 1200)$conf.int, 1) == c(4.9, 7.7),
+  round(100 * prop.table(table(cohort$smoker))[c("never", "former", "current")], 1) == c(53.5, 38.3, 8.2),
+  round(unname(chisq.test(table(cohort$smoker)[c("never", "former", "current")], p = c(0.5, 0.4, 0.1))$statistic), 1) == 3.9,
+  round(chisq.test(table(cohort$smoker)[c("never", "former", "current")], p = c(0.5, 0.4, 0.1))$p.value, 3) == 0.142
+)
+```
+
+## Übungen {#exercises}
+
+Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
+
+**1.** Angenommen, ein Register meldet ein mittleres Alter von 66 Jahren bei primärem Gelenkersatz. Unterscheidet sich das mittlere Alter unserer Patientinnen und Patienten? Führen Sie den Test durch und berichten Sie die Mittelwertsdifferenz mit ihrem 95%-KI.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+age_test <- t.test(cohort$age, mu = 66)
+age_test
+age_test$conf.int - 66
+```
+
+## Python
+
+```{python}
+age_test = stats.ttest_1samp(cohort["age"], popmean=66)
+print(age_test)
+ci = age_test.confidence_interval()
+print(cohort["age"].mean() - 66, ci.low - 66, ci.high - 66)
+```
+:::
+
+> **Results:** Mean age was 65.5 years; the registry's was 66 years (difference −0.5 years, 95% CI −1.2 to 0.3; p = 0.213).
+
+Das KI schliesst 0 ein und schliesst eine Differenz von mehr als etwa einem Jahr in beide Richtungen aus.
+:::
+
+**2.** Angenommen, ein nationales Audit zur proximalen Femurfraktur meldet eine Mortalität nach 30 Tagen von 7 %. [Seite 4](04-describe-one-group.qmd#proportion) hat gezeigt, dass 74 unserer 1,200 Patientinnen und Patienten innerhalb von 30 Tagen starben. Welchen Test würden Sie verwenden, und was schliessen Sie daraus?
+
+::: {.callout-tip collapse="true"}
+## Lösung
+Eine Ja/Nein-Zielgrösse, verglichen mit einem hypothetischen Anteil: der **Binomialtest**.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+binom.test(74, 1200, p = 0.07)
+```
+
+## Python
+
+```{python}
+mortality = stats.binomtest(74, 1200, p=0.07)
+print(mortality.pvalue, mortality.proportion_ci(method="exact"))
+```
+:::
+
+> **Results:** Within 30 days, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%); the audit reports 7% (binomial test p = 0.282).
+
+Das KI schliesst 7 % ein, es gibt also keinen klaren Hinweis, dass sich unsere Mortalität von jener des Audits unterscheidet. Das ist nicht dasselbe, wie zu zeigen, dass sie gleich ist: Unsere wahre Rate könnte irgendwo zwischen 4.9 % und 7.7 % liegen. Schreiben Sie nicht «unsere Mortalität entsprach jener des Audits»; berichten Sie das KI und lassen Sie es für sich sprechen.
+:::
+
+**3.** Angenommen, eine Befragung von Patientinnen und Patienten mit Gelenkersatz ergab 50 % Nichtrauchende, 40 % ehemals Rauchende und 10 % aktuell Rauchende. Prüfen Sie, ob sich unsere Verteilung des Rauchstatus unterscheidet, und schreiben Sie den Results-Satz.
+
+::: {.callout-tip collapse="true"}
+## Lösung
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+smoking <- table(factor(cohort$smoker, levels = c("never", "former", "current")))
+smoking
+chisq.test(smoking, p = c(0.50, 0.40, 0.10))
+```
+
+## Python
+
+```{python}
+smoking = cohort["smoker"].value_counts()[["never", "former", "current"]]
+print(smoking)
+print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10], index=smoking.index)))
+```
+:::
+
+> **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
 :::
