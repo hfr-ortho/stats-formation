@@ -1648,6 +1648,12 @@ quadriceps  3   64</code></pre>
 // The language switcher (HFR spec §4.3). Every page lives at <site>/<lang>/<path>, with the same <path>
 // in every language, so switching language swaps one segment of the address.
 const SITE_LANGS = ["en", "de", "fr"];
+// Quarto drops `aria-label` from text links in the navbar (it keeps it only on icons), so the switcher
+// gives each language link its accessible name: the language in its own language.
+// Languages whose pages are translated. The search shows only these; any other language (German, whose pages
+// are stubs that lead to English) searches the English index. German joins this list in sub-project 4.
+const TRANSLATED_LANGS = ["en", "fr"];
+const LANG_NAMES = { en: "English", de: "Deutsch", fr: "Français" };
 
 // Which segment of a path is the language folder; -1 at the site root.
 function langIndex(path) {
@@ -1666,6 +1672,32 @@ function switchHref(path, hash, to) {
 // The home page of the language a path is in.
 function homeHref(path) {
   return path.split("/").slice(0, langIndex(path) + 1).join("/") + "/index.html";
+}
+
+// Quarto's search index lists every page with an href relative to the site root ("fr/catalog/x.html#section"),
+// whatever address the site is served from. Keep the entries of one language.
+function filterIndex(entries, lang) {
+  return entries.filter((e) => typeof e.href === "string" && e.href.replace(/^(\.?\/)+/, "").startsWith(lang + "/"));
+}
+
+// Make the search box see only the current language: wrap fetch so the request for search.json comes back
+// filtered. Every other request passes through untouched, and if anything goes wrong the full index is returned.
+function limitSearchTo(lang, win) {
+  const original = win.fetch;
+  if (typeof original !== "function") return;
+  win.fetch = async function (input, init) {
+    const response = await original.apply(this, arguments);
+    try {
+      const url = typeof input === "string" ? input : (input && input.url) || String(input);
+      if (!/(^|\/)search\.json$/.test(url.split(/[?#]/)[0]) || !response.ok) return response;
+      const entries = await response.clone().json();
+      if (!Array.isArray(entries)) return response;
+      return new Response(JSON.stringify(filterIndex(entries, TRANSLATED_LANGS.includes(lang) ? lang : "en")),
+                          { status: response.status, statusText: response.statusText, headers: response.headers });
+    } catch (e) {
+      return response;
+    }
+  };
 }
 
 // Where to send a visitor at the site root: their earlier choice, else their browser's language, else English.
@@ -1695,15 +1727,24 @@ if (typeof document !== "undefined") {
   } else {
     const current = path.split("/")[langIndex(path)];
     document.querySelectorAll("a.navbar-brand").forEach((a) => { a.href = homeHref(path); });
-    document.querySelectorAll("a.nav-link").forEach((a) => {
+    limitSearchTo(current, window);
+    document.querySelectorAll("nav.navbar a.nav-link").forEach((a) => {
       const lang = a.textContent.trim().toLowerCase();
       if (!SITE_LANGS.includes(lang)) return;
       a.href = switchHref(path, window.location.hash, lang);
+      a.setAttribute("aria-label", LANG_NAMES[lang]);
       if (lang === current) a.setAttribute("aria-current", "true");
       else a.removeAttribute("aria-current");
       a.addEventListener("click", () => {
         saveChoice(lang);
         a.href = switchHref(window.location.pathname, window.location.hash, lang);   // the section open now
+      });
+    });
+    // Moving to another section changes the hash; keep the links in step, so a middle-click opens that section.
+    window.addEventListener("hashchange", () => {
+      document.querySelectorAll("nav.navbar a.nav-link").forEach((a) => {
+        const lang = a.textContent.trim().toLowerCase();
+        if (SITE_LANGS.includes(lang)) a.href = switchHref(window.location.pathname, window.location.hash, lang);
       });
     });
   }

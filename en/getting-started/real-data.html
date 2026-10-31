@@ -623,13 +623,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="swiss-rules">The Swiss rules</h2>
 <p>Two sets of rules apply to every HFR research project that uses patient data:</p>
 <ul>
-<li><strong>The Human Research Act</strong> (HRA; in German HFG, in French LRH) and its ordinances. Research with health data needs approval from the cantonal ethics committee before anyone touches the data. For HFR that is the CER-VD, and every project gets a BASEC number when it is submitted. Clinical trials, such as randomized trials, also fall under the Clinical Trials Ordinance (ClinO; in German KlinV, in French OClin).</li>
+<li><strong>The Human Research Act</strong> (HRA; in German HFG, in French LRH) and its ordinances. Research with health data needs approval from the cantonal ethics committee before anyone touches the data. For HFR that is the CER-VD, and every project gets a BASEC number when it is submitted. Clinical trials, such as randomized trials, also fall under the Clinical Trials Ordinance (ClinO; in German KlinV, in French OClin), and trials of medical devices, such as implants, under its counterpart for devices (ClinO-MD; in German KlinV-Mep, in French OClin-Dim).</li>
 <li><strong>Data protection law.</strong> Health data are sensitive personal data. HFR is a cantonal hospital, so Fribourg’s cantonal data protection law applies to it, alongside the Human Research Act’s own rules on research data.</li>
 </ul>
 <p>Your project lead has the approval and the protocol. Read them before you start: they say which data you may use and how.</p>
 <section id="coded" class="level3">
 <h3 class="anchored" data-anchor-id="coded">Coded, not anonymous</h3>
-<p>HFR studies work with <strong>coded</strong> data. Each patient gets a study code (for example <code>C0001</code>), and a separate <strong>code key</strong> links the codes back to the patients. The code key is kept apart from the study data, by the person the ethics application names for it, and never in a repository.</p>
+<p>HFR studies work with <strong>coded</strong> data. Each patient gets a study code (for example <code>C0001</code>), and a separate <strong>code key</strong> links the codes back to the patients. The code key is kept apart from the study data, by the person the ethics application names for it, who isn’t involved in the project, and never in a repository.</p>
 <p>“Coded” and “anonymous” mean different things in Swiss law. Data are anonymous only when they can no longer be linked back to a person, so data with a code key are never anonymous. Use the word “coded” in everything you write, including emails, protocols and Methods sections.</p>
 </section>
 <section id="general-consent" class="level3">
@@ -671,7 +671,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>Keep study data in the project’s REDCap database: HFR Ortho encourages every project to keep its data there. Don’t copy them anywhere else.</li>
 <li>Analysis code lives in a private repository in HFR Ortho’s GitHub organization. The repository reads the data at run time from git-ignored folders (<code>data/raw/</code>, <code>db/</code>, <code>exports/</code>) that are listed in <code>.gitignore</code> <em>before the first commit</em>.</li>
-<li>The code key stays with the person the ethics application names for it, never in a repository.</li>
+<li>The code key stays with the person the ethics application names for it, who isn’t involved in the project, never in a repository.</li>
 <li>What leaves the secure environment is aggregate: tables, figures and model results. Your protocol may require hiding small counts.</li>
 </ul>
 </section>
@@ -700,7 +700,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>If patient data reaches a commit, a push or an issue:</p>
 <ol type="1">
 <li><strong>Stop.</strong> Don’t try to fix it with another commit. Git keeps the history.</li>
-<li><strong>Tell your project lead right away.</strong> The data has to be purged from history, and the incident may have to be reported to HFR’s data protection officer.</li>
+<li><strong>Tell your project lead right away.</strong> The data has to be purged from history, and your project lead decides whether the incident has to be reported, and to whom.</li>
 </ol>
 <p>Reporting quickly is always the right call, and nobody will be upset that you did.</p>
 
@@ -712,6 +712,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 // The language switcher (HFR spec §4.3). Every page lives at <site>/<lang>/<path>, with the same <path>
 // in every language, so switching language swaps one segment of the address.
 const SITE_LANGS = ["en", "de", "fr"];
+// Quarto drops `aria-label` from text links in the navbar (it keeps it only on icons), so the switcher
+// gives each language link its accessible name: the language in its own language.
+// Languages whose pages are translated. The search shows only these; any other language (German, whose pages
+// are stubs that lead to English) searches the English index. German joins this list in sub-project 4.
+const TRANSLATED_LANGS = ["en", "fr"];
+const LANG_NAMES = { en: "English", de: "Deutsch", fr: "Français" };
 
 // Which segment of a path is the language folder; -1 at the site root.
 function langIndex(path) {
@@ -730,6 +736,32 @@ function switchHref(path, hash, to) {
 // The home page of the language a path is in.
 function homeHref(path) {
   return path.split("/").slice(0, langIndex(path) + 1).join("/") + "/index.html";
+}
+
+// Quarto's search index lists every page with an href relative to the site root ("fr/catalog/x.html#section"),
+// whatever address the site is served from. Keep the entries of one language.
+function filterIndex(entries, lang) {
+  return entries.filter((e) => typeof e.href === "string" && e.href.replace(/^(\.?\/)+/, "").startsWith(lang + "/"));
+}
+
+// Make the search box see only the current language: wrap fetch so the request for search.json comes back
+// filtered. Every other request passes through untouched, and if anything goes wrong the full index is returned.
+function limitSearchTo(lang, win) {
+  const original = win.fetch;
+  if (typeof original !== "function") return;
+  win.fetch = async function (input, init) {
+    const response = await original.apply(this, arguments);
+    try {
+      const url = typeof input === "string" ? input : (input && input.url) || String(input);
+      if (!/(^|\/)search\.json$/.test(url.split(/[?#]/)[0]) || !response.ok) return response;
+      const entries = await response.clone().json();
+      if (!Array.isArray(entries)) return response;
+      return new Response(JSON.stringify(filterIndex(entries, TRANSLATED_LANGS.includes(lang) ? lang : "en")),
+                          { status: response.status, statusText: response.statusText, headers: response.headers });
+    } catch (e) {
+      return response;
+    }
+  };
 }
 
 // Where to send a visitor at the site root: their earlier choice, else their browser's language, else English.
@@ -759,15 +791,24 @@ if (typeof document !== "undefined") {
   } else {
     const current = path.split("/")[langIndex(path)];
     document.querySelectorAll("a.navbar-brand").forEach((a) => { a.href = homeHref(path); });
-    document.querySelectorAll("a.nav-link").forEach((a) => {
+    limitSearchTo(current, window);
+    document.querySelectorAll("nav.navbar a.nav-link").forEach((a) => {
       const lang = a.textContent.trim().toLowerCase();
       if (!SITE_LANGS.includes(lang)) return;
       a.href = switchHref(path, window.location.hash, lang);
+      a.setAttribute("aria-label", LANG_NAMES[lang]);
       if (lang === current) a.setAttribute("aria-current", "true");
       else a.removeAttribute("aria-current");
       a.addEventListener("click", () => {
         saveChoice(lang);
         a.href = switchHref(window.location.pathname, window.location.hash, lang);   // the section open now
+      });
+    });
+    // Moving to another section changes the hash; keep the links in step, so a middle-click opens that section.
+    window.addEventListener("hashchange", () => {
+      document.querySelectorAll("nav.navbar a.nav-link").forEach((a) => {
+        const lang = a.textContent.trim().toLowerCase();
+        if (SITE_LANGS.includes(lang)) a.href = switchHref(window.location.pathname, window.location.hash, lang);
       });
     });
   }
