@@ -1077,8 +1077,6 @@ def test_french_banned_terms():
 
 @pytest.mark.parametrize("lang", LANGS)
 def test_report_docx_has_the_same_text_as_english(site, lang):
-    if lang == "de" and ".coming-soon" in (ROOT / "de" / "report" / "18-example-report.qmd").read_text(encoding="utf-8"):
-        pytest.skip("page 18 is still a German stub")
     english = SITE_ROOT / "en" / "report" / "18-example-report.docx"
     translated = SITE_ROOT / lang / "report" / "18-example-report.docx"
     assert english.exists() and translated.exists()
@@ -1217,8 +1215,6 @@ def test_german_banned_terms():
 
 def test_german_real_data_uses_the_swiss_law_names():
     text = (ROOT / "de" / "getting-started" / "real-data.qmd").read_text(encoding="utf-8")
-    if ".coming-soon" in text:
-        pytest.skip("real-data is still a German stub")
     for name in ("Humanforschungsgesetz", "KlinV-Mep", "CER-VD", "BASEC"):
         assert name in text, name
 
