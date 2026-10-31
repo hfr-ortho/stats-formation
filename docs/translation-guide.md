@@ -64,6 +64,7 @@ Copy every number exactly as the English has it: the decimal point stays a point
 - Numbers keep the English decimal point (`0.86`) and thousands comma (`1,200`), never `0,86` or `1'200`.
 - Fixed terms: `Results-Satz` (the sentence after **Results:**), `Eintritt` (admission), `Austritt` (discharge), `Kontrolle` for a visit (`Studienvisite` in a trial, never bare `Visite`), `normalverteilt` for Gaussian, `Hüft-TP`/`Knie-TP`.
 - Pair forms: Forschungsassistierende, Medizinstudierende, beurteilende Person (plural Beurteilende), Assistenzärztinnen und Assistenzärzte.
+- In "Ausgabe lesen", a term the output prints stays bold and verbatim (`95% CI 64.8 to 66.3`); a derived label is German (`95%-KI für den Median 41 bis 43`).
 - Gloss at first use, once per page: KI, SD, IQR, HR, OR, PROM, HOOS JR, KOOS JR. The glossary rows give the German form.
 - Fedlex's German text decides every law name; the glossary holds the names the project uses.
 
