@@ -55,17 +55,12 @@ SAME_AS_ENGLISH = {
 
 # ---------------------------------------------------------------- pages
 
-# The German home page is written by hand and differs from the English one until Task 13 of sub-project 4
-# translates it; delete this set then.
-NOT_YET_COMPARABLE = {("de", "index.qmd")}
-
-
 def translated_pages(lang, root=ROOT):
     """(en_path, tr_path) for every page of `lang` that isn't a stub, with its English twin."""
     folders = [root / lang] + [root / lang / d for d in CONTENT_DIRS]
     for folder in folders:
         for tr in sorted(folder.glob("*.qmd")):
-            if ".coming-soon" in tr.read_text(encoding="utf-8") or ((lang, tr.name) in NOT_YET_COMPARABLE and folder == root / lang):
+            if ".coming-soon" in tr.read_text(encoding="utf-8"):
                 continue
             yield root / "en" / tr.relative_to(root / lang), tr
 

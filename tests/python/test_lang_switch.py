@@ -57,6 +57,10 @@ def test_search_index_keeps_only_the_current_language():
     assert run(['filterIndex([{href: "fr/a.html"}, {href: "en/a.html"}, {href: "index.html"}], "fr")']) == [[{"href": "fr/a.html"}]]
 
 
+def test_search_index_keeps_german():
+    assert run(['filterIndex([{href: "de/a.html"}, {href: "fr/a.html"}], "de")']) == [[{"href": "de/a.html"}]]
+
+
 def test_search_index_handles_sections_and_leading_dots():
     assert run(['filterIndex([{href: "fr/a.html#s"}, {href: "./fr/b.html"}, {href: "de/fr/c.html"}, {href: "en/fr/"}, {}], "fr")']) == \
         [[{"href": "fr/a.html#s"}, {"href": "./fr/b.html"}]]
@@ -86,11 +90,11 @@ def test_fetch_wrapper_filters_search_json_and_returns_a_real_response():
     assert got == [True, 200, "b", [{"href": "fr/a.html#x"}]]
 
 
-def test_search_on_an_untranslated_language_uses_english():
+def test_search_on_german_keeps_only_german():
     probe = FETCH + script() + "\nlimitSearchTo('de', win);\n(async () => console.log(JSON.stringify(await (await win.fetch('../search.json')).json())))();"
     out = subprocess.run([NODE, "-e", probe], capture_output=True, text=True, timeout=30)
     assert out.returncode == 0, out.stderr
-    assert json.loads(out.stdout) == [{"href": "en/a.html"}]
+    assert json.loads(out.stdout) == [{"href": "de/a.html"}]
 
 
 def test_fetch_wrapper_leaves_other_requests_alone():

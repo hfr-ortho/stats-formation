@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 from sitelib import LANGS, PAGES, ROOT, SITE_ROOT, target, text_of
 
-STUB_MARK = {"de": "(in Vorbereitung)", "fr": "(en préparation)"}
+STUB_MARK = {"de": "(in Vorbereitung)", "fr": "(en préparation)"}   # kept for pages added later
 WARNING = {"en": "SYNTHETIC DATA", "de": "SYNTHETISCHE DATEN", "fr": "DONNÉES SYNTHÉTIQUES"}
 HOME_LINKS = {"getting-started/setup.html", "getting-started/using-this-site.html", "getting-started/real-data.html",
               "foundations/01-tidy-data.html", "catalog/04-describe-one-group.html", "survival/13-kaplan-meier.html",
@@ -65,6 +65,13 @@ def test_french_is_finished(site):
     for page in PAGES:
         assert load_lang("fr", page).select_one(".coming-soon") is None, page
     assert "Traduction en cours" not in text_of(load_lang("fr", "index.html"))
+
+
+def test_german_is_finished(site):
+    for page in PAGES:
+        assert load_lang("de", page).select_one(".coming-soon") is None, page
+        assert "(in Vorbereitung)" not in load_lang("de", page).title.get_text(), page
+    assert "Übersetzung in Arbeit" not in text_of(load_lang("de", "index.html"))
 
 
 def test_home_pages_are_translated_and_link_the_same_pages(site):
