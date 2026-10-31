@@ -134,7 +134,7 @@ check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parame
 ### Effektstärke und 95%-KI
 
 - Die **Mittelwertsdifferenz** mit ihrem KI, in Grad: 3.7° (95%-KI 2.7 bis 4.6).
-- **Cohens d~z~** teilt die Mittelwertsdifferenz durch die Standardabweichung der Differenzen: wie gleichmässig sich die beiden Aufnahmen über die Hüften hinweg unterscheiden. Die übliche Richtschnur (0.2 klein, 0.5 mittel, 0.8 gross) gilt auch hier.
+- **Cohens d~z~** teilt die Mittelwertsdifferenz durch die Standardabweichung der Differenzen: wie einheitlich sich die beiden Aufnahmen über die Hüften hinweg unterscheiden. Die übliche Richtschnur (0.2 klein, 0.5 mittel, 0.8 gross) gilt auch hier.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -177,7 +177,7 @@ Ein t-Test für unabhängige Stichproben auf den beiden Spalten ignoriert, welch
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: gepaarte Effektstärken
-`compute_effsize(x, y, paired=True)` von pingouin gibt **nicht** d~z~ zurück: Es gibt d~av~ zurück (die Mittelwertsdifferenz geteilt durch die Quadratwurzel aus dem Durchschnitt der beiden Varianzen), hier 0.33. Beide sind legitim, beantworten aber verschiedene Fragen und sind nicht austauschbar: d~av~ vergleicht die Differenz damit, wie stark sich die Hüften untereinander unterscheiden, d~z~ damit, wie gleichmässig sich die beiden Aufnahmen innerhalb einer Hüfte unterscheiden. Wir berechnen d~z~ direkt, damit die beiden Sprachen übereinstimmen; geben Sie an, welches Sie berichten.
+`compute_effsize(x, y, paired=True)` von pingouin gibt **nicht** d~z~ zurück: Es gibt d~av~ zurück (die Mittelwertsdifferenz geteilt durch die Quadratwurzel aus dem Durchschnitt der beiden Varianzen), hier 0.33. Beide sind zulässig, beantworten aber verschiedene Fragen und sind nicht austauschbar: d~av~ vergleicht die Differenz damit, wie stark sich die Hüften untereinander unterscheiden, d~z~ damit, wie einheitlich sich die beiden Aufnahmen innerhalb einer Hüfte unterscheiden. Wir berechnen d~z~ direkt, damit die beiden Sprachen übereinstimmen; geben Sie an, welches Sie berichten.
 :::
 
 ## Wilcoxon-Vorzeichen-Rang-Test {#wilcoxon-signed-rank}
@@ -361,7 +361,7 @@ Ein winziger p-Wert sagt, dass die Scores im Durchschnitt gestiegen sind; er sag
 ### Wann verwenden
 
 - Eine **Ja/Nein**-Zielgrösse, die **zweimal bei denselben Personen** gemessen wird (oder einmal bei jedem Mitglied eines gematchten Paars).
-- Er verwendet nur die **diskordanten Paare**: die Personen, bei denen sich etwas geändert hat (nein → ja oder ja → nein). Personen, bei denen alles gleich blieb, sagen nichts über die Richtung der Veränderung aus.
+- Er verwendet nur die **diskordanten Paare**: die Personen, bei denen sich etwas verändert hat (nein → ja oder ja → nein). Personen, bei denen alles gleich blieb, sagen nichts über die Richtung der Veränderung aus.
 - Die Chi-Quadrat-Version braucht insgesamt mindestens etwa 10 diskordante Paare. Bei weniger verwenden Sie die **exakte** Version (siehe den Kasten «R oder Python»).
 
 ### Zuerst die Daten ansehen
@@ -407,7 +407,7 @@ print(aid[["preop", "6wk"]].mean())                 # Anteil der Personen mit Ge
 ```
 :::
 
-Von 505 Patientinnen und Patienten, die bei beiden Kontrollen gesehen wurden, hatten 134 nie eine Gehhilfe und 108 zu beiden Zeitpunkten eine. Bei den übrigen 263 änderte sich etwas: **193 begannen**, eine Gehhilfe zu benutzen, und **70 hörten auf**.
+Von 505 Patientinnen und Patienten, die bei beiden Kontrollen gesehen wurden, hatten 134 nie eine Gehhilfe und 108 zu beiden Zeitpunkten eine. Bei den übrigen 263 veränderte sich etwas: **193 begannen**, eine Gehhilfe zu benutzen, und **70 hörten auf**.
 
 ### Analyse durchführen
 
@@ -455,7 +455,7 @@ stopped <- aid_table["1", "0"]    # vorher eine Gehhilfe, nach 6 Wochen keine Ge
 
 started / stopped                                    # Odds Ratio der diskordanten Paare
 
-ci <- binom.test(started, started + stopped)$conf.int  # KI für den Anteil der Wechselnden, die begannen
+ci <- binom.test(started, started + stopped)$conf.int  # KI für den Anteil der Personen mit Wechsel, die begannen
 ci / (1 - ci)                                        # umgerechnet in ein KI für das Odds Ratio
 ```
 
@@ -467,7 +467,7 @@ stopped = int(aid_table.loc[1, 0])    # vorher eine Gehhilfe, nach 6 Wochen kein
 
 print(started / stopped)                                                # Odds Ratio der diskordanten Paare
 
-ci = stats.binomtest(started, started + stopped).proportion_ci(method="exact")   # Anteil der Wechselnden, die begannen
+ci = stats.binomtest(started, started + stopped).proportion_ci(method="exact")   # Anteil der Personen mit Wechsel, die begannen
 print(ci.low / (1 - ci.low), ci.high / (1 - ci.high))                   # umgerechnet in ein KI für das Odds Ratio
 ```
 :::
@@ -509,7 +509,7 @@ Ein häufiger Fehler ist, «Gehhilfe ja/nein» gegen «präoperativ / 6 Wochen»
 ### Wann verwenden
 
 - Die Zielgrösse ist die **Zeit bis zu einem Ereignis**, und die Patientinnen und Patienten bilden **gematchte Paare** (oder Gruppen), oder die beiden «Fälle» sind die beiden Gelenke einer Person.
-- Ein nach Paaren **stratifiziertes** Cox-Modell gibt jedem Paar sein eigenes Ausgangsrisiko und vergleicht die Implantate nur **innerhalb** der Paare. Die Entscheidungstabelle nennt das *bedingte Regression mit proportionalen Hazards*.
+- Ein nach Paaren **stratifiziertes** Cox-Modell gibt jedem Paar sein eigenes Basisrisiko (Baseline-Hazard) und vergleicht die Implantate nur **innerhalb** der Paare. Die Entscheidungstabelle nennt das *bedingte Regression mit proportionalen Hazards*.
 - Nur Paare, in denen eine Person revidiert wurde, während die andere noch nachbeobachtet wurde, sagen dem Modell etwas; bei wenigen Ereignissen ist ein breites KI zu erwarten.
 - [Seite 14](../survival/14-cox-regression.qmd) behandelt die Cox-Regression ausführlich.
 
