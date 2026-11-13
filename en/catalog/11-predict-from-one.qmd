@@ -37,6 +37,17 @@ To keep the code short, the joint replacement examples use every case, including
 - The **residuals** (each patient's distance from the line) are roughly normal, with a similar spread all along the line. Check them after fitting.
 - If the relationship curves → [nonlinear regression](#nonlinear-regression). If the outcome is skewed or has a ceiling → [nonparametric regression](#nonparametric-regression). If it's yes/no → [logistic regression](#logistic-regression).
 
+### What the test really does
+
+Linear regression draws the straight line that fits the points best, and then asks how sure we can be of its slope.
+
+1. For any line you could draw, measure each patient's vertical distance from it: the **residual**.
+2. Square the residuals and add them up. The **least-squares line** is the one line for which this sum is as small as possible. Software finds it with a formula, not by trial and error.
+3. The **slope** of that line says how much the outcome changes, on average, for each extra unit of the predictor. The line always passes through the point where both variables are at their [mean](../glossary.qmd#mean){.term}.
+4. The test asks whether the slope is further from 0 than chance would explain: t = slope ÷ its [standard error](../glossary.qmd#standard-error){.term}, turned into a [p-value](../glossary.qmd#p-value){.term}. The standard error is smaller with more patients, with less scatter around the line, and with a wider spread of the predictor.
+
+Once the model has run, a box under "Read the output" rebuilds the line by hand.
+
 ### Look at the data first
 
 ::: {.panel-tabset group="language"}
@@ -53,6 +64,8 @@ ggplot(cohort, aes(bmi, op_time_min)) +
   geom_point(alpha = 0.4) +
   geom_smooth(method = "lm", se = FALSE) +   # the least-squares line
   labs(x = "BMI, kg/m²", y = "Operative time, minutes")
+
+range(cohort$bmi)   # lowest and highest BMI in the data
 ```
 
 ## Python
@@ -73,10 +86,11 @@ ax.plot(bmi_range, intercept + slope * bmi_range)
 ax.set_xlabel("BMI, kg/m²")
 ax.set_ylabel("Operative time, minutes")
 plt.show()
+print(bmi_range)   # lowest and highest BMI in the data
 ```
 :::
 
-The points scatter around a rising straight line, with no curve and no extreme outliers.
+The points scatter around a rising straight line, with no curve and no extreme outliers. BMI runs from 18.0 to 44.5 (the last line of output).
 
 ### Run it
 
@@ -117,10 +131,57 @@ check_agree(list(intercept = coef(bmi_model)[["(Intercept)"]], slope = coef(bmi_
 
 - **Intercept = 42.8:** the predicted operative time at a BMI of 0. That's impossible, so on its own it means nothing; it anchors the line.
 - **bmi = 1.37:** the **slope**. Each extra kg/m² of BMI goes with 1.37 more minutes of operative time, on average.
-- **Std. Error 0.11, t = 12.4, p < 0.001:** the slope's uncertainty, and the test of whether it's zero (no relationship).
+- **Std. Error 0.11, t = 12.4, p < 0.001** (R prints `<2e-16`, Python `0.000`): the slope's uncertainty, and the test of whether it's zero (no relationship).
 - **95% CI 1.15 to 1.58** (R's `confint()`; Python's `[0.025 0.975]` columns).
 - **R-squared = 0.20:** BMI accounts for a fifth of the variation in operative time.
 - **Residual standard error 14.7** (R only): the typical distance of a patient's operative time from the line, in minutes.
+- **Everything else** (R's residual quartiles, significance stars and F-statistic; Python's Omnibus, Durbin-Watson, Jarque-Bera, AIC and BIC): you can ignore it for a model with one predictor. With one predictor, the F test repeats the test of the slope.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the line by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_mean <- mean(cohort$bmi)
+time_mean <- mean(cohort$op_time_min)
+slope_by_hand <- sum((cohort$bmi - bmi_mean) * (cohort$op_time_min - time_mean)) / sum((cohort$bmi - bmi_mean)^2)   # step 2: the slope that makes the sum of squared residuals smallest
+intercept_by_hand <- time_mean - slope_by_hand * bmi_mean                                     # step 3: the line passes through the two means
+residuals_by_hand <- cohort$op_time_min - (intercept_by_hand + slope_by_hand * cohort$bmi)   # step 1: each procedure's distance from that line
+c(intercept = intercept_by_hand, slope = slope_by_hand)
+1 - sum(residuals_by_hand^2) / sum((cohort$op_time_min - time_mean)^2)   # R-squared: 1 minus the share of the variation left around the line
+sqrt(sum(residuals_by_hand^2) / (600 - 2))                                # residual standard error: the typical size of a residual (600 procedures)
+```
+
+## Python
+
+```{python}
+bmi_mean = cohort["bmi"].mean()
+time_mean = cohort["op_time_min"].mean()
+slope_by_hand = ((cohort["bmi"] - bmi_mean) * (cohort["op_time_min"] - time_mean)).sum() / ((cohort["bmi"] - bmi_mean) ** 2).sum()   # step 2: the slope that makes the sum of squared residuals smallest
+intercept_by_hand = time_mean - slope_by_hand * bmi_mean                                      # step 3: the line passes through the two means
+residuals_by_hand = cohort["op_time_min"] - (intercept_by_hand + slope_by_hand * cohort["bmi"])   # step 1: each procedure's distance from that line
+print(intercept_by_hand, slope_by_hand)
+print(1 - (residuals_by_hand ** 2).sum() / ((cohort["op_time_min"] - time_mean) ** 2).sum())   # R-squared: 1 minus the share of the variation left around the line
+print(np.sqrt((residuals_by_hand ** 2).sum() / (600 - 2)))                                      # residual standard error: the typical size of a residual (600 procedures)
+```
+:::
+
+The by-hand line has an intercept of 42.8 and a slope of 1.37, as in the output. R² is 1 minus the share of the variation that is left around the line: 0.20. The residual standard error, 14.7 minutes, is the typical size of a residual.
+:::
+
+```{python}
+#| include: false
+chk = {"intercept": float(intercept_by_hand), "slope": float(slope_by_hand),
+       "rse": float(np.sqrt((residuals_by_hand ** 2).sum() / (600 - 2)))}
+```
+
+```{r}
+#| include: false
+check_agree(list(intercept = intercept_by_hand, slope = slope_by_hand,
+                 rse = sqrt(sum(residuals_by_hand^2) / (600 - 2))), reticulate::py$chk)
+```
 
 Before trusting the line, plot the residuals against the fitted values: they should form a band of even width around 0, with no curve.
 
@@ -152,7 +213,7 @@ They do here: an even band, with no curve and no funnel shape.
 
 ### Effect size and 95% CI
 
-The **slope** with its 95% CI is the effect size: 1.37 minutes per kg/m² (95% CI 1.15 to 1.58). Scale it to a difference that matters clinically: 5 kg/m² of BMI goes with 6.8 more minutes (95% CI 5.8 to 7.9). **R² = 0.20** says how much of the variation the line explains.
+The **slope** with its 95% CI is the effect size: 1.37 minutes per kg/m² (95% CI 1.15 to 1.58). Scale it to a difference that matters clinically: 5 kg/m² of BMI goes with 5 × 1.368 = 6.8 more minutes (95% CI 5 × 1.151 = 5.8 to 5 × 1.585 = 7.9). The slope and both ends of its CI are multiplied by 5, using the unrounded numbers in the output. **R² = 0.20** says how much of the variation the line explains.
 
 ### How to report it
 
@@ -162,7 +223,7 @@ The **slope** with its 95% CI is the effect size: 1.37 minutes per kg/m² (95% C
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the line is an average, and only inside your data
-The line predicts the **average** operative time at each BMI. Individual patients scatter around it by about 15 minutes either way (the residual standard error), so it's a poor tool for scheduling one patient's case. And BMI here runs from 18.0 to 44.5: don't use the line to predict outside that range.
+The line predicts the **average** operative time at each BMI. Individual patients scatter around it by about 15 minutes either way (the residual standard error), so it's a poor tool for scheduling one patient's case. And BMI here runs from 18.0 to 44.5 (printed under "Look at the data first"): don't use the line to predict outside that range.
 :::
 
 ## Nonlinear regression {#nonlinear-regression}
@@ -181,7 +242,18 @@ $$\text{score} = \text{plateau} - (\text{plateau} - \text{start}) \times e^{-\te
 
 - **start:** the score on the day of surgery.
 - **plateau:** the level the score settles at.
-- **τ (tau):** the time constant. After τ days patients have made 63% of their eventual gain, and half of it after τ × ln 2 ≈ 0.69 τ days.
+- **τ (tau):** the time constant. After τ days patients have made 63% of their eventual gain (1 − e^−1^ = 0.63), and half of it after τ × ln 2 ≈ 0.69 τ days.
+
+### What the test really does
+
+Nonlinear regression fits a curve the way linear regression fits a line: by making the squared distances between the points and the curve as small as possible.
+
+1. Start from your rough guesses for the curve's numbers (here plateau, start and τ) and draw that curve.
+2. Measure each score's vertical distance from the curve, square the distances and add them up.
+3. Change the numbers a little in the direction that makes the sum smaller, and repeat. For a curve there is no formula that gives the answer in one step, which is why the program needs starting guesses.
+4. Stop when no small change makes the sum any smaller: the fit has **converged**. The numbers at that point are the estimates.
+
+Once the model has run, a box under "Read the output" shows the sum for the starting guesses and for the fitted curve.
 
 ### Look at the data first
 
@@ -197,7 +269,7 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 
 koos <- proms |>
   filter(instrument == "KOOS JR", !is.na(prom_score)) |>
-  mutate(days = pmax(visit_days, 0))   # pre-op visits (1-27 days before surgery) count as day 0
+  mutate(days = pmax(visit_days, 0))   # pre-op visits have negative days (before surgery); count them as day 0
 
 ggplot(koos, aes(days, prom_score)) +
   geom_point(alpha = 0.2) +
@@ -205,6 +277,7 @@ ggplot(koos, aes(days, prom_score)) +
 
 nrow(koos)                # scores
 n_distinct(koos$case_id)  # knees
+count(koos, visit)        # scores at each visit
 ```
 
 ## Python
@@ -219,7 +292,7 @@ from scipy.optimize import curve_fit
 proms = pd.read_csv("data/proms_long.csv")
 
 koos = proms[proms["instrument"] == "KOOS JR"].dropna(subset=["prom_score"]).copy()
-koos["days"] = koos["visit_days"].clip(lower=0)   # pre-op visits (1-27 days before surgery) count as day 0
+koos["days"] = koos["visit_days"].clip(lower=0)   # pre-op visits have negative days (before surgery); count them as day 0
 
 fig, ax = plt.subplots(figsize=(6, 3.5))
 ax.scatter(koos["days"], koos["prom_score"], alpha=0.2)
@@ -228,10 +301,11 @@ ax.set_ylabel("KOOS JR")
 plt.show()
 
 print(len(koos), koos["case_id"].nunique())   # scores, knees
+print(koos["visit"].value_counts())            # scores at each visit
 ```
 :::
 
-1146 scores from 330 knees. The scores climb steeply over the first 3 months, then more slowly toward 1 year: a curve that levels off, not a straight line.
+1146 scores from 330 knees. The scores climb steeply over the first 3 months, then more slowly toward 1 year: a curve that levels off, not a straight line. Each knee has up to four scores, one per visit (the last table).
 
 ### Run it
 
@@ -281,6 +355,52 @@ check_agree(list(plateau = recovery_coef["plateau", "Estimate"], start = recover
 - **Std. Error:** each estimate's uncertainty. The t values and p-values test whether each number is zero, which nobody doubts here; ignore them.
 - **Residual standard error 12.33 on 1143 degrees of freedom** (R only): individual scores scatter about 12 points around the curve.
 
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the sum the program makes as small as it can
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+squared_distance <- function(plateau, start, tau) {    # step 2: the sum of squared distances between the scores and a curve
+  sum((koos$prom_score - (plateau - (plateau - start) * exp(-koos$days / tau)))^2)
+}
+fit <- coef(recovery)
+squared_distance(85, 50, 100)                                              # step 1: the curve drawn from the starting guesses
+squared_distance(fit[["plateau"]], fit[["start"]], fit[["tau"]])           # step 4: the curve the program settled on
+squared_distance(fit[["plateau"]], fit[["start"]], 60)                     # the same curve with tau moved to 60 days: worse again
+sqrt(squared_distance(fit[["plateau"]], fit[["start"]], fit[["tau"]]) / (1146 - 3))   # residual standard error: 1146 scores, 3 estimated numbers
+```
+
+## Python
+
+```{python}
+def squared_distance(plateau, start, tau):             # step 2: the sum of squared distances between the scores and a curve
+    return ((koos["prom_score"] - recovery_curve(koos["days"], plateau, start, tau)) ** 2).sum()
+
+print(squared_distance(85, 50, 100))                               # step 1: the curve drawn from the starting guesses
+print(squared_distance(*estimates))                                # step 4: the curve the program settled on
+print(squared_distance(estimates[0], estimates[1], 60))            # the same curve with tau moved to 60 days: worse again
+print(np.sqrt(squared_distance(*estimates) / (1146 - 3)))          # residual standard error: 1146 scores, 3 estimated numbers
+```
+:::
+
+The starting guesses give a sum of 176095. The fitted curve brings it down to 173841, and no other values of the three numbers give a smaller sum: moving τ from 80.9 to 60 days, for example, raises it to 181009. Dividing the smallest sum by 1146 − 3 and taking the square root gives the residual standard error, 12.33 points.
+:::
+
+```{python}
+#| include: false
+chk = {"guess": float(squared_distance(85, 50, 100)), "fitted": float(squared_distance(*estimates)),
+       "other": float(squared_distance(estimates[0], estimates[1], 60))}
+```
+
+```{r}
+#| include: false
+check_agree(list(guess = squared_distance(85, 50, 100), fitted = squared_distance(fit[["plateau"]], fit[["start"]], fit[["tau"]]),
+                 other = squared_distance(fit[["plateau"]], fit[["start"]], 60)),
+            reticulate::py$chk, tol = 1e-4)   # the two programs' estimates agree to ~5 digits (see the check above)
+```
+
 ### Effect size and 95% CI
 
 The curve's numbers, with their 95% CIs, are the effect sizes. Half of the eventual gain comes after τ × ln 2 days.
@@ -301,10 +421,11 @@ t_crit = stats.t.ppf(0.975, df=len(koos) - 3)   # 3 parameters
 print(pd.DataFrame({"low": estimates - t_crit * standard_errors, "high": estimates + t_crit * standard_errors},
                    index=["plateau", "start", "tau"]))
 print(np.log(2) * estimates[2])                  # days to half of the eventual gain
+print(np.log(2) * (estimates[2] - t_crit * standard_errors[2]), np.log(2) * (estimates[2] + t_crit * standard_errors[2]))   # its 95% CI
 ```
 :::
 
-KOOS JR rose from about 49.8 points (95% CI 48.5 to 51.2) on the day of surgery toward a plateau of 84.2 (95% CI 82.6 to 85.9). Half of the gain came by about 56 days, 8 weeks (95% CI 49 to 64 days).
+KOOS JR rose from about 49.8 points (95% CI 48.5 to 51.2) on the day of surgery toward a plateau of 84.2 (95% CI 82.6 to 85.9). Half of the gain came by about 56 days, 8 weeks (95% CI 49 to 64 days). Python's CI for the half-gain time, computed differently, is 48 to 64 days: see the R vs Python box.
 
 ### How to report it
 
@@ -314,13 +435,13 @@ KOOS JR rose from about 49.8 points (95% CI 48.5 to 51.2) on the day of surgery 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: each knee appears up to four times
-Nonlinear least squares treats the 1146 scores as 1146 independent patients, but they come from 330 knees, and scores from the same knee are related. So these CIs can't be trusted: depending on the number, they may be too narrow or too wide. A mixed model ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) accounts for this. And if the fit fails to converge, try starting guesses closer to what the plot shows.
+Each knee has up to four scores (pre-op, 6 weeks, 3 months and 1 year). Nonlinear least squares treats the 1146 scores as 1146 independent patients, but they come from 330 knees, and scores from the same knee are related. So these CIs can't be trusted: depending on the number, they may be too narrow or too wide. A mixed model ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) accounts for this. And if the fit fails to converge, try starting guesses closer to what the plot shows.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two kinds of CI
 - R's `nls()` and scipy's `curve_fit()` use different fitting algorithms but find the same estimates and standard errors.
-- R's `confint()` **profiles** the fit: it moves each number away from its estimate until the fit gets significantly worse. scipy gives only the standard errors, so the Python code uses estimate ± t × standard error. The two CIs differ slightly; here τ's CI runs from 71.0 to 92.5 days in R and 69.9 to 91.8 in Python. Either is fine; say which you used.
+- R's `confint()` **profiles** the fit: it moves each number away from its estimate until the fit gets significantly worse. scipy gives only the standard errors, so the Python code uses estimate ± t × standard error. The two CIs differ slightly; here τ's CI runs from 71.0 to 92.5 days in R and 69.9 to 91.8 in Python, so the CI for the half-gain time is 49 to 64 days in R and 48 to 64 in Python. Either is fine; say which you used.
 :::
 
 ## Nonparametric regression {#nonparametric-regression}
@@ -333,6 +454,17 @@ Nonlinear least squares treats the 1146 scores as 1146 independent patients, but
 - **LOWESS** (locally weighted smoothing) draws the shape without a formula: it fits many small lines, each to the points near it, and joins them into a smooth curve. It gives a picture, not a p-value.
 - The **Theil-Sen slope** is the median of the slopes between every pair of patients. A few extreme patients barely move it, and its CI comes from ranks, not from normal residuals.
 - If the residuals are roughly normal → [linear regression](#linear-regression).
+
+### What the test really does
+
+This section uses two tools, and neither assumes normal residuals.
+
+1. **LOWESS** takes one patient at a time and fits a straight line to the patients whose pre-op score is nearest (here the nearest two-thirds), giving the closest ones the most weight. It keeps only that line's height at the patient's own pre-op score.
+2. Joining these heights gives a smooth curve that follows the data wherever they go. LOWESS gives a picture, with no slope and no [p-value](../glossary.qmd#p-value){.term}.
+3. The **Theil-Sen slope** takes every pair of patients and works out the slope of the line through the two of them. The 246 knees here make 30135 pairs.
+4. It then takes the [median](../glossary.qmd#median){.term} of all these slopes. A few unusual patients change only a few of the pairwise slopes, so they barely move the median.
+
+The R code under "Run it" does steps 3 and 4 by hand.
 
 ### Look at the data first
 
@@ -362,6 +494,7 @@ ggplot(koos_wide, aes(preop, one_year)) +
 
 nrow(koos_wide)
 sum(koos_wide$one_year == 100)   # at the ceiling
+smooth$y[c(1, length(smooth$y))]   # the curve's height at the lowest and highest pre-op score
 ```
 
 ## Python
@@ -390,6 +523,7 @@ ax.set_ylabel("KOOS JR at 1 year")
 plt.show()
 
 print(len(koos_wide), (koos_wide["1yr"] == 100).sum())   # knees, at the ceiling
+print(smooth[[0, -1], 1])   # the curve's height at the lowest and highest pre-op score
 ```
 :::
 
@@ -403,7 +537,7 @@ chk = {"low_end": float(smooth[0, 1]), "middle": float(smooth[100, 1]), "high_en
 check_agree(list(low_end = smooth$y[1], middle = smooth$y[101], high_end = smooth$y[length(smooth$y)]), reticulate::py$chk)
 ```
 
-246 knees have both scores, and 37 of them (15.0%) score the maximum of 100 at 1 year. The LOWESS curve rises steadily from about 70 to about 99 across the range of pre-op scores.
+246 knees have both scores, and 37 of them (37 ÷ 246 = 15.0%) score the maximum of 100 at 1 year. The LOWESS curve rises steadily from about 70 to about 99 across the range of pre-op scores (the last line of output: 70.1 and 98.6).
 
 ### Run it
 
@@ -460,7 +594,31 @@ check_agree(list(slope = ts_slope, intercept = ts_intercept, low = ts_ci[1], hig
 
 ### Effect size and 95% CI
 
-The **Theil-Sen slope** with its CI is the effect size: 0.39 points at 1 year per pre-op point (95% CI 0.27 to 0.52). An ordinary least-squares line gives 0.43; the two would differ more if a few unusual patients pulled the least-squares line.
+The **Theil-Sen slope** with its CI is the effect size: 0.39 points at 1 year per pre-op point (95% CI 0.27 to 0.52). An ordinary least-squares line gives 0.43 (the code below fits it); the two would differ more if a few unusual patients pulled the least-squares line.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+coef(lm(one_year ~ preop, data = koos_wide))   # the least-squares line, for comparison: its slope is the number under preop
+```
+
+## Python
+
+```{python}
+print(stats.linregress(koos_wide["preop"], koos_wide["1yr"]).slope)   # the least-squares slope, for comparison
+```
+:::
+
+```{python}
+#| include: false
+chk = {"ls_slope": float(stats.linregress(koos_wide["preop"], koos_wide["1yr"]).slope)}
+```
+
+```{r}
+#| include: false
+check_agree(list(ls_slope = coef(lm(one_year ~ preop, data = koos_wide))[["preop"]]), reticulate::py$chk)
+```
 
 ### How to report it
 
@@ -491,6 +649,17 @@ Theil-Sen resists outliers, but nothing can see above a ceiling: the 37 knees at
 - You need enough patients with the outcome: a common rule of thumb is at least 10 per predictor.
 - If the outcome is time until an event → [Cox regression](#cox).
 
+### What the test really does
+
+Logistic regression draws a straight line too, but on a scale where a yes/no outcome can follow one: the log odds.
+
+1. A risk can't follow a straight line for long, because it has to stay between 0% and 100%. So the model works with the **odds** (the risk divided by 1 minus the risk) and then with their logarithm, the **log odds**, which can take any value.
+2. The model assumes the log odds change in a straight line with the predictor: log odds = intercept + coefficient × predictor.
+3. It tries out values for the intercept and the coefficient, and keeps the pair under which the outcomes that really happened (who died and who survived), taken together, were most likely. This is called maximum likelihood.
+4. Adding the coefficient to the log odds is the same as multiplying the odds by e raised to the coefficient. That number is the [odds ratio](../glossary.qmd#odds-ratio){.term} per unit of the predictor.
+
+Once the model has run, a box under "Read the output" turns the two coefficients into predicted risks by hand.
+
 ### Look at the data first
 
 The model uses time to surgery as a number, in units of 24 hours, so the odds ratio is per day of delay. The bands are only for the picture.
@@ -512,6 +681,7 @@ by_delay <- hip_fracture |>
   group_by(delay_band) |>
   summarise(n = n(), deaths = sum(death_30d), percent = 100 * mean(death_30d))
 by_delay
+c(deaths = sum(hip_fracture$death_30d), patients = nrow(hip_fracture), percent = 100 * mean(hip_fracture$death_30d))   # all patients
 
 ggplot(by_delay, aes(delay_band, percent)) +
   geom_col() +
@@ -534,6 +704,7 @@ bands = pd.cut(hip_fracture["hours_to_surgery"], bins=[-np.inf, 24, 48, 72, np.i
 by_delay = hip_fracture.groupby(bands, observed=True)["death_30d"].agg(n="count", deaths="sum", percent="mean")
 by_delay["percent"] = 100 * by_delay["percent"]
 print(by_delay)
+print(hip_fracture["death_30d"].sum(), len(hip_fracture), 100 * hip_fracture["death_30d"].mean())   # all patients: deaths, patients, percent
 
 fig, ax = plt.subplots(figsize=(6, 3))
 bars = ax.bar(by_delay.index.astype(str), by_delay["percent"])
@@ -543,7 +714,7 @@ plt.show()
 ```
 :::
 
-Within 30 days, 29 of the 574 patients operated on within 24 hours died (5.1%), and 8 of the 44 operated on after more than 72 hours (18.2%); 74 of 1,200 overall.
+Within 30 days, 29 of the 574 patients operated on within 24 hours died (5.1%), and 8 of the 44 operated on after more than 72 hours (18.2%); 74 of 1,200 overall, or 6.2% (the line under the table).
 
 ### Run it
 
@@ -583,7 +754,47 @@ check_agree(list(coef = delay_coef["hours_24", "Estimate"], se = delay_coef["hou
 - **hours_24 = 0.41:** the change in the **log odds** of death within 30 days per 24 hours of delay. Log odds are hard to read, so turn the coefficient into an odds ratio (next step).
 - **Std. Error 0.11, z = 3.78, p < 0.001:** the test of whether time to surgery matters at all.
 - **Intercept = −3.29:** the log odds at surgery on admission (0 hours), which only anchors the line.
-- **Null and residual deviance** (R) or **LLR p-value** (Python): how much better the model fits with time to surgery than without it.
+- **Null and residual deviance** (R): the misfit of the model without and with time to surgery. Their difference, 555.67 − 543.20 = 12.47 on 1 degree of freedom, is the likelihood ratio test of the model. Python prints its p-value as **LLR p-value** (0.0004). With one predictor it says the same as the z test above.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: from the coefficients to a predicted risk, by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+days <- c(0, 1, 2, 4)                                                  # surgery after 0, 1, 2 and 4 days
+log_odds <- coef(delay_model)[["(Intercept)"]] + coef(delay_model)[["hours_24"]] * days   # step 2: the straight line on the log-odds scale
+odds <- exp(log_odds)                                                  # undo the logarithm
+rbind(days, log_odds, odds, risk_percent = 100 * odds / (1 + odds))    # odds back to a risk: odds ÷ (1 + odds)
+odds[2] / odds[1]                                                      # step 4: 1 more day multiplies the odds by this
+```
+
+## Python
+
+```{python}
+days = np.array([0, 1, 2, 4])                                          # surgery after 0, 1, 2 and 4 days
+log_odds = delay_model.params["Intercept"] + delay_model.params["hours_24"] * days   # step 2: the straight line on the log-odds scale
+odds = np.exp(log_odds)                                                # undo the logarithm
+print(pd.DataFrame({"days": days, "log_odds": log_odds, "odds": odds, "risk_percent": 100 * odds / (1 + odds)}).T)   # odds back to a risk: odds ÷ (1 + odds)
+print(odds[1] / odds[0])                                               # step 4: 1 more day multiplies the odds by this
+```
+:::
+
+For surgery on the day of admission the model predicts a risk of 3.6%; after 1 day 5.3%, after 2 days 7.8% and after 4 days 16.0%. The log odds rise by the same 0.41 with each day, so the odds are multiplied by the same 1.50 each time. The risk itself doesn't rise by a fixed amount, which is why the result is reported as an odds ratio.
+:::
+
+```{python}
+#| include: false
+chk = {"risk_0": float(100 * odds[0] / (1 + odds[0])), "risk_4": float(100 * odds[3] / (1 + odds[3])),
+       "ratio": float(odds[1] / odds[0])}
+```
+
+```{r}
+#| include: false
+check_agree(list(risk_0 = 100 * odds[1] / (1 + odds[1]), risk_4 = 100 * odds[4] / (1 + odds[4]), ratio = odds[2] / odds[1]),
+            reticulate::py$chk, tol = 1e-4)   # glm() stops a step before statsmodels (see the check above)
+```
 
 ### Effect size and 95% CI
 
@@ -615,8 +826,42 @@ Each 24 hours of delay multiplied the odds of death within 30 days by 1.50 (95% 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a straight line on the log-odds scale is an assumption
-The model says each 24 hours multiplies the odds by the same 1.50. That's an assumption, and the bands above can't test it by eye. The last band is open-ended: its patients waited 97 hours on average, so a straight line already predicts its higher rate (17.2% from the model, 18.2% observed). To test the shape, let the effect bend and compare the two fits, as [exercise 3 on page 12](12-predict-from-several.qmd#exercises) does with [splines](12-predict-from-several.qmd#multiple-nonlinear-regression). An odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (6.2%). And it isn't proof of cause: patients too unwell to operate on may wait longer, and they'd die more often whenever they were operated on.
+The model says each 24 hours multiplies the odds by the same 1.50. That's an assumption, and the bands above can't test it by eye. The last band is open-ended: its patients waited 97 hours on average, so a straight line already predicts its higher rate (17.2% from the model, 18.2% observed; the code below computes all three numbers). To test the shape, let the effect bend and compare the two fits, as [exercise 3 on page 12](12-predict-from-several.qmd#exercises) does with [splines](12-predict-from-several.qmd#multiple-nonlinear-regression). An odds ratio isn't a risk ratio: the two are close only when the outcome is rare, as it is here (6.2%). And it isn't proof of cause: patients too unwell to operate on may wait longer, and they'd die more often whenever they were operated on.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+over_72 <- hip_fracture$hours_to_surgery > 72       # the open-ended last band
+mean(hip_fracture$hours_to_surgery[over_72])        # its mean wait, in hours
+100 * mean(fitted(delay_model)[over_72])            # the death rate the model predicts for these patients, %
+100 * mean(hip_fracture$death_30d[over_72])         # the death rate observed, %
+```
+
+## Python
+
+```{python}
+over_72 = hip_fracture["hours_to_surgery"] > 72     # the open-ended last band
+print(hip_fracture.loc[over_72, "hours_to_surgery"].mean())      # its mean wait, in hours
+print(100 * delay_model.predict(hip_fracture[over_72]).mean())   # the death rate the model predicts for these patients, %
+print(100 * hip_fracture.loc[over_72, "death_30d"].mean())       # the death rate observed, %
+```
 :::
+:::
+
+```{python}
+#| include: false
+chk = {"wait": float(hip_fracture.loc[over_72, "hours_to_surgery"].mean()),
+       "predicted": float(100 * delay_model.predict(hip_fracture[over_72]).mean()),
+       "observed": float(100 * hip_fracture.loc[over_72, "death_30d"].mean())}
+```
+
+```{r}
+#| include: false
+check_agree(list(wait = mean(hip_fracture$hours_to_surgery[over_72]), predicted = 100 * mean(fitted(delay_model)[over_72]),
+                 observed = 100 * mean(hip_fracture$death_30d[over_72])),
+            reticulate::py$chk, tol = 1e-4)   # glm() stops a step before statsmodels (see the check above)
+```
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: profile and Wald CIs
@@ -633,6 +878,17 @@ R's `confint()` on a `glm()` **profiles** the likelihood, which is more accurate
 - Cox regression gives a **hazard ratio per unit** of the predictor. Choose a unit that means something: here, per degree.
 - It assumes the hazard ratio stays the same over time (**proportional hazards**) and that the log hazard changes in a straight line with slope. [Page 14](../survival/14-cox-regression.qmd) shows how to check both and covers Cox regression in full.
 - Deaths are censored in any Cox model of another event. That hardly matters in young ACL patients, who rarely die during follow-up. In older patients it does: the hazard ratio then describes the rate among patients still alive, and a patient's actual chance of the event needs the [cumulative incidence](../survival/13-kaplan-meier.qmd#competing-risks) or a [Fine-Gray model](../survival/14-cox-regression.qmd#fine-gray).
+
+### What the test really does
+
+The Cox model works as on [page 8](08-three-plus-unmatched.qmd#cox), with a measurement in place of groups.
+
+1. Start at surgery and move forward in time. Each time a graft fails, look at who was still being followed just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
+2. The model assumes each extra degree of slope multiplies the hazard by the same factor, the [hazard ratio](../glossary.qmd#hazard-ratio){.term}. A patient whose slope is 2° steeper has the hazard multiplied by that factor twice.
+3. It tries out values for the hazard ratio and keeps the one under which the failures that really happened, taken together, were most likely: at each failure, was it one of the steeper slopes among the patients at risk?
+4. The test asks whether that hazard ratio is further from 1 than chance would explain, and gives a [p-value](../glossary.qmd#p-value){.term}.
+
+A patient who leaves the study early is [censored](../glossary.qmd#censored){.term}: they count among the patients at risk for as long as they were followed, and not after.
 
 ### Look at the data first
 
@@ -683,7 +939,7 @@ plt.show()
 ```
 :::
 
-11 of the 73 reconstructions with a slope of 12° or more failed, and 20 of the 277 with a smaller slope.
+11 of the 73 reconstructions with a slope of 12° or more failed, and 20 of the 277 with a smaller slope. The table under the plot gives these counts: the numbers at risk at year 0 (73 and 277) and the events by the end of follow-up (11 and 20).
 
 ### Run it
 
@@ -702,7 +958,9 @@ slope_cox = CoxPHFitter().fit(acl[["followup_years", "graft_failure", "tibial_sl
                               duration_col="followup_years", event_col="graft_failure",
                               fit_options={"precision": 1e-9})
 print(slope_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
-print(slope_cox.log_likelihood_ratio_test().test_statistic)   # overall likelihood ratio test
+overall = slope_cox.log_likelihood_ratio_test()                           # overall likelihood ratio test
+print(overall.test_statistic, overall.degrees_freedom, overall.p_value)   # its statistic, degrees of freedom and p-value
+print(len(acl), acl["graft_failure"].sum())                               # reconstructions, failures
 ```
 :::
 
@@ -725,14 +983,42 @@ check_agree(list(hr = slope_hr["tibial_slope_deg", "exp(coef)"], low = slope_hr[
 ### Read the output
 
 - **exp(coef) = 1.27:** the hazard ratio per degree of tibial slope: the hazard of graft failure is 1.27 times higher for a slope 1° steeper.
-- **lower .95 / upper .95 = 1.09 to 1.48:** the 95% CI, which excludes 1 (no difference).
+- **lower .95 / upper .95 = 1.09 to 1.48:** the 95% CI, which excludes 1 (no difference). R prints 1.095 and 1.485, which are 1.0946 and 1.4847 already rounded (Python shows more digits), so don't round them a second time.
 - **Pr(>|z|) = 0.002:** the p-value for slope.
-- **Likelihood ratio test = 10.1 on 1 df, p = 0.002:** the overall test; with one predictor it says the same as the p-value for slope.
-- **Concordance = 0.67** (R only): how often the model ranks two patients' graft failure times correctly. 0.5 is a coin toss, so slope alone is better than a coin toss, but far from a prediction for one patient.
+- **Likelihood ratio test = 10.1 on 1 df, p = 0.002:** the overall test; with one predictor it says the same as the p-value for slope. R prints it as `10.08 on 1 df, p=0.002`; Python prints the statistic, its degrees of freedom and the p-value on the line under its table. R's first line, `n= 350, number of events= 31`, gives the reconstructions and the failures; Python prints them last.
+- **Concordance = 0.67** (R only): how often the model ranks two patients' graft failure times correctly. 0.5 is a coin toss, so slope alone is better than a coin toss, but far from a prediction for one patient. R prints 0.665 (0.6654 before rounding).
 
 ### Effect size and 95% CI
 
-The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size. Hazard ratios multiply: a slope 5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21), computed from the unrounded hazard ratio.
+The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size. Hazard ratios multiply: a slope 5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21), computed from the unrounded hazard ratio raised to the power 5: 1.2748^5^ = 3.37. The code below does the same for the CI.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+exp(5 * coef(slope_cox))      # the hazard ratio for 5° more slope: the per-degree ratio to the power 5
+exp(5 * confint(slope_cox))   # its 95% CI
+```
+
+## Python
+
+```{python}
+print(slope_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]] ** 5)   # the hazard ratio for 5° more slope, with its 95% CI: each number to the power 5
+```
+:::
+
+```{python}
+#| include: false
+five = slope_cox.summary.loc["tibial_slope_deg", ["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%"]] ** 5
+chk = {"hr5": float(five.iloc[0]), "low5": float(five.iloc[1]), "high5": float(five.iloc[2])}
+```
+
+```{r}
+#| include: false
+check_agree(list(hr5 = exp(5 * coef(slope_cox))[["tibial_slope_deg"]], low5 = exp(5 * confint(slope_cox))[1, 1],
+                 high5 = exp(5 * confint(slope_cox))[1, 2]),
+            reticulate::py$chk, tol = 1e-5)   # the 5th power multiplies by 5 the tiny gap lifelines leaves in the per-degree ratio
+```
 
 ### How to report it
 
@@ -742,7 +1028,7 @@ The **hazard ratio per degree**, 1.27 (95% CI 1.09 to 1.48), is the effect size.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a hazard ratio isn't a treatment effect
-Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. With 31 failures, this model can take about three terms ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. At about 10 failures per term, the 31 failures here allow about three terms ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
 :::
 
 ::: {.callout-tip}
@@ -805,6 +1091,29 @@ stopifnot(
   round(unname(summary(slope_cox)$concordance[1]), 2) == 0.67,
   round(exp(5 * coef(slope_cox))[["tibial_slope_deg"]], 2) == 3.37,
   round(exp(5 * confint(slope_cox))["tibial_slope_deg", ], 2) == c(1.57, 7.21),
+  # the by-hand boxes, and the numbers added with them
+  isTRUE(all.equal(c(intercept_by_hand, slope_by_hand), unname(coef(bmi_model)))),
+  round(1 - sum(residuals_by_hand^2) / sum((cohort$op_time_min - time_mean)^2), 2) == 0.20,
+  round(sqrt(sum(residuals_by_hand^2) / (600 - 2)), 1) == 14.7,
+  round(coef(bmi_model)[["bmi"]], 3) == 1.368, round(bmi_ci["bmi", ], 3) == c(1.151, 1.585),
+  round(5 * 1.368, 1) == 6.8, round(5 * 1.151, 1) == 5.8, round(5 * 1.585, 1) == 7.9,
+  max(table(koos$case_id)) == 4, sort(unique(koos$visit)) == c("1yr", "3mo", "6wk", "preop"),
+  round(squared_distance(85, 50, 100)) == 176095, round(deviance(recovery)) == 173841,
+  isTRUE(all.equal(squared_distance(fit[["plateau"]], fit[["start"]], fit[["tau"]]), deviance(recovery))),
+  round(squared_distance(fit[["plateau"]], fit[["start"]], 60)) == 181009,
+  round(log(2) * (recovery_coef["tau", "Estimate"] + c(-1, 1) * qt(0.975, 1143) * recovery_coef["tau", "Std. Error"])) == c(48, 64),
+  choose(246, 2) == 30135, round(smooth$y[c(1, length(smooth$y))], 1) == c(70.1, 98.6), round(100 * 37 / 246, 1) == 15.0,
+  round(delay_model$null.deviance, 2) == 555.67, round(delay_model$deviance, 2) == 543.20, round(555.67 - 543.20, 2) == 12.47,
+  round(pchisq(delay_model$null.deviance - delay_model$deviance, 1, lower.tail = FALSE), 4) == 0.0004,
+  round(100 * odds / (1 + odds), 1) == c(3.6, 5.3, 7.8, 16.0), round(odds[2] / odds[1], 2) == 1.50,
+  round(mean(hip_fracture$hours_to_surgery[over_72]), 1) == 97.3,
+  round(slope_hr["tibial_slope_deg", c("exp(coef)", "lower .95", "upper .95")], 4) == c(1.2748, 1.0946, 1.4847),
+  round(1.2748^5, 2) == 3.37, round(unname(summary(slope_cox)$concordance[1]), 4) == 0.6654,
+  round(unname(summary(slope_cox)$logtest["test"]), 2) == 10.08, slope_cox$n == 350, slope_cox$nevent == 31,
+  signif(summary(ex_age)$coefficients["age", "Pr(>|t|)"], 2) == 0.00059,
+  round(coef(ex_hoos_fit)[["plateau"]] + c(-1, 1) * qt(0.975, 903) * summary(ex_hoos_fit)$coefficients["plateau", "Std. Error"], 1) == c(86.3, 89.4),
+  round(coef(ex_hoos_fit)[["start"]] + c(-1, 1) * qt(0.975, 903) * summary(ex_hoos_fit)$coefficients["start", "Std. Error"], 1) == c(44.2, 46.9),
+  round(log(2) * (coef(ex_hoos_fit)[["tau"]] + c(-1, 1) * qt(0.975, 903) * summary(ex_hoos_fit)$coefficients["tau", "Std. Error"])) == c(33, 41),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(coef(ex_age)[["age"]], 2) == 0.24, round(confint(ex_age)["age", ], 2) == c(0.11, 0.38),
   summary(ex_age)$coefficients["age", "Pr(>|t|)"] < 0.001, round(summary(ex_age)$r.squared, 2) == 0.02,
@@ -840,13 +1149,13 @@ summary(age_time)$r.squared
 
 ```{python}
 age_time = smf.ols("op_time_min ~ age", data=cohort).fit()
-print(age_time.params, age_time.conf_int(), age_time.rsquared, sep="\n")
+print(age_time.params, age_time.conf_int(), age_time.pvalues, age_time.rsquared, sep="\n")
 ```
 :::
 
 > **Results:** The slope of operative time on age was 0.24 minutes per year (95% CI 0.11 to 0.38; p < 0.001; R² = 0.02).
 
-That's about 2.4 minutes per decade, and age explains only 2% of the variation, against 20% for BMI.
+That's about 2.4 minutes per decade, and age explains only 2% of the variation, against 20% for BMI. Both programs print the p-value as `5.910612e-04`, which is 0.00059, so p < 0.001.
 :::
 
 **2.** A colleague asks whether older hip fracture patients are more likely to die within 30 days. Which regression would you use, and what do you find?
@@ -897,6 +1206,7 @@ hip_recovery <- nls(prom_score ~ plateau - (plateau - start) * exp(-days / tau),
                     data = hoos, start = list(plateau = 85, start = 50, tau = 100))
 coef(hip_recovery)
 confint(hip_recovery)
+log(2) * coef(hip_recovery)[["tau"]]
 log(2) * confint(hip_recovery)["tau", ]
 c(scores = nrow(hoos), hips = n_distinct(hoos$case_id))
 ```
@@ -907,12 +1217,18 @@ c(scores = nrow(hoos), hips = n_distinct(hoos$case_id))
 hoos = proms[proms["instrument"] == "HOOS JR"].dropna(subset=["prom_score"]).copy()
 hoos["days"] = hoos["visit_days"].clip(lower=0)
 hip_estimates, hip_covariance = curve_fit(recovery_curve, hoos["days"], hoos["prom_score"], p0=[85, 50, 100])
-print(hip_estimates, np.sqrt(np.diag(hip_covariance)), np.log(2) * hip_estimates[2])
+hip_errors = np.sqrt(np.diag(hip_covariance))
+hip_t = stats.t.ppf(0.975, df=len(hoos) - 3)
+print(pd.DataFrame({"estimate": hip_estimates, "low": hip_estimates - hip_t * hip_errors, "high": hip_estimates + hip_t * hip_errors},
+                   index=["plateau", "start", "tau"]))
+print(np.log(2) * hip_estimates[2], np.log(2) * (hip_estimates[2] - hip_t * hip_errors[2]), np.log(2) * (hip_estimates[2] + hip_t * hip_errors[2]))
 print(len(hoos), hoos["case_id"].nunique())
 ```
 :::
 
 > **Results:** In 270 hips (906 scores), the fitted curve gave an estimated HOOS JR of 45.6 points (95% CI 44.2 to 46.9) at surgery and a plateau of 87.9 points (95% CI 86.3 to 89.4); half of the change was reached at about 37 days (95% CI 33 to 41).
+
+The CIs are R's profile CIs; Python's, computed from the standard errors, round to the same numbers here.
 
 Hips seem to recover faster than knees (half the gain by about 5 weeks, against 8). To test that difference, fit both in one model ([page 12](12-predict-from-several.qmd#multiple-nonlinear-regression)).
 :::

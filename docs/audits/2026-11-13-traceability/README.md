@@ -221,26 +221,26 @@ All four were rechecked against the page text and the data after the audit.
 | 10-8 | B | yes | Exercise 1: "3.7° higher on average" is not on this page | [catalog-10-12.md](catalog-10-12.md) | done |
 | 10-9 | B | no | Row totals 36 and 18 are not printed | [catalog-10-12.md](catalog-10-12.md) | done |
 | 10-10 | C | no | p-values: what the two languages print is only half tied to the text | [catalog-10-12.md](catalog-10-12.md) | done |
-| 11-1 | A | yes | Logistic ⚠️ box: "97 hours on average" and "17.2% from the model" exist only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-2 | A | yes | "An ordinary least-squares line gives 0.43" is never fitted on the page | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-3 | A | yes | LOWESS "from about 70 to about 99" must be read off the plot | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-4 | A | yes | "BMI here runs from 18.0 to 44.5" is never printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-5 | A | no | "each knee appears up to four times" is not shown and not even guarded | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-6 | A | yes | Code comment "pre-op visits (1-27 days before surgery)" quotes an unshown range | [catalog-10-12.md](catalog-10-12.md) | open |
+| 11-1 | A | yes | Logistic ⚠️ box: "97 hours on average" and "17.2% from the model" exist only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-2 | A | yes | "An ordinary least-squares line gives 0.43" is never fitted on the page | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-3 | A | yes | LOWESS "from about 70 to about 99" must be read off the plot | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-4 | A | yes | "BMI here runs from 18.0 to 44.5" is never printed | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-5 | A | no | "each knee appears up to four times" is not shown and not even guarded | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-6 | A | yes | Code comment "pre-op visits (1-27 days before surgery)" quotes an unshown range | [catalog-10-12.md](catalog-10-12.md) | done |
 | 11-7 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | done |
-| 11-8 | B | yes | Half-gain CI "49 to 64 days" is printed in R only, and Python's own CI gives 48 to 64 | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-9 | B | no | Cox CI "1.09 to 1.48" looks wrong against R's printed 1.095 and 1.485 | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-10 | B | yes | "74 of 1,200" and "6.2%" need adding and dividing | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-11 | B | no | "6.8 more minutes (95% CI 5.8 to 7.9)" per 5 kg/m²: the multiplication is not shown | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-12 | B | yes | "5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21)": the power is not shown | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-13 | B | yes | Exercise 3: "about 37 days" is printed only in Python, the CIs only in R | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-14 | B | yes | Exercise 1: p < 0.001 is not in the Python output | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-15 | B | yes | Cox: counts and the overall test are not tied to where they are printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-16 | B | no | "37 of them (15.0%)": the percentage is not printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-17 | B | no | "63% of their eventual gain" after τ days has no derivation | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-18 | B | no | "With 31 failures, this model can take about three terms": the rule is not stated here | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-19 | C | no | Regression summaries: most of the printed output is never explained, and p is quoted in a form neither tab prints | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-20 | C | no | Logistic: "Null and residual deviance (R) or LLR p-value (Python)" leaves the R reader without the link | [catalog-10-12.md](catalog-10-12.md) | open |
+| 11-8 | B | yes | Half-gain CI "49 to 64 days" is printed in R only, and Python's own CI gives 48 to 64 | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-9 | B | no | Cox CI "1.09 to 1.48" looks wrong against R's printed 1.095 and 1.485 | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-10 | B | yes | "74 of 1,200" and "6.2%" need adding and dividing | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-11 | B | no | "6.8 more minutes (95% CI 5.8 to 7.9)" per 5 kg/m²: the multiplication is not shown | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-12 | B | yes | "5° steeper carries 3.37 times the hazard (95% CI 1.57 to 7.21)": the power is not shown | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-13 | B | yes | Exercise 3: "about 37 days" is printed only in Python, the CIs only in R | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-14 | B | yes | Exercise 1: p < 0.001 is not in the Python output | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-15 | B | yes | Cox: counts and the overall test are not tied to where they are printed | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-16 | B | no | "37 of them (15.0%)": the percentage is not printed | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-17 | B | no | "63% of their eventual gain" after τ days has no derivation | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-18 | B | no | "With 31 failures, this model can take about three terms": the rule is not stated here | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-19 | C | no | Regression summaries: most of the printed output is never explained, and p is quoted in a form neither tab prints | [catalog-10-12.md](catalog-10-12.md) | done |
+| 11-20 | C | no | Logistic: "Null and residual deviance (R) or LLR p-value (Python)" leaves the R reader without the link | [catalog-10-12.md](catalog-10-12.md) | done |
 | 12-1 | A | yes | Logistic ⚠️ box: "15 of 350" and "all 6 patients whose graft failed in the first year" are never shown | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-2 | A | no | lifelines' default result "0.82915" is computed only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-3 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | done |
