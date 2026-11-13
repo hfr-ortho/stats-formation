@@ -306,12 +306,12 @@ All four were rechecked against the page text and the data after the audit.
 | 16-12 | C | no | Exercise 3: R gives p = 0.003, Python p = 0.002, no reason given | [beyond.md](beyond.md) | done |
 | 16-13 | C | no | The contrast weights `c(-1, 0, 0, 1)` | [beyond.md](beyond.md) | done |
 | 17-1 | ERROR | no | "limits of ±3.7°" contradicts the limits shown | [beyond.md](beyond.md) | done |
-| 17-2 | A | yes | "`irr::kappa2(weight = "equal")` ... gives 0.63 here instead of 0.73" | [beyond.md](beyond.md) | open |
-| 17-3 | B | no | ICC 0.915 reported as 0.91, 0.935 as 0.93, −0.265 as −0.26 | [beyond.md](beyond.md) | open |
-| 17-4 | B | no | "0.896 for consistency, and 0.94 for the average of the two raters" | [beyond.md](beyond.md) | open |
-| 17-5 | B | no | "40 of the 60 knees" and "48 of 60 knees" are not printed | [beyond.md](beyond.md) | open |
-| 17-6 | B | yes | CIs of the limits: Python prints them in a different arrangement | [beyond.md](beyond.md) | open |
-| 17-7 | C | yes | Kappa: "some of that would happen by chance" is never quantified | [beyond.md](beyond.md) | open |
+| 17-2 | A | yes | "`irr::kappa2(weight = "equal")` ... gives 0.63 here instead of 0.73" | [beyond.md](beyond.md) | done |
+| 17-3 | B | no | ICC 0.915 reported as 0.91, 0.935 as 0.93, −0.265 as −0.26 | [beyond.md](beyond.md) | done |
+| 17-4 | B | no | "0.896 for consistency, and 0.94 for the average of the two raters" | [beyond.md](beyond.md) | done |
+| 17-5 | B | no | "40 of the 60 knees" and "48 of 60 knees" are not printed | [beyond.md](beyond.md) | done |
+| 17-6 | B | yes | CIs of the limits: Python prints them in a different arrangement | [beyond.md](beyond.md) | done |
+| 17-7 | C | yes | Kappa: "some of that would happen by chance" is never quantified | [beyond.md](beyond.md) | done |
 | 18-1 | A | yes | The study period in the Methods is printed nowhere | [report-and-front.md](report-and-front.md) | open |
 | 18-2 | A | yes | The software versions in the Methods are printed nowhere | [report-and-front.md](report-and-front.md) | open |
 | 18-3 | B | yes | How many patients have both scores: 93, 77.5%, 86.8% and 70.1% are never computed | [report-and-front.md](report-and-front.md) | open |

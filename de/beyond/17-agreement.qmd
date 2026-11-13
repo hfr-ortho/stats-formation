@@ -78,6 +78,8 @@ Es gibt mehrere ICC, und welcher der richtige ist, hängt vom Studiendesign ab. 
 - **Typ:** Soll es gegen die Messung zählen, wenn eine beurteilende Person immer höher misst (**absolute Übereinstimmung**, *absolute agreement*), oder nicht (**Konsistenz**, *consistency*)? Bei Winkeln, die in klinische Entscheidungen einfliessen, soll es zählen: Wählen Sie die absolute Übereinstimmung.
 - **Einheit:** Verwendet die Studie die Messung einer einzelnen beurteilenden Person (**einzeln**, *single*) oder den Mittelwert mehrerer (**Mittelwert**, *average*)? Meist einzeln.
 
+In einfachen Worten teilt der ICC die Streuung aller Messungen in drei Teile: echte Unterschiede zwischen den Knien, einen systematischen Unterschied zwischen den Beurteilenden und den Rest, den Messfehler. Jeder Teil ist eine [Varianz](../glossary.qmd#variance){.term}. Der ICC für die absolute Übereinstimmung ist der Anteil der Knie an allen drei zusammen; der ICC für die Konsistenz lässt den Unterschied zwischen den Beurteilenden weg. Ein Kasten unter der Ausgabe unten berechnet beide von Hand.
+
 Für die Inter-Rater-Reliabilität des HKA ergibt das einen zweifaktoriellen ICC mit zufälligen Effekten, absoluter Übereinstimmung und einzelner beurteilender Person, geschrieben ICC(A,1) (oder ICC(2,1) in der älteren Benennung von Shrout und Fleiss). Mit den Messungen der ersten Sitzung jeder Person:
 
 ::: {.panel-tabset group="language"}
@@ -116,12 +118,74 @@ check_agree(list(icc = inter_icc$value, low = round(inter_icc$lbound, 2), high =
 ```
 
 - **ICC(A,1) = 0.889** (die Zeile `ICC(A,1)` in Python; R gibt 0.889 aus).
-- **95% CI 0.82 to 0.93:** das Konfidenzintervall (KI) des ICC. Richtschnur von Koo und Li: unter 0.5 schlecht, 0.5 bis 0.75 mässig, 0.75 bis 0.9 gut, über 0.9 ausgezeichnet. Beurteilen Sie nach dem KI, nicht nach dem Schätzwert: Dieses KI reicht von gut bis ausgezeichnet.
+- **95% CI 0.82 to 0.93:** das [Konfidenzintervall (KI)](../glossary.qmd#confidence-interval){.term} des ICC. Richtschnur von Koo und Li: unter 0.5 schlecht, 0.5 bis 0.75 mässig, 0.75 bis 0.9 gut, über 0.9 ausgezeichnet. Beurteilen Sie nach dem KI, nicht nach dem Schätzwert: Dieses KI reicht von gut bis ausgezeichnet.
 - **Der F-Test** (R) prüft, ob der ICC über 0 liegt. Das ist fast immer der Fall, deshalb lohnt es sich selten, ihn zu berichten.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: der ICC von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+both <- as.matrix(inter_hka[, c("R1", "R2")])                         # 60 Knie in den Zeilen, 2 Beurteilende in den Spalten
+grand_mean <- mean(both)
+ms_knees <- 2 * sum((rowMeans(both) - grand_mean)^2) / (60 - 1)       # wie stark die Mittelwerte der 60 Knie streuen
+ms_raters <- 60 * sum((colMeans(both) - grand_mean)^2) / (2 - 1)      # wie stark die Mittelwerte der 2 Beurteilenden streuen
+leftover <- both - outer(rowMeans(both), colMeans(both), "+") + grand_mean   # was weder das Knie noch die beurteilende Person erklärt
+ms_error <- sum(leftover^2) / ((60 - 1) * (2 - 1))
+
+parts <- c(knees = (ms_knees - ms_error) / 2,                         # die Varianz aus echten Unterschieden zwischen den Knien
+           raters = (ms_raters - ms_error) / 60,                      # die Varianz daraus, dass eine Person höher misst
+           error = ms_error)                                          # die Varianz aus allem Übrigen
+parts
+parts[["knees"]] / sum(parts)                                         # absolute Übereinstimmung: der Anteil der Knie an allen drei
+parts[["knees"]] / (parts[["knees"]] + parts[["error"]])              # Konsistenz: der Unterschied zwischen den Beurteilenden bleibt weg
+```
+
+## Python
+
+```{python}
+both = first_session.pivot(index="knee_id", columns="rater", values="hka_deg")    # 60 Knie in den Zeilen, 2 Beurteilende in den Spalten
+grand_mean = both.to_numpy().mean()
+ms_knees = 2 * ((both.mean(axis=1) - grand_mean) ** 2).sum() / (60 - 1)           # wie stark die Mittelwerte der 60 Knie streuen
+ms_raters = 60 * ((both.mean(axis=0) - grand_mean) ** 2).sum() / (2 - 1)          # wie stark die Mittelwerte der 2 Beurteilenden streuen
+leftover = both.sub(both.mean(axis=1), axis=0).sub(both.mean(axis=0), axis=1) + grand_mean   # was weder das Knie noch die beurteilende Person erklärt
+ms_error = (leftover ** 2).to_numpy().sum() / ((60 - 1) * (2 - 1))
+
+parts = pd.Series({"knees": (ms_knees - ms_error) / 2,                            # die Varianz aus echten Unterschieden zwischen den Knien
+                   "raters": (ms_raters - ms_error) / 60,                         # die Varianz daraus, dass eine Person höher misst
+                   "error": ms_error})                                            # die Varianz aus allem Übrigen
+print(parts)
+print(parts["knees"] / parts.sum())                                               # absolute Übereinstimmung: der Anteil der Knie an allen drei
+print(parts["knees"] / (parts["knees"] + parts["error"]))                         # Konsistenz: der Unterschied zwischen den Beurteilenden bleibt weg
+```
+:::
+
+Die Streuung der 120 Messungen teilt sich in drei Varianzen: 11.83 aus echten Unterschieden zwischen den Knien, 0.10 daraus, dass Person 2 etwas höher misst als Person 1, und 1.37 Messfehler. Der Anteil der Knie beträgt 11.83 / (11.83 + 0.10 + 1.37) = 0.889, der ICC(A,1), den die Software ausgegeben hat. Lässt man den Unterschied zwischen den Beurteilenden weg, beträgt der Anteil 11.83 / (11.83 + 1.37) = 0.896, der ICC für die Konsistenz. Die ersten drei Zeilen des Codes sind die mittleren Quadrate einer ANOVA mit Knien und Beurteilenden; [Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) baut solche Summen Schritt für Schritt auf.
+:::
+
+```{python}
+#| include: false
+chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error": float(parts["error"]),
+       "agreement": float(parts["knees"] / parts.sum()),
+       "software": float(inter_icc.set_index("Type").loc["ICC(A,1)", "ICC"]),
+       "consistency": float(parts["knees"] / (parts["knees"] + parts["error"])),
+       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = parts[["error"]],
+                 agreement = parts[["knees"]] / sum(parts), software = inter_icc$value,
+                 consistency = parts[["knees"]] / (parts[["knees"]] + parts[["error"]]),
+                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value),
+            reticulate::py$chk)
+```
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Nennen Sie immer, welcher ICC gemeint ist
-Dieselben Daten ergeben für jedes Modell, jeden Typ und jede Einheit einen anderen ICC: hier 0.889 für die absolute Übereinstimmung, 0.896 für die Konsistenz und 0.94 für den Mittelwert der beiden Beurteilenden. «ICC = 0.94» ohne Angabe der Form lässt sich nicht interpretieren. Schreiben Sie die Form im Methodenteil aus.
+Dieselben Daten ergeben für jedes Modell, jeden Typ und jede Einheit einen anderen ICC: hier 0.889 für die absolute Übereinstimmung, 0.896 für die Konsistenz (Zeile `ICC(C,1)` in Python) und 0.94 für den Mittelwert der beiden Beurteilenden (Zeile `ICC(A,k)` in Python). In R führen Sie `irr::icc()` nochmals mit `type = "consistency"` oder `unit = "average"` aus. «ICC = 0.94» ohne Angabe der Form lässt sich nicht interpretieren. Schreiben Sie die Form im Methodenteil aus.
 :::
 
 ::: {.callout-tip}
@@ -168,7 +232,7 @@ check_agree(list(icc = intra_icc$value, low = round(intra_icc$lbound, 2), high =
             reticulate::py$chk)
 ```
 
-Person 1 stimmte mit sich selbst etwas besser überein als mit Person 2: Intra-Rater-ICC(A,1) = 0.915 (95%-KI 0.86 bis 0.95), beim Schätzwert ausgezeichnet und über das KI hinweg gut bis ausgezeichnet.
+Person 1 stimmte mit sich selbst etwas besser überein als mit Person 2: Intra-Rater-ICC(A,1) = 0.915 (95%-KI 0.86 bis 0.95), beim Schätzwert ausgezeichnet und über das KI hinweg gut bis ausgezeichnet. R gibt den ICC bereits auf drei Dezimalstellen gerundet aus. Vor dem Runden beträgt er 0.9148 (Ausgabe von Python), auf zwei Dezimalstellen also 0.91, nicht 0.92.
 
 ## Bland-Altman: Wie weit liegen die Messungen auseinander? {#bland-altman}
 
@@ -216,8 +280,9 @@ limits = bias + np.array([-1.96, 1.96]) * sd_diff
 se_limit = np.sqrt(3 * sd_diff**2 / n_knees)                   # Standardfehler jeder Grenze nach Bland und Altman
 t_crit = stats.t.ppf(0.975, n_knees - 1)
 bias_ci = stats.ttest_1samp(difference, 0).confidence_interval()
-print(round(bias, 3), round(float(bias_ci.low), 3), round(float(bias_ci.high), 3), round(sd_diff, 3), limits.round(3))
-print((limits - t_crit * se_limit).round(3), (limits + t_crit * se_limit).round(3))   # KI jeder Grenze: untere Enden, obere Enden
+print(round(bias, 3), round(float(bias_ci.low), 3), round(float(bias_ci.high), 3), round(sd_diff, 3))   # der Bias, sein 95%-KI und die SD der Differenzen
+for limit in limits:
+    print(round(limit, 3), round(limit - t_crit * se_limit, 3), round(limit + t_crit * se_limit, 3))    # jede Grenze mit ihrem 95%-KI
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(mean, difference)
@@ -246,7 +311,7 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 
 - **Bias = 0.50°** (95%-KI 0.08° bis 0.93°): Person 2 misst im Mittel ein halbes Grad höher als Person 1. Dieselbe Differenz fand [Seite 7](../catalog/07-two-paired-groups.qmd#exercises) in Übung 2 mit einem t-Test für gepaarte Stichproben.
 - **Übereinstimmungsgrenzen −2.74° bis 3.74°:** Bei 95 % der Knie liegt die Messung von Person 2 zwischen 2.7° unter und 3.7° über der von Person 1.
-- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°) zeigen, wie genau 60 Knie die Grenzen festlegen.
+- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°; die letzte Tabelle von R und die letzten beiden Zeilen von Python, in denen auf jede Grenze ihr KI folgt) zeigen, wie genau 60 Knie die Grenzen festlegen.
 - **Das Diagramm:** Die Punkte streuen gleichmässig um die Bias-Linie, ohne Trend nach oben oder unten, wenn sich der mittlere Winkel ändert. Ein Trend würde bedeuten, dass die beiden Personen bei manchen Knien (etwa bei stärkerem Varus) stärker voneinander abweichen als bei anderen, und ein einziges Paar von Grenzen würde diese Knie nicht beschreiben.
 
 Ob Grenzen von −2.7° bis 3.7° gut genug sind, ist eine klinische und keine statistische Frage. Würde eine Differenz von 3° die geplante Korrektur in Ihrer Studie verändern, ist sie relevant. Legen Sie die akzeptablen Grenzen **vor** der Reliabilitätsstudie fest und vergleichen Sie die Grenzen (und ihre KI) damit.
@@ -298,7 +363,51 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %), aber ein Teil davon wäre auch zufällig entstanden. Kappa = 0.58 (95%-KI 0.44 bis 0.73): beim Schätzwert mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim ICC beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
+Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %; die Ausgabe zeigt 0.667, und 0.667 × 60 = 40). Ein Teil davon wäre aber auch zufällig entstanden: hier 20.1 %, wie der Kasten unten berechnet. Kappa = 0.58 (95%-KI 0.44 bis 0.73): beim Schätzwert mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim ICC beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: Kappa von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+cpak_table <- table(R1 = cpak$R1, R2 = cpak$R2)
+observed <- sum(diag(cpak_table)) / 60                               # Schritt 1: der Anteil der 60 Knie mit derselben Klasse
+rbind(R1 = rowSums(cpak_table), R2 = colSums(cpak_table))            # wie oft jede Person jede Klasse verwendet hat
+by_chance <- sum(rowSums(cpak_table) * colSums(cpak_table)) / 60^2   # Schritt 2: die zufällig erwartete Übereinstimmung
+c(observed = observed, by_chance = by_chance)
+(observed - by_chance) / (1 - by_chance)                             # Schritt 3: Kappa
+```
+
+## Python
+
+```{python}
+observed = np.diag(cpak_table).sum() / 60                             # Schritt 1: der Anteil der 60 Knie mit derselben Klasse
+used = pd.DataFrame({"R1": cpak_table.sum(axis=1).to_numpy(), "R2": cpak_table.sum(axis=0).to_numpy()}, index=cpak_levels).T
+print(used)                                                           # wie oft jede Person jede Klasse verwendet hat
+by_chance = (used.loc["R1"] * used.loc["R2"]).sum() / 60 ** 2         # Schritt 2: die zufällig erwartete Übereinstimmung
+print(observed, by_chance)
+print((observed - by_chance) / (1 - by_chance))                       # Schritt 3: Kappa
+```
+:::
+
+Person 1 stufte 15 der 60 Knie als Klasse I ein, Person 2 stufte 12 davon so ein. Hätten die beiden ihre Klassen unabhängig voneinander gewählt, hätten beide bei 15/60 × 12/60 = 5 % der Knie Klasse I angegeben. Über alle Klassen addiert ergibt das 20.1 %: die Übereinstimmung, die der Zufall allein ergäbe. Tatsächlich stimmten sie bei 66.7 % überein. Kappa ist der Anteil des verbleibenden Spielraums, den sie ausgeschöpft haben: (0.667 − 0.201) / (1 − 0.201) = 0.58, das Kappa, das die Software ausgegeben hat.
+:::
+
+```{python}
+#| include: false
+chk = {"observed": float(observed), "by_chance": float(by_chance),
+       "by_hand": float((observed - by_chance) / (1 - by_chance)), "software": float(cpak_kappa.kappa),
+       "class_1_r1": float(used.loc["R1", "I"]), "class_1_r2": float(used.loc["R2", "I"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(observed = observed, by_chance = by_chance, by_hand = (observed - by_chance) / (1 - by_chance),
+                 software = cpak_kappa[["kappa"]], class_1_r1 = rowSums(cpak_table)[["I"]],
+                 class_1_r2 = colSums(cpak_table)[["I"]]), reticulate::py$chk)
+```
 
 **Gewichtetes Kappa für geordnete Kategorien.** Ungewichtetes Kappa behandelt jede Abweichung als gleich schwerwiegend. Haben die Kategorien eine Reihenfolge, soll eine Abweichung um nur eine Kategorie weniger zählen als eine grosse Abweichung. Die CPAK-Klasse hat keine einheitliche Reihenfolge (sie ist ein 3 × 3-Raster aus zwei Winkeln), aber jede Achse hat eine. Die arithmetische HKA-Gruppe geht von Varus über neutral zu Valgus. Ein **gewichtetes Kappa** bestraft eine Abweichung zwischen Varus und neutral nur halb so stark wie eine zwischen Varus und Valgus (lineare Gewichte):
 
@@ -316,6 +425,7 @@ hka_table
 unweighted_kappa <- DescTools::CohenKappa(hka_table, conf.level = 0.95)                            # ungewichtet
 weighted_kappa <- DescTools::CohenKappa(hka_table, weights = "Equal-Spacing", conf.level = 0.95)   # lineare Gewichte
 rbind(unweighted = unweighted_kappa, weighted = weighted_kappa)
+irr::kappa2(data.frame(hka_group(cpak$R1), hka_group(cpak$R2)), weight = "equal")$value   # sortiert die Gruppen alphabetisch: die falschen Gewichte
 ```
 
 ## Python
@@ -330,6 +440,8 @@ print(hka_table)
 unweighted = cohens_kappa(hka_table.to_numpy())
 weighted = cohens_kappa(hka_table.to_numpy(), wt="linear")     # lineare Gewichte
 print(unweighted.kappa, weighted.kappa, weighted.kappa_low, weighted.kappa_upp)
+alphabetical = pd.crosstab(cpak["R1"].map(hka_group), cpak["R2"].map(hka_group))   # keine Reihenfolge angegeben, pandas sortiert also alphabetisch
+print(cohens_kappa(alphabetical.to_numpy(), wt="linear").kappa)                    # die falschen Gewichte
 ```
 :::
 
@@ -337,6 +449,7 @@ print(unweighted.kappa, weighted.kappa, weighted.kappa_low, weighted.kappa_upp)
 #| include: false
 chk = {"unweighted": float(unweighted.kappa), "weighted": float(weighted.kappa),
        "low": float(weighted.kappa_low), "high": float(weighted.kappa_upp)}
+chk_wrong = {"alphabetical": float(cohens_kappa(alphabetical.to_numpy(), wt="linear").kappa)}
 ```
 
 ```{r}
@@ -344,13 +457,15 @@ chk = {"unweighted": float(unweighted.kappa), "weighted": float(weighted.kappa),
 check_agree(list(unweighted = unweighted_kappa[["kappa"]], weighted = weighted_kappa[["kappa"]],
                  low = weighted_kappa[["lwr.ci"]], high = weighted_kappa[["upr.ci"]]),
             reticulate::py$chk)
+check_agree(list(alphabetical = irr::kappa2(data.frame(hka_group(cpak$R1), hka_group(cpak$R2)), weight = "equal")$value),
+            reticulate::py$chk_wrong)
 ```
 
-Die beiden Personen stimmten bei der HKA-Gruppe in 48 von 60 Knien überein, und jede Abweichung betrug nur eine Kategorie: Kein Knie wurde von der einen Person als Varus und von der anderen als Valgus eingestuft. Das ungewichtete Kappa beträgt 0.68; das gewichtete Kappa, das Abweichungen um nur eine Kategorie teilweise anrechnet, beträgt 0.73 (95%-KI 0.58 bis 0.87): beim Schätzwert substanziell, über das KI hinweg mässig bis fast vollkommen.
+Die beiden Personen stimmten bei der HKA-Gruppe in 48 von 60 Knien überein (die Diagonale der Tabelle: 16 + 23 + 9), und jede Abweichung betrug nur eine Kategorie: Kein Knie wurde von der einen Person als Varus und von der anderen als Valgus eingestuft (die beiden Eckzellen sind 0). Das ungewichtete Kappa beträgt 0.68; das gewichtete Kappa, das Abweichungen um nur eine Kategorie teilweise anrechnet, beträgt 0.73 (95%-KI 0.58 bis 0.87): beim Schätzwert substanziell, über das KI hinweg mässig bis fast vollkommen.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Gewichtetes Kappa braucht die Kategorien in der richtigen Reihenfolge
-Die Gewichte hängen von der Reihenfolge der Kategorien ab. Legen Sie sie selbst in ihre echte Reihenfolge (Varus, neutral, Valgus). Manche Funktionen sortieren Kategorien alphabetisch, was «neutral» vor «valgus» vor «varus» setzen und die falschen Abweichungen gewichten würde: `irr::kappa2(weight = "equal")` tut das und ergibt hier 0.63 statt 0.73. Verwenden Sie gewichtetes Kappa nie für Kategorien ohne Reihenfolge, etwa die CPAK-Klasse selbst.
+Die Gewichte hängen von der Reihenfolge der Kategorien ab. Legen Sie sie selbst in ihre echte Reihenfolge (Varus, neutral, Valgus). Manche Funktionen sortieren Kategorien alphabetisch, was «neutral» vor «valgus» vor «varus» setzen und die falschen Abweichungen gewichten würde: `irr::kappa2(weight = "equal")` tut das und ergibt hier 0.63 statt 0.73 (die letzte Zeile der Ausgabe oben). Verwenden Sie gewichtetes Kappa nie für Kategorien ohne Reihenfolge, etwa die CPAK-Klasse selbst.
 :::
 
 ::: {.callout-tip}
@@ -392,6 +507,19 @@ stopifnot(
   round(unweighted_kappa[["kappa"]], 2) == 0.68,
   round(weighted_kappa[c("kappa", "lwr.ci", "upr.ci")], 2) == c(0.73, 0.58, 0.87),
   round(irr_weighted$value, 2) == 0.63,
+  # numbers added with the audit fixes and the by-hand boxes
+  nrow(both) * ncol(both) == 120, format(round(parts, 2), nsmall = 2) == c("11.83", " 0.10", " 1.37"),
+  colMeans(both)[["R2"]] > colMeans(both)[["R1"]],
+  round(11.83 / (11.83 + 0.10 + 1.37), 3) == 0.889, round(11.83 / (11.83 + 1.37), 3) == 0.896,
+  isTRUE(all.equal(parts[["knees"]] / sum(parts), inter_icc$value)),
+  isTRUE(all.equal(parts[["knees"]] / (parts[["knees"]] + parts[["error"]]), inter_c$value)),
+  round(intra_icc$value, 4) == 0.9148,
+  round(mean(cpak$R1 == cpak$R2), 3) == 0.667, round(0.667 * 60) == 40,
+  rowSums(cpak_table)[["I"]] == 15, colSums(cpak_table)[["I"]] == 12, 15 / 60 * 12 / 60 == 0.05,
+  round(100 * by_chance, 1) == 20.1, round((0.667 - 0.201) / (1 - 0.201), 2) == 0.58,
+  isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
+  diag(hka_table) == c(16, 23, 9), 16 + 23 + 9 == 48,
+  round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),
@@ -432,7 +560,7 @@ print(mpta_icc.set_index("Type").loc["ICC(A,1)", ["ICC", "CI95"]])
 
 > **Results:** The inter-rater ICC(A,1) for the MPTA was 0.93 (95% CI 0.89 to 0.96).
 
-Nach der Richtschnur von Koo und Li ist das beim Schätzwert ausgezeichnet, und das KI reicht von gut bis ausgezeichnet.
+Nach der Richtschnur von Koo und Li ist das beim Schätzwert ausgezeichnet, und das KI reicht von gut bis ausgezeichnet. R gibt den ICC als 0.935 aus. Vor dem Runden beträgt er 0.9348 (Ausgabe von Python), auf zwei Dezimalstellen also 0.93.
 :::
 
 **2.** Berechnen Sie mit den beiden Sitzungen von Person 1 den Bland-Altman-Bias und die 95%-Übereinstimmungsgrenzen für den HKA und formulieren Sie den Results-Satz.
@@ -459,6 +587,8 @@ print(retest.mean(), retest_ci.low, retest_ci.high, retest.mean() + np.array([-1
 :::
 
 > **Results:** The mean difference between rater 1's second and first readings was −0.26° (95% CI −0.65° to 0.12°), with 95% limits of agreement from −3.20° to 2.67°.
+
+R gibt den Bias als −0.2650000 aus und Python als −0.2649999999999987. Auf zwei Dezimalstellen runden beide Programme ihn auf −0.26, den Wert im Results-Satz.
 :::
 
 **3.** Kolleginnen und Kollegen berichten, die HKA-Messungen der beiden Personen korrelierten gut (Pearson-Korrelation r = 0.90, 95%-KI 0.83 bis 0.94), und führen das als Beleg dafür an, dass sie übereinstimmen. Was ist daran falsch? Zeigen Sie es, indem Sie 5° zu jeder Messung von Person 2 addieren und r sowie den ICC neu berechnen.
