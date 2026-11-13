@@ -143,26 +143,26 @@ All four were rechecked against the page text and the data after the audit.
 | 05-12 | C | no | The rank-biserial r is defined by its end points only; the printed rank sums give it in one line | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-13 | C | no | The chi-square statistic is described, not calculated, although the table above gives every term | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-14 | C | no | pingouin's `CLES  NaN` and `alternative` columns are shown and never explained | [catalog-04-05.md](catalog-04-05.md) | open |
-| 06-1 | A | yes | Chi-square p without Yates' correction (0.754) is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-2 | A | yes | Exercise 2: "13% with a boot and 17% with a cast scored 24" is not printed anywhere | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-3 | A | yes | Exercise 3: the two percentages and the risk difference are not printed | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-4 | A | yes | "Leaving out any one patient still gives −1" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
+| 06-1 | A | yes | Chi-square p without Yates' correction (0.754) is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-2 | A | yes | Exercise 2: "13% with a boot and 17% with a cast scored 24" is not printed anywhere | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-3 | A | yes | Exercise 3: the two percentages and the risk difference are not printed | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-4 | A | yes | "Leaving out any one patient still gives −1" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
 | 06-5 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and is not this page's number | [catalog-06-07.md](catalog-06-07.md) | done |
-| 06-6 | B | no | Missed-visit counts need a subtraction from numbers the output never shows | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-7 | B | no | p-values are printed in e-notation and the bullets never say how to read them | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-8 | B | no | The mean difference (3.6) is printed only in Python; the bullets use R's labels only | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-9 | B | no | Risk difference −0.8 points is not printed; the CI is printed as proportions | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-10 | B | no | The CI for the rank-biserial r is printed in R only, and nothing says so | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-11 | B | no | Python's `CLES = 0.319411` is printed and never explained | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-12 | B | no | Log-rank bullets describe columns that only R prints | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-13 | B | yes | Exercise 1: R prints the boot arm's SD as 2.75, the Results sentence says 2.7 | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-14 | B | no | The sample odds ratio 0.8311 is not printed, and the formula has no numbers | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-15 | B | yes | "No patient at the floor (0) or the ceiling (24)" can only be read off the histogram | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-16 | B | no | "The estimates agree to five decimals" cannot be checked from the output | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-17 | C | yes | Python's row-percentage table comes out in a different order from R's | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-18 | C | no | `conf.type = "log-log"` and the 5-year table get no explanation in this section | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-19 | C | no | The quartile bullet sits under the wrong output and skips its reasoning | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-20 | C | no | "Wald" is used in the Methods sentence and the Python code without explanation | [catalog-06-07.md](catalog-06-07.md) | open |
+| 06-6 | B | no | Missed-visit counts need a subtraction from numbers the output never shows | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-7 | B | no | p-values are printed in e-notation and the bullets never say how to read them | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-8 | B | no | The mean difference (3.6) is printed only in Python; the bullets use R's labels only | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-9 | B | no | Risk difference −0.8 points is not printed; the CI is printed as proportions | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-10 | B | no | The CI for the rank-biserial r is printed in R only, and nothing says so | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-11 | B | no | Python's `CLES = 0.319411` is printed and never explained | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-12 | B | no | Log-rank bullets describe columns that only R prints | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-13 | B | yes | Exercise 1: R prints the boot arm's SD as 2.75, the Results sentence says 2.7 | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-14 | B | no | The sample odds ratio 0.8311 is not printed, and the formula has no numbers | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-15 | B | yes | "No patient at the floor (0) or the ceiling (24)" can only be read off the histogram | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-16 | B | no | "The estimates agree to five decimals" cannot be checked from the output | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-17 | C | yes | Python's row-percentage table comes out in a different order from R's | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-18 | C | no | `conf.type = "log-log"` and the 5-year table get no explanation in this section | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-19 | C | no | The quartile bullet sits under the wrong output and skips its reasoning | [catalog-06-07.md](catalog-06-07.md) | done |
+| 06-20 | C | no | "Wald" is used in the Methods sentence and the Python code without explanation | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-1 | ERROR | yes | "Only 22 revisions inform it": 18 do, and they explain the hazard ratio of exactly 3.5 | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-2 | A | yes | Results sentence: the mean and SD of each view are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-3 | A | yes | "62 of the 80 hips (78%)" and "56 ... and 48" cam-positive hips are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |

@@ -74,7 +74,7 @@ ggplot(efas_3mo, aes(efas)) +
 
 efas_3mo |>
   group_by(arm) |>
-  summarise(n = n(), mean = mean(efas), sd = sd(efas))
+  summarise(n = n(), mean = mean(efas), sd = sd(efas), min = min(efas), max = max(efas))
 ```
 
 ## Python
@@ -99,11 +99,11 @@ axes[1].set_xlabel("EFAS score at 3 months (24 = best)")
 plt.tight_layout()
 plt.show()
 
-print(efas_3mo.groupby("arm")["efas"].agg(["count", "mean", "std"]))
+print(efas_3mo.groupby("arm")["efas"].agg(["count", "mean", "std", "min", "max"]))
 ```
 :::
 
-Beide Arme sind ungefähr glockenförmig, keine Person liegt am Boden (0) oder an der Decke (24), und beide Arme sind gross. Der Walker-Arm liegt weiter rechts. Acht Personen verpassten die Studienvisite nach 3 Monaten (3 im Walker-Arm, 5 im Gips-Arm), sodass 112 der 120 randomisierten Personen analysiert werden.
+Beide Arme sind ungefähr glockenförmig, keine Person liegt am Boden (0) oder an der Decke (24), und beide Arme sind gross. Der Walker-Arm liegt weiter rechts. Acht Personen verpassten die Studienvisite nach 3 Monaten (3 im Walker-Arm, 5 im Gips-Arm), sodass 112 der 120 randomisierten Personen analysiert werden. Die Spalten `min` und `max` bestätigen das: Der tiefste Score ist 4, der höchste 23. Die Tabelle zeigt auch, wer gesehen wurde: 57 + 55 = 112 Personen. Jedem Arm wurden 60 zugeteilt, also verpassten 60 − 57 = 3 Personen mit Walker und 60 − 55 = 5 mit Gips die Kontrolle.
 
 ### Analyse durchführen
 
@@ -139,9 +139,9 @@ check_agree(list(t = unname(efas_test$statistic), df = unname(efas_test$paramete
 
 ### Ausgabe lesen
 
-- **t = 6.00:** Die Differenz zwischen den Mittelwerten beträgt 6 Standardfehler.
+- **t = 6.00:** Die Differenz zwischen den Mittelwerten beträgt 6 Standardfehler. Python nennt es `statistic`.
 - **df = 106.05:** Der Test nach Welch passt die Freiheitsgrade an ungleiche Streuungen an, daher sind sie keine ganze Zahl.
-- **p < 0.001:** Eine so grosse Differenz wäre sehr unwahrscheinlich, wenn beide Arme denselben mittleren EFAS-Score hätten.
+- **p < 0.001:** Eine so grosse Differenz wäre sehr unwahrscheinlich, wenn beide Arme denselben mittleren EFAS-Score hätten. R gibt ihn als `p-value = 2.738e-08` aus. `e-08` bedeutet «den Dezimalpunkt um 8 Stellen nach links verschieben», das ist also 0.000000027; Python gibt dieselbe Zahl als `pvalue=` aus.
 - **95% CI 2.40 to 4.77:** das Konfidenzintervall (KI) für die **Differenz der Mittelwerte**, Walker minus Gips.
 - **mean in group boot 17.4, mean in group cast 13.8:** die beiden Mittelwerte.
 
@@ -185,7 +185,7 @@ check_agree(list(difference = efas_difference, se = efas_se, t = efas_difference
 
 ### Effektstärke und 95%-KI
 
-- Die **Mittelwertsdifferenz** mit ihrem KI ist die Effektstärke, die am verständlichsten ist: 3.6 Punkte (95%-KI 2.4 bis 4.8).
+- Die **Mittelwertsdifferenz** mit ihrem KI ist die Effektstärke, die am verständlichsten ist: 3.6 Punkte (95%-KI 2.4 bis 4.8). R gibt die beiden Mittelwerte aus und überlässt Ihnen die Subtraktion (17.40 − 13.82 = 3.58); die zweite Zeile von Python gibt die Differenz aus, 3.585, und danach das KI.
 - **Hedges' g** gibt die Differenz in Standardabweichungen an, sodass sich Effekte vergleichen lassen, die auf verschiedenen Skalen gemessen wurden. Als grobe Richtschnur: 0.2 ist klein, 0.5 mittel und 0.8 gross.
 
 ::: {.panel-tabset group="language"}
@@ -233,7 +233,7 @@ Früher war es üblich, zuerst einen Test auf gleiche Varianzen (etwa nach Leven
 ## 🔀 R oder Python: Student oder Welch?
 - **Der Standardwert ist verschieden.** `t.test()` in R führt den Test nach **Welch** aus, ausser Sie fügen `var.equal = TRUE` hinzu. `ttest_ind()` in scipy führt den Test nach **Student** aus, ausser Sie fügen `equal_var=False` hinzu. Legen Sie ihn in Python immer ausdrücklich fest.
 - **Die Reihenfolge der Gruppen.** R subtrahiert in der Reihenfolge der Faktorstufen (wir haben boot an die erste Stelle gesetzt); scipy zieht das zweite Argument vom ersten ab.
-- **Das KI für Hedges' g.** effectsize verwendet eine exakte Methode und pingouin eine Näherung, daher können die KI leicht voneinander abweichen (0.73 bis 1.52 in R, 0.73 bis 1.53 in Python). Die Schätzwerte stimmen auf fünf Dezimalstellen überein: Beide korrigieren g für kleine Stichproben, effectsize mit der exakten Formel und pingouin mit der üblichen Näherung.
+- **Das KI für Hedges' g.** effectsize verwendet eine exakte Methode und pingouin eine Näherung, daher können die KI leicht voneinander abweichen (0.73 bis 1.52 in R, 0.73 bis 1.53 in Python). Die Schätzwerte stimmen auf fünf Dezimalstellen überein: Beide korrigieren g für kleine Stichproben, effectsize mit der exakten Formel und pingouin mit der üblichen Näherung. Die Tabelle von R rundet g auf 1.13; ungerundet liefert R 1.130197 und Python 1.130200.
 :::
 
 ## Mann-Whitney-Test {#mann-whitney}
@@ -314,7 +314,7 @@ print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75
 ```
 :::
 
-Vier Personen verpassten die Studienvisite nach 6 Wochen (2 in jedem Arm), sodass 116 der 120 randomisierten Personen analysiert werden. Die meisten Scores liegen zwischen 2 und 6, und viele Personen haben denselben Score (Bindungen). Bei ganzen Zahlen auf einer ordinalen Skala sind Mediane die passende Zusammenfassung: 4 Punkte mit Walker und 5 mit Gips.
+Vier Personen verpassten die Studienvisite nach 6 Wochen (2 in jedem Arm), sodass 116 der 120 randomisierten Personen analysiert werden. Die meisten Scores liegen zwischen 2 und 6, und viele Personen haben denselben Score (Bindungen). Bei ganzen Zahlen auf einer ordinalen Skala sind Mediane die passende Zusammenfassung: 4 Punkte mit Walker und 5 mit Gips. (Die Tabelle zeigt 58 Personen pro Arm, also verpassten in jedem Arm 60 − 58 = 2 die Kontrolle.) Das obere Quartil im Walker-Arm, 4.75, ist kein ganzer Score: Sortiert man die 58 Scores, liegt das Quartil zwischen dem 43. (einer 4) und dem 44. (einer 5), und beide Programme setzen es auf drei Viertel des Wegs dazwischen.
 
 ### Analyse durchführen
 
@@ -353,7 +353,7 @@ check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticu
 - **p < 0.001:** Ein solcher Unterschied wäre ungewöhnlich, wenn der Schmerz in beiden Armen gleich verteilt wäre.
 - **difference in location −1.00, 95% CI −2.00 to −1.00** (nur R): der Hodges-Lehmann-Schätzer, siehe unten. R findet ihn durch eine numerische Suche und gibt deshalb −1.000041 und Ähnliches aus; die letzten Stellen sind Rauschen.
 - **RBC = −0.361** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
-- Bei ganzzahligen Scores kann ein Quartil zwischen zwei Scores fallen: Das obere Quartil des Walker-Arms ist 4.75, weil es drei Viertel des Wegs zwischen einer 4 und einer 5 liegt.
+- **CLES = 0.319** (Python): die «Common Language Effect Size», U geteilt durch die Anzahl Paare (1,074.5 ÷ 3,364). Sie ist die Wahrscheinlichkeit, dass eine zufällig gewählte Person mit Walker mehr Schmerz angibt als eine zufällig gewählte Person mit Gips, wobei eine Bindung halb zählt.
 
 ### Effektstärke und 95%-KI
 
@@ -423,6 +423,46 @@ check_agree(list(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied 
 
 Mit Walker war der Schmerz typischerweise 1 Punkt tiefer (95%-KI 2 Punkte tiefer bis 1 Punkt tiefer), und r = −0.36. Die letzten Codezeilen zeigen, woher r kommt. Von allen 3,364 Paaren (Walker, Gips) gab die Person mit Walker in 61 % weniger Schmerz an, in 25 % mehr, und 14 % waren gebunden. r ist die Differenz zwischen dem Anteil «mehr» und dem Anteil «weniger»: 0.25 − 0.61 = −0.36. U zählt dieselben Paare, wie die letzte Zeile von Hand zeigt: 1,074.5, das W (R) oder U_val (Python), das der Test ausgegeben hat. Und 1,074.5 ÷ 3,364 = 0.32, der Anteil «mehr» plus der halbe Anteil der Bindungen (0.25 + 0.07). Bei ganzzahligen Scores ist jede Differenz zwischen zwei Personen eine ganze Zahl, daher liegen auch der Hodges-Lehmann-Schätzer und sein KI auf ganzen Zahlen, und der Schätzwert kann am Rand seines eigenen KI liegen, wie hier.
 
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: warum der Standard-Bootstrap von scipy hier `nan` liefert
+
+Die Standardmethode von scipy für den Bootstrap (BCa) justiert ihr Intervall danach, wie stark sich der Schätzwert ändert, wenn man jeweils eine Person weglässt. Bei ganzzahligen Scores kann der Hodges-Lehmann-Schätzer nur auf ganzen oder halben Punkten liegen, und hier ändert er sich gar nicht:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+boot_scores <- pain_6wk$pain_nrs[pain_6wk$arm == "boot"]
+cast_scores <- pain_6wk$pain_nrs[pain_6wk$arm == "cast"]
+# Jeweils eine Person weglassen und den Schätzwert ohne sie neu berechnen
+leave_one_out <- c(sapply(seq_along(boot_scores), function(i) median(outer(boot_scores[-i], cast_scores, "-"))),
+                   sapply(seq_along(cast_scores), function(i) median(outer(boot_scores, cast_scores[-i], "-"))))
+table(leave_one_out)                                     # wie oft jeder Wert vorkam
+```
+
+## Python
+
+```{python}
+# Jeweils eine Person weglassen und den Schätzwert ohne sie neu berechnen
+leave_one_out = ([hodges_lehmann(pain_boot.drop(i), pain_cast) for i in pain_boot.index]
+                 + [hodges_lehmann(pain_boot, pain_cast.drop(i)) for i in pain_cast.index])
+print(pd.Series(leave_one_out).value_counts())           # wie oft jeder Wert vorkam
+```
+:::
+
+Alle 116 Schätzwerte sind −1. BCa braucht Schätzwerte, die variieren, und liefert deshalb `nan` mit einer Warnung; die Perzentilmethode verwendet sie nicht.
+:::
+
+```{python}
+#| include: false
+chk = {"n": float(len(leave_one_out)), "all_minus_one": float(all(value == -1 for value in leave_one_out))}
+```
+
+```{r}
+#| include: false
+check_agree(list(n = length(leave_one_out), all_minus_one = as.numeric(all(leave_one_out == -1))), reticulate::py$chk)
+```
+
 ### Resultate formulieren
 
 > **Methods:** Pain at 6 weeks (NRS 0 to 10, an ordinal scale) was compared between the arms with the Mann-Whitney test, in the patients seen at that visit, with the Hodges-Lehmann estimate of the difference and its 95% CI as the effect size.
@@ -438,7 +478,8 @@ Der Mann-Whitney-Test fragt, ob die Werte der einen Gruppe **tendenziell grösse
 ## 🔀 R oder Python: Standardwerte beim Mann-Whitney-Test
 - **Exakt oder näherungsweise.** Bei Bindungen (wie hier) verwenden beide Programme eine Normalapproximation. Ohne Bindungen berechnet R bei Gruppen unter 50 einen exakten p-Wert, scipy nur bei sehr kleinen Gruppen. Wir setzen `exact = FALSE` in R und `method="asymptotic"` in Python, damit beide immer übereinstimmen.
 - **Stetigkeitskorrektur.** Beide Programme wenden sie bei der Näherung standardmässig an; wir setzen sie trotzdem ausdrücklich.
-- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests; der Python-Code verwendet einen Bootstrap, also eine andere Methode. Bei ganzzahligen Scores bewegt sich der Schätzwert kaum: Lässt man eine beliebige Person weg, ergibt sich weiterhin −1. Die Standardmethode von scipy für den Bootstrap (BCa) braucht aber Schätzwerte, die variieren, wenn man jeweils eine Person weglässt, und liefert deshalb hier `nan` mit einer Warnung. Die Perzentilmethode (`method="percentile"`) braucht sie nicht. Hier stimmen die beiden KI überein (−2.00 bis −1.00); bei anderen Daten können sie leicht voneinander abweichen.
+- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests; der Python-Code verwendet einen Bootstrap, also eine andere Methode. Bei ganzzahligen Scores bewegt sich der Schätzwert kaum: Lässt man eine beliebige Person weg, ergibt sich weiterhin −1 (der Kasten unter «Effektstärke und 95%-KI» zeigt es). Die Standardmethode von scipy für den Bootstrap (BCa) braucht aber Schätzwerte, die variieren, wenn man jeweils eine Person weglässt, und liefert deshalb hier `nan` mit einer Warnung. Die Perzentilmethode (`method="percentile"`) braucht sie nicht. Hier stimmen die beiden KI überein (−2.00 bis −1.00); bei anderen Daten können sie leicht voneinander abweichen.
+- **Das KI für r.** effectsize gibt ein 95%-KI für die biseriale Rangkorrelation r aus. `mwu()` von pingouin liefert r (die Spalte `RBC`) ohne KI; das KI im Results-Satz stammt also aus R.
 :::
 
 ## Exakter Test nach Fisher und Chi-Quadrat-Test {#fisher-chi-square}
@@ -500,11 +541,11 @@ two_grafts = acl[acl["graft"].isin(["hamstring", "BPTB"])]   # die Frage verglei
 # Vergleichsgruppe zuerst und die Zielgrösse «ja» (1) zuerst
 failure_table = pd.crosstab(two_grafts["graft"], two_grafts["failure_2y"]).loc[["hamstring", "BPTB"], [1, 0]]
 print(failure_table)
-print(pd.crosstab(two_grafts["graft"], two_grafts["failure_2y"], normalize="index"))   # Zeilenprozente
+print(pd.crosstab(two_grafts["graft"], two_grafts["failure_2y"], normalize="index").loc[["hamstring", "BPTB"], [1, 0]])   # Zeilenprozente
 ```
 :::
 
-6 von 154 Hamstring-Transplantaten (3.9 %) und 6 von 129 BPTB-Transplantaten (4.7 %) versagten innerhalb von 2 Jahren.
+6 von 154 Hamstring-Transplantaten (3.9 %) und 6 von 129 BPTB-Transplantaten (4.7 %) versagten innerhalb von 2 Jahren. Die Zeilensummen sind 6 + 148 = 154 und 6 + 123 = 129. Die Prozentsätze stehen in der Spalte `yes` der zweiten Tabelle (Spalte `1` in Python), mal 100.
 
 ### Analyse durchführen
 
@@ -604,7 +645,7 @@ Der Chi-Quadrat-Test behandelt Häufigkeiten so, als könnten sie jeden Wert ann
 
 Zwei Effektstärken, und es lohnt sich, beide zu berichten:
 
-- Die **Risikodifferenz**: die Differenz zwischen den beiden Prozentsätzen, in Prozentpunkten. Sie ist für Patientinnen und Patienten wie für Ärztinnen und Ärzte verständlich.
+- Die **Risikodifferenz**: die Differenz zwischen den beiden Prozentsätzen, in Prozentpunkten. Sie ist für Patientinnen und Patienten wie für Ärztinnen und Ärzte verständlich. Sein KI ist hier das einfache Intervall «Schätzwert ± 1.96 Standardfehler», das Wald-KI heisst: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
 - Das **Odds Ratio**: die Odds für Versagen mit einem Hamstring-Transplantat geteilt durch die Odds mit einem BPTB-Transplantat. Es ist das, was die logistische Regression berichtet ([Seite 11](11-predict-from-one.qmd#logistic-regression)), und eignet sich daher für den Vergleich mit anderen Studien.
 
 ::: {.panel-tabset group="language"}
@@ -650,7 +691,7 @@ check_agree(list(or = unname(failure_fisher$estimate), or_low = failure_fisher$c
             tol = 1e-4)   # both programs find the odds ratio and its CI by root-finding, accurate to about 1e-5
 ```
 
-Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer (95%-KI 5.5 Punkte tiefer bis 4.0 Punkte höher), ein Odds Ratio von 0.83 (95%-KI 0.22 bis 3.20).
+Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer (95%-KI 5.5 Punkte tiefer bis 4.0 Punkte höher), ein Odds Ratio von 0.83 (95%-KI 0.22 bis 3.20). Die beiden Versagensraten sind 3.9 % und 4.7 %, die Risikodifferenz ist also 3.9 − 4.7 = −0.8 Prozentpunkte. Das KI wird als Anteile ausgegeben, −0.055 und 0.040; mal 100 sind das −5.5 bis 4.0 Punkte.
 
 ### Resultate formulieren
 
@@ -665,7 +706,7 @@ Das KI des Odds Ratio reicht von 0.22 bis 3.20: Die Daten sind damit vereinbar, 
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: zwei verschiedene Odds Ratios
-`fisher_exact()` in scipy gibt das einfache **Stichproben**-Odds-Ratio (a × d) / (b × c) an, hier 0.8311. `fisher.test()` in R gibt das **bedingte Maximum-Likelihood**-Odds-Ratio an, 0.8316, das zu seinem exakten KI gehört. Verwenden Sie `scipy.stats.contingency.odds_ratio(..., kind="conditional")`, um die Zahl und das KI von R zu erhalten. Die beiden liegen immer nahe beieinander; geben Sie an, welches Sie berichten.
+`fisher_exact()` in scipy gibt das einfache **Stichproben**-Odds-Ratio (a × d) / (b × c) an, hier 0.8311. `fisher.test()` in R gibt das **bedingte Maximum-Likelihood**-Odds-Ratio an, 0.8316, das zu seinem exakten KI gehört. Verwenden Sie `scipy.stats.contingency.odds_ratio(..., kind="conditional")`, um die Zahl und das KI von R zu erhalten. Die beiden liegen immer nahe beieinander; geben Sie an, welches Sie berichten. In unserer Tabelle ist das Odds Ratio der Stichprobe (6 × 123) / (148 × 6) = 0.8311.
 :::
 
 ## Log-Rank-Test {#log-rank}
@@ -776,7 +817,8 @@ check_agree(list(chisq = implant_logrank$chisq, p = implant_logrank$pvalue), ret
 
 - **N:** Patientinnen und Patienten in jeder Gruppe (246 mit Implantat A, 137 mit C).
 - **Observed / Expected:** die Revisionen, die jede Gruppe hatte, und die Anzahl, die sie gehabt hätte, wenn beide Implantate dasselbe Risiko hätten. Implantat C hatte 38 Revisionen, wo 21.1 erwartet wurden; Implantat A hatte 25, wo 41.9 erwartet wurden.
-- **Chisq = 20.5 on 1 degree of freedom, p < 0.001:** So unterschiedliche Kurven wären sehr unwahrscheinlich, wenn die Implantate dasselbe Revisionsrisiko hätten.
+- **Chisq = 20.5 on 1 degree of freedom, p < 0.001:** So unterschiedliche Kurven wären sehr unwahrscheinlich, wenn die Implantate dasselbe Revisionsrisiko hätten. R gibt den p-Wert als `p= 6e-06` aus, das ist 0.000006 (der Dezimalpunkt rückt 6 Stellen nach links).
+- Python gibt nur zwei Zahlen aus: die Teststatistik (20.53) und den p-Wert. `N`, `Observed` und `Expected` stehen in der Ausgabe von R; der Kasten unten berechnet beobachtet und erwartet von Hand in beiden Sprachen. Die letzte Spalte von R, `(O-E)^2/V`, ist noch einmal die Teststatistik; `(O-E)^2/E` können Sie ignorieren.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: beobachtete und erwartete Revisionen von Hand
@@ -877,6 +919,8 @@ for km in [km_a, km_c]:
 ```
 :::
 
+Lesen Sie die Spalte `survival` und ihre beiden KI-Spalten (R) oder die drei Zahlen jeder Zeile (Python), mal 100: 89.9 % (84.7 % bis 93.3 %) mit Implantat A und 71.1 % (61.5 % bis 78.8 %) mit Implantat C.
+
 ```{python}
 #| include: false
 ci_a = km_a.confidence_interval_survival_function_.loc[:5].iloc[-1]
@@ -906,7 +950,7 @@ Die KI der beiden Kurven zu einem Zeitpunkt zu vergleichen («die KI nach 5 Jahr
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: eine Formel oder zwei Gruppen
-`survdiff()` in R nimmt eine Formel mit einer Gruppierungsvariable. `logrank_test()` in lifelines nimmt die Nachbeobachtungszeiten und Ereignisse jeder Gruppe getrennt (`multivariate_logrank_test()` nimmt eine Gruppierungsspalte). Sie berechnen denselben Test. Beide Cox-Modelle behandeln gebundene Revisionszeiten mit der Methode von Efron, daher stimmen die Hazard Ratios überein.
+`survdiff()` in R nimmt eine Formel mit einer Gruppierungsvariable. `logrank_test()` in lifelines nimmt die Nachbeobachtungszeiten und Ereignisse jeder Gruppe getrennt (`multivariate_logrank_test()` nimmt eine Gruppierungsspalte). Sie berechnen denselben Test. Beide Cox-Modelle behandeln gebundene Revisionszeiten mit der Methode von Efron, daher stimmen die Hazard Ratios überein. Der R-Code setzt `conf.type = "log-log"`, weil lifelines diese KI-Methode verwendet ([Seite 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
 ```{r}
@@ -943,6 +987,7 @@ stopifnot(
   round(unname(pain_test$estimate), 2) == -1.00, round(pain_test$conf.int, 2) == c(-2.00, -1.00),
   round(reticulate::py_eval("[float(hl_boot.confidence_interval.low), float(hl_boot.confidence_interval.high)]"), 2) == c(-2.00, -1.00),
   all(jackknife_hl == -1), length(jackknife_hl) == 116,
+  all(leave_one_out == -1), length(leave_one_out) == 116,
   as.vector(table(factor(missed_6wk$arm, levels = c("boot", "cast")))) == c(2, 2), nrow(pain_6wk) == 116,
   round(pain_rb$r_rank_biserial, 3) == -0.361, round(pain_rb$r_rank_biserial, 2) == -0.36,
   round(c(pain_rb$CI_low, pain_rb$CI_high), 2) == c(-0.53, -0.17),
@@ -958,6 +1003,13 @@ stopifnot(
   round(sum((chisq_observed - chisq_expected)^2 / chisq_expected), 3) == 0.099, round(chisq_uncorrected$p.value, 3) == 0.754,
   sum(a_vs_c$revised[a_vs_c$implant == "A"]) == 25, round(expected_a, 1) == 41.9,
   round(implant_logrank$exp[[1]], 1) == 41.9,
+  as.vector(tapply(efas_3mo$efas, efas_3mo$arm, min)) == c(10, 4), as.vector(tapply(efas_3mo$efas, efas_3mo$arm, max)) == c(23, 23),
+  round(17.40 - 13.82, 2) == 3.58, round(efas_g$Hedges_g, 6) == 1.130197, round(reticulate::py$g, 6) == 1.1302,
+  sort(pain_6wk$pain_nrs[pain_6wk$arm == "boot"])[43:44] == c(4, 5),
+  round(1074.5 / 3364, 3) == 0.319, round(reticulate::py_eval("float(pain_test['CLES'].iloc[0])"), 3) == 0.319,
+  round(prop.test(failure_table, correct = FALSE)$conf.int[1:2], 3) == c(-0.055, 0.040), round((6 * 123) / (148 * 6), 4) == 0.8311,
+  round(tapply(ex_6wk$efas, ex_6wk$arm, sd)[["boot"]], 3) == 2.747, round(as.vector(tapply(ex_6wk$efas, ex_6wk$arm, mean)), 2) == c(12.43, 9.50),
+  round(53.3 - 46.5, 1) == 6.8,
   failure_table["hamstring", "yes"] == 6, sum(failure_table["hamstring", ]) == 154,
   failure_table["BPTB", "yes"] == 6, sum(failure_table["BPTB", ]) == 129, sum(failure_table[, "yes"]) == 12,
   round(100 * prop.table(failure_table, 1)[, "yes"], 1) == c(3.9, 4.7),
@@ -1028,6 +1080,8 @@ print(efas_6wk.groupby("arm")["efas"].agg(["count", "mean", "std"]))
 :::
 
 > **Results:** At 6 weeks, the mean EFAS score was 12.4 points (SD 2.7; n = 58) with a boot and 9.5 (SD 2.9; n = 58) with a cast (difference 2.9 points, 95% CI 1.9 to 4.0; p < 0.001).
+
+Die Tabelle von R zeigt drei Ziffern: Die SD von 2.75 im Walker-Arm ist gerundet 2.747, auf eine Dezimalstelle also 2.7. Die Differenz ist 12.43 − 9.50 = 2.93.
 :::
 
 **2.** Unterscheidet sich der **EFAS-Score nach 12 Monaten** zwischen den Armen? Sehen Sie sich zuerst die Daten an und wählen Sie dann den Test.
@@ -1050,6 +1104,7 @@ wilcox.test(efas ~ arm, data = efas_12mo, exact = FALSE, correct = TRUE)
 effectsize::rank_biserial(efas ~ arm, data = efas_12mo)
 efas_12mo |> group_by(arm) |> summarise(n = n(), median = median(efas),
                                         q1 = quantile(efas, 0.25), q3 = quantile(efas, 0.75))
+efas_12mo |> group_by(arm) |> summarise(at_24 = sum(efas == 24), percent = 100 * mean(efas == 24))   # Personen an der Decke von 24
 ```
 
 ## Python
@@ -1060,12 +1115,13 @@ late_boot = efas_12mo.loc[efas_12mo["arm"] == "boot", "efas"]
 late_cast = efas_12mo.loc[efas_12mo["arm"] == "cast", "efas"]
 print(pg.mwu(late_boot, late_cast, method="asymptotic", use_continuity=True))
 print(efas_12mo.groupby("arm")["efas"].describe()[["count", "25%", "50%", "75%"]])
+print(efas_12mo.groupby("arm")["efas"].agg(at_24=lambda s: (s == 24).sum(), percent=lambda s: 100 * (s == 24).mean()))   # Personen an der Decke von 24
 ```
 :::
 
 > **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
 
-Es gibt keinen klaren Hinweis auf einen Unterschied nach 12 Monaten, nach dem Vorsprung von 3.6 Punkten, den der Walker nach 3 Monaten hatte. Beachten Sie auch, dass 18 der 120 Patientinnen und Patienten die Studienvisite nach 12 Monaten verpassten, 5 im Walker-Arm und 13 im Gips-Arm: Wenn ein Arm mehr Personen verliert, sind die verbleibenden Personen womöglich nicht mehr mit denen des anderen Arms vergleichbar. Ob sich die Differenz zwischen den Armen im Zeitverlauf wirklich verändert, ist eine Frage für ein einziges Modell mit allen Studienvisiten: [Seite 16](../beyond/16-mixed-models.qmd#group-by-time) zeigt, wie das geht.
+Es gibt keinen klaren Hinweis auf einen Unterschied nach 12 Monaten, nach dem Vorsprung von 3.6 Punkten, den der Walker nach 3 Monaten hatte. Beachten Sie auch, dass 18 der 120 Patientinnen und Patienten die Studienvisite nach 12 Monaten verpassten, 5 im Walker-Arm und 13 im Gips-Arm: Wenn ein Arm mehr Personen verliert, sind die verbleibenden Personen womöglich nicht mehr mit denen des anderen Arms vergleichbar. Ob sich die Differenz zwischen den Armen im Zeitverlauf wirklich verändert, ist eine Frage für ein einziges Modell mit allen Studienvisiten: [Seite 16](../beyond/16-mixed-models.qmd#group-by-time) zeigt, wie das geht. (Die Tabelle zeigt 55 und 47 Personen: 60 − 55 = 5 und 60 − 47 = 13.)
 :::
 
 **3.** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Frauen und Männern? Wählen Sie den Test, führen Sie ihn durch und schreiben Sie den Results-Satz mit der Risikodifferenz und dem Odds Ratio.
@@ -1081,6 +1137,7 @@ Eine Ja/Nein-Zielgrösse, zwei unabhängige Gruppen: der **exakte Test nach Fish
 rts_table <- table(sex      = factor(acl$sex, levels = c("Female", "Male")),
                    returned = factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no")))
 rts_table
+prop.table(rts_table, margin = 1)                 # Zeilenprozente: Rückkehr zum Sport, nach Geschlecht
 fisher.test(rts_table)
 prop.test(rts_table, correct = FALSE)$conf.int
 ```
@@ -1095,10 +1152,13 @@ rts_or = odds_ratio(rts_table.to_numpy(), kind="conditional")
 print(rts_or.statistic, rts_or.confidence_interval())
 women_yes, women_no = rts_table.loc["Female"]
 men_yes, men_no = rts_table.loc["Male"]
+print(women_yes / (women_yes + women_no), men_yes / (men_yes + men_no))   # Anteil mit Rückkehr: Frauen, dann Männer
 print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_yes + men_no,
                                  method="wald", compare="diff"))
 ```
 :::
 
 > **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
+
+Die Risikodifferenz ist 53.3 − 46.5 = 6.8 Prozentpunkte; die KI-Zeile gibt Anteile aus, also mit 100 multiplizieren.
 :::
