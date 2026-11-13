@@ -164,24 +164,24 @@ All four were rechecked against the page text and the data after the audit.
 | 06-19 | C | no | The quartile bullet sits under the wrong output and skips its reasoning | [catalog-06-07.md](catalog-06-07.md) | done |
 | 06-20 | C | no | "Wald" is used in the Methods sentence and the Python code without explanation | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-1 | ERROR | yes | "Only 22 revisions inform it": 18 do, and they explain the hazard ratio of exactly 3.5 | [catalog-06-07.md](catalog-06-07.md) | done |
-| 07-2 | A | yes | Results sentence: the mean and SD of each view are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-3 | A | yes | "62 of the 80 hips (78%)" and "56 ... and 48" cam-positive hips are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-4 | A | yes | The unpaired p = 0.037 and the "11° spread" are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-5 | A | yes | Wilcoxon Results sentence: both IQRs are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-6 | A | yes | The unstratified hazard ratio 3.60 is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-7 | A | yes | Exercise 1: "reads high in hips with little torsion and low in hips with a lot" is shown nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-8 | A | no | d~av~ "0.33 here" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-9 | A | yes | "A hazard ratio of 3.4997 instead of 3.5" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
+| 07-2 | A | yes | Results sentence: the mean and SD of each view are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-3 | A | yes | "62 of the 80 hips (78%)" and "56 ... and 48" cam-positive hips are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-4 | A | yes | The unpaired p = 0.037 and the "11° spread" are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-5 | A | yes | Wilcoxon Results sentence: both IQRs are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-6 | A | yes | The unstratified hazard ratio 3.60 is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-7 | A | yes | Exercise 1: "reads high in hips with little torsion and low in hips with a lot" is shown nowhere | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-8 | A | no | d~av~ "0.33 here" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-9 | A | yes | "A hazard ratio of 3.4997 instead of 3.5" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-10 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and no example on this page has 80 | [catalog-06-07.md](catalog-06-07.md) | done |
-| 07-11 | B | no | p-values: e-notation unexplained, and R and Python print different things for the Wilcoxon test | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-12 | B | no | The CI for d~z~ is printed in R only, and nothing says so | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-13 | B | yes | Exercise 1: R cuts the Budin SD off the table, so "SD 7.6" is visible in Python only | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-14 | B | no | Exercise 3: the Hodges-Lehmann estimate and its CI come from R only | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-15 | B | no | "Of 505 patients seen at both visits" is a sum the output does not show | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-16 | C | no | Python's `CLES = 0.964621` is printed, unexplained, and looks wrong | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-17 | C | yes | The reason for choosing the Wilcoxon test (a ceiling at 1 year) is never shown, and the plot points the other way | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-18 | C | no | The step from the binomial CI to the odds-ratio CI is unexplained | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-19 | C | no | Cox output: three tests with different p-values "test the same thing", and half the table is unexplained | [catalog-06-07.md](catalog-06-07.md) | open |
+| 07-11 | B | no | p-values: e-notation unexplained, and R and Python print different things for the Wilcoxon test | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-12 | B | no | The CI for d~z~ is printed in R only, and nothing says so | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-13 | B | yes | Exercise 1: R cuts the Budin SD off the table, so "SD 7.6" is visible in Python only | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-14 | B | no | Exercise 3: the Hodges-Lehmann estimate and its CI come from R only | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-15 | B | no | "Of 505 patients seen at both visits" is a sum the output does not show | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-16 | C | no | Python's `CLES = 0.964621` is printed, unexplained, and looks wrong | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-17 | C | yes | The reason for choosing the Wilcoxon test (a ceiling at 1 year) is never shown, and the plot points the other way | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-18 | C | no | The step from the binomial CI to the odds-ratio CI is unexplained | [catalog-06-07.md](catalog-06-07.md) | done |
+| 07-19 | C | no | Cox output: three tests with different p-values "test the same thing", and half the table is unexplained | [catalog-06-07.md](catalog-06-07.md) | done |
 | 08-1 | A | yes | Welch's ANOVA result appears from nowhere | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-2 | A | yes | Bias-corrected Cramér's V "0.24 here" is never printed | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-3 | A | yes | lifelines' default hazard ratio 0.81713 is never printed | [catalog-08-09.md](catalog-08-09.md) | open |
