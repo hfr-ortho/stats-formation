@@ -116,6 +116,23 @@ def test_every_page_includes_the_switcher(site):
     assert missing == []
 
 
+def test_every_page_includes_the_glossary_script(site):
+    pages = sorted(p for p in SITE_ROOT.rglob("*.html") if "site_libs" not in p.parts)
+    missing = [str(p.relative_to(SITE_ROOT)) for p in pages if 'id="glossary-terms"' not in p.read_text(encoding="utf-8")]
+    assert missing == []
+
+
+def test_every_term_link_points_to_an_entry_of_its_own_language(site):
+    for lang in LANGS:
+        entries = {span["id"] for span in load_lang(lang, "glossary.html").select("dl dt span[id]")}
+        assert entries, lang
+        for page in PAGES:
+            for a in load_lang(lang, page).select("a.term"):
+                target, _, entry = a["href"].partition("#")
+                assert target.endswith("glossary.html") and f"/{lang}/" in "/" + target.replace("../", ""), f"{lang}/{page}: {a['href']}"
+                assert entry in entries, f"{lang}/{page}: no glossary entry '{entry}'"
+
+
 def test_every_page_includes_the_report_link_script(site):
     pages = sorted(p for p in SITE_ROOT.rglob("*.html") if "site_libs" not in p.parts)
     assert pages

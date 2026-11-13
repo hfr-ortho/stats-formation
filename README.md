@@ -40,7 +40,7 @@ Step-by-step instructions for beginners: [Install & set up](https://hfr-ortho.gi
 | `templates/` | A data-collection template to copy for real projects |
 | `R/` | Site helpers (`check_agree()`) |
 | `scripts/` | Setup checks you run on your own computer |
-| `theme/`, `images/`, `lang-switch.html`, `report-error.html` | HFR colors and logo, the language switcher, and the "Report an error" link |
+| `theme/`, `images/`, `lang-switch.html`, `report-error.html`, `glossary-terms.html` | HFR colors and logo, the language switcher, the "Report an error" link, and the glossary pop-ups |
 | `tests/` | R (testthat), Python (pytest), and built-site tests |
 | `_freeze/` | Saved results of every page's code (committed, so the site builds without R or Python) |
 | `scratch/` | Your practice space; git ignores everything in it |

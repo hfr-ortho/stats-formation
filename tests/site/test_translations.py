@@ -26,6 +26,7 @@ LANGS = ["fr", "de"]
 STEPS = {
     "fr": {
         "When to use it": "Quand l'utiliser",
+        "What the test really does": "Ce que fait vraiment le test",
         "Look at the data first": "Regarder d'abord les données",
         "Run it": "Exécuter l'analyse",
         "Read the output": "Lire le résultat",
@@ -34,6 +35,7 @@ STEPS = {
     },
     "de": {
         "When to use it": "Wann verwenden",
+        "What the test really does": "Was der Test wirklich macht",
         "Look at the data first": "Zuerst die Daten ansehen",
         "Run it": "Analyse durchführen",
         "Read the output": "Ausgabe lesen",
@@ -461,6 +463,7 @@ def structure_problems(en: str, tr: str) -> list[str]:
 # Wilcoxon under W), so its rows no longer sit in English order. That one page compares its numbers and
 # inline code as sets of rows; everything outside the table is compared as on any other page.
 A_TO_Z = "tests-a-z.qmd"
+GLOSSARY_PAGE = "glossary.qmd"   # sorted by the term in each language, so its entries compare as a set
 
 
 def table_rows(text: str) -> list[str]:
@@ -478,11 +481,30 @@ def row_set_problems(en: str, tr: str) -> list[str]:
     return [] if a == b else [f"rows differ in numbers or inline code: only translation {dict(b - a)}, only English {dict(a - b)}"]
 
 
+def entry_set_problems(en: str, tr: str) -> list[str]:
+    """The glossary's entries, whatever their order: the same ids, and the same numbers in each entry."""
+    def entries(text):
+        found = {}
+        for block in blocks(text):
+            m = re.match(r"^\[[^\]]+\]\{#([a-z0-9-]+)\}", block)
+            if m:
+                found[m.group(1)] = number_tokens(block)
+        return found
+    a, b = entries(en), entries(tr)
+    problems = [f"entries differ: only translation {sorted(b.keys() - a.keys())}, only English {sorted(a.keys() - b.keys())}"] if a.keys() != b.keys() else []
+    return problems + [f"entry '{k}': numbers {b[k]}, English {a[k]}" for k in a.keys() & b.keys() if a[k] != b[k]]
+
+
 def check_pages(check, lang):
     found = {}
     for en, tr in translated_pages(lang):
         en_text, tr_text = en.read_text(encoding="utf-8"), tr.read_text(encoding="utf-8")
         problems = []
+        if tr.name == GLOSSARY_PAGE and tr.parent.name == lang and check is number_problems:
+            problems = entry_set_problems(en_text, tr_text)
+            if problems:
+                found[str(tr.relative_to(ROOT))] = problems
+            continue
         if tr.name == A_TO_Z and tr.parent.name == lang:
             if check in (code_problems, number_problems):
                 problems += row_set_problems(en_text, tr_text)

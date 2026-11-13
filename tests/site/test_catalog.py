@@ -25,6 +25,15 @@ WRITTEN = [
 ANATOMY = ["When to use it", "Look at the data first", "Run it", "Read the output",
            "Effect size and 95% CI", "How to report it"]
 DESCRIBE = [step for step in ANATOMY if step != "Effect size and 95% CI"]
+# A plain-words step after "When to use it", added page by page. List a page here once every section on it
+# has the step; when every catalog page is listed, move the step into ANATOMY and delete this set.
+EXPLAINED = "What the test really does"
+WITH_EXPLANATION = {"catalog/06-two-unpaired-groups.html"}
+
+
+def anatomy(page):
+    steps = DESCRIBE if page.startswith("catalog/04-") else ANATOMY
+    return [steps[0], EXPLAINED, *steps[1:]] if page in WITH_EXPLANATION else steps
 
 SECTIONS = [(page, anchor) for page in WRITTEN for anchor in CELL_ANCHORS[page]]
 
@@ -50,7 +59,7 @@ def test_page_is_written_and_frozen(site, page):
 def test_section_follows_the_page_anatomy(site, page, anchor):
     found = section(page, anchor)
     steps = [h.get_text(strip=True) for h in found.select("section.level3 > h3")]
-    assert steps == (DESCRIBE if page.startswith("catalog/04-") else ANATOMY)
+    assert steps == anatomy(page)
     text = text_of(found)
     assert "The question:" in text                                      # step 1
     report = " ".join(text_of(q) for q in found.select("blockquote"))
