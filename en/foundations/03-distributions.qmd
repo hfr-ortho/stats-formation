@@ -116,7 +116,7 @@ How to read them:
 - Points **curving up at the right end**: right skew (length of stay). The flat steps are the many ties at 0, 1 and 2 days.
 - Points **flattening at the top**: a ceiling (the PROM). Many patients share the maximum score.
 
-A number for lopsidedness is the **skewness**: 0 for a symmetric shape, positive for a tail to the right, negative for a tail to the left.
+A number for lopsidedness is the **[skewness](../glossary.qmd#skewed){.term}**: 0 for a symmetric shape, positive for a tail to the right, negative for a tail to the left.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -155,6 +155,8 @@ check_agree(list(age = skewness(cohort$age), los = skewness(cohort$los_days),
                  prom_1yr = skewness(one_year$prom_score)), reticulate::py$chk)
 ```
 
+Age: −0.05, practically symmetric. Length of stay: 1.61, a long tail to the right. 1-year PROM score: −0.73, a tail to the left. The numbers say what the histograms showed.
+
 ::: {.callout-tip}
 ## 🔀 R vs Python: skewness functions
 Packages define skewness in slightly different ways (`scipy.stats.skew()` and the R package `e1071` each use their own formula), so the third decimal can differ between them. We wrote the formula out by hand in both languages so the numbers match exactly.
@@ -180,7 +182,7 @@ print(stats.shapiro(cohort["age"]))
 ```
 :::
 
-p = 0.001: "not normal". With 600 values the test can detect departures far too small to matter. A t test on these ages would be perfectly fine.
+p = 0.001: "not normal". With 600 values the test can detect departures far too small to matter. A t test on these ages would be perfectly fine. The other number, W (`statistic` in Python), is the test statistic: 1 would be a perfect fit to the normal curve. You don't report it; read the [p-value](../glossary.qmd#p-value){.term} (`p-value` in R, `pvalue` in Python).
 
 **It's too weak with small samples.** Take just the first 10 patients' 1-year PROM scores, from a variable we *know* is skewed with a ceiling:
 
@@ -229,17 +231,21 @@ Decide from the plots, from what you know about the measurement (a bounded score
 
 The normality assumption is about the data **within each group** (or, for regression models, the **residuals**: what's left after the model's prediction). Pooling groups with different centers can make perfectly normal data look non-normal.
 
-Here's an extreme, made-up example: two groups of 200 values, each exactly normal, 4 standard deviations apart.
+Here's an extreme, made-up example: two groups of 200 values, each exactly normal, with means of 40 and 60 and an SD of 5, so 4 standard deviations apart.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+#| fig-height: 3
 group_a <- qnorm(ppoints(200), mean = 40, sd = 5)   # 200 perfectly normal values
 group_b <- qnorm(ppoints(200), mean = 60, sd = 5)
 
 shapiro.test(group_a)$p.value                       # one group alone
 shapiro.test(c(group_a, group_b))$p.value           # both groups pooled
+
+ggplot(tibble(value = c(group_a, group_b)), aes(value)) +   # the pooled values: two humps
+  geom_histogram(bins = 30)
 ```
 
 ## Python
@@ -251,6 +257,10 @@ group_b = stats.norm.ppf(points, loc=60, scale=5)
 
 print(stats.shapiro(group_a).pvalue)                              # one group alone
 print(stats.shapiro(np.concatenate([group_a, group_b])).pvalue)   # both groups pooled
+
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(np.concatenate([group_a, group_b]), bins=30)              # the pooled values: two humps
+plt.show()
 ```
 :::
 
@@ -266,9 +276,11 @@ check_agree(list(one = shapiro.test(group_a)$p.value,
                  pooled = shapiro.test(c(group_a, group_b))$p.value), reticulate::py$chk)
 ```
 
-Each group alone passes easily (p ≈ 1). Pooled, p < 0.001: the histogram of the pooled values has two humps, which is not what a normal distribution looks like.
+Each group alone passes easily (p ≈ 1). Pooled, p < 0.001: the histogram of the pooled values has two humps, one around 40 and one around 60, which is not what a normal distribution looks like.
 
-In real data the groups are usually much closer together. BMI differs by only about a third of a standard deviation between THA and TKA patients, so pooling barely matters. What you see instead is Shapiro-Wilk's verdict bouncing around 0.05 depending on how you slice the same data:
+The pooled p-value prints as `9.267769e-11`. That is [scientific notation](../glossary.qmd#scientific-notation){.term}: 9.27 × 10⁻¹¹, or 0.0000000000927. For one group alone, R rounds the p-value to 1 and Python prints 0.999999999999995.
+
+In real data the groups are usually much closer together. BMI differs by only about a third of a standard deviation between THA and TKA patients (the SMD of 0.33 in [Table 1](02-demographics.qmd#smd)), so pooling barely matters. What you see instead is Shapiro-Wilk's verdict bouncing around 0.05 depending on how you slice the same data:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -379,9 +391,9 @@ check_agree(list(skew_log = skewness(log1p(cohort$los_days)),
                  ceiling_1yr = mean(one_year$prom_score == 100)), reticulate::py$chk)
 ```
 
-The log helps (skewness falls from about 1.6 to 0.6), but nearly half the stays are 0 days and no transformation can spread out a pile of identical values. Results on a log scale are also harder to explain ("a 0.3 difference in log(days + 1)"). Here the rank-based tests are simpler and more honest.
+The log helps (skewness falls from about 1.6 to 0.6), but nearly half the stays are 0 days (`share_zero`: 0.485, or 48.5%) and no transformation can spread out a pile of identical values. Results on a log scale are also harder to explain ("a 0.3 difference in log(days + 1)"). Here the rank-based tests are simpler and more honest.
 
-The same goes for the **ceiling**: 17% of patients score the maximum at 1 year, and no transformation can tell those patients apart. Compare groups with rank-based tests, or report the proportion reaching the ceiling (or a clinically important improvement) as a yes/no outcome.
+The same goes for the **ceiling**: 17% of the patients with a 1-year score reach the maximum (`ceiling_1yr`: 0.17), and no transformation can tell those patients apart. Compare groups with rank-based tests, or report the proportion reaching the ceiling (or a clinically important improvement) as a yes/no outcome.
 
 ## Ordinal data always go in the rank column {#ordinal}
 
@@ -412,6 +424,8 @@ chk = {"very_satisfied": float((cohort["satisfaction_1yr"] == 5).sum()),
 check_agree(list(very_satisfied = sum(cohort$satisfaction_1yr == 5, na.rm = TRUE),
                  no_answer = sum(is.na(cohort$satisfaction_1yr))), reticulate::py$chk)
 ```
+
+250 patients chose 5 ("very satisfied") and 15 chose 1. The last row (`NA` in R, `NaN` in Python) is the 98 patients with no answer; say how many are missing when you report the scale. Python prints the scores as `1.0` to `5.0` because the column has blanks.
 
 Report ordinal data as counts and percentages, or as a median (IQR), and compare groups with rank-based tests. Never compute a t test on Likert scores, however many patients you have.
 
@@ -508,6 +522,8 @@ check_agree(list(difference = difference, ci_low = ci[1], ci_high = ci[2], p = b
             reticulate::py$chk)
 ```
 
+Reading the output: the difference is 1.786, so 1.8 to one decimal. The CI runs from 0.924 to 2.647, so 0.9 to 2.6 (R's small table shows 2.65 because it prints three significant figures). R prints p as `5.341e-05`, which is 0.00005 and is written as p < 0.001. R's first printout also shows t and df, the [test statistic](../glossary.qmd#test-statistic){.term} and its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) explains them, and here we need only the difference, its CI and p.
+
 > TKA patients had a higher BMI than THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Is a difference of 1.8 kg/m² *clinically* important? The p-value can't tell you. Ask whether a difference anywhere in the CI (0.9 to 2.6 kg/m²) would change risk or management, for example complication rates. That's clinical judgment, not statistics. **Statistically significant** means only that data like these would be unusual if there were really no difference. It doesn't mean the difference is large or important.
@@ -538,6 +554,18 @@ stopifnot(
   round(shapiro.test(residuals(fit))$p.value, 3) == 0.306,
   shapiro.test(group_a)$p.value > 0.99,
   shapiro.test(c(group_a, group_b))$p.value < 0.001,
+  # numbers added with the audit fixes
+  round(c(skewness(cohort$age), skewness(cohort$los_days), skewness(one_year$prom_score)), 2) == c(-0.05, 1.61, -0.73),
+  isTRUE(all.equal(mean(group_a), 40)), isTRUE(all.equal(mean(group_b), 60)), (60 - 40) / 5 == 4,
+  format(signif(shapiro.test(c(group_a, group_b))$p.value, 7)) == "9.267769e-11",
+  round(shapiro.test(group_a)$p.value, 6) == 1,
+  reticulate::py_eval("str(stats.shapiro(group_a).pvalue)") == "0.999999999999995",
+  round(abs(smd::smd(cohort$bmi, cohort$procedure)$estimate), 2) == 0.33,
+  round(mean(cohort$los_days == 0), 3) == 0.485, round(mean(one_year$prom_score == 100), 2) == 0.17,
+  sum(cohort$satisfaction_1yr == 5, na.rm = TRUE) == 250, sum(cohort$satisfaction_1yr == 1, na.rm = TRUE) == 15,
+  sum(is.na(cohort$satisfaction_1yr)) == 98,
+  round(difference, 3) == 1.786, round(ci, 3) == c(0.924, 2.647), format(signif(ci[2], 3)) == "2.65",
+  format(signif(bmi_test$p.value, 4)) == "5.341e-05", round(bmi_test$p.value, 5) == 0.00005,
   bmi_test$p.value < 0.001,
   sum(table(cohort$patient_id) == 2) == 80,
   round(skewness(cohort$los_days), 1) == 1.6,

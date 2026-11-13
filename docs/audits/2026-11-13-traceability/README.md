@@ -105,14 +105,14 @@ All four were rechecked against the page text and the data after the audit.
 | 02-7 | B | no | The wrong guesses in the ⚠️ box are described, not shown | [foundations.md](foundations.md) | done |
 | 02-8 | C | no | Diabetes p-value prints as `>0.999` in R and `1.000` in Python | [foundations.md](foundations.md) | done |
 | 03-1 | A | yes | "80 patients appear twice … usually in the same group" has no output behind it | [foundations.md](foundations.md) | done |
-| 03-2 | B | no | The three skewness values are printed and never read | [foundations.md](foundations.md) | open |
-| 03-3 | B | ? | R's summary shows the upper CI limit as 2.65; the prose says 2.6 | [foundations.md](foundations.md) | open |
-| 03-4 | B | no | "About a third of a standard deviation" comes from page 2 | [foundations.md](foundations.md) | open |
-| 03-5 | B | no | "The histogram of the pooled values has two humps" but no histogram is drawn | [foundations.md](foundations.md) | open |
-| 03-6 | B | no | The satisfaction counts are printed and never mentioned; 98 blanks are unexplained | [foundations.md](foundations.md) | open |
-| 03-7 | B | no | "Nearly half" and "17% of patients" are printed as proportions, with the denominator unstated | [foundations.md](foundations.md) | open |
-| 03-8 | C | no | Numbers like `9.267769e-11` and `5.341e-05` are never explained | [foundations.md](foundations.md) | open |
-| 03-9 | C | no | `W`, `t` and `df` are printed and never explained | [foundations.md](foundations.md) | open |
+| 03-2 | B | no | The three skewness values are printed and never read | [foundations.md](foundations.md) | done |
+| 03-3 | B | ? | R's summary shows the upper CI limit as 2.65; the prose says 2.6 | [foundations.md](foundations.md) | done |
+| 03-4 | B | no | "About a third of a standard deviation" comes from page 2 | [foundations.md](foundations.md) | done |
+| 03-5 | B | no | "The histogram of the pooled values has two humps" but no histogram is drawn | [foundations.md](foundations.md) | done |
+| 03-6 | B | no | The satisfaction counts are printed and never mentioned; 98 blanks are unexplained | [foundations.md](foundations.md) | done |
+| 03-7 | B | no | "Nearly half" and "17% of patients" are printed as proportions, with the denominator unstated | [foundations.md](foundations.md) | done |
+| 03-8 | C | no | Numbers like `9.267769e-11` and `5.341e-05` are never explained | [foundations.md](foundations.md) | done |
+| 03-9 | C | no | `W`, `t` and `df` are printed and never explained | [foundations.md](foundations.md) | done |
 | 04-1 | ERROR | no | The standard error arithmetic as written gives 0.38, not 0.39 | [catalog-04-05.md](catalog-04-05.md) | done |
 | 04-2 | A | yes | "39 of the 194 scores were 48" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
 | 04-3 | A | yes | "13 scored exactly 42" and "62 of the 194 (32%)" are computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
