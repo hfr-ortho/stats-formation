@@ -97,13 +97,13 @@ All four were rechecked against the page text and the data after the audit.
 | 01-7 | C | no | The spot check prints different patients in R and Python, with no explanation | [foundations.md](foundations.md) | done |
 | 01-8 | C | no | Step 5's output is never read, and whole numbers print as `2.0` in Python | [foundations.md](foundations.md) | done |
 | 02-1 | A | yes | 80 bilateral patients and 520 patients appear in no output | [foundations.md](foundations.md) | done |
-| 02-2 | A | yes | R's age SMD of 0.1048 is not in any output | [foundations.md](foundations.md) | open |
-| 02-3 | B | no | The quartile box quotes THA numbers the reader has not seen yet | [foundations.md](foundations.md) | open |
-| 02-4 | B | no | The SMD sentence drops the minus signs before the box explains them, and the box's sign rule does not fit three of the seven rows | [foundations.md](foundations.md) | open |
-| 02-5 | B | no | The SMD's 95% CI column is never explained and exists in R only, yet the exercise answer relies on it | [foundations.md](foundations.md) | open |
-| 02-6 | B | no | "Percentages are of the patients with a value" cannot be seen in R, and Python's Missing column is not explained | [foundations.md](foundations.md) | open |
-| 02-7 | B | no | The wrong guesses in the ⚠️ box are described, not shown | [foundations.md](foundations.md) | open |
-| 02-8 | C | no | Diabetes p-value prints as `>0.999` in R and `1.000` in Python | [foundations.md](foundations.md) | open |
+| 02-2 | A | yes | R's age SMD of 0.1048 is not in any output | [foundations.md](foundations.md) | done |
+| 02-3 | B | no | The quartile box quotes THA numbers the reader has not seen yet | [foundations.md](foundations.md) | done |
+| 02-4 | B | no | The SMD sentence drops the minus signs before the box explains them, and the box's sign rule does not fit three of the seven rows | [foundations.md](foundations.md) | done |
+| 02-5 | B | no | The SMD's 95% CI column is never explained and exists in R only, yet the exercise answer relies on it | [foundations.md](foundations.md) | done |
+| 02-6 | B | no | "Percentages are of the patients with a value" cannot be seen in R, and Python's Missing column is not explained | [foundations.md](foundations.md) | done |
+| 02-7 | B | no | The wrong guesses in the ⚠️ box are described, not shown | [foundations.md](foundations.md) | done |
+| 02-8 | C | no | Diabetes p-value prints as `>0.999` in R and `1.000` in Python | [foundations.md](foundations.md) | done |
 | 03-1 | A | yes | "80 patients appear twice … usually in the same group" has no output behind it | [foundations.md](foundations.md) | done |
 | 03-2 | B | no | The three skewness values are printed and never read | [foundations.md](foundations.md) | open |
 | 03-3 | B | ? | R's summary shows the upper CI limit as 2.65; the prose says 2.6 | [foundations.md](foundations.md) | open |

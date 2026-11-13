@@ -135,12 +135,28 @@ check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(coho
             reticulate::py$chk)
 ```
 
+Was passiert, wenn Sie das nicht angeben? Hier darf jedes Package bei einer Variable selbst raten:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+cohort |> select(los_days) |> tbl_summary()   # kein Typ angegeben: die Aufenthaltsdauer wird als Kategorie aufgelistet
+```
+
+## Python
+
+```{python}
+print(TableOne(pd.read_csv("data/cohort.csv"), columns=["asa"]).tabulate(tablefmt="github"))   # keine Liste categorical: die ASA-Klasse wird gemittelt
+```
+:::
+
 ::: {.callout-warning}
 ## ⚠️ Achtung: Sagen Sie der Software, was jede Variable ist
 Software rät den Typ der Variablen, und das Raten geht oft schief:
 
-- Die **ASA-Klasse** sieht wie eine Zahl aus und wird deshalb gemittelt («mean ASA 2.4»). Sie ist eine Kategorie.
-- Die **Aufenthaltsdauer** hat nur wenige verschiedene Werte, deshalb behandelt gtsummary sie als Kategorie und listet «0 days, 1 day, 2 days…» auf. Sie ist eine Anzahl.
+- Die **ASA-Klasse** sieht wie eine Zahl aus und wird deshalb von tableone gemittelt, wenn Sie sie nicht unter `categorical` aufführen: «mean (SD) 2.4 (0.7)» in der Python-Ausgabe oben. Sie ist eine Kategorie.
+- Die **Aufenthaltsdauer** hat nur wenige verschiedene Werte, deshalb behandelt gtsummary sie als Kategorie und listet je eine Zeile für 0, 1, 2 … Tage auf, wie in der R-Ausgabe oben. Sie ist eine Anzahl.
 - **0/1-Spalten** wie `diabetes`: gtsummary zeigt eine einzige Zeile (wie viele den Wert 1 haben, also «ja»), tableone dagegen sowohl die Zeile für 0 als auch die für 1. In einer Publikation zeigen Sie nur die «Ja»-Zeile.
 
 Legen Sie den Typ jeder Variable selbst fest (`type =` in R, `categorical =` in Python).
@@ -156,7 +172,7 @@ Woran erkennen Sie, ob eine Variable schief ist? Sehen Sie sie sich an: [Verteil
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Quartile
-gtsummary und tableone berechnen Quartile nach unterschiedlichen Formeln (in R-Begriffen `quantile()` Typ 2 und Typ 7). Bei ganzzahligen Daten können die Resultate voneinander abweichen. An der Aufenthaltsdauer sehen Sie den Unterschied: Das obere Quartil der Hüft-TP beträgt in R 2 Tage und in Python 1.8. Keines von beiden ist falsch. Nennen Sie im Methodenteil, welche Software Sie verwendet haben.
+gtsummary und tableone berechnen Quartile nach unterschiedlichen Formeln (in R-Begriffen `quantile()` Typ 2 und Typ 7). Bei ganzzahligen Daten wie der Aufenthaltsdauer können die Resultate voneinander abweichen. In der Tabelle oben stimmen die beiden überein (0 bis 1 Tag). In der Spalte THA der [nächsten Tabelle](#by-group) nicht: Das obere Quartil beträgt in R 2 Tage (`1 (0–2)`) und in Python 1.8 (`1.0 [0.0,1.8]`). Keines von beiden ist falsch. Nennen Sie im Methodenteil, welche Software Sie verwendet haben.
 :::
 
 ## Gruppen vergleichen {#by-group}
@@ -214,7 +230,7 @@ p_r <- by_procedure$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 ```
 
-Jeder p-Wert stammt aus einem Test, den Sie im Katalog kennenlernen: dem [t-Test nach Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) für die symmetrischen kontinuierlichen Variablen, einem [rangbasierten Test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) für die Aufenthaltsdauer (der Kruskal-Wallis-Test mit zwei Gruppen ist der Mann-Whitney-Test) und dem [Chi-Quadrat-Test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) für die Kategorien.
+Jeder p-Wert stammt aus einem Test, den Sie im Katalog kennenlernen: dem [t-Test nach Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) für die symmetrischen kontinuierlichen Variablen, einem [rangbasierten Test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) für die Aufenthaltsdauer (der Kruskal-Wallis-Test mit zwei Gruppen ist der Mann-Whitney-Test) und dem [Chi-Quadrat-Test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) für die Kategorien. Beim Diabetes gibt R `>0.999` aus und Python `1.000`. Es ist derselbe p-Wert: tableone rundet ihn auf drei Dezimalstellen. Berichten Sie ihn als p > 0.999, wie es die Konventionen dieser Website vorsehen.
 
 ## p-Werte oder standardisierte Mittelwertsdifferenzen? {#smd}
 
@@ -274,12 +290,40 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Geschlecht (SMD 0.31) und BMI (0.33) sind die deutlichen Ungleichgewichte. Alter (0.10), ASA-Klasse (0.12) und Rauchen (0.15) liegen knapp über 0.1: einen Satz wert, aber kein Grund zur Sorge. Diabetes und Aufenthaltsdauer sind vernachlässigbar.
+Sieht man vorerst von den Vorzeichen ab (der Kasten unten erklärt sie), sind Geschlecht (SMD 0.31) und BMI (0.33) die deutlichen Ungleichgewichte. Alter (0.10), ASA-Klasse (0.12) und Rauchen (0.15) liegen knapp über 0.1: einen Satz wert, aber kein Grund zur Sorge. Diabetes und Aufenthaltsdauer sind vernachlässigbar. Die Tabelle von R gibt ausserdem für jede SMD ein 95%-KI (Konfidenzintervall) an; tableone berechnet keines.
+
+Die beiden Packages stimmen auf drei Dezimalstellen überein. Um zu sehen, wo sie auseinandergehen, geben Sie die SMD des Alters mit mehr Stellen aus:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+smd::smd(cohort$age, cohort$procedure)   # die Funktion, die gtsummary aufruft; seine Tabelle rundet den Wert auf 0.10
+```
+
+## Python
+
+```{python}
+print(round(abs(balance.smd_table.loc["age"].iloc[0]), 4))   # die Zeile age der Tabelle oben, ohne Vorzeichen
+```
+:::
+
+```{python}
+#| include: false
+chk = {"age": float(abs(balance.smd_table.loc["age"].iloc[0]))}
+```
+
+```{r}
+#| include: false
+# The two packages divide the variances differently (n against n - 1; see the box), so the
+# continuous SMDs differ in the fourth decimal.
+check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), reticulate::py$chk, tol = 0.005)
+```
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Die SMDs weichen leicht voneinander ab
-- **Vorzeichen.** gtsummary zieht Knie-TP von Hüft-TP ab, tableone zieht Hüft-TP von Knie-TP ab. Geben Sie den Absolutwert an oder sagen Sie, welche Gruppe von welcher abgezogen wurde.
-- **Vierte Dezimalstelle.** Bei kontinuierlichen Variablen teilt das R-Package `smd` die Varianzen durch *n*, tableone dagegen durch *n − 1* (die übliche Lehrbuchformel). Das Alter ergibt in R 0.1048 und in Python 0.1046. Kategoriale SMDs stimmen genau überein.
+- **Vorzeichen.** Bei den Variablen, die als Zahlen eingehen (Alter, BMI, Aufenthaltsdauer), zieht gtsummary Knie-TP von Hüft-TP ab und tableone Hüft-TP von Knie-TP; die Vorzeichen sind deshalb entgegengesetzt. Bei Kategorien (Geschlecht, ASA-Klasse, Rauchen) hat die SMD keine Richtung und ist in beiden positiv. Geben Sie den Absolutwert an oder sagen Sie, welche Gruppe von welcher abgezogen wurde.
+- **Vierte Dezimalstelle.** Bei kontinuierlichen Variablen teilt das R-Package `smd` die Varianzen durch *n*, tableone dagegen durch *n − 1* (die übliche Lehrbuchformel). Das Alter ergibt in R 0.1048 und in Python 0.1046 (die beiden Zahlen direkt über dem Kasten). Kategoriale SMDs stimmen genau überein.
 :::
 
 **Was sollten Sie angeben?**
@@ -333,7 +377,7 @@ check_agree(list(missing_bmi = sum(is.na(abstraction$bmi)),
                  missing_asa = sum(is.na(abstraction$asa))), reticulate::py$chk)
 ```
 
-R fügt unter jeder Variable mit fehlenden Werten eine Zeile «Missing» hinzu, Python eine Spalte «Missing». In beiden Fällen beziehen sich die Prozentsätze auf die Patientinnen und Patienten mit einem Wert, und die Leserinnen und Leser sehen, wie viele ausgelassen wurden.
+R fügt unter jeder Variable mit fehlenden Werten eine Zeile «Missing» hinzu, mit einer Anzahl pro Standort (BMI: 5 und 3). Python fügt eine Spalte «Missing» für beide Standorte zusammen hinzu (BMI: 8 = 5 + 3). In beiden Fällen beziehen sich die Prozentsätze auf die Patientinnen und Patienten mit einem Wert: An Site A gehören 6 der 58 Personen mit einer ASA-Klasse zur Klasse 1, das sind 10.3 % (`6 (10.3)` in Python), nicht 6 von 60. Die Leserinnen und Leser sehen, wie viele ausgelassen wurden.
 
 ## Export nach Word {#export}
 
@@ -389,6 +433,14 @@ stopifnot(
   round(mean(cohort$age), 1) == 65.5, round(sd(cohort$age), 1) == 9.4,
   sum(cohort$sex == "Female") == 343, pct(cohort$sex == "Female") == 57,
   median(cohort$los_days) == 1,
+  # numbers added with the audit fixes
+  round(smd::smd(cohort$age, cohort$procedure)$estimate, 4) == 0.1048,
+  round(abs(reticulate::py_eval("float(balance.smd_table.loc['age'].iloc[0])")), 4) == 0.1046,
+  round(mean(as.integer(as.character(cohort$asa))), 1) == 2.4, round(sd(as.integer(as.character(cohort$asa))), 1) == 0.7,
+  sort(unique(cohort$los_days)) == 0:6,
+  tapply(is.na(abstraction$bmi), abstraction$site, sum) == c(5, 3), 5 + 3 == 8,
+  sum(!is.na(abstraction$asa[abstraction$site == "Site A"])) == 58,
+  sum(abstraction$asa[abstraction$site == "Site A"] == 1, na.rm = TRUE) == 6, round(100 * 6 / 58, 1) == 10.3,
   # what the libraries actually display (Python side checked in the next chunk)
   by_procedure$table_body$stat_1[by_procedure$table_body$variable == "los_days" &
                                    by_procedure$table_body$row_type == "label"] == "1 (0–2)",
@@ -445,7 +497,7 @@ print(by_site.smd_table)
 ```
 :::
 
-Rauchstatus (0.23) und Aufenthaltsdauer (0.22) unterscheiden sich zwischen den Standorten am stärksten, und ihre 95%-KI (Konfidenzintervalle) schliessen null aus. Und doch wurde der Standort in diesem Datensatz völlig zufällig zugewiesen, unabhängig von allem anderen. Bei sieben Variablen sind ein paar zufällige Ungleichgewichte über 0.1 zu erwarten: Beurteilen Sie jede SMD nach ihrer Grösse und danach, ob sie plausibel eine Rolle spielen könnte, nicht danach, ob sie «signifikant» ist.
+Rauchstatus (0.23) und Aufenthaltsdauer (0.22; Python gibt −0.22 aus, siehe den Kasten zu den Vorzeichen) unterscheiden sich zwischen den Standorten am stärksten. In der Tabelle von R schliessen ihre 95%-KI (Konfidenzintervalle; 0.07 bis 0.39 und 0.06 bis 0.39) null aus; tableone gibt kein KI an. Und doch wurde der Standort in diesem Datensatz völlig zufällig zugewiesen, unabhängig von allem anderen. Bei sieben Variablen sind ein paar zufällige Ungleichgewichte über 0.1 zu erwarten: Beurteilen Sie jede SMD nach ihrer Grösse und danach, ob sie plausibel eine Rolle spielen könnte, nicht danach, ob sie «signifikant» ist.
 :::
 
 **2.** Bei einer Studie werden Patientinnen und Patienten ab 80 Jahren mit jüngeren verglichen, gematcht nach Geschlecht, BMI und ASA-Klasse. Soll die Tabelle zu Studienbeginn p-Werte oder SMDs zeigen? Warum?

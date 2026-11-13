@@ -135,12 +135,28 @@ check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(coho
             reticulate::py$chk)
 ```
 
+Que se passe-t-il si vous ne le dites pas ? Voici chaque package laissé à ses suppositions, sur une variable :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+cohort |> select(los_days) |> tbl_summary()   # aucun type indiqué : la durée de séjour est listée comme une catégorie
+```
+
+## Python
+
+```{python}
+print(TableOne(pd.read_csv("data/cohort.csv"), columns=["asa"]).tabulate(tablefmt="github"))   # pas de liste categorical : la classe ASA est moyennée
+```
+:::
+
 ::: {.callout-warning}
 ## ⚠️ Attention : dites au logiciel de quel type est chaque variable
 Les logiciels devinent le type des variables, et ils se trompent souvent :
 
-- **La classe ASA** ressemble à un nombre, donc elle est moyennée (« ASA moyen 2.4 »). C'est une catégorie.
-- **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste « 0 jour, 1 jour, 2 jours… ». C'est un comptage (un nombre de jours).
+- **La classe ASA** ressemble à un nombre, donc tableone en fait la moyenne si vous ne la listez pas sous `categorical` : « mean (SD) 2.4 (0.7) » dans la sortie Python ci-dessus. C'est une catégorie.
+- **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste une ligne pour 0, 1, 2 … jours, comme dans la sortie R ci-dessus. C'est un comptage (un nombre de jours).
 - **Les colonnes 0/1**, comme `diabetes` : gtsummary montre une seule ligne (combien valent 1, donc « oui »), alors que tableone montre la ligne 0 et la ligne 1. Dans un article, montrez seulement la ligne « oui ».
 
 Définissez vous-même le type de chaque variable (`type =` en R, `categorical =` en Python).
@@ -156,7 +172,7 @@ Comment savoir si une variable est asymétrique ? Regardez-la : [Distributions
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les quartiles
-gtsummary et tableone calculent les quartiles avec des formules différentes (selon la terminologie de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer : le quartile supérieur de la PTH est de 2 jours en R et de 1.8 en Python. Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
+gtsummary et tableone calculent les quartiles avec des formules différentes (selon la terminologie de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer. Dans le tableau ci-dessus, les deux concordent (0 à 1 jour). Dans la colonne THA du [tableau suivant](#by-group), ce n'est pas le cas : le quartile supérieur est de 2 jours en R (`1 (0–2)`) et de 1.8 en Python (`1.0 [0.0,1.8]`). Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
 :::
 
 ## Comparer des groupes {#by-group}
@@ -214,7 +230,7 @@ p_r <- by_procedure$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 ```
 
-Chaque valeur p vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les variables continues symétriques, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, Kruskal-Wallis revient au test de Mann-Whitney) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les catégories.
+Chaque valeur p vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les variables continues symétriques, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, Kruskal-Wallis revient au test de Mann-Whitney) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les catégories. Pour le diabète, R affiche `>0.999` et Python `1.000`. C'est la même valeur p : tableone l'arrondit à trois décimales. Rapportez-la comme p > 0.999, selon les conventions de ce site.
 
 ## Valeurs p ou différences moyennes standardisées ? {#smd}
 
@@ -274,12 +290,40 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables.
+En laissant les signes de côté pour l'instant (l'encadré ci-dessous les explique), le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables. Le tableau de R donne aussi un IC à 95 % (intervalle de confiance) pour chaque SMD ; tableone n'en calcule pas.
+
+Les deux packages concordent à trois décimales. Pour voir où ils se séparent, affichez la SMD de l'âge avec plus de chiffres :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+smd::smd(cohort$age, cohort$procedure)   # la fonction que gtsummary appelle ; son tableau arrondit cette valeur à 0.10
+```
+
+## Python
+
+```{python}
+print(round(abs(balance.smd_table.loc["age"].iloc[0]), 4))   # la ligne age du tableau ci-dessus, sans son signe
+```
+:::
+
+```{python}
+#| include: false
+chk = {"age": float(abs(balance.smd_table.loc["age"].iloc[0]))}
+```
+
+```{r}
+#| include: false
+# The two packages divide the variances differently (n against n - 1; see the box), so the
+# continuous SMDs differ in the fourth decimal.
+check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), reticulate::py$chk, tol = 0.005)
+```
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les SMD diffèrent légèrement
-- **Signe.** gtsummary soustrait la PTG de la PTH, tableone soustrait la PTH de la PTG. Donnez la valeur absolue, ou dites quel groupe a été soustrait de quel autre.
-- **Quatrième décimale.** Pour les variables continues, le package `smd` de R divise les variances par *n*, alors que tableone les divise par *n − 1* (la formule usuelle des manuels). L'âge donne 0.1048 en R et 0.1046 en Python. Les SMD des variables catégorielles concordent exactement.
+- **Signe.** Pour les variables saisies comme des nombres (âge, IMC, durée de séjour), gtsummary soustrait la PTG de la PTH et tableone soustrait la PTH de la PTG : les signes sont donc opposés. Pour les catégories (sexe, classe ASA, tabagisme), la SMD n'a pas de direction et elle est positive dans les deux. Donnez la valeur absolue, ou dites quel groupe a été soustrait de quel autre.
+- **Quatrième décimale.** Pour les variables continues, le package `smd` de R divise les variances par *n*, alors que tableone les divise par *n − 1* (la formule usuelle des manuels). L'âge donne 0.1048 en R et 0.1046 en Python (les deux nombres affichés juste au-dessus de l'encadré). Les SMD des variables catégorielles concordent exactement.
 :::
 
 **Laquelle faut-il rapporter ?**
@@ -333,7 +377,7 @@ check_agree(list(missing_bmi = sum(is.na(abstraction$bmi)),
                  missing_asa = sum(is.na(abstraction$asa))), reticulate::py$chk)
 ```
 
-R ajoute une ligne « Missing » sous chaque variable qui a des valeurs manquantes. Python ajoute une colonne « Missing ». Dans les deux cas, les pourcentages portent sur les patients qui ont une valeur, et le lecteur voit combien ont été laissés de côté.
+R ajoute une ligne « Missing » sous chaque variable qui a des valeurs manquantes, avec un effectif par site (IMC : 5 et 3). Python ajoute une colonne « Missing » pour les deux sites réunis (IMC : 8 = 5 + 3). Dans les deux cas, les pourcentages portent sur les patients qui ont une valeur : à Site A, 6 des 58 patients qui ont une classe ASA sont en classe 1, soit 10.3 % (`6 (10.3)` dans Python), et non 6 sur 60. Le lecteur voit combien ont été laissés de côté.
 
 ## Exporter vers Word {#export}
 
@@ -389,6 +433,14 @@ stopifnot(
   round(mean(cohort$age), 1) == 65.5, round(sd(cohort$age), 1) == 9.4,
   sum(cohort$sex == "Female") == 343, pct(cohort$sex == "Female") == 57,
   median(cohort$los_days) == 1,
+  # numbers added with the audit fixes
+  round(smd::smd(cohort$age, cohort$procedure)$estimate, 4) == 0.1048,
+  round(abs(reticulate::py_eval("float(balance.smd_table.loc['age'].iloc[0])")), 4) == 0.1046,
+  round(mean(as.integer(as.character(cohort$asa))), 1) == 2.4, round(sd(as.integer(as.character(cohort$asa))), 1) == 0.7,
+  sort(unique(cohort$los_days)) == 0:6,
+  tapply(is.na(abstraction$bmi), abstraction$site, sum) == c(5, 3), 5 + 3 == 8,
+  sum(!is.na(abstraction$asa[abstraction$site == "Site A"])) == 58,
+  sum(abstraction$asa[abstraction$site == "Site A"] == 1, na.rm = TRUE) == 6, round(100 * 6 / 58, 1) == 10.3,
   # what the libraries actually display (Python side checked in the next chunk)
   by_procedure$table_body$stat_1[by_procedure$table_body$variable == "los_days" &
                                    by_procedure$table_body$row_type == "label"] == "1 (0–2)",
@@ -445,7 +497,7 @@ print(by_site.smd_table)
 ```
 :::
 
-Le tabagisme (0.23) et la durée de séjour (0.22) diffèrent le plus entre les sites, et leurs intervalles de confiance (IC) à 95 % excluent zéro. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « significative ».
+Le tabagisme (0.23) et la durée de séjour (0.22 ; Python affiche −0.22, voir l'encadré sur les signes) diffèrent le plus entre les sites. Dans le tableau de R, leurs intervalles de confiance (IC) à 95 % (0.07 à 0.39 et 0.06 à 0.39) excluent zéro ; tableone ne donne pas d'IC. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « significative ».
 :::
 
 **2.** Un fellow compare des patients de 80 ans ou plus à des patients plus jeunes, appariés sur le sexe, l'IMC et la classe ASA. Le tableau de départ doit-il montrer des valeurs p ou des SMD ? Pourquoi ?
