@@ -121,3 +121,15 @@ def test_every_page_includes_the_report_link_script(site):
     assert pages
     missing = [str(p.relative_to(SITE_ROOT)) for p in pages if 'id="report-error"' not in p.read_text(encoding="utf-8")]
     assert missing == []
+
+
+REPORT_LINK = {"en": "Report an error", "de": "Fehler melden", "fr": "Signaler une erreur"}
+
+
+def test_getting_help_names_the_report_link_and_the_address(site):
+    for lang in LANGS:
+        help_text = text_of(load_lang(lang, "getting-started/using-this-site.html").select_one("section#getting-help"))
+        assert REPORT_LINK[lang] in help_text, lang
+        assert "josephmichael.schwab@h-fr.ch" in help_text, lang
+        assert "github.com/hfr-ortho/stats-formation/issues" in str(
+            load_lang(lang, "getting-started/using-this-site.html").select_one("section#getting-help")), lang
