@@ -628,8 +628,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <ul>
 <li>The variable is a <strong>measurement</strong> (age, BMI, operative time), not a category.</li>
 <li>Its distribution is <strong>roughly symmetric</strong>, without extreme outliers. Check with a histogram (<a href="../../en/foundations/03-distributions.html#look">page 3</a>).</li>
-<li>If it’s <strong>skewed</strong>, has a <strong>ceiling or floor</strong>, or is <strong>ordinal</strong> → use the <a href="#median-iqr">median and IQR</a> instead.</li>
+<li>If it’s <strong><a href="../../en/glossary.html#skewed" class="term">skewed</a></strong>, has a <strong><a href="../../en/glossary.html#ceiling-effect" class="term">ceiling or floor</a></strong>, or is <strong>ordinal</strong> → use the <a href="#median-iqr">median and IQR</a> instead.</li>
 </ul>
+</section>
+<section id="what-the-calculation-really-does" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-calculation-really-does">What the calculation really does</h3>
+<p>The mean and the SD are two short pieces of arithmetic. The confidence interval adds a third.</p>
+<ol type="1">
+<li><strong><a href="../../en/glossary.html#mean" class="term">Mean</a>:</strong> add up all the ages and divide by the number of cases.</li>
+<li><strong>Distances:</strong> subtract the mean from each age. Some distances are positive and some negative, and together they always add up to 0, so they can’t simply be averaged.</li>
+<li><strong><a href="../../en/glossary.html#variance" class="term">Variance</a>:</strong> square each distance, which makes them all positive. Add the squares up and divide by n − 1, one less than the number of cases.</li>
+<li><strong><a href="../../en/glossary.html#standard-deviation" class="term">Standard deviation</a> (SD):</strong> take the square root of the variance. That brings the result back to years: the typical distance of a patient’s age from the mean.</li>
+<li><strong><a href="../../en/glossary.html#confidence-interval" class="term">Confidence interval</a> (CI):</strong> divide the SD by √n to get the <a href="../../en/glossary.html#standard-error" class="term">standard error</a> of the mean, then go about 2 standard errors either side of the mean.</li>
+</ol>
+<p>Once the numbers are in, a box under “Read the output” does each step by hand.</p>
 </section>
 <section id="look-at-the-data-first" class="level3">
 <h3 class="anchored" data-anchor-id="look-at-the-data-first">Look at the data first</h3>
@@ -734,7 +746,7 @@ attr(,"conf.level")
 <ul>
 <li><strong>n = 600:</strong> the number of cases with an age recorded.</li>
 <li><strong>Mean = 65.5 years:</strong> the average age.</li>
-<li><strong>SD = 9.4 years:</strong> the standard deviation, the typical distance of a patient’s age from the mean. In a bell-shaped distribution about 95% of patients lie within 2 SDs of the mean, here roughly 47 to 84 years.</li>
+<li><strong>SD = 9.4 years:</strong> the standard deviation, the typical distance of a patient’s age from the mean. In a bell-shaped distribution about 95% of patients lie within 2 SDs of the mean, here 65.5 ± 2 × 9.4, roughly 47 to 84 years.</li>
 <li><strong>95% CI 64.8 to 66.3:</strong> the confidence interval for the <strong>mean</strong>. It tells you how precisely 600 patients pin down the average age of patients like ours. It says nothing about how spread out individual patients are; that’s the SD’s job.</li>
 </ul>
 <div class="callout callout-style-default callout-note callout-titled">
@@ -743,13 +755,87 @@ attr(,"conf.level")
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>🔍 Under the hood: the CI for a mean
+<span class="screen-reader-only">Note</span>🔍 Under the hood: the mean, SD and CI by hand
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
 <div id="callout-2" class="callout-2-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>The <strong>standard error</strong> of the mean is SD / √n = 9.44 / √600 ≈ 0.39 years (9.44 is the SD to two decimals, as the output prints it). The 95% CI is the mean ± <em>t</em> × standard error, where <em>t</em> ≈ 1.96 for large samples (it’s a little bigger for small ones): here 65.52 ± 1.96 × 0.39 = 64.76 to 66.28, the CI in the output. Quadruple the sample size and the standard error halves; the SD stays about the same.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>ages <span class="ot">&lt;-</span> cohort<span class="sc">$</span>age</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(ages, <span class="dv">5</span>)                                          <span class="co"># the first 5 ages</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 56 82 59 66 67</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(ages) <span class="sc">/</span> <span class="dv">600</span>                                        <span class="co"># step 1: the mean, the sum of the ages ÷ 600 cases</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 65.52</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>distance <span class="ot">&lt;-</span> ages <span class="sc">-</span> <span class="fu">mean</span>(ages)                          <span class="co"># step 2: each case's distance from the mean</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(distance, <span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] -9.52 16.48 -6.52  0.48  1.48</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>age_variance <span class="ot">&lt;-</span> <span class="fu">sum</span>(distance<span class="sc">^</span><span class="dv">2</span>) <span class="sc">/</span> (<span class="dv">600</span> <span class="sc">-</span> <span class="dv">1</span>)            <span class="co"># step 3: the variance, the squared distances added up ÷ (n − 1)</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">variance =</span> age_variance, <span class="at">sd =</span> <span class="fu">sqrt</span>(age_variance))    <span class="co"># step 4: the SD is its square root</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> variance        sd 
+89.024641  9.435287 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>age_se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(age_variance) <span class="sc">/</span> <span class="fu">sqrt</span>(<span class="dv">600</span>)               <span class="co"># step 5: the standard error, SD ÷ √n</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>t_multiplier <span class="ot">&lt;-</span> <span class="fu">qt</span>(<span class="fl">0.975</span>, <span class="at">df =</span> <span class="dv">600</span> <span class="sc">-</span> <span class="dv">1</span>)                <span class="co"># the exact multiplier that "about 2" stands for</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">standard_error =</span> age_se, <span class="at">t =</span> t_multiplier)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>standard_error              t 
+      0.385194       1.963932 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(ages) <span class="sc">+</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>) <span class="sc">*</span> t_multiplier <span class="sc">*</span> age_se          <span class="co"># the 95% CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 64.76351 66.27649</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>ages <span class="op">=</span> cohort[<span class="st">"age"</span>]</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ages.head(<span class="dv">5</span>).to_list())                          <span class="co"># the first 5 ages</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[56, 82, 59, 66, 67]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ages.<span class="bu">sum</span>() <span class="op">/</span> <span class="dv">600</span>)                                <span class="co"># step 1: the mean, the sum of the ages ÷ 600 cases</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>65.52</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>distance <span class="op">=</span> ages <span class="op">-</span> ages.mean()                          <span class="co"># step 2: each case's distance from the mean</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(distance.head(<span class="dv">5</span>).<span class="bu">round</span>(<span class="dv">2</span>).to_list())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[-9.52, 16.48, -6.52, 0.48, 1.48]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>age_variance <span class="op">=</span> (distance <span class="op">**</span> <span class="dv">2</span>).<span class="bu">sum</span>() <span class="op">/</span> (<span class="dv">600</span> <span class="op">-</span> <span class="dv">1</span>)       <span class="co"># step 3: the variance, the squared distances added up ÷ (n − 1)</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(age_variance, age_variance <span class="op">**</span> <span class="fl">0.5</span>)               <span class="co"># step 4: the SD is its square root</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>89.02464106844742 9.435287015689953</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>age_se <span class="op">=</span> age_variance <span class="op">**</span> <span class="fl">0.5</span> <span class="op">/</span> <span class="dv">600</span> <span class="op">**</span> <span class="fl">0.5</span>              <span class="co"># step 5: the standard error, SD ÷ √n</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>t_multiplier <span class="op">=</span> stats.t.ppf(<span class="fl">0.975</span>, df<span class="op">=</span><span class="dv">600</span> <span class="op">-</span> <span class="dv">1</span>)          <span class="co"># the exact multiplier that "about 2" stands for</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(age_se, t_multiplier)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.38519397941913075 1.9639322489452784</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ages.mean() <span class="op">-</span> t_multiplier <span class="op">*</span> age_se, ages.mean() <span class="op">+</span> t_multiplier <span class="op">*</span> age_se)   <span class="co"># the 95% CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>64.7635051217192 66.27649487828079</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The first case was 56 years old, which is 56 − 65.52 = −9.52 years from the mean. The variance comes to 89.02, and its square root is the SD the software printed, 9.44 years. The standard error is 0.385 years and the exact multiplier is 1.964, so the CI is 65.52 ± 1.964 × 0.385: from 64.76 to 66.28, as in the output.</p>
+<p>The multiplier is called <em>t</em>. It is close to 1.96 for large samples and a little bigger for small ones. Quadruple the sample size and the standard error halves; the SD stays about the same.</p>
 </div>
 </div>
 </div>
@@ -770,7 +856,7 @@ attr(,"conf.level")
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>The <strong>standard error of the mean (SEM)</strong> is much smaller than the SD (0.39 vs 9.4 years here), which is why some papers report “mean ± SEM”: it looks tidier. But it describes the precision of the mean, not your patients. Use the <strong>SD</strong> to describe patients and a <strong>95% CI</strong> to show the precision of an estimate. Never report a bare “±” without saying which one it is.</p>
+<p>The <strong>standard error of the mean (SEM)</strong> is the SD divided by √n: 9.44 / √600 ≈ 0.39 years here, much smaller than the SD of 9.4 years. That is why some papers report “mean ± SEM”: it looks tidier. But it describes the precision of the mean, not your patients. Use the <strong>SD</strong> to describe patients and a <strong>95% CI</strong> to show the precision of an estimate. Never report a bare “±” without saying which one it is.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled">
@@ -794,108 +880,159 @@ attr(,"conf.level")
 <section id="when-to-use-it-1" class="level3">
 <h3 class="anchored" data-anchor-id="when-to-use-it-1">When to use it</h3>
 <ul>
-<li>The variable is <strong>skewed</strong>, has a <strong>ceiling or floor</strong>, has <strong>outliers</strong>, or is <strong>ordinal</strong> (an ordered scale such as satisfaction from 1 to 5).</li>
-<li>The median is the middle value: half the patients are above it and half below. The <strong>interquartile range (IQR)</strong> runs from the 25th to the 75th percentile (the first and third quartiles), so it holds the middle half of the patients.</li>
+<li>The variable is <strong><a href="../../en/glossary.html#skewed" class="term">skewed</a></strong>, has a <strong><a href="../../en/glossary.html#ceiling-effect" class="term">ceiling or floor</a></strong>, has <strong>outliers</strong>, or is <strong>ordinal</strong> (an ordered scale such as satisfaction from 1 to 5).</li>
+<li>The <a href="../../en/glossary.html#median" class="term">median</a> is the middle value: half the patients are above it and half below. The <strong><a href="../../en/glossary.html#iqr" class="term">interquartile range (IQR)</a></strong> runs from the 25th to the 75th <a href="../../en/glossary.html#percentile" class="term">percentile</a> (the first and third quartiles), so it holds the middle half of the patients.</li>
 <li>If the variable is a roughly symmetric measurement → the <a href="#mean-sd">mean and SD</a> are fine and more familiar.</li>
 </ul>
+</section>
+<section id="what-the-calculation-really-does-1" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-calculation-really-does-1">What the calculation really does</h3>
+<p>The median and the quartiles come from sorting, not from adding.</p>
+<ol type="1">
+<li><strong>Sort</strong> the scores from lowest to highest.</li>
+<li><strong>Median:</strong> take the score in the middle of the sorted list. With an even number of scores there are two middle scores, and the median is halfway between them.</li>
+<li><strong>Quartiles:</strong> do the same a quarter and three quarters of the way along the list. The interquartile range runs from the first of these scores to the second.</li>
+<li>Only the order matters, so extreme scores don’t move the median: the lowest score could drop to 0 and the middle of the list would stay where it is.</li>
+</ol>
+<p>Once the numbers are in, a box under “Read the output” finds the same scores by their position in the list.</p>
 </section>
 <section id="look-at-the-data-first-1" class="level3">
 <h3 class="anchored" data-anchor-id="look-at-the-data-first-1">Look at the data first</h3>
 <p>The Oxford Hip Score (OHS) adds up 12 questions scored 0 to 4, so it runs from 0 to 48, and 48 is the best. The practice records it for every hip replacement, before surgery and at each follow-up visit.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Python</a></li></ul>
-<div class="tab-content" data-group="language">
-<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>proms <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/proms_long.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>ohs_1yr <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(visit <span class="sc">==</span> <span class="st">"1yr"</span>, <span class="sc">!</span><span class="fu">is.na</span>(ohs)) <span class="sc">|&gt;</span>   <span class="co"># ohs is blank for knee replacements and missed visits</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(ohs)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">tibble</span>(<span class="at">score =</span> ohs_1yr), <span class="fu">aes</span>(score)) <span class="sc">+</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>() <span class="sc">+</span>                             <span class="co"># one bar per whole score</span></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">48</span>)) <span class="sc">+</span>       <span class="co"># the whole scale</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Oxford Hip Score at 1 year (48 = best)"</span>, <span class="at">y =</span> <span class="st">"Patients"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
-</div>
-</div>
-</div>
-</div>
-<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>proms <span class="op">=</span> pd.read_csv(<span class="st">"data/proms_long.csv"</span>)</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>ohs_1yr <span class="op">=</span> proms.loc[proms[<span class="st">"visit"</span>] <span class="op">==</span> <span class="st">"1yr"</span>, <span class="st">"ohs"</span>].dropna()   <span class="co"># ohs is blank for knee replacements and missed visits</span></span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">3</span>))</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>ax.hist(ohs_1yr, bins<span class="op">=</span>np.arange(<span class="op">-</span><span class="fl">0.5</span>, <span class="dv">49</span>))   <span class="co"># one bar per whole score, over the whole scale</span></span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Oxford Hip Score at 1 year (48 = best)"</span>)</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Patients"</span>)</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img"></p>
-</figure>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<p>Scores pile up against the maximum of 48 (a <strong>ceiling</strong>): 39 of the 194 scores were 48. Below the pile there’s a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn’t.</p>
-</section>
-<section id="run-it-1" class="level3">
-<h3 class="anchored" data-anchor-id="run-it-1">Run it</h3>
-<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
 <div id="tabset-4-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(ohs_1yr)                                <span class="co"># how many patients</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>proms <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/proms_long.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>ohs_1yr <span class="ot">&lt;-</span> proms <span class="sc">|&gt;</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(visit <span class="sc">==</span> <span class="st">"1yr"</span>, <span class="sc">!</span><span class="fu">is.na</span>(ohs)) <span class="sc">|&gt;</span>   <span class="co"># ohs is blank for knee replacements and missed visits</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(ohs)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(ohs_1yr)                            <span class="co"># how many scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 194</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(ohs_1yr, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>)) <span class="co"># first quartile, median, third quartile</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(ohs_1yr <span class="sc">==</span> <span class="dv">48</span>)                         <span class="co"># how many of them are the maximum, 48</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 39</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">tibble</span>(<span class="at">score =</span> ohs_1yr), <span class="fu">aes</span>(score)) <span class="sc">+</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_bar</span>() <span class="sc">+</span>                             <span class="co"># one bar per whole score</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">xlim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">48</span>)) <span class="sc">+</span>       <span class="co"># the whole scale</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Oxford Hip Score at 1 year (48 = best)"</span>, <span class="at">y =</span> <span class="st">"Patients"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-4-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a>proms <span class="op">=</span> pd.read_csv(<span class="st">"data/proms_long.csv"</span>)</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>ohs_1yr <span class="op">=</span> proms.loc[proms[<span class="st">"visit"</span>] <span class="op">==</span> <span class="st">"1yr"</span>, <span class="st">"ohs"</span>].dropna()   <span class="co"># ohs is blank for knee replacements and missed visits</span></span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(ohs_1yr))                          <span class="co"># how many scores</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>194</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((ohs_1yr <span class="op">==</span> <span class="dv">48</span>).<span class="bu">sum</span>())                 <span class="co"># how many of them are the maximum, 48</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>39</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">3</span>))</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>ax.hist(ohs_1yr, bins<span class="op">=</span>np.arange(<span class="op">-</span><span class="fl">0.5</span>, <span class="dv">49</span>))   <span class="co"># one bar per whole score, over the whole scale</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Oxford Hip Score at 1 year (48 = best)"</span>)</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Patients"</span>)</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>Scores pile up against the maximum of 48 (a <strong>ceiling</strong>): 39 of the 194 scores were 48 (the two numbers printed above the plot, in reverse order). Below the pile there’s a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn’t.</p>
+</section>
+<section id="run-it-1" class="level3">
+<h3 class="anchored" data-anchor-id="run-it-1">Run it</h3>
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-5-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(ohs_1yr)                                <span class="co"># how many patients</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 194</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(ohs_1yr, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>)) <span class="co"># first quartile, median, third quartile</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>25% 50% 75% 
  39  42  46 </code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>DescTools<span class="sc">::</span><span class="fu">MedianCI</span>(ohs_1yr, <span class="at">method =</span> <span class="st">"exact"</span>) <span class="co"># the median with its 95% CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>DescTools<span class="sc">::</span><span class="fu">MedianCI</span>(ohs_1yr, <span class="at">method =</span> <span class="st">"exact"</span>) <span class="co"># the median with its 95% CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>median lwr.ci upr.ci 
     42     41     43 
 attr(,"conf.level")
 [1] 0.9629381</code></pre>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(ohs_1yr <span class="sc">==</span> <span class="dv">42</span>)                             <span class="co"># how many scored exactly the median, 42</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 13</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(ohs_1yr <span class="sc">&lt;=</span> <span class="dv">39</span>)                             <span class="co"># how many scored the first quartile, 39, or less</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 62</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(ohs_1yr <span class="sc">&lt;=</span> <span class="dv">39</span>)                            <span class="co"># the same as a proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.3195876</code></pre>
 </div>
 </div>
-<div id="tabset-4-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+</div>
+<div id="tabset-5-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(ohs_1yr))                                      <span class="co"># how many patients</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(ohs_1yr))                                      <span class="co"># how many patients</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>194</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.quantile(ohs_1yr, [<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>]))          <span class="co"># first quartile, median, third quartile</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.quantile(ohs_1yr, [<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>]))          <span class="co"># first quartile, median, third quartile</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[39. 42. 46.]</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scipy has no "median CI" function, but quantile_test() reports one.</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Its q argument is the value it would test against; it doesn't change the CI.</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>median_ci <span class="op">=</span> stats.quantile_test(ohs_1yr, q<span class="op">=</span>ohs_1yr.median(), p<span class="op">=</span><span class="fl">0.5</span>).confidence_interval()</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(median_ci)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="co"># scipy has no "median CI" function, but quantile_test() reports one.</span></span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Its q argument is the value it would test against; it doesn't change the CI.</span></span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>median_ci <span class="op">=</span> stats.quantile_test(ohs_1yr, q<span class="op">=</span>ohs_1yr.median(), p<span class="op">=</span><span class="fl">0.5</span>).confidence_interval()</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(median_ci)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ConfidenceInterval(low=np.float64(41.0), high=np.float64(43.0))</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((ohs_1yr <span class="op">==</span> <span class="dv">42</span>).<span class="bu">sum</span>())                             <span class="co"># how many scored exactly the median, 42</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>13</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((ohs_1yr <span class="op">&lt;=</span> <span class="dv">39</span>).<span class="bu">sum</span>())                             <span class="co"># how many scored the first quartile, 39, or less</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>62</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((ohs_1yr <span class="op">&lt;=</span> <span class="dv">39</span>).mean())                            <span class="co"># the same as a proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.31958762886597936</code></pre>
 </div>
 </div>
 </div>
@@ -906,9 +1043,9 @@ attr(,"conf.level")
 <h3 class="anchored" data-anchor-id="read-the-output-1">Read the output</h3>
 <ul>
 <li><strong>n = 194:</strong> hip replacements with an Oxford Hip Score at 1 year.</li>
-<li><strong>Median = 42:</strong> the middle score. With whole-number scores many patients share it (13 scored exactly 42), so “half above, half below” is only roughly true.</li>
-<li><strong>IQR 39 to 46:</strong> the middle half of the patients scored between these two values. At least a quarter scored 39 or less: with ties, 62 of the 194 (32%) did.</li>
-<li><strong>95% CI for the median 41 to 43:</strong> how precisely 194 patients pin down the median.</li>
+<li><strong>Median = 42:</strong> the middle score. With whole-number scores many patients share it (13 scored exactly 42: the first of the three numbers at the end of the output), so “half above, half below” is only roughly true.</li>
+<li><strong>IQR 39 to 46:</strong> the middle half of the patients scored between these two values. At least a quarter scored 39 or less: with ties, 62 of the 194 did, a proportion of 0.32 or 32% (the last two numbers of the output).</li>
+<li><strong>95% CI for the median 41 to 43:</strong> how precisely 194 patients pin down the median. Under the interval, R prints <code>conf.level</code> and 0.9629: the confidence this interval really has, a little more than the 95% asked for (the box below shows why). Python doesn’t print it.</li>
 </ul>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
@@ -916,13 +1053,87 @@ attr(,"conf.level")
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-<span class="screen-reader-only">Note</span>🔍 Under the hood: where the median’s CI comes from
+<span class="screen-reader-only">Note</span>🔍 Under the hood: the median, the quartiles and the CI by hand
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
 <div id="callout-5" class="callout-5-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>The CI for a median uses no formula with an SD in it. It counts instead. Sort the scores, then pick two positions such that, if the study were repeated many times, the true median would fall between the scores at those positions at least 95% of the time. The binomial distribution says which positions those are, and the CI is the pair of scores sitting there. Because positions are whole numbers, the actual confidence is a little over 95% (R reports 0.9629 here). This “exact” method needs no assumption about the shape of the data.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-6-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-6-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>sorted_scores <span class="ot">&lt;-</span> <span class="fu">sort</span>(ohs_1yr)                              <span class="co"># step 1: sort the 194 scores</span></span>
+<span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a>sorted_scores[<span class="fu">c</span>(<span class="dv">97</span>, <span class="dv">98</span>)]                                    <span class="co"># step 2: the two middle scores, the 97th and the 98th</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 42 42</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> (<span class="dv">194</span> <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.75</span>)                               <span class="co"># step 3: the positions a quarter and three quarters of the way along the list</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  49.25 145.75</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb73"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>sorted_scores[<span class="fu">c</span>(<span class="dv">49</span>, <span class="dv">50</span>)]                                    <span class="co"># the 49th and the 50th score: the first quartile lies between them</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 39 39</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>sorted_scores[<span class="fu">c</span>(<span class="dv">145</span>, <span class="dv">146</span>)]                                  <span class="co"># the 145th and the 146th score: the third quartile lies between them</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 46 46</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>ci_position <span class="ot">&lt;-</span> <span class="fu">qbinom</span>(<span class="fl">0.025</span>, <span class="at">size =</span> <span class="dv">194</span>, <span class="at">prob =</span> <span class="fl">0.5</span>)        <span class="co"># the CI: the binomial distribution gives a position below the middle</span></span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(ci_position, <span class="dv">194</span> <span class="sc">-</span> ci_position <span class="sc">+</span> <span class="dv">1</span>)                       <span class="co"># that position, and the same position counted from the top</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  83 112</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>sorted_scores[<span class="fu">c</span>(ci_position, <span class="dv">194</span> <span class="sc">-</span> ci_position <span class="sc">+</span> <span class="dv">1</span>)]        <span class="co"># the scores at those two positions are the CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 41 43</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">-</span> <span class="dv">2</span> <span class="sc">*</span> <span class="fu">pbinom</span>(ci_position <span class="sc">-</span> <span class="dv">1</span>, <span class="at">size =</span> <span class="dv">194</span>, <span class="at">prob =</span> <span class="fl">0.5</span>)     <span class="co"># the confidence these two positions really give</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.9629381</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-6-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-6-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a>sorted_scores <span class="op">=</span> np.sort(ohs_1yr)                            <span class="co"># step 1: sort the 194 scores</span></span>
+<span id="cb83-2"><a href="#cb83-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sorted_scores[[<span class="dv">97</span> <span class="op">-</span> <span class="dv">1</span>, <span class="dv">98</span> <span class="op">-</span> <span class="dv">1</span>]])                      <span class="co"># step 2: the two middle scores, the 97th and the 98th (Python counts from 0, so subtract 1)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[42. 42.]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="dv">1</span> <span class="op">+</span> (<span class="dv">194</span> <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> np.array([<span class="fl">0.25</span>, <span class="fl">0.75</span>]))               <span class="co"># step 3: the positions a quarter and three quarters of the way along the list</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[ 49.25 145.75]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sorted_scores[[<span class="dv">49</span> <span class="op">-</span> <span class="dv">1</span>, <span class="dv">50</span> <span class="op">-</span> <span class="dv">1</span>]])                      <span class="co"># the 49th and the 50th score: the first quartile lies between them</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[39. 39.]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb89"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sorted_scores[[<span class="dv">145</span> <span class="op">-</span> <span class="dv">1</span>, <span class="dv">146</span> <span class="op">-</span> <span class="dv">1</span>]])                    <span class="co"># the 145th and the 146th score: the third quartile lies between them</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[46. 46.]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb91"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>ci_position <span class="op">=</span> <span class="bu">int</span>(stats.binom.ppf(<span class="fl">0.025</span>, <span class="dv">194</span>, <span class="fl">0.5</span>))         <span class="co"># the CI: the binomial distribution gives a position below the middle</span></span>
+<span id="cb91-2"><a href="#cb91-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ci_position, <span class="dv">194</span> <span class="op">-</span> ci_position <span class="op">+</span> <span class="dv">1</span>)                   <span class="co"># that position, and the same position counted from the top</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>83 112</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb93"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(sorted_scores[[ci_position <span class="op">-</span> <span class="dv">1</span>, <span class="dv">194</span> <span class="op">-</span> ci_position]])  <span class="co"># the scores at those two positions are the CI</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[41. 43.]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb95"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="dv">1</span> <span class="op">-</span> <span class="dv">2</span> <span class="op">*</span> stats.binom.cdf(ci_position <span class="op">-</span> <span class="dv">1</span>, <span class="dv">194</span>, <span class="fl">0.5</span>))   <span class="co"># the confidence these two positions really give</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.9629380859521739</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>Both middle scores are 42, so the median is 42. The quartiles sit at positions 49.25 and 145.75. The 49th and 50th scores are both 39, and the 145th and 146th are both 46, so the quartiles are 39 and 46.</p>
+<p>The CI for a median uses no formula with an SD in it. It counts instead. Each patient is as likely to score above the true median as below it, like a coin toss. The binomial distribution, which describes coin tosses, says that out of 194 patients, fewer than 83 landing on one side would happen less than 2.5% of the time. So the 83rd score from the bottom is rarely above the true median, and the 83rd from the top (the 112th from the bottom) is rarely below it. Those two scores are 41 and 43, the CI in the output. Because positions are whole numbers, the confidence comes out a little over 95%: 0.9629, the number R reports. This “exact” method needs no assumption about the shape of the data.</p>
 </div>
 </div>
 </div>
@@ -969,22 +1180,33 @@ attr(,"conf.level")
 <ul>
 <li>The outcome is <strong>yes/no</strong> (binomial): death within 30 days, complication, discharge home.</li>
 <li>Report the count, the percentage, and a 95% CI for the percentage.</li>
-<li>If patients were followed for <strong>different lengths of time</strong> and the event can happen at any time (revision, death) → use a <a href="#kaplan-meier">Kaplan-Meier curve</a> instead. Here every patient was followed for at least 30 days or until death, so the 30-day proportion is complete.</li>
+<li>If patients were followed for <strong>different lengths of time</strong> and the event can happen at any time (revision, death) → use a <a href="#kaplan-meier">Kaplan-Meier curve</a> instead. Here every patient was followed for at least 30 days or until death, so the 30-day proportion is complete (“Look at the data first” checks this).</li>
 </ul>
+</section>
+<section id="what-the-calculation-really-does-2" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-calculation-really-does-2">What the calculation really does</h3>
+<p>A proportion is one count divided by another. The work is in its confidence interval.</p>
+<ol type="1">
+<li><strong>Count</strong> the patients with the event, and the patients whose outcome is known.</li>
+<li><strong>Divide</strong> the first count by the second. That is the proportion; multiply it by 100 for a percentage.</li>
+<li>The simple recipe for the <a href="../../en/glossary.html#confidence-interval" class="term">CI</a> is the proportion ± 1.96 <a href="../../en/glossary.html#standard-error" class="term">standard errors</a>, with the standard error worked out from the sample’s own proportion. This is the <a href="../../en/glossary.html#wald-interval" class="term">Wald interval</a>, and it works badly when the event is rare or the group is small.</li>
+<li>The <strong>Wilson interval</strong> turns the question around. It collects every true proportion from which our observed proportion would lie no more than 1.96 standard errors away, and it works the standard error out from each of those candidates in turn. The result is not centered on the observed proportion: it is pulled a little toward 50%, and it can never go below 0% or above 100%.</li>
+</ol>
+<p>Once the numbers are in, a box under “Read the output” calculates both intervals by hand.</p>
 </section>
 <section id="look-at-the-data-first-2" class="level3">
 <h3 class="anchored" data-anchor-id="look-at-the-data-first-2">Look at the data first</h3>
 <p>The hip fracture data hold one row per patient aged 65 or over who was treated for a hip fracture. For a yes/no variable, “looking” means counting, including the missing values.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-5-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
+<div id="tabset-7-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-7-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>hip_fracture <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/hip_fracture.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(hip_fracture, death_30d)   <span class="co"># 1 = died within 30 days, 0 = alive at 30 days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb97"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb97-3"><a href="#cb97-3" aria-hidden="true" tabindex="-1"></a>hip_fracture <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/hip_fracture.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb97-4"><a href="#cb97-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb97-5"><a href="#cb97-5" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(hip_fracture, death_30d)   <span class="co"># 1 = died within 30 days, 0 = alive at 30 days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 2 × 2
   death_30d     n
@@ -992,44 +1214,60 @@ attr(,"conf.level")
 1         0  1126
 2         1    74</code></pre>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb99"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(hip_fracture, died, followup_days <span class="sc">&lt;=</span> <span class="dv">30</span>)   <span class="co"># died: 1 = died during follow-up. Did the follow-up end by day 30?</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 3
+   died `followup_days &lt;= 30`     n
+  &lt;dbl&gt; &lt;lgl&gt;                 &lt;int&gt;
+1     0 FALSE                   847
+2     1 FALSE                   279
+3     1 TRUE                     74</code></pre>
 </div>
 </div>
-<div id="tabset-5-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
+</div>
+<div id="tabset-7-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-7-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>hip_fracture <span class="op">=</span> pd.read_csv(<span class="st">"data/hip_fracture.csv"</span>)</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hip_fracture[<span class="st">"death_30d"</span>].value_counts(dropna<span class="op">=</span><span class="va">False</span>))   <span class="co"># 1 = died within 30 days, 0 = alive at 30 days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb101"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb101-2"><a href="#cb101-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb101-3"><a href="#cb101-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb101-4"><a href="#cb101-4" aria-hidden="true" tabindex="-1"></a>hip_fracture <span class="op">=</span> pd.read_csv(<span class="st">"data/hip_fracture.csv"</span>)</span>
+<span id="cb101-5"><a href="#cb101-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb101-6"><a href="#cb101-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hip_fracture[<span class="st">"death_30d"</span>].value_counts(dropna<span class="op">=</span><span class="va">False</span>))   <span class="co"># 1 = died within 30 days, 0 = alive at 30 days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>death_30d
 0    1126
 1      74
 Name: count, dtype: int64</code></pre>
 </div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb103"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(pd.crosstab(hip_fracture[<span class="st">"died"</span>], hip_fracture[<span class="st">"followup_days"</span>] <span class="op">&lt;=</span> <span class="dv">30</span>))   <span class="co"># died: 1 = died during follow-up. Did the follow-up end by day 30?</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>followup_days  False  True 
+died                       
+0                847      0
+1                279     74</code></pre>
 </div>
 </div>
 </div>
 </div>
-<p>No missing values, and only the two codes the codebook allows (0 and 1).</p>
+</div>
+<p>No missing values, and only the two codes the codebook allows (0 and 1). The second table checks the follow-up. It ended by day 30 only for the 74 patients who died in that time. All 847 patients who were still alive at the end of their follow-up (<code>died</code> = 0) were followed for longer, so nobody’s 30-day outcome is unknown.</p>
 </section>
 <section id="run-it-2" class="level3">
 <h3 class="anchored" data-anchor-id="run-it-2">Run it</h3>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-8-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-1" role="tab" aria-controls="tabset-8-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-8-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-2" role="tab" aria-controls="tabset-8-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-6-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-6-1-tab">
+<div id="tabset-8-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-8-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>deaths   <span class="ot">&lt;-</span> <span class="fu">sum</span>(hip_fracture<span class="sc">$</span>death_30d <span class="sc">==</span> <span class="dv">1</span>)</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>patients <span class="ot">&lt;-</span> <span class="fu">nrow</span>(hip_fracture)</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>deaths <span class="sc">/</span> patients                                           <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb105"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb105-1"><a href="#cb105-1" aria-hidden="true" tabindex="-1"></a>deaths   <span class="ot">&lt;-</span> <span class="fu">sum</span>(hip_fracture<span class="sc">$</span>death_30d <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb105-2"><a href="#cb105-2" aria-hidden="true" tabindex="-1"></a>patients <span class="ot">&lt;-</span> <span class="fu">nrow</span>(hip_fracture)</span>
+<span id="cb105-3"><a href="#cb105-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb105-4"><a href="#cb105-4" aria-hidden="true" tabindex="-1"></a>deaths <span class="sc">/</span> patients                                           <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.06166667</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wilson 95% CI: prop.test() without the continuity correction</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(deaths, patients, <span class="at">correct =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb107"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb107-1"><a href="#cb107-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wilson 95% CI: prop.test() without the continuity correction</span></span>
+<span id="cb107-2"><a href="#cb107-2" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(deaths, patients, <span class="at">correct =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.04940522 0.07672555
 attr(,"conf.level")
@@ -1037,17 +1275,17 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<div id="tabset-6-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-6-2-tab">
+<div id="tabset-8-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-8-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>deaths <span class="op">=</span> <span class="bu">int</span>((hip_fracture[<span class="st">"death_30d"</span>] <span class="op">==</span> <span class="dv">1</span>).<span class="bu">sum</span>())</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>patients <span class="op">=</span> <span class="bu">len</span>(hip_fracture)</span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(deaths <span class="op">/</span> patients)                                    <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb109"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1" aria-hidden="true" tabindex="-1"></a>deaths <span class="op">=</span> <span class="bu">int</span>((hip_fracture[<span class="st">"death_30d"</span>] <span class="op">==</span> <span class="dv">1</span>).<span class="bu">sum</span>())</span>
+<span id="cb109-2"><a href="#cb109-2" aria-hidden="true" tabindex="-1"></a>patients <span class="op">=</span> <span class="bu">len</span>(hip_fracture)</span>
+<span id="cb109-3"><a href="#cb109-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb109-4"><a href="#cb109-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(deaths <span class="op">/</span> patients)                                    <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0.06166666666666667</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wilson 95% CI</span></span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.binomtest(deaths, patients).proportion_ci(method<span class="op">=</span><span class="st">"wilson"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb111"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Wilson 95% CI</span></span>
+<span id="cb111-2"><a href="#cb111-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.binomtest(deaths, patients).proportion_ci(method<span class="op">=</span><span class="st">"wilson"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ConfidenceInterval(low=np.float64(0.04940522288254482), high=np.float64(0.07672555431251947))</code></pre>
 </div>
@@ -1059,9 +1297,83 @@ attr(,"conf.level")
 <section id="read-the-output-2" class="level3">
 <h3 class="anchored" data-anchor-id="read-the-output-2">Read the output</h3>
 <ul>
-<li><strong>74 of 1,200 = 0.062:</strong> 6.2% of patients died within 30 days of admission.</li>
+<li><strong>74 of 1,200 = 0.062:</strong> the first count shows 74 deaths and 1,126 survivors, 1,200 patients in all. 74 / 1,200 = 0.0617, so 6.2% of patients died within 30 days of admission.</li>
 <li><strong>95% CI 0.049 to 0.077:</strong> the true 30-day mortality for patients like ours is plausibly anywhere from 4.9% to 7.7%.</li>
 </ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🔍 Under the hood: the Wald and Wilson intervals by hand
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-9-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-1" role="tab" aria-controls="tabset-9-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-9-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-2" role="tab" aria-controls="tabset-9-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-9-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-9-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb113"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb113-1"><a href="#cb113-1" aria-hidden="true" tabindex="-1"></a>p_hat <span class="ot">&lt;-</span> deaths <span class="sc">/</span> patients                                     <span class="co"># the observed proportion</span></span>
+<span id="cb113-2"><a href="#cb113-2" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>)                                              <span class="co"># the multiplier for 95%, 1.96</span></span>
+<span id="cb113-3"><a href="#cb113-3" aria-hidden="true" tabindex="-1"></a>wald_se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(p_hat <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p_hat) <span class="sc">/</span> patients)                <span class="co"># the standard error, worked out from our own proportion</span></span>
+<span id="cb113-4"><a href="#cb113-4" aria-hidden="true" tabindex="-1"></a>p_hat <span class="sc">+</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>) <span class="sc">*</span> z <span class="sc">*</span> wald_se                                 <span class="co"># the Wald interval: the proportion ± 1.96 standard errors</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.04805657 0.07527677</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb115"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb115-1"><a href="#cb115-1" aria-hidden="true" tabindex="-1"></a>wilson_center <span class="ot">&lt;-</span> (p_hat <span class="sc">+</span> z<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> patients)) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> z<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> patients)   <span class="co"># Wilson: the center, pulled toward 0.5, and the half-width</span></span>
+<span id="cb115-2"><a href="#cb115-2" aria-hidden="true" tabindex="-1"></a>wilson_half <span class="ot">&lt;-</span> z <span class="sc">*</span> <span class="fu">sqrt</span>(p_hat <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> p_hat) <span class="sc">/</span> patients <span class="sc">+</span> z<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> (<span class="dv">4</span> <span class="sc">*</span> patients<span class="sc">^</span><span class="dv">2</span>)) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> z<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> patients)</span>
+<span id="cb115-3"><a href="#cb115-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">center =</span> wilson_center, <span class="at">half_width =</span> wilson_half)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    center half_width 
+0.06306539 0.01366017 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb117"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb117-1"><a href="#cb117-1" aria-hidden="true" tabindex="-1"></a>wilson_center <span class="sc">+</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>) <span class="sc">*</span> wilson_half                         <span class="co"># the Wilson interval</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.04940522 0.07672555</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb119"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb119-1"><a href="#cb119-1" aria-hidden="true" tabindex="-1"></a>lower_limit <span class="ot">&lt;-</span> wilson_center <span class="sc">-</span> wilson_half</span>
+<span id="cb119-2"><a href="#cb119-2" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(p_hat <span class="sc">-</span> lower_limit, z <span class="sc">*</span> <span class="fu">sqrt</span>(lower_limit <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> lower_limit) <span class="sc">/</span> patients))   <span class="co"># at the lower limit: the distance to our proportion, and 1.96 standard errors worked out from the limit</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.01226144 0.01226144</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-9-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-9-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb121"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb121-1"><a href="#cb121-1" aria-hidden="true" tabindex="-1"></a>p_hat <span class="op">=</span> deaths <span class="op">/</span> patients                                      <span class="co"># the observed proportion</span></span>
+<span id="cb121-2"><a href="#cb121-2" aria-hidden="true" tabindex="-1"></a>z <span class="op">=</span> stats.norm.ppf(<span class="fl">0.975</span>)                                      <span class="co"># the multiplier for 95%, 1.96</span></span>
+<span id="cb121-3"><a href="#cb121-3" aria-hidden="true" tabindex="-1"></a>wald_se <span class="op">=</span> (p_hat <span class="op">*</span> (<span class="dv">1</span> <span class="op">-</span> p_hat) <span class="op">/</span> patients) <span class="op">**</span> <span class="fl">0.5</span>              <span class="co"># the standard error, worked out from our own proportion</span></span>
+<span id="cb121-4"><a href="#cb121-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p_hat <span class="op">-</span> z <span class="op">*</span> wald_se, p_hat <span class="op">+</span> z <span class="op">*</span> wald_se)                <span class="co"># the Wald interval: the proportion ± 1.96 standard errors</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.04805656789247553 0.0752767654408578</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb123"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1" aria-hidden="true" tabindex="-1"></a>wilson_center <span class="op">=</span> (p_hat <span class="op">+</span> z <span class="op">**</span> <span class="dv">2</span> <span class="op">/</span> (<span class="dv">2</span> <span class="op">*</span> patients)) <span class="op">/</span> (<span class="dv">1</span> <span class="op">+</span> z <span class="op">**</span> <span class="dv">2</span> <span class="op">/</span> patients)   <span class="co"># Wilson: the center, pulled toward 0.5, and the half-width</span></span>
+<span id="cb123-2"><a href="#cb123-2" aria-hidden="true" tabindex="-1"></a>wilson_half <span class="op">=</span> z <span class="op">*</span> (p_hat <span class="op">*</span> (<span class="dv">1</span> <span class="op">-</span> p_hat) <span class="op">/</span> patients <span class="op">+</span> z <span class="op">**</span> <span class="dv">2</span> <span class="op">/</span> (<span class="dv">4</span> <span class="op">*</span> patients <span class="op">**</span> <span class="dv">2</span>)) <span class="op">**</span> <span class="fl">0.5</span> <span class="op">/</span> (<span class="dv">1</span> <span class="op">+</span> z <span class="op">**</span> <span class="dv">2</span> <span class="op">/</span> patients)</span>
+<span id="cb123-3"><a href="#cb123-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(wilson_center, wilson_half)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.06306538859753215 0.013660165714987323</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb125"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb125-1"><a href="#cb125-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(wilson_center <span class="op">-</span> wilson_half, wilson_center <span class="op">+</span> wilson_half)   <span class="co"># the Wilson interval</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.04940522288254483 0.07672555431251947</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb127"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1" aria-hidden="true" tabindex="-1"></a>lower_limit <span class="op">=</span> wilson_center <span class="op">-</span> wilson_half</span>
+<span id="cb127-2"><a href="#cb127-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(p_hat <span class="op">-</span> lower_limit, z <span class="op">*</span> (lower_limit <span class="op">*</span> (<span class="dv">1</span> <span class="op">-</span> lower_limit) <span class="op">/</span> patients) <span class="op">**</span> <span class="fl">0.5</span>)   <span class="co"># at the lower limit: the distance to our proportion, and 1.96 standard errors worked out from the limit</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.01226144378412184 0.012261443784121851</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The Wald interval would run from 0.048 to 0.075. The Wilson interval runs from 0.049 to 0.077, as in the output. It sits a little higher because its center is 0.0631, not our proportion of 0.0617. The last line shows what defines it: the lower limit, 0.0494, lies 0.0123 below our proportion, and 1.96 standard errors worked out from 0.0494 are also 0.0123. With 74 deaths among 1,200 patients the two intervals are close. With fewer patients or a rarer event they move apart.</p>
+</div>
+</div>
+</div>
 </section>
 <section id="how-to-report-it-2" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-report-it-2">How to report it</h3>
@@ -1107,26 +1419,37 @@ attr(,"conf.level")
 <h3 class="anchored" data-anchor-id="when-to-use-it-3">When to use it</h3>
 <ul>
 <li>The outcome is <strong>time until an event</strong> (revision, death), and patients were followed for <strong>different lengths of time</strong>.</li>
-<li>Some patients are <strong>censored</strong>: their follow-up ended (the study closed, they moved away, they died) before any revision. We know they went <em>at least</em> that long without one.</li>
-<li>A plain percentage (“13.5% were revised”) ignores follow-up time: a patient operated on last year hasn’t had time to need a revision. The Kaplan-Meier method uses each patient’s follow-up for as long as it lasts.</li>
+<li>Some patients are <strong><a href="../../en/glossary.html#censored" class="term">censored</a></strong>: their follow-up ended (the study closed, they moved away, they died) before any revision. We know they went <em>at least</em> that long without one.</li>
+<li>A plain percentage (81 of our 600 cases were revised, 13.5%; the next step counts them) ignores follow-up time: a patient operated on last year hasn’t had time to need a revision. The Kaplan-Meier method uses each patient’s follow-up for as long as it lasts.</li>
 </ul>
 <p><a href="../../en/survival/13-kaplan-meier.html">Page 13</a> covers survival analysis in depth. This section shows the basic curve.</p>
+</section>
+<section id="what-the-calculation-really-does-3" class="level3">
+<h3 class="anchored" data-anchor-id="what-the-calculation-really-does-3">What the calculation really does</h3>
+<p>The Kaplan-Meier method builds the curve one revision at a time.</p>
+<ol type="1">
+<li>Put the cases in order of follow-up time. At any moment, the cases still being followed and not yet revised are <a href="../../en/glossary.html#at-risk" class="term">at risk</a>.</li>
+<li>Each time a revision happens, work out the fraction of the cases at risk that <strong>got past</strong> that moment without one: 1 − revisions ÷ cases at risk.</li>
+<li><strong>Multiply</strong> these fractions together, from the day of surgery up to the time you are interested in. The product is the estimated proportion still unrevised at that time. Plotted against time, it is the curve.</li>
+<li>A censored case counts among those at risk until its follow-up ends, and then leaves the count. It never makes the curve step down. But every later revision is divided by fewer cases at risk, so each later step is a little bigger.</li>
+</ol>
+<p>Once the curve is drawn, a box under “Read the output” rebuilds the 5-year estimate by hand.</p>
 </section>
 <section id="look-at-the-data-first-3" class="level3">
 <h3 class="anchored" data-anchor-id="look-at-the-data-first-3">Look at the data first</h3>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-10-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-1" role="tab" aria-controls="tabset-10-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-10-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-2" role="tab" aria-controls="tabset-10-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-7-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-7-1-tab">
+<div id="tabset-10-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-10-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggsurvfit)</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a><span class="co"># followup_years: time from surgery to revision or censoring; revised: 1 = revised, 0 = censored</span></span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">select</span>(case_id, followup_years, revised) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb129"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb129-1"><a href="#cb129-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb129-2"><a href="#cb129-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(survival)</span>
+<span id="cb129-3"><a href="#cb129-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggsurvfit)</span>
+<span id="cb129-4"><a href="#cb129-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-5"><a href="#cb129-5" aria-hidden="true" tabindex="-1"></a>cohort <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"data/cohort.csv"</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb129-6"><a href="#cb129-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb129-7"><a href="#cb129-7" aria-hidden="true" tabindex="-1"></a><span class="co"># followup_years: time from surgery to revision or censoring; revised: 1 = revised, 0 = censored</span></span>
+<span id="cb129-8"><a href="#cb129-8" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">select</span>(case_id, followup_years, revised) <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">5</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 3
   case_id followup_years revised
@@ -1137,8 +1460,8 @@ attr(,"conf.level")
 4 C0004            10.9        0
 5 C0005             5.79       1</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">patients =</span> <span class="fu">n</span>(), <span class="at">revisions =</span> <span class="fu">sum</span>(revised),</span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">median_followup =</span> <span class="fu">median</span>(followup_years))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb131"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb131-1"><a href="#cb131-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">patients =</span> <span class="fu">n</span>(), <span class="at">revisions =</span> <span class="fu">sum</span>(revised),</span>
+<span id="cb131-2"><a href="#cb131-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">median_followup =</span> <span class="fu">median</span>(followup_years))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 3
   patients revisions median_followup
@@ -1147,17 +1470,17 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<div id="tabset-7-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-7-2-tab">
+<div id="tabset-10-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-10-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines <span class="im">import</span> KaplanMeierFitter</span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines.plotting <span class="im">import</span> add_at_risk_counts</span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>cohort <span class="op">=</span> pd.read_csv(<span class="st">"data/cohort.csv"</span>)</span>
-<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a><span class="co"># followup_years: time from surgery to revision or censoring; revised: 1 = revised, 0 = censored</span></span>
-<span id="cb41-9"><a href="#cb41-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cohort[[<span class="st">"case_id"</span>, <span class="st">"followup_years"</span>, <span class="st">"revised"</span>]].head(<span class="dv">5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb133"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb133-1"><a href="#cb133-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb133-2"><a href="#cb133-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb133-3"><a href="#cb133-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines <span class="im">import</span> KaplanMeierFitter</span>
+<span id="cb133-4"><a href="#cb133-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines.plotting <span class="im">import</span> add_at_risk_counts</span>
+<span id="cb133-5"><a href="#cb133-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb133-6"><a href="#cb133-6" aria-hidden="true" tabindex="-1"></a>cohort <span class="op">=</span> pd.read_csv(<span class="st">"data/cohort.csv"</span>)</span>
+<span id="cb133-7"><a href="#cb133-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb133-8"><a href="#cb133-8" aria-hidden="true" tabindex="-1"></a><span class="co"># followup_years: time from surgery to revision or censoring; revised: 1 = revised, 0 = censored</span></span>
+<span id="cb133-9"><a href="#cb133-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cohort[[<span class="st">"case_id"</span>, <span class="st">"followup_years"</span>, <span class="st">"revised"</span>]].head(<span class="dv">5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>  case_id  followup_years  revised
 0   C0001            6.23        0
@@ -1166,7 +1489,7 @@ attr(,"conf.level")
 3   C0004           10.94        0
 4   C0005            5.79        1</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(cohort), cohort[<span class="st">"revised"</span>].<span class="bu">sum</span>(), cohort[<span class="st">"followup_years"</span>].median())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb135"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb135-1"><a href="#cb135-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(cohort), cohort[<span class="st">"revised"</span>].<span class="bu">sum</span>(), cohort[<span class="st">"followup_years"</span>].median())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>600 81 4.365</code></pre>
 </div>
@@ -1174,32 +1497,32 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<p>Each row needs exactly two things: <strong>how long</strong> the patient was followed and <strong>whether</strong> the follow-up ended with the event (1) or was censored (0). The first case was followed for 6.2 years without a revision; the fifth was revised at 5.8 years.</p>
+<p>Each row needs exactly two things: <strong>how long</strong> the patient was followed and <strong>whether</strong> the follow-up ended with the event (1) or was censored (0). The first case was followed for 6.2 years without a revision; the fifth was revised at 5.8 years. The second output counts 600 cases and 81 revisions, the 81 / 600 = 0.135 above, with a median follow-up of 4.365 years (R shows it as 4.36). Python prints the three numbers without labels.</p>
 </section>
 <section id="run-it-3" class="level3">
 <h3 class="anchored" data-anchor-id="run-it-3">Run it</h3>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-8-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-1" role="tab" aria-controls="tabset-8-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-8-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-2" role="tab" aria-controls="tabset-8-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-11-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-1" role="tab" aria-controls="tabset-11-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-11-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-2" role="tab" aria-controls="tabset-11-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-8-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-8-1-tab">
+<div id="tabset-11-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-11-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>km <span class="ot">&lt;-</span> <span class="fu">survfit2</span>(<span class="fu">Surv</span>(followup_years, revised) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> cohort,</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">conf.type =</span> <span class="st">"log-log"</span>)              <span class="co"># the CI method lifelines uses</span></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>km <span class="sc">|&gt;</span></span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsurvfit</span>() <span class="sc">+</span></span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_confidence_interval</span>() <span class="sc">+</span></span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_risktable</span>() <span class="sc">+</span></span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_ggsurvfit</span>() <span class="sc">+</span></span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Years since surgery"</span>, <span class="at">y =</span> <span class="st">"Revision-free survival"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb137"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb137-1"><a href="#cb137-1" aria-hidden="true" tabindex="-1"></a>km <span class="ot">&lt;-</span> <span class="fu">survfit2</span>(<span class="fu">Surv</span>(followup_years, revised) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> cohort,</span>
+<span id="cb137-2"><a href="#cb137-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">conf.type =</span> <span class="st">"log-log"</span>)              <span class="co"># the CI method lifelines uses</span></span>
+<span id="cb137-3"><a href="#cb137-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb137-4"><a href="#cb137-4" aria-hidden="true" tabindex="-1"></a>km <span class="sc">|&gt;</span></span>
+<span id="cb137-5"><a href="#cb137-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggsurvfit</span>() <span class="sc">+</span></span>
+<span id="cb137-6"><a href="#cb137-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_confidence_interval</span>() <span class="sc">+</span></span>
+<span id="cb137-7"><a href="#cb137-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_risktable</span>() <span class="sc">+</span></span>
+<span id="cb137-8"><a href="#cb137-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_ggsurvfit</span>() <span class="sc">+</span></span>
+<span id="cb137-9"><a href="#cb137-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Years since surgery"</span>, <span class="at">y =</span> <span class="st">"Revision-free survival"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-23-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(km, <span class="at">times =</span> <span class="dv">5</span>)                             <span class="co"># the estimate at 5 years</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb138"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb138-1"><a href="#cb138-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(km, <span class="at">times =</span> <span class="dv">5</span>)                             <span class="co"># the estimate at 5 years</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Call: survfit(formula = Surv(followup_years, revised) ~ 1, data = cohort, 
     conf.type = "log-log")
@@ -1209,33 +1532,37 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<div id="tabset-8-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-8-2-tab">
+<div id="tabset-11-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-11-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>km <span class="op">=</span> KaplanMeierFitter()</span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>km.fit(cohort[<span class="st">"followup_years"</span>], event_observed<span class="op">=</span>cohort[<span class="st">"revised"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb140"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb140-1"><a href="#cb140-1" aria-hidden="true" tabindex="-1"></a>km <span class="op">=</span> KaplanMeierFitter()</span>
+<span id="cb140-2"><a href="#cb140-2" aria-hidden="true" tabindex="-1"></a>km.fit(cohort[<span class="st">"followup_years"</span>], event_observed<span class="op">=</span>cohort[<span class="st">"revised"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>&lt;lifelines.KaplanMeierFitter:"KM_estimate", fitted with 600 total observations, 519 right-censored observations&gt;</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">4.5</span>))</span>
-<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>km.plot_survival_function(ax<span class="op">=</span>ax, legend<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Years since surgery"</span>)</span>
-<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Revision-free survival"</span>)</span>
-<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>add_at_risk_counts(km, ax<span class="op">=</span>ax)</span>
-<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
-<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb142"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb142-1"><a href="#cb142-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">7</span>, <span class="fl">4.5</span>))</span>
+<span id="cb142-2"><a href="#cb142-2" aria-hidden="true" tabindex="-1"></a>km.plot_survival_function(ax<span class="op">=</span>ax, legend<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb142-3"><a href="#cb142-3" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">"Years since surgery"</span>)</span>
+<span id="cb142-4"><a href="#cb142-4" aria-hidden="true" tabindex="-1"></a>ax.set_ylabel(<span class="st">"Revision-free survival"</span>)</span>
+<span id="cb142-5"><a href="#cb142-5" aria-hidden="true" tabindex="-1"></a>add_at_risk_counts(km, ax<span class="op">=</span>ax)</span>
+<span id="cb142-6"><a href="#cb142-6" aria-hidden="true" tabindex="-1"></a>plt.tight_layout()</span>
+<span id="cb142-7"><a href="#cb142-7" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-24-1.png" class="img-fluid figure-img"></p>
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-36-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the estimate and its 95% CI at 5 years</span></span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>at_5 <span class="op">=</span> km.survival_function_at_times(<span class="dv">5</span>).iloc[<span class="dv">0</span>]</span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>ci_5 <span class="op">=</span> km.confidence_interval_survival_function_.loc[:<span class="dv">5</span>].iloc[<span class="op">-</span><span class="dv">1</span>]   <span class="co"># last step at or before 5 years</span></span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(at_5, ci_5.to_list())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb143"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb143-1"><a href="#cb143-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the estimate and its 95% CI at 5 years</span></span>
+<span id="cb143-2"><a href="#cb143-2" aria-hidden="true" tabindex="-1"></a>at_5 <span class="op">=</span> km.survival_function_at_times(<span class="dv">5</span>).iloc[<span class="dv">0</span>]</span>
+<span id="cb143-3"><a href="#cb143-3" aria-hidden="true" tabindex="-1"></a>ci_5 <span class="op">=</span> km.confidence_interval_survival_function_.loc[:<span class="dv">5</span>].iloc[<span class="op">-</span><span class="dv">1</span>]   <span class="co"># last step at or before 5 years</span></span>
+<span id="cb143-4"><a href="#cb143-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(at_5, ci_5.to_list())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0.8630934920484908 [0.8278279294142131, 0.891611047941076]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb145"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb145-1"><a href="#cb145-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>((cohort[<span class="st">"followup_years"</span>] <span class="op">&gt;=</span> <span class="dv">5</span>).<span class="bu">sum</span>())   <span class="co"># cases still being followed at 5 years (n.risk in R)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>263</code></pre>
 </div>
 </div>
 </div>
@@ -1247,9 +1574,83 @@ attr(,"conf.level")
 <ul>
 <li><strong>The curve</strong> starts at 100% and steps down at each revision. Censored patients don’t make it step; they just leave the group “at risk”.</li>
 <li><strong>The shaded band</strong> is the 95% CI. It widens to the right as fewer patients remain under follow-up.</li>
-<li><strong>The numbers at risk</strong> under the plot show how many patients were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only a handful remain.</li>
-<li><strong>At 5 years:</strong> survival 0.863 (95% CI 0.828 to 0.892), with 263 patients still at risk.</li>
+<li><strong>The numbers at risk</strong> under the plot show how many patients were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only 21 of the 600 cases remain (the last number in the first row under the plot).</li>
+<li><strong>At 5 years:</strong> survival 0.863 (95% CI 0.828 to 0.892), with 263 patients still at risk (<code>n.risk</code> in R, the last number Python prints).</li>
+<li><strong>The rest of what is printed:</strong> in R’s line, <code>n.event</code> 66 is the number of revisions up to 5 years (81 over the whole follow-up) and <code>std.err</code> is the standard error of the estimate. Python’s first line, “600 total observations, 519 right-censored observations”, restates the data: 600 cases − 81 revisions = 519 censored.</li>
 </ul>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🔍 Under the hood: the 5-year estimate by hand
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-11" class="callout-11-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-12-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-12-1" role="tab" aria-controls="tabset-12-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-12-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-12-2" role="tab" aria-controls="tabset-12-2" aria-selected="false" href="">Python</a></li></ul>
+<div class="tab-content" data-group="language">
+<div id="tabset-12-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-12-1-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb147"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb147-1"><a href="#cb147-1" aria-hidden="true" tabindex="-1"></a>km_steps <span class="ot">&lt;-</span> cohort <span class="sc">|&gt;</span></span>
+<span id="cb147-2"><a href="#cb147-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(revised <span class="sc">==</span> <span class="dv">1</span>, followup_years <span class="sc">&lt;=</span> <span class="dv">5</span>) <span class="sc">|&gt;</span>                <span class="co"># the revisions in the first 5 years</span></span>
+<span id="cb147-3"><a href="#cb147-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(followup_years, <span class="at">name =</span> <span class="st">"revisions"</span>) <span class="sc">|&gt;</span>                <span class="co"># one row per moment at which a revision happened</span></span>
+<span id="cb147-4"><a href="#cb147-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">at_risk =</span> <span class="fu">map_int</span>(followup_years, \(t) <span class="fu">sum</span>(cohort<span class="sc">$</span>followup_years <span class="sc">&gt;=</span> t)),   <span class="co"># step 1: the cases still at risk at that moment</span></span>
+<span id="cb147-5"><a href="#cb147-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">got_past =</span> <span class="dv">1</span> <span class="sc">-</span> revisions <span class="sc">/</span> at_risk)                  <span class="co"># step 2: the fraction that got past it</span></span>
+<span id="cb147-6"><a href="#cb147-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(km_steps, <span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 4
+  followup_years revisions at_risk got_past
+           &lt;dbl&gt;     &lt;int&gt;   &lt;int&gt;    &lt;dbl&gt;
+1           0.03         2     599    0.997
+2           0.04         1     596    0.998
+3           0.05         1     594    0.998
+4           0.07         1     593    0.998</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb149"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb149-1"><a href="#cb149-1" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">moments =</span> <span class="fu">nrow</span>(km_steps), <span class="at">revisions =</span> <span class="fu">sum</span>(km_steps<span class="sc">$</span>revisions))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  moments revisions 
+       59        66 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb151"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb151-1"><a href="#cb151-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prod</span>(km_steps<span class="sc">$</span>got_past)                                       <span class="co"># step 3: multiply the fractions together</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.8630935</code></pre>
+</div>
+</div>
+</div>
+<div id="tabset-12-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-12-2-tab">
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb153"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb153-1"><a href="#cb153-1" aria-hidden="true" tabindex="-1"></a>early <span class="op">=</span> cohort[(cohort[<span class="st">"revised"</span>] <span class="op">==</span> <span class="dv">1</span>) <span class="op">&amp;</span> (cohort[<span class="st">"followup_years"</span>] <span class="op">&lt;=</span> <span class="dv">5</span>)]   <span class="co"># the revisions in the first 5 years</span></span>
+<span id="cb153-2"><a href="#cb153-2" aria-hidden="true" tabindex="-1"></a>km_steps <span class="op">=</span> early.groupby(<span class="st">"followup_years"</span>).size().rename(<span class="st">"revisions"</span>).reset_index()   <span class="co"># one row per moment at which a revision happened</span></span>
+<span id="cb153-3"><a href="#cb153-3" aria-hidden="true" tabindex="-1"></a>km_steps[<span class="st">"at_risk"</span>] <span class="op">=</span> [(cohort[<span class="st">"followup_years"</span>] <span class="op">&gt;=</span> t).<span class="bu">sum</span>() <span class="cf">for</span> t <span class="kw">in</span> km_steps[<span class="st">"followup_years"</span>]]   <span class="co"># step 1: the cases still at risk at that moment</span></span>
+<span id="cb153-4"><a href="#cb153-4" aria-hidden="true" tabindex="-1"></a>km_steps[<span class="st">"got_past"</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> km_steps[<span class="st">"revisions"</span>] <span class="op">/</span> km_steps[<span class="st">"at_risk"</span>]       <span class="co"># step 2: the fraction that got past it</span></span>
+<span id="cb153-5"><a href="#cb153-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(km_steps.head(<span class="dv">4</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   followup_years  revisions  at_risk  got_past
+0            0.03          2      599  0.996661
+1            0.04          1      596  0.998322
+2            0.05          1      594  0.998316
+3            0.07          1      593  0.998314</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb155"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb155-1"><a href="#cb155-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(km_steps), km_steps[<span class="st">"revisions"</span>].<span class="bu">sum</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>59 66</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb157"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb157-1"><a href="#cb157-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(km_steps[<span class="st">"got_past"</span>].prod())                                           <span class="co"># step 3: multiply the fractions together</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.8630934920484891</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The first revisions came 0.03 years after surgery: 2 among the 599 cases still at risk, so a fraction of 0.997 got past that moment. The first 5 years hold 59 such moments, with 66 revisions between them. The 59 fractions multiplied together give 0.863, the estimate at 5 years.</p>
+</div>
+</div>
+</div>
 </section>
 <section id="how-to-report-it-3" class="level3">
 <h3 class="anchored" data-anchor-id="how-to-report-it-3">How to report it</h3>
@@ -1281,6 +1682,7 @@ attr(,"conf.level")
 </div>
 <div class="callout-body-container callout-body">
 <p>R’s <code>survfit()</code> uses a “log” CI by default; lifelines uses “log-log”. The estimates are identical but the CIs differ slightly. We set <code>conf.type = "log-log"</code> in R so the two match. Log-log keeps the CI between 0% and 100%; say which you used.</p>
+<p>The tables under the two plots differ by one case at 4 years and at 8 years (332 and 84 in R, 331 and 83 in Python). R counts a case whose follow-up ends exactly at that time as still at risk; lifelines doesn’t. For the same reason lifelines’ own count at 5 years would be 258, not 263: the follow-up of 5 cases ends at exactly 5 years. The Python code above counts the way R does. lifelines also adds a row for the cases censored so far.</p>
 </div>
 </div>
 </section>
@@ -1290,7 +1692,7 @@ attr(,"conf.level")
 <p>The solutions use the packages and data loaded in the sections above, so run the page from the top first.</p>
 <p><strong>1.</strong> Describe <strong>BMI</strong> in the cohort with a mean, SD and 95% CI for the mean. Check the histogram first: is the mean a fair summary?</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1299,29 +1701,29 @@ attr(,"conf.level")
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-12" class="callout-12-contents callout-collapse collapse">
+<div id="callout-14" class="callout-14-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-9-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-1" role="tab" aria-controls="tabset-9-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-9-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-2" role="tab" aria-controls="tabset-9-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-13-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-13-1" role="tab" aria-controls="tabset-13-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-13-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-13-2" role="tab" aria-controls="tabset-13-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-9-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-9-1-tab">
+<div id="tabset-13-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-13-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cohort, <span class="fu">aes</span>(bmi)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb159"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb159-1"><a href="#cb159-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cohort, <span class="fu">aes</span>(bmi)) <span class="sc">+</span> <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-44-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">mean =</span> <span class="fu">mean</span>(bmi), <span class="at">sd =</span> <span class="fu">sd</span>(bmi))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb160"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb160-1"><a href="#cb160-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">mean =</span> <span class="fu">mean</span>(bmi), <span class="at">sd =</span> <span class="fu">sd</span>(bmi))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 3
       n  mean    sd
   &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
 1   600  30.4  5.43</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(cohort<span class="sc">$</span>bmi)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb162"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb162-1"><a href="#cb162-1" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(cohort<span class="sc">$</span>bmi)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 30.00875 30.87925
 attr(,"conf.level")
@@ -1329,20 +1731,20 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<div id="tabset-9-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-9-2-tab">
+<div id="tabset-13-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-13-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">3</span>))</span>
-<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>ax.hist(cohort[<span class="st">"bmi"</span>], bins<span class="op">=</span><span class="bu">range</span>(<span class="dv">18</span>, <span class="dv">46</span>))</span>
-<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb164"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb164-1"><a href="#cb164-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="dv">6</span>, <span class="dv">3</span>))</span>
+<span id="cb164-2"><a href="#cb164-2" aria-hidden="true" tabindex="-1"></a>ax.hist(cohort[<span class="st">"bmi"</span>], bins<span class="op">=</span><span class="bu">range</span>(<span class="dv">18</span>, <span class="dv">46</span>))</span>
+<span id="cb164-3"><a href="#cb164-3" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-29-1.png" class="img-fluid figure-img"></p>
+<p><img src="04-describe-one-group_files/figure-html/unnamed-chunk-45-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>n, mean, sd <span class="op">=</span> cohort[<span class="st">"bmi"</span>].count(), cohort[<span class="st">"bmi"</span>].mean(), cohort[<span class="st">"bmi"</span>].std()</span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(n, mean, sd, stats.t.interval(<span class="fl">0.95</span>, df<span class="op">=</span>n <span class="op">-</span> <span class="dv">1</span>, loc<span class="op">=</span>mean, scale<span class="op">=</span>sd <span class="op">/</span> n <span class="op">**</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb165"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb165-1"><a href="#cb165-1" aria-hidden="true" tabindex="-1"></a>n, mean, sd <span class="op">=</span> cohort[<span class="st">"bmi"</span>].count(), cohort[<span class="st">"bmi"</span>].mean(), cohort[<span class="st">"bmi"</span>].std()</span>
+<span id="cb165-2"><a href="#cb165-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(n, mean, sd, stats.t.interval(<span class="fl">0.95</span>, df<span class="op">=</span>n <span class="op">-</span> <span class="dv">1</span>, loc<span class="op">=</span>mean, scale<span class="op">=</span>sd <span class="op">/</span> n <span class="op">**</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>600 30.444000000000003 5.428579906353605 (np.float64(30.008751672242138), np.float64(30.879248327757868))</code></pre>
 </div>
@@ -1359,7 +1761,7 @@ attr(,"conf.level")
 </div>
 <p><strong>2.</strong> A resident wants to summarize <strong>length of stay</strong> in a Table 1 as “0.9 ± 1.1 days”. What would you suggest instead, and why? Compute it.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1368,25 +1770,61 @@ attr(,"conf.level")
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>Length of stay is strongly right-skewed (most patients go home on day 0 or 1, a few stay 4 to 6 days), so report the median (IQR). “±” is also ambiguous: SD or SEM?</p>
+<p>Length of stay is strongly right-skewed. The first output below counts the cases by day: 291 + 173 = 464 of the 600 went home on day 0 or 1, and 16 + 8 + 2 = 26 stayed 4 to 6 days. So report the median (IQR). The second output is the resident’s mean and SD, 0.885 and 1.14. “±” is also ambiguous: SD or SEM?</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-10-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-1" role="tab" aria-controls="tabset-10-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-10-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-10-2" role="tab" aria-controls="tabset-10-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-14-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-14-1" role="tab" aria-controls="tabset-14-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-14-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-14-2" role="tab" aria-controls="tabset-14-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-10-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-10-1-tab">
+<div id="tabset-14-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-14-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(cohort<span class="sc">$</span>los_days, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb167"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb167-1"><a href="#cb167-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(cohort, los_days)                                         <span class="co"># how many cases stayed 0, 1, 2 ... days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 7 × 2
+  los_days     n
+     &lt;dbl&gt; &lt;int&gt;
+1        0   291
+2        1   173
+3        2    88
+4        3    22
+5        4    16
+6        5     8
+7        6     2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb169"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb169-1"><a href="#cb169-1" aria-hidden="true" tabindex="-1"></a>cohort <span class="sc">|&gt;</span> <span class="fu">summarise</span>(<span class="at">mean =</span> <span class="fu">mean</span>(los_days), <span class="at">sd =</span> <span class="fu">sd</span>(los_days))   <span class="co"># the resident's mean and SD</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 2
+   mean    sd
+  &lt;dbl&gt; &lt;dbl&gt;
+1 0.885  1.14</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb171"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb171-1"><a href="#cb171-1" aria-hidden="true" tabindex="-1"></a><span class="fu">quantile</span>(cohort<span class="sc">$</span>los_days, <span class="at">probs =</span> <span class="fu">c</span>(<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>))          <span class="co"># the median and the quartiles</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>25% 50% 75% 
   0   1   1 </code></pre>
 </div>
 </div>
 </div>
-<div id="tabset-10-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-10-2-tab">
+<div id="tabset-14-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-14-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.quantile(cohort[<span class="st">"los_days"</span>], [<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb173"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb173-1"><a href="#cb173-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb173-2"><a href="#cb173-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cohort[<span class="st">"los_days"</span>].value_counts().sort_index())           <span class="co"># how many cases stayed 0, 1, 2 ... days</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>los_days
+0    291
+1    173
+2     88
+3     22
+4     16
+5      8
+6      2
+Name: count, dtype: int64</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb175"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb175-1"><a href="#cb175-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(cohort[<span class="st">"los_days"</span>].mean(), cohort[<span class="st">"los_days"</span>].std())      <span class="co"># the resident's mean and SD</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.885 1.1419055333426071</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb177"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb177-1"><a href="#cb177-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.quantile(cohort[<span class="st">"los_days"</span>], [<span class="fl">0.25</span>, <span class="fl">0.50</span>, <span class="fl">0.75</span>]))      <span class="co"># the median and the quartiles</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[0. 1. 1.]</code></pre>
 </div>
@@ -1402,7 +1840,7 @@ attr(,"conf.level")
 </div>
 <p><strong>3.</strong> How many of the hip fracture patients lived in a nursing home before the fracture? Write the Results sentence, with a Wilson 95% CI.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1411,14 +1849,14 @@ attr(,"conf.level")
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-14" class="callout-14-contents callout-collapse collapse">
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
-<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-11-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-1" role="tab" aria-controls="tabset-11-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-11-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-2" role="tab" aria-controls="tabset-11-2" aria-selected="false" href="">Python</a></li></ul>
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-15-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-15-1" role="tab" aria-controls="tabset-15-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-15-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-15-2" role="tab" aria-controls="tabset-15-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
-<div id="tabset-11-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-11-1-tab">
+<div id="tabset-15-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-15-1-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(hip_fracture, residence)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb179"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb179-1"><a href="#cb179-1" aria-hidden="true" tabindex="-1"></a><span class="fu">count</span>(hip_fracture, residence)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 2 × 2
   residence        n
@@ -1426,8 +1864,12 @@ attr(,"conf.level")
 1 home           943
 2 nursing home   257</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>nursing_home <span class="ot">&lt;-</span> <span class="fu">sum</span>(hip_fracture<span class="sc">$</span>residence <span class="sc">==</span> <span class="st">"nursing home"</span>)</span>
-<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(nursing_home, <span class="fu">nrow</span>(hip_fracture), <span class="at">correct =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb181"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb181-1"><a href="#cb181-1" aria-hidden="true" tabindex="-1"></a>nursing_home <span class="ot">&lt;-</span> <span class="fu">sum</span>(hip_fracture<span class="sc">$</span>residence <span class="sc">==</span> <span class="st">"nursing home"</span>)</span>
+<span id="cb181-2"><a href="#cb181-2" aria-hidden="true" tabindex="-1"></a>nursing_home <span class="sc">/</span> <span class="fu">nrow</span>(hip_fracture)                                        <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.2141667</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb183"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb183-1"><a href="#cb183-1" aria-hidden="true" tabindex="-1"></a><span class="fu">prop.test</span>(nursing_home, <span class="fu">nrow</span>(hip_fracture), <span class="at">correct =</span> <span class="cn">FALSE</span>)<span class="sc">$</span>conf.int</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.1918866 0.2382709
 attr(,"conf.level")
@@ -1435,17 +1877,21 @@ attr(,"conf.level")
 </div>
 </div>
 </div>
-<div id="tabset-11-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-11-2-tab">
+<div id="tabset-15-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-15-2-tab">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hip_fracture[<span class="st">"residence"</span>].value_counts())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb185"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb185-1"><a href="#cb185-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(hip_fracture[<span class="st">"residence"</span>].value_counts())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>residence
 home            943
 nursing home    257
 Name: count, dtype: int64</code></pre>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>nursing_home <span class="op">=</span> <span class="bu">int</span>((hip_fracture[<span class="st">"residence"</span>] <span class="op">==</span> <span class="st">"nursing home"</span>).<span class="bu">sum</span>())</span>
-<span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.binomtest(nursing_home, <span class="bu">len</span>(hip_fracture)).proportion_ci(method<span class="op">=</span><span class="st">"wilson"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb187"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb187-1"><a href="#cb187-1" aria-hidden="true" tabindex="-1"></a>nursing_home <span class="op">=</span> <span class="bu">int</span>((hip_fracture[<span class="st">"residence"</span>] <span class="op">==</span> <span class="st">"nursing home"</span>).<span class="bu">sum</span>())</span>
+<span id="cb187-2"><a href="#cb187-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(nursing_home <span class="op">/</span> <span class="bu">len</span>(hip_fracture))                                  <span class="co"># the proportion</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>0.21416666666666667</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb189"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb189-1"><a href="#cb189-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(stats.binomtest(nursing_home, <span class="bu">len</span>(hip_fracture)).proportion_ci(method<span class="op">=</span><span class="st">"wilson"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>ConfidenceInterval(low=np.float64(0.19188662652965993), high=np.float64(0.23827089548157027))</code></pre>
 </div>
@@ -1453,6 +1899,7 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
+<p>The second output is the proportion, 0.2142, or 21.4%.</p>
 <blockquote class="blockquote">
 <p><strong>Results:</strong> Before the fracture, 257 of 1,200 patients (21.4%; 95% CI 19.2% to 23.8%) lived in a nursing home.</p>
 </blockquote>
