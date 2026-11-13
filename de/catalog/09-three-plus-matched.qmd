@@ -28,7 +28,7 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Diese Tests schliessen jede Person mit einer verpassten Kontrolle aus
-Die ANOVA mit Messwiederholung, der Friedman-Test und der Cochran-Q-Test brauchen Patientinnen und Patienten, die bei **jeder** Kontrolle gemessen wurden. Wer eine Kontrolle verpasst hat, fällt samt den übrigen Messungen ganz heraus. Unten hatten 574 Eingriffe vor der Operation einen Score für die körperliche Funktion PROMIS, aber nur 328 hatten alle vier, die Analyse verliert also 246 Eingriffe (43 %). Wenn sich Personen, die Kontrollen verpassen, von den übrigen unterscheiden, ist das Resultat verzerrt. [Gemischte Modelle](../beyond/16-mixed-models.qmd#why-mixed-models) verwenden die verfügbaren Daten aller Personen und sind bei wiederholt erhobenen PROMs meist die bessere Wahl.
+Die ANOVA mit Messwiederholung, der Friedman-Test und der Cochran-Q-Test brauchen Patientinnen und Patienten, die bei **jeder** Kontrolle gemessen wurden. Wer eine Kontrolle verpasst hat, fällt samt den übrigen Messungen ganz heraus. Unten hatten 574 Eingriffe vor der Operation einen Score für die körperliche Funktion PROMIS, aber nur 328 hatten alle vier, die Analyse verliert also 574 − 328 = 246 Eingriffe (246 ÷ 574 = 43 %); der erste Abschnitt zählt sie. Wenn sich Personen, die Kontrollen verpassen, von den übrigen unterscheiden, ist das Resultat verzerrt. [Gemischte Modelle](../beyond/16-mixed-models.qmd#why-mixed-models) verwenden die verfügbaren Daten aller Personen und sind bei wiederholt erhobenen PROMs meist die bessere Wahl.
 :::
 
 ## ANOVA mit Messwiederholung {#repeated-measures-anova}
@@ -39,11 +39,22 @@ Die ANOVA mit Messwiederholung, der Friedman-Test und der Cochran-Q-Test brauche
 
 - Ein **Messwert**, der **drei- oder mehrmals** bei denselben Patientinnen und Patienten erhoben wird (oder einmal bei jedem Mitglied einer gematchten Gruppe).
 - Die Veränderungen zwischen den Kontrollen sind ungefähr normalverteilt, oder es gibt viele Patientinnen und Patienten.
-- **Sphärizität:** Die Streuung der Veränderungen ist für jedes Paar von Kontrollen ähnlich. Der Mauchly-Test prüft sie; wird sie verletzt, passt die **Greenhouse-Geisser-Korrektur** die Freiheitsgrade an. Beide Programme unten geben beides aus.
+- **Sphärizität:** Die Streuung der Veränderungen ist für jedes Paar von Kontrollen ähnlich. Der Mauchly-Test prüft sie; wird sie verletzt, passt die **Greenhouse-Geisser-Korrektur** die [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} an. Beide Programme unten geben beides aus.
 - Es werden nur Patientinnen und Patienten einbezogen, die bei **jeder** Kontrolle gemessen wurden (siehe die Warnung oben).
-- Ist die Zielgrösse schief, begrenzt oder ordinal → verwenden Sie den [Friedman-Test](#friedman).
+- Ist die Zielgrösse [schief](../glossary.qmd#skewed){.term}, begrenzt oder ordinal → verwenden Sie den [Friedman-Test](#friedman).
 
 Die körperliche Funktion PROMIS ist ein T-Score: 50 ist der Mittelwert der allgemeinen Bevölkerung der USA. Die Kurzform mit vier Fragen in PROMIS-29+2 reicht von 22.5 bis 57.0, und 57.0 ist der beste Wert, den sie erfassen kann.
+
+### Was der Test wirklich macht
+
+Die ANOVA mit Messwiederholung ist eine [einfaktorielle ANOVA](08-three-plus-unmatched.qmd#one-way-anova), die zuerst die Unterschiede zwischen den Personen beiseitelässt.
+
+1. Den [Mittelwert](../glossary.qmd#mean){.term} jeder Kontrolle berechnen und für jede Person ihren eigenen Mittelwert über alle Kontrollen.
+2. Die Variation der Scores in drei Teile zerlegen. **Zwischen den Kontrollen:** wie weit die Mittelwerte der Kontrollen vom Gesamtmittelwert entfernt sind. **Zwischen den Personen:** wie weit der eigene Mittelwert jeder Person vom Gesamtmittelwert entfernt ist. **Rest:** wie stark die Scores jeder Person noch schwanken, wenn die Mittelwerte der Kontrollen und das eigene Niveau der Person berücksichtigt sind.
+3. Den Teil zwischen den Personen beiseitelassen. Manche Personen haben bei jeder Kontrolle hohe Scores und andere tiefe, und das sagt nichts über die Veränderung über die Zeit.
+4. Jeden der beiden anderen Teile durch seine [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} teilen und dann die Ergebnisse teilen: **F = Variation zwischen den Kontrollen ÷ restliche Variation**. Würden sich die Scores über die Zeit nicht verändern, läge F nahe bei 1. Je grösser F, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
+
+Dass die Unterschiede zwischen den Personen beiseitegelassen werden, macht den Test empfindlich: Jede Person dient als ihr eigener Vergleich, wie beim [t-Test für gepaarte Stichproben](07-two-paired-groups.qmd#paired-t). Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» F von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -64,7 +75,9 @@ pf <- proms |>
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))   # in zeitlicher Reihenfolge
 
+proms |> filter(visit == "preop", !is.na(promis_pf)) |> nrow()   # Eingriffe mit einem Score vor der Operation
 n_distinct(pf$case_id)                # Eingriffe mit vollständigen Daten
+sum(pf$promis_pf[pf$visit == "1yr"] == 57)   # wie viele das Maximum von 57.0 nach 1 Jahr erreichen
 
 ggplot(pf, aes(visit, promis_pf)) +
   geom_boxplot() +
@@ -89,7 +102,9 @@ pf = proms[["case_id", "visit", "promis_pf"]]
 complete = pf.groupby("case_id")["promis_pf"].transform(lambda scores: scores.notna().all())
 pf = pf[complete]                        # Eingriffe behalten, die bei allen vier Kontrollen gemessen wurden
 
+print(proms.loc[proms["visit"] == "preop", "promis_pf"].notna().sum())   # Eingriffe mit einem Score vor der Operation
 print(pf["case_id"].nunique())            # Eingriffe mit vollständigen Daten
+print((pf.loc[pf["visit"] == "1yr", "promis_pf"] == 57).sum())   # wie viele das Maximum von 57.0 nach 1 Jahr erreichen
 
 fig, ax = plt.subplots(figsize=(6, 3))
 parts = ax.boxplot([pf.loc[pf["visit"] == v, "promis_pf"] for v in visits], tick_labels=visits)   # mit einem Namen für den Rückgabewert erscheint er nicht in der Ausgabe
@@ -101,7 +116,7 @@ print(pf.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[visits])
 ```
 :::
 
-328 Eingriffe wurden bei allen vier Kontrollen gemessen. Ihr mittlerer T-Score steigt bei jeder Kontrolle, und die Streuungen bleiben ähnlich. Nach 1 Jahr liegen 28 von ihnen bei 57.0, dem besten Wert, den der Fragebogen erfassen kann. Das ist ein kleiner Anteil, bei einer einzigen Kontrolle, unter 328 Eingriffen, die ANOVA mit Messwiederholung ist hier also weiterhin eine vernünftige Wahl.
+574 Eingriffe hatten einen Score vor der Operation, und 328 davon wurden bei allen vier Kontrollen gemessen (die ersten beiden Zahlen). Ihr mittlerer T-Score steigt bei jeder Kontrolle, und die Streuungen bleiben ähnlich. Nach 1 Jahr liegen 28 der 328 (9 %) bei 57.0, dem besten Wert, den der Fragebogen erfassen kann (die dritte Zahl). Das ist ein kleiner Anteil, bei einer einzigen Kontrolle, die ANOVA mit Messwiederholung ist hier also weiterhin eine vernünftige Wahl.
 
 ### Analyse durchführen
 
@@ -147,10 +162,60 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 ### Ausgabe lesen
 
 - **F = 326.1 mit 3 und 981 Freiheitsgraden** (DFn/DFd in R, DF in Python): wie stark sich die Mittelwerte der Kontrollen unterscheiden, verglichen damit, wie stark die Scores jedes Eingriffs um ihren eigenen Mittelwert schwanken. 3 = vier Kontrollen minus eins; 981 = 3 × (328 Eingriffe − 1).
-- **p** (R gibt `7.55e-147` aus; die Tabelle von pingouin rundet ihn auf `0.0` in der Zeile `p_unc`): weit unter 0.001.
-- **Mauchly-Test, W = 0.995, p = 0.903:** kein Hinweis darauf, dass die Sphärizität verletzt ist, das unkorrigierte Resultat gilt also.
-- **Sphericity Corrections** (R) oder **eps** und **p_GG_corr** (Python): Das Epsilon nach Greenhouse-Geisser beträgt 0.997 (1 bedeutet perfekte Sphärizität), und der korrigierte p-Wert liegt weiterhin weit unter 0.001.
+- **p** (R gibt `7.55e-147` aus; die Tabelle von pingouin rundet ihn auf `0.0` in der Zeile `p_unc`): weit unter 0.001. `e-147` ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: Der Dezimalpunkt rückt 147 Stellen nach links.
+- **Mauchly-Test, W = 0.995, p = 0.903** (in Python `W_spher` und `p_spher`, zusammengefasst als `sphericity True`): kein Hinweis darauf, dass die Sphärizität verletzt ist, das unkorrigierte Resultat gilt also.
+- **Sphericity Corrections** (R) oder **eps** und **p_GG_corr** (Python): Das Epsilon nach Greenhouse-Geisser beträgt 0.997 (1 bedeutet perfekte Sphärizität), und der korrigierte p-Wert liegt weiterhin weit unter 0.001. `HFe` und die Spalten mit `[HF]` in R sind eine zweite Korrektur, nach Huynh-Feldt; Sie können sie hier ignorieren.
 - **pes = 0.499** (R) oder **np2** (Python): das partielle Eta-Quadrat, siehe unten.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: F von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+overall_mean <- mean(pf$promis_pf)
+visit_means <- tapply(pf$promis_pf, pf$visit, mean)                       # Schritt 1: der Mittelwert jeder Kontrolle ...
+case_means <- tapply(pf$promis_pf, pf$case_id, mean)                      # ... und jedes Eingriffs über seine vier Kontrollen
+ss_visits <- 328 * sum((visit_means - overall_mean)^2)                    # Schritt 2: zwischen den Kontrollen, einmal pro Eingriff gezählt
+ss_cases <- 4 * sum((case_means - overall_mean)^2)                        # zwischen den Eingriffen, einmal pro Kontrolle gezählt
+ss_left <- sum((pf$promis_pf - overall_mean)^2) - ss_visits - ss_cases    # Rest: das Total minus die beiden anderen
+c(ss_visits = ss_visits, ss_cases = ss_cases, ss_left = ss_left)
+c(ms_visits = ss_visits / 3, ms_left = ss_left / 981)                     # Schritt 4: durch die Freiheitsgrade teilen ...
+(ss_visits / 3) / (ss_left / 981)                                         # ... dann teilen: F
+ss_visits / (ss_visits + ss_left)                                         # partielles Eta-Quadrat: der Anteil der Kontrollen, wenn die Eingriffe beiseitegelassen sind
+```
+
+## Python
+
+```{python}
+overall_mean = pf["promis_pf"].mean()
+visit_means = pf.groupby("visit")["promis_pf"].mean()                             # Schritt 1: der Mittelwert jeder Kontrolle ...
+case_means = pf.groupby("case_id")["promis_pf"].mean()                            # ... und jedes Eingriffs über seine vier Kontrollen
+ss_visits = 328 * ((visit_means - overall_mean) ** 2).sum()                       # Schritt 2: zwischen den Kontrollen, einmal pro Eingriff gezählt
+ss_cases = 4 * ((case_means - overall_mean) ** 2).sum()                           # zwischen den Eingriffen, einmal pro Kontrolle gezählt
+ss_left = ((pf["promis_pf"] - overall_mean) ** 2).sum() - ss_visits - ss_cases    # Rest: das Total minus die beiden anderen
+print(ss_visits, ss_cases, ss_left)
+print(ss_visits / 3, ss_left / 981)                                               # Schritt 4: durch die Freiheitsgrade teilen ...
+print((ss_visits / 3) / (ss_left / 981))                                          # ... dann teilen: F
+print(ss_visits / (ss_visits + ss_left))                                          # partielles Eta-Quadrat: der Anteil der Kontrollen, wenn die Eingriffe beiseitegelassen sind
+```
+:::
+
+Die Variation zwischen den Eingriffen, 11327, wird beiseitegelassen (Schritt 3) und spielt für F keine Rolle. Teilt man die beiden anderen Teile durch ihre Freiheitsgrade, erhält man 9526 und 29.21; ihr Verhältnis ist das **F = 326.1**, das der Test ausgegeben hat. Die Tabelle von Python zeigt dieselben Zahlen in den Zeilen `SS` und `MS`. Die letzte Zeile ist das partielle Eta-Quadrat: 28578 ÷ (28578 + 28655) = 0.499, `pes` in der Tabelle von R und `np2` in derjenigen von Python.
+:::
+
+```{python}
+#| include: false
+chk = {"ss_visits": float(ss_visits), "ss_cases": float(ss_cases), "ss_left": float(ss_left),
+       "f": float((ss_visits / 3) / (ss_left / 981))}
+```
+
+```{r}
+#| include: false
+check_agree(list(ss_visits = ss_visits, ss_cases = ss_cases, ss_left = ss_left, f = (ss_visits / 3) / (ss_left / 981)),
+            reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -171,7 +236,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin berechnet dafür kein KI
 ```
 :::
 
-η²~p~ = 0.50: ein sehr grosser Effekt. Die Kontrollen erklären etwa die Hälfte der Variation in den Scores jeder Person über das Jahr.
+η²~p~ = 0.50: ein sehr grosser Effekt. Die Kontrollen erklären etwa die Hälfte der Variation in den Scores jeder Person über das Jahr. R gibt ausserdem ein einseitiges 95%-KI (Konfidenzintervall) aus, 0.47 bis 1.00: η²~p~ kann nicht negativ sein, daher gibt R nur eine untere Grenze an und setzt die obere auf 1.00. pingouin berechnet kein KI. In den Überschriften von R stehen «type III» und «Type I»: Das sind Arten, die Variation aufzuteilen, wenn ein Modell mehrere Prädiktoren hat; bei einem einzigen Prädiktor liefern sie dasselbe Resultat.
 
 ### Resultate formulieren
 
@@ -197,10 +262,21 @@ Die ANOVA sagt, dass die Mittelwerte der Kontrollen nicht alle gleich sind. Um z
 
 ### Wann verwenden
 
-- Eine Zielgrösse, die **drei- oder mehrmals** bei denselben Patientinnen und Patienten gemessen wird, wenn sie **schief** oder **ordinal** ist oder einen **Decken- oder Bodeneffekt** hat. Der EFAS-Score summiert sechs Fragen, und nach 12 Monaten häufen sich die Scores beim Maximum von 24.
+- Eine Zielgrösse, die **drei- oder mehrmals** bei denselben Patientinnen und Patienten gemessen wird, wenn sie **[schief](../glossary.qmd#skewed){.term}** oder **ordinal** ist oder einen **[Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}** hat. Der EFAS-Score summiert sechs Fragen, und nach 12 Monaten häufen sich die Scores beim Maximum von 24.
 - Er bringt die eigenen Scores jeder Person in eine Rangfolge (Rang 1, 2, 3) und fragt, ob einige Studienvisiten tendenziell höhere Ränge erhalten als andere.
 - Es werden nur Patientinnen und Patienten einbezogen, die bei **jeder** Studienvisite gemessen wurden.
 - Ist die Zielgrösse ein ungefähr normalverteilter Messwert → verwenden Sie die [ANOVA mit Messwiederholung](#repeated-measures-anova).
+
+### Was der Test wirklich macht
+
+Der Friedman-Test vergleicht die Studienvisiten innerhalb jeder Person und nutzt nur die Reihenfolge ihrer eigenen Scores.
+
+1. Eine Person nach der anderen nehmen und ihren Scores über die Studienvisiten einen [Rang](../glossary.qmd#rank){.term} geben: 1 für den tiefsten, 2 für den nächsten und 3 für den höchsten. Gebundene Scores teilen sich den Mittelwert ihrer Ränge.
+2. Für jede Studienvisite den **mittleren Rang** über alle Personen berechnen.
+3. Würden sich die Scores zwischen den Studienvisiten nicht verändern, könnte jede Studienvisite jeden Rang gleich wahrscheinlich erhalten, und der mittlere Rang jeder Studienvisite läge nahe bei 2, der Mitte von 1, 2 und 3.
+4. Die [Teststatistik](../glossary.qmd#test-statistic){.term} misst, wie weit die mittleren Ränge der Studienvisiten von diesem mittleren Wert entfernt sind. Je weiter, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
+
+Weil jede Person für sich in Ränge umgewandelt wird, spielt es keine Rolle, dass manche Personen bei jeder Studienvisite hohe Scores haben und andere tiefe. Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» die Statistik von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -216,6 +292,8 @@ library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # eine Zeile pro Person und Studienvisite
 
+trial |> filter(arm == "boot") |> distinct(patient_id) |> nrow()   # Personen, die randomisiert einen Walker erhielten
+
 efas_boot <- trial |>
   filter(arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |>
   select(patient_id, visit, efas) |>
@@ -224,7 +302,8 @@ efas_boot <- trial |>
   ungroup() |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "12mo")))
 
-n_distinct(efas_boot$patient_id)
+n_distinct(efas_boot$patient_id)                        # Personen mit allen drei Scores
+sum(efas_boot$efas[efas_boot$visit == "12mo"] == 24)    # wie viele das Maximum von 24 nach 12 Monaten erreichen
 
 ggplot(efas_boot, aes(visit, efas)) +
   geom_boxplot() +
@@ -245,11 +324,14 @@ import matplotlib.pyplot as plt
 trial = pd.read_csv("data/foot_ankle_rct_long.csv")   # eine Zeile pro Person und Studienvisite
 visits = ["6wk", "3mo", "12mo"]
 
+print(trial.loc[trial["arm"] == "boot", "patient_id"].nunique())   # Personen, die randomisiert einen Walker erhielten
+
 efas_boot = trial[(trial["arm"] == "boot") & trial["visit"].isin(visits)][["patient_id", "visit", "efas"]]
 complete = efas_boot.groupby("patient_id")["efas"].transform(lambda scores: scores.notna().all())
 efas_boot = efas_boot[complete]           # Personen behalten, die bei allen drei Studienvisiten gemessen wurden
 
-print(efas_boot["patient_id"].nunique())
+print(efas_boot["patient_id"].nunique())                                   # Personen mit allen drei Scores
+print((efas_boot.loc[efas_boot["visit"] == "12mo", "efas"] == 24).sum())    # wie viele das Maximum von 24 nach 12 Monaten erreichen
 
 fig, ax = plt.subplots(figsize=(6, 3))
 parts = ax.boxplot([efas_boot.loc[efas_boot["visit"] == v, "efas"] for v in visits], tick_labels=visits)
@@ -261,7 +343,7 @@ print(efas_boot.groupby("visit")["efas"].describe()[["25%", "50%", "75%"]].loc[v
 ```
 :::
 
-50 der 60 Personen, die randomisiert einen Walker erhielten, wurden bei allen drei Studienvisiten gemessen. Die Scores steigen bei jeder Studienvisite, und nach 12 Monaten häufen sie sich an der Decke von 24: 6 Personen erreichen das Maximum.
+50 der 60 Personen, die randomisiert einen Walker erhielten, wurden bei allen drei Studienvisiten gemessen (die ersten beiden Zahlen). Die Scores steigen bei jeder Studienvisite, und nach 12 Monaten häufen sie sich an der Decke von 24: 6 der 50 Personen erreichen das Maximum (die dritte Zahl).
 
 ### Analyse durchführen
 
@@ -294,13 +376,64 @@ check_agree(list(chisq = unname(efas_test$statistic), df = unname(efas_test$para
 ### Ausgabe lesen
 
 - **Friedman chi-squared = 84.9** (R) oder **Q** (Python): wie einheitlich die Studienvisiten bei den Personen in dieselbe Rangfolge kommen.
-- **df = 2:** drei Studienvisiten minus eins.
-- **p < 0.001** (R gibt «p < 2.2e-16» aus).
+- **df = 2** (in Python `ddof1`): drei Studienvisiten minus eins.
+- **p < 0.001:** So einheitliche Rangfolgen wären sehr unwahrscheinlich, wenn sich die Scores zwischen den Studienvisiten nicht veränderten. R gibt `p-value < 2.2e-16` aus, den kleinsten Wert, den es anzeigt; `p_unc` von Python ist `3.589140e-19`. Beides ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} für Zahlen weit unter 0.001.
 - **W = 0.849** (Python): Kendalls W, siehe unten.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: die Friedman-Statistik von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+efas_wide <- efas_boot |> pivot_wider(names_from = visit, values_from = efas)   # eine Zeile pro Person, eine Spalte pro Studienvisite
+efas_scores <- as.matrix(efas_wide[, c("6wk", "3mo", "12mo")])
+efas_ranks <- t(apply(efas_scores, 1, rank))                     # Schritt 1: die drei Scores jeder Person in Ränge umwandeln
+head(cbind(efas_scores, efas_ranks), 4)                          # die ersten vier Personen: ihre Scores, dann ihre Ränge
+mean_ranks <- colMeans(efas_ranks)                               # Schritt 2: der mittlere Rang jeder Studienvisite
+mean_ranks
+q_no_ties <- 12 * 50 / (3 * (3 + 1)) * sum((mean_ranks - 2)^2)   # Schritt 4: die Statistik, vor der Korrektur für Bindungen
+tied <- apply(efas_scores, 1, function(scores) sum(table(scores)^3 - table(scores)))   # 0 bei einer Person mit drei verschiedenen Scores
+sum(tied > 0)                                                    # Personen mit demselben Score bei zwei Studienvisiten
+tie_correction <- 1 - sum(tied) / (50 * (3^3 - 3))               # der Korrekturfaktor für Bindungen
+c(q_no_ties = q_no_ties, tie_correction = tie_correction, q = q_no_ties / tie_correction)
+```
+
+## Python
+
+```{python}
+efas_wide = efas_boot.pivot(index="patient_id", columns="visit", values="efas")[visits]   # eine Zeile pro Person, eine Spalte pro Studienvisite
+efas_ranks = efas_wide.rank(axis=1)                                    # Schritt 1: die drei Scores jeder Person in Ränge umwandeln
+print(pd.concat([efas_wide, efas_ranks], axis=1).head(4))              # die ersten vier Personen: ihre Scores, dann ihre Ränge
+mean_ranks = efas_ranks.mean()                                         # Schritt 2: der mittlere Rang jeder Studienvisite
+print(mean_ranks)
+q_no_ties = 12 * 50 / (3 * (3 + 1)) * ((mean_ranks - 2) ** 2).sum()    # Schritt 4: die Statistik, vor der Korrektur für Bindungen
+tied = efas_wide.apply(lambda scores: (scores.value_counts() ** 3 - scores.value_counts()).sum(), axis=1)   # 0 bei einer Person mit drei verschiedenen Scores
+print((tied > 0).sum())                                                # Personen mit demselben Score bei zwei Studienvisiten
+tie_correction = 1 - tied.sum() / (50 * (3 ** 3 - 3))                  # der Korrekturfaktor für Bindungen
+print(q_no_ties, tie_correction, q_no_ties / tie_correction)
+```
+:::
+
+Die zweite und die dritte Person zeigen, wie Bindungen behandelt werden: Zwei gleiche Scores teilen sich den Mittelwert ihrer beiden Ränge (1.5 und 1.5 oder 2.5 und 2.5). Die mittleren Ränge sind 1.08 nach 6 Wochen, 2.04 nach 3 Monaten und 2.88 nach 12 Monaten, an beiden Enden weit von 2 entfernt; die Statistik ist daher gross: 81.12. 9 Personen haben bei zwei Studienvisiten denselben Score; die Korrektur für diese Bindungen (Teilen durch 0.955) ergibt **84.94**, das Chi-Quadrat, das beide Programme ausgegeben haben.
+:::
+
+```{python}
+#| include: false
+chk = {"q_no_ties": float(q_no_ties), "tie_correction": float(tie_correction), "q": float(q_no_ties / tie_correction),
+       "tied_patients": float((tied > 0).sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(q_no_ties = q_no_ties, tie_correction = tie_correction, q = q_no_ties / tie_correction,
+                 tied_patients = sum(tied > 0)), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
-**Kendalls W** misst, wie einheitlich die Scores der Personen die Studienvisiten in dieselbe Rangfolge bringen: 0 bedeutet keinerlei Übereinstimmung, 1 bedeutet, dass die Scores jeder Person die drei Studienvisiten gleich ordnen. Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross.
+**Kendalls W** misst, wie einheitlich die Scores der Personen die Studienvisiten in dieselbe Rangfolge bringen: 0 bedeutet keinerlei Übereinstimmung, 1 bedeutet, dass die Scores jeder Person die drei Studienvisiten gleich ordnen. Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross. W ist die Friedman-Statistik geteilt durch ihren grösstmöglichen Wert, n × (k − 1) bei n Personen und k Studienvisiten: 84.94 ÷ (50 × 2) = 0.85.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -310,12 +443,18 @@ check_agree(list(chisq = unname(efas_test$statistic), df = unname(efas_test$para
 # kendalls_w() warnt, wenn eine Person bei zwei Studienvisiten denselben Score hat; die Korrektur für Bindungen berücksichtigt das bereits
 set.seed(2026)   # sein KI stammt aus einem Bootstrap (zufälliges Neuziehen); mit einem Seed ist es wiederholbar
 effectsize::kendalls_w(efas ~ visit | patient_id, data = efas_boot)
+by_patient <- efas_boot |> pivot_wider(names_from = visit, values_from = efas)   # eine Zeile pro Person, eine Spalte pro Studienvisite
+sum(by_patient$`3mo` > by_patient$`6wk`)      # Personen mit einem höheren Score nach 3 Monaten als nach 6 Wochen
+sum(by_patient$`12mo` > by_patient$`3mo`)     # ... und einem höheren nach 12 Monaten als nach 3 Monaten
 ```
 
 ## Python
 
 ```{python}
 print(efas_test["W"])
+by_patient = efas_boot.pivot(index="patient_id", columns="visit", values="efas")   # eine Zeile pro Person, eine Spalte pro Studienvisite
+print((by_patient["3mo"] > by_patient["6wk"]).sum())      # Personen mit einem höheren Score nach 3 Monaten als nach 6 Wochen
+print((by_patient["12mo"] > by_patient["3mo"]).sum())     # ... und einem höheren nach 12 Monaten als nach 3 Monaten
 ```
 :::
 
@@ -331,7 +470,7 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85: ein grosser Effekt. Die meisten Personen verbesserten sich von einer Studienvisite zur nächsten. Das Konfidenzintervall (KI) von R stammt aus einem Bootstrap, weshalb der Code einen Seed setzt; pingouin berechnet keines.
+W = 0.85: ein grosser Effekt. 45 der 50 Personen hatten nach 3 Monaten einen höheren Score als nach 6 Wochen, und 42 nach 12 Monaten einen höheren als nach 3 Monaten. R gibt ausserdem ein einseitiges 95%-KI (Konfidenzintervall) aus, 0.78 bis 1.00: W kann nicht negativ sein, daher gibt R nur eine untere Grenze an. Das KI stammt aus einem Bootstrap, weshalb der Code einen Seed setzt; pingouin berechnet keines.
 
 ### Resultate formulieren
 
@@ -358,6 +497,17 @@ Er verwendet nur die Rangfolge der Studienvisiten bei jeder Person. Eine Person,
 - Eine **Ja/Nein**-Zielgrösse, die **drei- oder mehrmals** bei denselben Patientinnen und Patienten erhoben wird (oder einmal bei jedem Mitglied einer gematchten Gruppe).
 - Er erweitert den [McNemar-Test](07-two-paired-groups.qmd#mcnemar) auf mehr als zwei Kontrollen, und wie beim McNemar-Test tragen nur Personen zum Resultat bei, deren Antwort sich geändert hat.
 - Es werden nur Patientinnen und Patienten einbezogen, die bei **jeder** Kontrolle gemessen wurden.
+
+### Was der Test wirklich macht
+
+Der Cochran-Q-Test vergleicht, wie viele Personen bei jeder Kontrolle mit Ja antworten, innerhalb derselben Personen.
+
+1. Die Ja-Antworten bei jeder Kontrolle zählen.
+2. Die Ja-Antworten jeder Person über die Kontrollen zählen. Wer bei jeder Kontrolle mit Ja oder bei jeder Kontrolle mit Nein antwortet, sagt nichts über eine Veränderung und fällt aus der Berechnung heraus.
+3. Hätte sich über die Zeit nichts verändert, könnte jede Ja-Antwort einer Person gleich wahrscheinlich auf jede Kontrolle fallen; die Summen der Kontrollen wären dann etwa gleich.
+4. Die [Teststatistik](../glossary.qmd#test-statistic){.term}, **Q**, misst, wie ungleich die Summen der Kontrollen sind, im Vergleich dazu, wie ungleich der Zufall allein sie machen würde. Je grösser Q, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
+
+Bei nur zwei Kontrollen ist Q die Statistik des [McNemar-Tests](07-two-paired-groups.qmd#mcnemar) ohne dessen Stetigkeitskorrektur. Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» Q von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -433,7 +583,59 @@ check_agree(list(q = unname(aid_test$statistic), df = unname(aid_test$parameter)
 ### Ausgabe lesen
 
 - **Q = 186.8, df = 3:** die Statistik des Cochran-Q-Tests, mit vier Kontrollen minus eins Freiheitsgraden.
-- **p < 0.001** (R gibt «p < 2.2e-16» aus): Eine so unterschiedliche Gehhilfenbenutzung zwischen den Kontrollen wäre sehr unwahrscheinlich, wenn sie sich nicht verändert hätte.
+- **p < 0.001** (R gibt `p-value < 2.2e-16` aus, den kleinsten Wert, den es anzeigt; `p_unc` von Python ist `3.008880e-40`): Eine so unterschiedliche Gehhilfenbenutzung zwischen den Kontrollen wäre sehr unwahrscheinlich, wenn sie sich nicht verändert hätte.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: Q von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+aid_wide <- aid |> pivot_wider(names_from = visit, values_from = walking_aid)   # eine Zeile pro Eingriff, eine Spalte pro Kontrolle
+answers <- as.matrix(aid_wide[, c("preop", "6wk", "3mo", "1yr")])               # 1 = ja, 0 = nein
+colSums(answers)                                                                 # Schritt 1: Ja-Antworten bei jeder Kontrolle
+case_totals <- rowSums(answers)                                                  # Schritt 2: Ja-Antworten jedes Eingriffs, von 0 bis 4
+table(case_totals)
+cochran_q <- function(yes) {                                                     # Schritt 4: Q aus einer Tabelle mit 0 und 1
+  k <- ncol(yes)
+  (k - 1) * (k * sum(colSums(yes)^2) - sum(yes)^2) / (k * sum(yes) - sum(rowSums(yes)^2))
+}
+cochran_q(answers)
+cochran_q(answers[case_totals > 0 & case_totals < 4, ])                          # dasselbe ohne die Eingriffe, deren Antwort sich nie geändert hat
+```
+
+## Python
+
+```{python}
+answers = aid.pivot(index="case_id", columns="visit", values="walking_aid")[visits]   # eine Zeile pro Eingriff, eine Spalte pro Kontrolle; 1 = ja, 0 = nein
+print(answers.sum())                                                                   # Schritt 1: Ja-Antworten bei jeder Kontrolle
+case_totals = answers.sum(axis=1)                                                      # Schritt 2: Ja-Antworten jedes Eingriffs, von 0 bis 4
+print(case_totals.value_counts().sort_index())
+
+def cochran_q(yes):                                                                    # Schritt 4: Q aus einer Tabelle mit 0 und 1
+    k = yes.shape[1]
+    return (k - 1) * (k * (yes.sum() ** 2).sum() - yes.sum().sum() ** 2) / (k * yes.sum().sum() - (yes.sum(axis=1) ** 2).sum())
+
+print(cochran_q(answers))
+print(cochran_q(answers[(case_totals > 0) & (case_totals < 4)]))                       # dasselbe ohne die Eingriffe, deren Antwort sich nie geändert hat
+```
+:::
+
+Q beträgt 186.8, wie vom Test ausgegeben. Die Tabelle `case_totals` zeigt, wer zum Test beiträgt: Bei 63 Eingriffen wurde nie eine Gehhilfe benutzt und bei 3 bei jeder Kontrolle. Ohne diese 66 ergibt sich genau dasselbe Q: Es beruht nur auf den 262 Eingriffen, bei denen sich die Antwort irgendwann geändert hat.
+:::
+
+```{python}
+#| include: false
+chk = {"q": float(cochran_q(answers)), "q_changed": float(cochran_q(answers[(case_totals > 0) & (case_totals < 4)])),
+       "n_changed": float(((case_totals > 0) & (case_totals < 4)).sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(q = cochran_q(answers), q_changed = cochran_q(answers[case_totals > 0 & case_totals < 4, ]),
+                 n_changed = sum(case_totals > 0 & case_totals < 4)), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -444,7 +646,9 @@ Der Cochran-Q-Test hat keine einheitliche Standard-Effektstärke. Beschreiben Si
 
 ```{r}
 aid_by_visit <- aid |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
+# Wilson-95%-KI für jede Kontrolle: prop.test() ohne Stetigkeitskorrektur, einmal pro Zeile
 aid_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, aid_by_visit$using, aid_by_visit$procedures)
+# aid_ci hat eine Spalte pro Kontrolle: Zeile 1 = untere Grenze, Zeile 2 = obere Grenze
 
 aid_by_visit |>
   mutate(percent = 100 * using / procedures, ci_low = 100 * aid_ci[1, ], ci_high = 100 * aid_ci[2, ])
@@ -454,6 +658,7 @@ aid_by_visit |>
 
 ```{python}
 counts = aid.groupby("visit")["walking_aid"].agg(["sum", "count"]).loc[visits]
+# Wilson-95%-KI für jede Kontrolle, eines pro Zeile von counts
 cis = [stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k, n in zip(counts["sum"], counts["count"])]
 
 print(pd.DataFrame({"percent": 100 * counts["sum"] / counts["count"],
@@ -473,7 +678,7 @@ check_agree(c(setNames(as.list(aid_ci[1, ]), paste0("low_", visit_names)),
               setNames(as.list(aid_ci[2, ]), paste0("high_", visit_names))), reticulate::py$chk)
 ```
 
-Die Benutzung stieg um 24.4 Prozentpunkte von vor der Operation bis 6 Wochen und lag nach 1 Jahr deutlich unter dem Wert vor der Operation (24.4 Punkte tiefer).
+Die Benutzung stieg von 114 auf 194 der 328 Eingriffe zwischen der Kontrolle vor der Operation und 6 Wochen (die Spalte `using` in R; Python gibt diese Anzahlen unter «Zuerst die Daten ansehen» aus): 80 mehr, das sind 80 ÷ 328 = 24.4 Prozentpunkte. Nach 1 Jahr war sie auf 34 gefallen, 80 weniger als vor der Operation, also wieder 24.4 Punkte. Zieht man stattdessen die gerundeten Prozentwerte voneinander ab, 59.1 − 34.8, erhält man 24.3: Rechnen Sie mit den Anzahlen.
 
 ### Resultate formulieren
 
@@ -500,6 +705,17 @@ Base R hat keinen Cochran-Q-Test; `DescTools::CochranQTest()` (oder `rstatix::co
 - Die Zielgrösse ist die **Zeit bis zu einem Ereignis**, und die Patientinnen und Patienten bilden **gematchte Gruppen** aus drei oder mehr Personen.
 - Ein nach gematchten Gruppen **stratifiziertes** Cox-Modell vergleicht die Implantate nur **innerhalb** der Gruppen, wie auf [Seite 7](07-two-paired-groups.qmd#stratified-cox), wo nur die Patientinnen und Patienten mit Implantat A und C aus denselben Gruppen verwendet wurden.
 - Bei wenigen Ereignissen sind breite KI zu erwarten. [Seite 14](../survival/14-cox-regression.qmd) behandelt die Cox-Regression ausführlich.
+
+### Was der Test wirklich macht
+
+Ein stratifiziertes Cox-Modell funktioniert wie das Cox-Modell auf [Seite 8](08-three-plus-unmatched.qmd#cox), mit einer Änderung: Jeder Vergleich bleibt innerhalb einer gematchten Gruppe.
+
+1. Eine gematchte Gruppe nach der anderen nehmen und ihre drei Personen ab der Operation verfolgen.
+2. Bei jeder Revision schauen, welche Mitglieder der Gruppe unmittelbar davor noch nachbeobachtet wurden: die Personen [unter Risiko](../glossary.qmd#at-risk){.term} in dieser Gruppe.
+3. Hätten die Implantate dasselbe Risiko, könnte die Revision jedes dieser Mitglieder gleich wahrscheinlich treffen. Das Modell probiert Werte für das [Hazard Ratio](../glossary.qmd#hazard-ratio){.term} jedes Implantats aus und behält diejenigen, unter denen die tatsächlich eingetretenen Revisionen zusammengenommen am wahrscheinlichsten waren.
+4. Eine Revision sagt dem Modell nichts, wenn kein anderes Mitglied der Gruppe mehr nachbeobachtet wurde, und ebenso wenig eine Gruppe ganz ohne Revision.
+
+Die Personen einer Gruppe gleichen sich in den Merkmalen, nach denen gematcht wurde; diese Merkmale können einen Unterschied zwischen den Implantaten also nicht erklären. Nach dem Modell berechnet ein Kasten unter «Ausgabe lesen» die beobachteten und erwarteten Revisionen innerhalb der Gruppen von Hand.
 
 ### Zuerst die Daten ansehen
 
@@ -554,7 +770,8 @@ set_cox = CoxPHFitter().fit(
     formula="implant", strata=["set_id"],    # ein Stratum pro gematchte Gruppe
 )
 print(set_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
-print(set_cox.log_likelihood_ratio_test().test_statistic)   # Gesamttest, alle Implantate
+overall = set_cox.log_likelihood_ratio_test()                             # Gesamttest, alle Implantate
+print(overall.test_statistic, overall.degrees_freedom, overall.p_value)   # seine Statistik, Freiheitsgrade und p-Wert
 ```
 :::
 
@@ -580,7 +797,60 @@ check_agree(list(hr_b = set_hr["implantB", "exp(coef)"], hr_c = set_hr["implantC
 - **n = 156, number of events = 24:** 52 gematchte Gruppen aus je drei Patientinnen und Patienten, 24 Revisionen.
 - **exp(coef):** das Hazard Ratio (HR) jedes Implantats gegenüber Implantat A, innerhalb der gematchten Gruppen. Implantat B: 0.43; Implantat C: 3.91.
 - **lower .95 / upper .95:** Das KI von Implantat B (0.08 bis 2.25) ist sehr breit und schliesst 1 ein; dasjenige von Implantat C (1.28 bis 11.95) tut das nicht.
-- **Likelihood ratio test = 13.5 on 2 df, p = 0.001:** der Gesamttest, ob das Implantat überhaupt eine Rolle spielt. Python gibt ihn zuletzt aus.
+- **Pr(>|z|)** (in Python `p`): der p-Wert für jedes Implantat gegenüber A, p = 0.320 für B und p = 0.017 für C.
+- **Likelihood ratio test = 13.48 on 2 df, p = 0.001:** der Gesamttest, ob das Implantat überhaupt eine Rolle spielt; wir berichten ihn als 13.5. Python gibt ihn in der Zeile unter seiner Tabelle aus: die Statistik, ihre Freiheitsgrade und den p-Wert (0.00118). Verwechseln Sie ihn nicht mit dem «Score (logrank) test» von R zwei Zeilen weiter unten, der zufällig 13.5 ausgibt.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: beobachtete und erwartete Revisionen innerhalb der Gruppen, von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+revisions <- matched |> filter(revised == 1)                 # die 24 Revisionen
+expected <- c(A = 0, B = 0, C = 0)
+alone <- 0
+for (i in seq_len(nrow(revisions))) {
+  at_risk <- matched |>                                      # Mitglieder derselben Gruppe, die unmittelbar vor dieser Revision noch nachbeobachtet wurden
+    filter(set_id == revisions$set_id[i], followup_years >= revisions$followup_years[i])
+  if (nrow(at_risk) == 1) alone <- alone + 1                 # sonst niemand mehr in der Gruppe: Diese Revision sagt dem Modell nichts
+  expected <- expected + as.vector(table(factor(at_risk$implant, levels = c("A", "B", "C")))) / nrow(at_risk)   # jedes Mitglied unter Risiko erhält den gleichen Anteil an der Revision
+}
+rbind(observed = table(revisions$implant), expected = expected)
+alone
+```
+
+## Python
+
+```{python}
+revisions = matched[matched["revised"] == 1]                  # die 24 Revisionen
+expected = pd.Series({"A": 0.0, "B": 0.0, "C": 0.0})
+alone = 0
+for revision in revisions.itertuples():
+    at_risk = matched[(matched["set_id"] == revision.set_id)                 # Mitglieder derselben Gruppe, die unmittelbar vor dieser Revision noch nachbeobachtet wurden
+                      & (matched["followup_years"] >= revision.followup_years)]
+    alone += len(at_risk) == 1                                # sonst niemand mehr in der Gruppe: Diese Revision sagt dem Modell nichts
+    for group in expected.index:
+        expected[group] += (at_risk["implant"] == group).sum() / len(at_risk)   # jedes Mitglied unter Risiko erhält den gleichen Anteil an der Revision
+print(pd.DataFrame({"observed": revisions["implant"].value_counts().sort_index(), "expected": expected}).T)
+print(alone)
+```
+:::
+
+Hätten die Implantate dasselbe Risiko, hätten sich die 24 Revisionen innerhalb der Gruppen so verteilt: 7.8 (A), 6.8 (B) und 9.3 (C). Implantat C hatte 17, fast das Doppelte seines Anteils; Implantat A hatte 5 und Implantat B 2. 2 der 24 Revisionen traten ein, als kein anderes Mitglied der Gruppe mehr nachbeobachtet wurde (`alone`); jede zählt bei ihrem Implantat sowohl zu beobachtet als auch zu erwartet 1 hinzu und sagt dem Modell daher nichts. Die Zeile «Score (logrank) test» von R testet diese Abstände zwischen beobachtet und erwartet.
+:::
+
+```{python}
+#| include: false
+chk = {"expected_a": float(expected["A"]), "expected_b": float(expected["B"]), "expected_c": float(expected["C"]),
+       "alone": float(alone)}
+```
+
+```{r}
+#| include: false
+check_agree(list(expected_a = expected[["A"]], expected_b = expected[["B"]], expected_c = expected[["C"]],
+                 alone = alone), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -667,6 +937,31 @@ stopifnot(
   round(set_hr["implantC", c("lower .95", "upper .95")], 2) == c(1.28, 11.95),
   round(unname(summary(set_cox)$logtest["test"]), 1) == 13.5, round(summary(set_cox)$logtest["pvalue"], 3) == 0.001,
   choose(4, 2) == 6,
+  round(100 * 28 / 328) == 9,
+  # the by-hand boxes, and the numbers added with them
+  round(c(ss_visits, ss_cases, ss_left)) == c(28578, 11327, 28655), round(ss_visits / 3) == 9526, round(ss_left / 981, 2) == 29.21,
+  isTRUE(all.equal((ss_visits / 3) / (ss_left / 981), pf_aov["visit", "F value"])),
+  round(ss_visits / (ss_visits + ss_left), 3) == 0.499, round(28578 / (28578 + 28655), 3) == 0.499, pf_pes$CI_high == 1,
+  round(mean_ranks, 2) == c(1.08, 2.04, 2.88), round(q_no_ties, 2) == 81.12, round(tie_correction, 3) == 0.955, sum(tied > 0) == 9,
+  isTRUE(all.equal(q_no_ties / tie_correction, unname(efas_test$statistic))), round(unname(efas_test$statistic), 2) == 84.94,
+  round(84.94 / (50 * 2), 2) == 0.85,
+  efas_scores[2, ] == c(13, 13, 19), efas_ranks[2, ] == c(1.5, 1.5, 3), efas_ranks[3, ] == c(1, 2.5, 2.5),
+  sum(by_patient$`3mo` > by_patient$`6wk`) == 45, sum(by_patient$`12mo` > by_patient$`3mo`) == 42, efas_w$CI_high == 1,
+  abs(reticulate::py_eval("float(efas_test['p_unc'].iloc[0])") / 3.589140e-19 - 1) < 1e-6,
+  abs(reticulate::py_eval("float(aid_test['p_unc'].iloc[0])") / 3.008880e-40 - 1) < 1e-6,
+  aid_by_visit$using == c(114, 194, 80, 34), 194 - 114 == 80, 114 - 34 == 80, round(100 * 80 / 328, 1) == 24.4,
+  round(59.1 - 34.8, 1) == 24.3,
+  as.vector(table(case_totals)) == c(63, 142, 92, 28, 3), 63 + 3 == 66, 328 - 66 == 262,
+  isTRUE(all.equal(cochran_q(answers), unname(aid_test$statistic))),
+  isTRUE(all.equal(cochran_q(answers[case_totals > 0 & case_totals < 4, ]), unname(aid_test$statistic))),
+  sum(case_totals > 0 & case_totals < 4) == 262,
+  round(summary(set_cox)$coefficients[, "Pr(>|z|)"], 3) == c(0.320, 0.017),
+  round(unname(summary(set_cox)$logtest["test"]), 2) == 13.48, signif(unname(summary(set_cox)$logtest["pvalue"]), 3) == 0.00118,
+  round(unname(summary(set_cox)$sctest["test"]), 1) == 13.5,
+  as.vector(table(revisions$implant)) == c(5, 2, 17), round(expected, 1) == c(7.8, 6.8, 9.3), alone == 2, nrow(revisions) == 24,
+  isTRUE(all.equal(unname(expected),
+                   unname(rowSums(survdiff(Surv(followup_years, revised) ~ implant + strata(set_id), data = matched)$exp)))),
+  expected[["C"]] < 17, 17 < 2 * expected[["C"]],
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   n_distinct(ex_hips$case_id) == 136,
   round(tapply(ex_hips$promis_pf, ex_hips$visit, mean), 1) == c(36.8, 38.7, 45.5, 47.9),
@@ -786,8 +1081,9 @@ after_surgery <- proms |>
 
 DescTools::CochranQTest(walking_aid ~ visit | case_id, data = after_surgery)
 after_counts <- after_surgery |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
-after_counts
-mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$procedures)
+after_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$procedures)
+after_counts |>
+  mutate(percent = 100 * using / procedures, ci_low = 100 * after_ci[1, ], ci_high = 100 * after_ci[2, ])
 ```
 
 ## Python
@@ -797,8 +1093,9 @@ after = proms[proms["visit"].isin(["6wk", "3mo", "1yr"])][["case_id", "visit", "
 after = after[after.groupby("case_id")["walking_aid"].transform(lambda answers: answers.notna().all())]
 print(pg.cochran(data=after, dv="walking_aid", within="visit", subject="case_id"))
 counts = after.groupby("visit")["walking_aid"].agg(["sum", "count"]).loc[["6wk", "3mo", "1yr"]]
-print(counts)
-print([stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k, n in zip(counts["sum"], counts["count"])])
+cis = [stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k, n in zip(counts["sum"], counts["count"])]
+print(pd.DataFrame({"using": counts["sum"], "procedures": counts["count"], "percent": 100 * counts["sum"] / counts["count"],
+                    "ci_low": [100 * ci.low for ci in cis], "ci_high": [100 * ci.high for ci in cis]}))
 ```
 :::
 

@@ -199,17 +199,17 @@ All four were rechecked against the page text and the data after the audit.
 | 08-15 | C | no | Half of R's Cox printout is never mentioned | [catalog-08-09.md](catalog-08-09.md) | done |
 | 08-16 | C | yes | Two Results sentences leave out the group figures the page asks for | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-1 | ERROR | comments | The "patients" counted on this page are procedures | [catalog-08-09.md](catalog-08-09.md) | done |
-| 09-2 | A | yes | 574 pre-op scores, and the 246 and 43% built on it, are never shown | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-3 | A | yes | "28 of them sit at 57.0" is never shown | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-4 | A | yes | "60 randomized patients" in the boot arm is never shown | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-5 | A | yes | "6 patients score the maximum" is never shown | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-6 | A | yes | "Most patients improved from each visit to the next" has no output behind it | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-7 | B | no | "24.4 percentage points" does not follow from the printed percentages | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-8 | B | yes | Solution 3: the percentages are not computed and the CIs print as an unlabeled matrix | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-9 | B | no | Stratified Cox: the per-implant p-values are skipped, and "13.5" matches the wrong printed line | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-10 | B | no | Python's row and column names are not matched to the bullets | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-11 | C | no | One-sided CIs, Huynh-Feldt columns and "type III" vs "Type I" are printed but never explained | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-12 | C | comments | The Wilson interval line has no comment | [catalog-08-09.md](catalog-08-09.md) | open |
+| 09-2 | A | yes | 574 pre-op scores, and the 246 and 43% built on it, are never shown | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-3 | A | yes | "28 of them sit at 57.0" is never shown | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-4 | A | yes | "60 randomized patients" in the boot arm is never shown | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-5 | A | yes | "6 patients score the maximum" is never shown | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-6 | A | yes | "Most patients improved from each visit to the next" has no output behind it | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-7 | B | no | "24.4 percentage points" does not follow from the printed percentages | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-8 | B | yes | Solution 3: the percentages are not computed and the CIs print as an unlabeled matrix | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-9 | B | no | Stratified Cox: the per-implant p-values are skipped, and "13.5" matches the wrong printed line | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-10 | B | no | Python's row and column names are not matched to the bullets | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-11 | C | no | One-sided CIs, Huynh-Feldt columns and "type III" vs "Type I" are printed but never explained | [catalog-08-09.md](catalog-08-09.md) | done |
+| 09-12 | C | comments | The Wilson interval line has no comment | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-13 | B | no | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | done |
 | 10-1 | A | yes | Budin vs CT disagreement figures come only from the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
 | 10-2 | A | yes | Bias-corrected V = 0.18 is never printed | [catalog-10-12.md](catalog-10-12.md) | open |
