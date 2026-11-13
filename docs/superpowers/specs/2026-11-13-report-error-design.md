@@ -9,7 +9,7 @@ Doc presents the site to the HFR Ortho learners on Monday 16.11.2026. He wants e
 ## Goals
 
 - Every page in `en/`, `de/` and `fr/` carries a "Report an error" link in the page's language.
-- Clicking it opens an email to `josephmichael.schwab@h-fr.ch` that already names the page, the section and any text the learner highlighted. The learner only types what is wrong.
+- Clicking it opens an email to `soft-canoes2@icloud.com` that already names the page, the section and any text the learner highlighted. The learner only types what is wrong.
 - No account, no outside service. Works on phones.
 - Merged and deployed before 16.11.2026.
 
@@ -29,7 +29,7 @@ Doc presents the site to the HFR Ortho learners on Monday 16.11.2026. He wants e
 
 - Only whole-project renders use the freeze, and CI never runs R or Python (golden rule 5). The change must render from the existing freeze, except for the three pages whose prose changes.
 - Translations change prose only; the three languages keep the same structure (golden rule 21).
-- The address is readable in the public source and on a public page. Doc chose his own HFR address knowing this.
+- The address is readable in the public source and on a public page. Doc first chose his HFR address, then on 13.11.2026 replaced it with an iCloud alias made for this site, so the address shown here can be retired without touching his own.
 - An email link does nothing on a computer with no mail app set up (webmail only), so the address must also appear as plain text somewhere.
 
 ## Approaches
@@ -40,7 +40,7 @@ Doc presents the site to the HFR Ortho learners on Monday 16.11.2026. He wants e
 
 ## Design
 
-Decided by Doc: prefilled email, approach 1, the address above. The rest are Claude's calls, shown to Doc on 13.11.2026.
+Decided by Doc: prefilled email, approach 1, the address above (changed to the iCloud alias on 13.11.2026). The rest are Claude's calls, shown to Doc on 13.11.2026.
 
 **File.** `report-error.html` at the repo root, holding `<script id="report-error">`. `_quarto.yml` lists it after `lang-switch.html` under `include-after-body`. It does not depend on names defined in `lang-switch.html`. It does nothing on the root redirect page.
 
@@ -61,7 +61,7 @@ Decided by Doc: prefilled email, approach 1, the address above. The rest are Cla
 **The email.**
 
 ```
-To:      josephmichael.schwab@h-fr.ch
+To:      soft-canoes2@icloud.com
 Subject: HFR Ortho Stats: en/catalog/06-two-unpaired-groups
 
 Page: https://hfr-ortho.github.io/stats-formation/en/catalog/06-two-unpaired-groups.html#mann-whitney
@@ -77,7 +77,7 @@ What is wrong or confusing:
 
 **"Getting help" in `getting-started/using-this-site.qmd`, all three languages.** The first bullet becomes, in English:
 
-> Something on this site is wrong or confusing? Click **Report an error** on that page. It opens an email that already names the page; highlight the sentence first and it is included. No mail app on this computer? Write to josephmichael.schwab@h-fr.ch. With a GitHub account you can [open an issue](https://github.com/hfr-ortho/stats-formation/issues) instead.
+> Something on this site is wrong or confusing? Click **Report an error** on that page. It opens an email that already names the page; highlight the sentence first and it is included. No mail app on this computer? Write to soft-canoes2@icloud.com. With a GitHub account you can [open an issue](https://github.com/hfr-ortho/stats-formation/issues) instead.
 
 German and French follow `docs/glossary.csv` and `docs/translation-guide.md`.
 

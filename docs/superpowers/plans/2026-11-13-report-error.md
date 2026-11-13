@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Reports go to `josephmichael.schwab@h-fr.ch`.
+- Reports go to `soft-canoes2@icloud.com`.
 - Subject prefix, the same in every language: `HFR Ortho Stats: `.
 - Highlighted text: whitespace collapsed, cut to 300 characters with `…`.
 - No page source edits other than `getting-started/using-this-site.qmd` in `en/`, `de/`, `fr/`. Nothing else may re-run R or Python.
@@ -82,7 +82,7 @@ def href(lang, selection, page="en/catalog/06-two-unpaired-groups", url=PAGE_URL
 
 def test_constants_are_the_ones_in_the_spec():
     assert run(["REPORT_TO", "REPORT_PREFIX", "REPORT_MAX"]) == \
-        ["josephmichael.schwab@h-fr.ch", "HFR Ortho Stats: ", 300]
+        ["soft-canoes2@icloud.com", "HFR Ortho Stats: ", 300]
 
 
 def test_labels_in_every_language():
@@ -127,7 +127,7 @@ def test_section_comes_from_the_highlight_then_the_address():
 
 def test_email_names_the_page_and_the_highlight():
     to, subject, body = mail(href("en", "the mean (SD) was"))
-    assert to == "josephmichael.schwab@h-fr.ch"
+    assert to == "soft-canoes2@icloud.com"
     assert subject == "HFR Ortho Stats: en/catalog/06-two-unpaired-groups"
     assert body == f'Page: {PAGE_URL}\r\nHighlighted text: "the mean (SD) was"\r\n\r\nWhat is wrong or confusing:\r\n'
 
@@ -326,7 +326,7 @@ def test_getting_help_names_the_report_link_and_the_address(site):
     for lang in LANGS:
         help_text = text_of(load_lang(lang, "getting-started/using-this-site.html").select_one("section#getting-help"))
         assert REPORT_LINK[lang] in help_text, lang
-        assert "josephmichael.schwab@h-fr.ch" in help_text, lang
+        assert "soft-canoes2@icloud.com" in help_text, lang
         assert "github.com/hfr-ortho/stats-formation/issues" in str(
             load_lang(lang, "getting-started/using-this-site.html").select_one("section#getting-help")), lang
 ```
@@ -343,19 +343,19 @@ Exact copy. The French line below already has U+00A0 before each `?` and `;`; ch
 `en`:
 
 ```markdown
-- Something on this site is wrong or confusing? Click **Report an error** on that page. It opens an email that already names the page; highlight the sentence first and it is included. No mail app on this computer? Write to josephmichael.schwab@h-fr.ch. With a GitHub account you can [open an issue](https://github.com/hfr-ortho/stats-formation/issues) instead.
+- Something on this site is wrong or confusing? Click **Report an error** on that page. It opens an email that already names the page; highlight the sentence first and it is included. No mail app on this computer? Write to soft-canoes2@icloud.com. With a GitHub account you can [open an issue](https://github.com/hfr-ortho/stats-formation/issues) instead.
 ```
 
 `de`:
 
 ```markdown
-- Etwas auf dieser Website ist falsch oder unklar? Klicken Sie auf der betreffenden Seite auf **Fehler melden**. Es öffnet sich eine E-Mail, in der die Seite schon steht; markieren Sie zuerst den Satz, dann steht auch er darin. Kein E-Mail-Programm auf diesem Computer? Schreiben Sie an josephmichael.schwab@h-fr.ch. Mit einem GitHub-Konto können Sie stattdessen [ein Issue eröffnen](https://github.com/hfr-ortho/stats-formation/issues).
+- Etwas auf dieser Website ist falsch oder unklar? Klicken Sie auf der betreffenden Seite auf **Fehler melden**. Es öffnet sich eine E-Mail, in der die Seite schon steht; markieren Sie zuerst den Satz, dann steht auch er darin. Kein E-Mail-Programm auf diesem Computer? Schreiben Sie an soft-canoes2@icloud.com. Mit einem GitHub-Konto können Sie stattdessen [ein Issue eröffnen](https://github.com/hfr-ortho/stats-formation/issues).
 ```
 
 `fr`:
 
 ```markdown
-- Quelque chose est faux ou confus sur ce site ? Cliquez sur **Signaler une erreur** sur la page concernée. Un e-mail s'ouvre et indique déjà la page ; surlignez d'abord la phrase et elle y figure aussi. Pas de logiciel de messagerie sur cet ordinateur ? Écrivez à josephmichael.schwab@h-fr.ch. Avec un compte GitHub, vous pouvez aussi [ouvrir un ticket](https://github.com/hfr-ortho/stats-formation/issues).
+- Quelque chose est faux ou confus sur ce site ? Cliquez sur **Signaler une erreur** sur la page concernée. Un e-mail s'ouvre et indique déjà la page ; surlignez d'abord la phrase et elle y figure aussi. Pas de logiciel de messagerie sur cet ordinateur ? Écrivez à soft-canoes2@icloud.com. Avec un compte GitHub, vous pouvez aussi [ouvrir un ticket](https://github.com/hfr-ortho/stats-formation/issues).
 ```
 
 - [ ] **Step 4: Document the script**

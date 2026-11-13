@@ -48,7 +48,7 @@ def href(lang, selection, page="en/catalog/06-two-unpaired-groups", url=PAGE_URL
 
 def test_constants_are_the_ones_in_the_spec():
     assert run(["REPORT_TO", "REPORT_PREFIX", "REPORT_MAX"]) == \
-        ["josephmichael.schwab@h-fr.ch", "HFR Ortho Stats: ", 300]
+        ["soft-canoes2@icloud.com", "HFR Ortho Stats: ", 300]
 
 
 def test_labels_in_every_language():
@@ -93,7 +93,7 @@ def test_section_comes_from_the_highlight_then_the_address():
 
 def test_email_names_the_page_and_the_highlight():
     to, subject, body = mail(href("en", "the mean (SD) was"))
-    assert to == "josephmichael.schwab@h-fr.ch"
+    assert to == "soft-canoes2@icloud.com"
     assert subject == "HFR Ortho Stats: en/catalog/06-two-unpaired-groups"
     assert body == f'Page: {PAGE_URL}\r\nHighlighted text: "the mean (SD) was"\r\n\r\nWhat is wrong or confusing:\r\n'
 
