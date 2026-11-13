@@ -265,7 +265,8 @@ def test_mixed_model_exercise_counts_joint_replacements_not_patients(site):
 
 def test_walking_aid_answer_gives_counts_with_percentages(site):
     text = text_of(section(POST_HOC, "exercises"))
-    assert re.search(r"\d+ \(58\.8%\) used a walking aid at 6 weeks, \d+ \(25\.2%\) at 3 months and \d+ \(10\.7%\)", text)
+    # The counts are procedures (both sides of a bilateral patient count), so the sentence says where an aid "was used".
+    assert re.search(r"a walking aid was used in \d+ \(58\.8%\) at 6 weeks, \d+ \(25\.2%\) at 3 months and \d+ \(10\.7%\)", text)
 
 
 def test_log_rank_box_says_lifelines_needs_a_tighter_convergence_setting(site):

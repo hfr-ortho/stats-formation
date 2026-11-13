@@ -28,7 +28,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages, data and models made earlier.
 
-Until the section on [bilateral patients](#stratified-cox), the examples use every case as if it were a separate patient, including the 80 patients who had both sides operated on.
+Until the section on [bilateral patients](#stratified-cox), the examples use every case as if it were a separate patient, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them).
 :::
 
 ## The hazard ratio {#hazard-ratio}
@@ -504,6 +504,14 @@ A Cox model assumes every row is an independent patient. Two common designs brea
 ## R
 
 ```{r}
+# How many patients had both sides replaced, and in how many of them was a joint revised?
+both_sides <- cohort |>
+  group_by(patient_id) |>
+  filter(n() == 2) |>                                    # patients with two procedures
+  summarise(any_revision = any(revised == 1))            # one row per patient: was either joint revised?
+nrow(both_sides)                                         # patients who had both sides replaced
+sum(both_sides$any_revision)                             # ... and how many of them had a revision
+
 clustered_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5,
                          data = cohort, cluster = patient_id)    # robust SEs, clustered on patient
 summary(clustered_model)$coefficients[, c("exp(coef)", "se(coef)", "robust se", "Pr(>|z|)")]
@@ -513,6 +521,11 @@ summary(clustered_model)$conf.int["implantC", ]
 ## Python
 
 ```{python}
+# How many patients had both sides replaced, and in how many of them was a joint revised?
+per_patient = cohort.groupby("patient_id")["revised"].agg(["size", "max"])   # procedures and any revision, per patient
+both_sides = per_patient[per_patient["size"] == 2]                             # patients with two procedures
+print(len(both_sides), int(both_sides["max"].sum()))                           # patients with both sides replaced; of them, with a revision
+
 clustered_model = CoxPHFitter().fit(
     cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "patient_id"]],
     duration_col="followup_years", event_col="revised", formula="implant + age_10 + sex + bmi_5",
@@ -529,6 +542,7 @@ rows = clustered_model.summary
 chk = {"se_b": float(rows.loc["implant[T.B]", "se(coef)"]), "se_c": float(rows.loc["implant[T.C]", "se(coef)"]),
        "se_age": float(rows.loc["age_10", "se(coef)"]), "se_male": float(rows.loc["sex[T.Male]", "se(coef)"]),
        "se_bmi": float(rows.loc["bmi_5", "se(coef)"])}
+chk_both = {"n": float(len(both_sides)), "revised": float(both_sides["max"].sum())}
 ```
 
 ```{r}
@@ -539,10 +553,11 @@ robust_se <- summary(clustered_model)$coefficients[, "robust se"]
 check_agree(list(se_b = robust_se[["implantB"]], se_c = robust_se[["implantC"]], se_age = robust_se[["age_10"]],
                  se_male = robust_se[["sexMale"]], se_bmi = robust_se[["bmi_5"]]),
             reticulate::py$chk, tol = 1e-3)
+check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), reticulate::py$chk_both)
 ```
 
 - **exp(coef):** unchanged: implant C's hazard ratio is still 3.19.
-- **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same (0.259 and 0.258 for implant C), so the CI barely moves (1.92 to 5.28). Only 20 of the 80 bilateral patients had a revision, so the pairing matters little in this cohort. It can matter much more in yours: check, and say in the Methods what you did.
+- **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same (0.259 and 0.258 for implant C), so the CI barely moves (1.92 to 5.28). Only 20 of the 80 bilateral patients had a revision (the two numbers the code prints first), so the pairing matters little in this cohort. It can matter much more in yours: check, and say in the Methods what you did.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: robust standard errors
@@ -703,6 +718,7 @@ stopifnot(
   round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
   round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
   n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
+  nrow(both_sides) == 80, sum(both_sides$any_revision) == 20,
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
   fg_hr("age_10") == 1.07, fg_ci("age_10") == c(0.86, 1.33),
   round(adjusted_hr["age_10", "exp(coef)"], 2) == 1.22,

@@ -43,6 +43,11 @@ table1_vars <- c("age", "sex", "bmi", "asa", "diabetes", "smoker", "los_days")
 labels <- list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
                diabetes ~ "Diabetes", smoker ~ "Smoking status",
                los_days ~ "Length of stay, days")
+
+nrow(cohort)                                  # Zeilen: eine pro Eingriff
+cohort |>
+  count(patient_id, name = "procedures") |>   # wie viele Eingriffe jede Person hatte
+  count(procedures, name = "patients")        # wie viele Personen 1 Eingriff hatten, wie viele 2
 ```
 
 ## Python
@@ -60,12 +65,28 @@ categorical = ["sex", "asa", "diabetes", "smoker"]
 labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA class",
           "diabetes": "Diabetes", "smoker": "Smoking status",
           "los_days": "Length of stay, days"}
+
+print(len(cohort))                                    # Zeilen: eine pro Eingriff
+per_patient = cohort["patient_id"].value_counts()     # wie viele Eingriffe jede Person hatte
+# wie viele Personen 1 Eingriff hatten, wie viele 2
+print(per_patient.value_counts().rename_axis("procedures").rename("patients"))
 ```
 :::
 
+```{python}
+#| include: false
+chk = {"rows": float(len(cohort)), "one": float((per_patient == 1).sum()), "two": float((per_patient == 2).sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(rows = nrow(cohort), one = sum(table(cohort$patient_id) == 1), two = sum(table(cohort$patient_id) == 2)),
+            reticulate::py$chk)
+```
+
 ::: {.callout-warning}
 ## ⚠️ Achtung: eine Zeile pro Eingriff, nicht pro Person
-Die Kohorte hat eine Zeile pro *Eingriff*. Bei 80 Patientinnen und Patienten wurden beide Seiten operiert, also stammen 600 Eingriffe von 520 Personen. Geben Sie an, was Ihre Tabelle zählt, zum Beispiel in einer Fussnote: «600 Eingriffe bei 520 Personen». Die beiden Eingriffe einer beidseitig operierten Person sind nicht unabhängig (gleiche Person, gleiches Alter, gleiches Geschlecht, gleiche Gesundheit). Tests, die jede Zeile wie eine eigene Patientin oder einen eigenen Patienten behandeln, sind deshalb etwas zu optimistisch. [Verteilungen und Testwahl](03-distributions.qmd#paired) erklärt die Möglichkeiten.
+Die Kohorte hat eine Zeile pro *Eingriff*. Die Zählung oben zeigt 440 Personen mit einem Eingriff und 80 mit zwei (beide Seiten): 440 + 80 = 520 Personen und 440 + 2 × 80 = 600 Eingriffe. Geben Sie an, was Ihre Tabelle zählt, zum Beispiel in einer Fussnote: «600 Eingriffe bei 520 Personen». Die beiden Eingriffe einer beidseitig operierten Person sind nicht unabhängig (gleiche Person, gleiches Alter, gleiches Geschlecht, gleiche Gesundheit). Tests, die jede Zeile wie eine eigene Patientin oder einen eigenen Patienten behandeln, sind deshalb etwas zu optimistisch. [Verteilungen und Testwahl](03-distributions.qmd#paired) erklärt die Möglichkeiten.
 :::
 
 ## Eine Gruppe {#one-group}
@@ -360,6 +381,7 @@ site_rows <- site_table$table_body |> filter(row_type == "label")
 site_smd <- setNames(abs(site_rows$estimate), site_rows$variable)
 stopifnot(
   nrow(cohort) == 600, n_distinct(cohort$patient_id) == 520,
+  sum(table(cohort$patient_id) == 1) == 440, 440 + 80 == 520, 440 + 2 * 80 == 600,
   sum(table(cohort$patient_id) == 2) == 80,
   sum(cohort$procedure == "THA") == 270, sum(cohort$procedure == "TKA") == 330,
   pct(cohort$sex[cohort$procedure == "THA"] == "Female") == 66,
@@ -439,5 +461,5 @@ SMDs. Das Matching soll die Gruppen einander angleichen. Sie auf Unterschiede zu
 ## Lösung
 "We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
-Prüfen Sie jede Zahl an Ihrer eigenen Tabelle: Mittelwert und SD für das Alter, n (%) für das Geschlecht, Median (IQR) für die Aufenthaltsdauer.
+Prüfen Sie jede Zahl an Ihrer eigenen Tabelle: Mittelwert und SD für das Alter, n (%) für das Geschlecht, Median (IQR) für die Aufenthaltsdauer. Die 520 Personen stammen aus der Zählung im [ersten Schritt](#setup).
 :::

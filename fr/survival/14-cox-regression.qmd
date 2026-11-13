@@ -28,7 +28,7 @@ La [page 13](13-kaplan-meier.qmd) a comparé des courbes de survie. La **régres
 ## 💡 Comment fonctionne cette page
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages, les données et les modèles créés plus haut.
 
-Jusqu'à la section sur les [patients bilatéraux](#stratified-cox), les exemples traitent chaque cas comme un patient distinct, y compris les 80 patients opérés des deux côtés. Dans le code, les prothèses s'appellent THA et TKA ; dans le texte, nous disons PTH et PTG.
+Jusqu'à la section sur les [patients bilatéraux](#stratified-cox), les exemples traitent chaque cas comme un patient distinct, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans le code, les prothèses s'appellent THA et TKA ; dans le texte, nous disons PTH et PTG.
 :::
 
 ## Le hazard ratio {#hazard-ratio}
@@ -504,6 +504,14 @@ Un modèle de Cox suppose que chaque ligne est un patient indépendant. Deux pla
 ## R
 
 ```{r}
+# combien de patients ont eu une prothèse des deux côtés, et chez combien d'entre eux une articulation a-t-elle été révisée ?
+both_sides <- cohort |>
+  group_by(patient_id) |>
+  filter(n() == 2) |>                                    # patients avec deux interventions
+  summarise(any_revision = any(revised == 1))            # une ligne par patient : l'une des articulations a-t-elle été révisée ?
+nrow(both_sides)                                         # patients opérés des deux côtés
+sum(both_sides$any_revision)                             # ... et combien d'entre eux ont eu une révision
+
 clustered_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5,
                          data = cohort, cluster = patient_id)    # erreurs standard robustes, en grappes sur le patient
 summary(clustered_model)$coefficients[, c("exp(coef)", "se(coef)", "robust se", "Pr(>|z|)")]
@@ -513,6 +521,11 @@ summary(clustered_model)$conf.int["implantC", ]
 ## Python
 
 ```{python}
+# combien de patients ont eu une prothèse des deux côtés, et chez combien d'entre eux une articulation a-t-elle été révisée ?
+per_patient = cohort.groupby("patient_id")["revised"].agg(["size", "max"])   # interventions et révision (oui/non), par patient
+both_sides = per_patient[per_patient["size"] == 2]                             # patients avec deux interventions
+print(len(both_sides), int(both_sides["max"].sum()))                           # patients opérés des deux côtés ; parmi eux, avec une révision
+
 clustered_model = CoxPHFitter().fit(
     cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "patient_id"]],
     duration_col="followup_years", event_col="revised", formula="implant + age_10 + sex + bmi_5",
@@ -529,6 +542,7 @@ rows = clustered_model.summary
 chk = {"se_b": float(rows.loc["implant[T.B]", "se(coef)"]), "se_c": float(rows.loc["implant[T.C]", "se(coef)"]),
        "se_age": float(rows.loc["age_10", "se(coef)"]), "se_male": float(rows.loc["sex[T.Male]", "se(coef)"]),
        "se_bmi": float(rows.loc["bmi_5", "se(coef)"])}
+chk_both = {"n": float(len(both_sides)), "revised": float(both_sides["max"].sum())}
 ```
 
 ```{r}
@@ -539,10 +553,11 @@ robust_se <- summary(clustered_model)$coefficients[, "robust se"]
 check_agree(list(se_b = robust_se[["implantB"]], se_c = robust_se[["implantC"]], se_age = robust_se[["age_10"]],
                  se_male = robust_se[["sexMale"]], se_bmi = robust_se[["bmi_5"]]),
             reticulate::py$chk, tol = 1e-3)
+check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), reticulate::py$chk_both)
 ```
 
 - **exp(coef) :** inchangé : le hazard ratio de l'implant C est toujours de 3.19.
-- **se(coef) / robust se :** R affiche les deux ; lifelines n'affiche que l'erreur robuste quand vous demandez des erreurs en grappes. Ici elles sont presque identiques (0.259 et 0.258 pour l'implant C), si bien que l'IC bouge à peine (1.92 à 5.28). Seuls 20 des 80 patients bilatéraux ont eu une révision : l'appariement compte donc peu dans cette cohorte. Il peut compter bien plus dans la vôtre : vérifiez, et dites dans les Méthodes ce que vous avez fait.
+- **se(coef) / robust se :** R affiche les deux ; lifelines n'affiche que l'erreur robuste quand vous demandez des erreurs en grappes. Ici elles sont presque identiques (0.259 et 0.258 pour l'implant C), si bien que l'IC bouge à peine (1.92 à 5.28). Seuls 20 des 80 patients bilatéraux ont eu une révision (les deux nombres que le code affiche en premier) : l'appariement compte donc peu dans cette cohorte. Il peut compter bien plus dans la vôtre : vérifiez, et dites dans les Méthodes ce que vous avez fait.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : erreurs standard robustes
@@ -703,6 +718,7 @@ stopifnot(
   round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
   round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
   n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
+  nrow(both_sides) == 80, sum(both_sides$any_revision) == 20,
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
   fg_hr("age_10") == 1.07, fg_ci("age_10") == c(0.86, 1.33),
   round(adjusted_hr["age_10", "exp(coef)"], 2) == 1.22,

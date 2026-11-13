@@ -28,7 +28,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages, Daten und Modelle, die weiter oben erstellt wurden.
 
-Bis zum Abschnitt über [beidseitig operierte Patientinnen und Patienten](#stratified-cox) behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Im Code heisst die Hüft-TP THA, die Knie-TP TKA.
+Bis zum Abschnitt über [beidseitig operierte Patientinnen und Patienten](#stratified-cox) behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Im Code heisst die Hüft-TP THA, die Knie-TP TKA.
 :::
 
 ## Das Hazard Ratio {#hazard-ratio}
@@ -504,6 +504,14 @@ Ein Cox-Modell setzt voraus, dass jede Zeile eine unabhängige Person ist. Zwei 
 ## R
 
 ```{r}
+# Wie viele Personen wurden auf beiden Seiten operiert, und bei wie vielen von ihnen wurde ein Gelenk revidiert?
+both_sides <- cohort |>
+  group_by(patient_id) |>
+  filter(n() == 2) |>                                    # Personen mit zwei Eingriffen
+  summarise(any_revision = any(revised == 1))            # eine Zeile pro Person: Wurde eines der Gelenke revidiert?
+nrow(both_sides)                                         # beidseitig operierte Personen
+sum(both_sides$any_revision)                             # ... und wie viele von ihnen eine Revision hatten
+
 clustered_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + bmi_5,
                          data = cohort, cluster = patient_id)    # robuste Standardfehler, nach Person geclustert
 summary(clustered_model)$coefficients[, c("exp(coef)", "se(coef)", "robust se", "Pr(>|z|)")]
@@ -513,6 +521,11 @@ summary(clustered_model)$conf.int["implantC", ]
 ## Python
 
 ```{python}
+# Wie viele Personen wurden auf beiden Seiten operiert, und bei wie vielen von ihnen wurde ein Gelenk revidiert?
+per_patient = cohort.groupby("patient_id")["revised"].agg(["size", "max"])   # Eingriffe und Revision (ja/nein) pro Person
+both_sides = per_patient[per_patient["size"] == 2]                             # Personen mit zwei Eingriffen
+print(len(both_sides), int(both_sides["max"].sum()))                           # beidseitig operierte Personen; davon mit einer Revision
+
 clustered_model = CoxPHFitter().fit(
     cohort[["followup_years", "revised", "implant", "age_10", "sex", "bmi_5", "patient_id"]],
     duration_col="followup_years", event_col="revised", formula="implant + age_10 + sex + bmi_5",
@@ -529,6 +542,7 @@ rows = clustered_model.summary
 chk = {"se_b": float(rows.loc["implant[T.B]", "se(coef)"]), "se_c": float(rows.loc["implant[T.C]", "se(coef)"]),
        "se_age": float(rows.loc["age_10", "se(coef)"]), "se_male": float(rows.loc["sex[T.Male]", "se(coef)"]),
        "se_bmi": float(rows.loc["bmi_5", "se(coef)"])}
+chk_both = {"n": float(len(both_sides)), "revised": float(both_sides["max"].sum())}
 ```
 
 ```{r}
@@ -539,10 +553,11 @@ robust_se <- summary(clustered_model)$coefficients[, "robust se"]
 check_agree(list(se_b = robust_se[["implantB"]], se_c = robust_se[["implantC"]], se_age = robust_se[["age_10"]],
                  se_male = robust_se[["sexMale"]], se_bmi = robust_se[["bmi_5"]]),
             reticulate::py$chk, tol = 1e-3)
+check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), reticulate::py$chk_both)
 ```
 
 - **exp(coef):** unverändert: Das Hazard Ratio von Implantat C ist weiterhin 3.19.
-- **se(coef) / robust se:** R gibt beide aus; lifelines gibt beim Clustern nur den robusten aus. Hier sind sie fast gleich (0.259 und 0.258 für Implantat C), sodass sich das KI kaum verändert (1.92 bis 5.28). Nur 20 der 80 beidseitig operierten Personen hatten eine Revision, die Paarung spielt in dieser Kohorte also wenig Rolle. In Ihren Daten kann sie viel mehr ausmachen: Prüfen Sie das und sagen Sie im Methodenteil, was Sie getan haben.
+- **se(coef) / robust se:** R gibt beide aus; lifelines gibt beim Clustern nur den robusten aus. Hier sind sie fast gleich (0.259 und 0.258 für Implantat C), sodass sich das KI kaum verändert (1.92 bis 5.28). Nur 20 der 80 beidseitig operierten Personen hatten eine Revision (die beiden Zahlen, die der Code zuerst ausgibt), die Paarung spielt in dieser Kohorte also wenig Rolle. In Ihren Daten kann sie viel mehr ausmachen: Prüfen Sie das und sagen Sie im Methodenteil, was Sie getan haben.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: robuste Standardfehler
@@ -703,6 +718,7 @@ stopifnot(
   round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
   round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
   n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
+  nrow(both_sides) == 80, sum(both_sides$any_revision) == 20,
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
   fg_hr("age_10") == 1.07, fg_ci("age_10") == c(0.86, 1.33),
   round(adjusted_hr["age_10", "exp(coef)"], 2) == 1.22,

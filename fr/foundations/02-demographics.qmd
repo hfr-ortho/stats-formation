@@ -43,6 +43,11 @@ table1_vars <- c("age", "sex", "bmi", "asa", "diabetes", "smoker", "los_days")
 labels <- list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
                diabetes ~ "Diabetes", smoker ~ "Smoking status",
                los_days ~ "Length of stay, days")
+
+nrow(cohort)                                  # lignes : une par intervention
+cohort |>
+  count(patient_id, name = "procedures") |>   # combien d'interventions a eues chaque patient
+  count(procedures, name = "patients")        # combien de patients ont eu 1 intervention, combien en ont eu 2
 ```
 
 ## Python
@@ -60,12 +65,28 @@ categorical = ["sex", "asa", "diabetes", "smoker"]
 labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA class",
           "diabetes": "Diabetes", "smoker": "Smoking status",
           "los_days": "Length of stay, days"}
+
+print(len(cohort))                                    # lignes : une par intervention
+per_patient = cohort["patient_id"].value_counts()     # combien d'interventions a eues chaque patient
+# combien de patients ont eu 1 intervention, combien en ont eu 2
+print(per_patient.value_counts().rename_axis("procedures").rename("patients"))
 ```
 :::
 
+```{python}
+#| include: false
+chk = {"rows": float(len(cohort)), "one": float((per_patient == 1).sum()), "two": float((per_patient == 2).sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(rows = nrow(cohort), one = sum(table(cohort$patient_id) == 1), two = sum(table(cohort$patient_id) == 2)),
+            reticulate::py$chk)
+```
+
 ::: {.callout-warning}
 ## ⚠️ Attention : une ligne par intervention, pas par patient
-La cohorte compte une ligne par *intervention*. 80 patients ont été opérés des deux côtés, donc 600 interventions concernent 520 patients. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop optimistes (valeurs p trop petites, IC trop étroits). [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
+La cohorte compte une ligne par *intervention*. Le décompte ci-dessus montre 440 patients avec une intervention et 80 avec deux (les deux côtés) : 440 + 80 = 520 patients, et 440 + 2 × 80 = 600 interventions. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop optimistes (valeurs p trop petites, IC trop étroits). [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
 :::
 
 ## Un seul groupe {#one-group}
@@ -360,6 +381,7 @@ site_rows <- site_table$table_body |> filter(row_type == "label")
 site_smd <- setNames(abs(site_rows$estimate), site_rows$variable)
 stopifnot(
   nrow(cohort) == 600, n_distinct(cohort$patient_id) == 520,
+  sum(table(cohort$patient_id) == 1) == 440, 440 + 80 == 520, 440 + 2 * 80 == 600,
   sum(table(cohort$patient_id) == 2) == 80,
   sum(cohort$procedure == "THA") == 270, sum(cohort$procedure == "TKA") == 330,
   pct(cohort$sex[cohort$procedure == "THA"] == "Female") == 66,
@@ -439,5 +461,5 @@ Des SMD. L'appariement a été conçu pour rendre les groupes semblables, donc t
 ## Solution
 "We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
-Vérifiez chaque nombre avec votre propre tableau : moyenne et écart-type pour l'âge, n (%) pour le sexe, médiane (IIQ) pour la durée de séjour.
+Vérifiez chaque nombre avec votre propre tableau : moyenne et écart-type pour l'âge, n (%) pour le sexe, médiane (IIQ) pour la durée de séjour. Les 520 patients viennent du décompte de la [première étape](#setup).
 :::

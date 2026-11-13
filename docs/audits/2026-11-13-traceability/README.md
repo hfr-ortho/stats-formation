@@ -96,7 +96,7 @@ All four were rechecked against the page text and the data after the audit.
 | 01-6 | B | no | Exercise 1's answer points at spellings the output shows differently | [foundations.md](foundations.md) | open |
 | 01-7 | C | no | The spot check prints different patients in R and Python, with no explanation | [foundations.md](foundations.md) | open |
 | 01-8 | C | no | Step 5's output is never read, and whole numbers print as `2.0` in Python | [foundations.md](foundations.md) | open |
-| 02-1 | A | yes | 80 bilateral patients and 520 patients appear in no output | [foundations.md](foundations.md) | open |
+| 02-1 | A | yes | 80 bilateral patients and 520 patients appear in no output | [foundations.md](foundations.md) | done |
 | 02-2 | A | yes | R's age SMD of 0.1048 is not in any output | [foundations.md](foundations.md) | open |
 | 02-3 | B | no | The quartile box quotes THA numbers the reader has not seen yet | [foundations.md](foundations.md) | open |
 | 02-4 | B | no | The SMD sentence drops the minus signs before the box explains them, and the box's sign rule does not fit three of the seven rows | [foundations.md](foundations.md) | open |
@@ -104,7 +104,7 @@ All four were rechecked against the page text and the data after the audit.
 | 02-6 | B | no | "Percentages are of the patients with a value" cannot be seen in R, and Python's Missing column is not explained | [foundations.md](foundations.md) | open |
 | 02-7 | B | no | The wrong guesses in the ⚠️ box are described, not shown | [foundations.md](foundations.md) | open |
 | 02-8 | C | no | Diabetes p-value prints as `>0.999` in R and `1.000` in Python | [foundations.md](foundations.md) | open |
-| 03-1 | A | yes | "80 patients appear twice … usually in the same group" has no output behind it | [foundations.md](foundations.md) | open |
+| 03-1 | A | yes | "80 patients appear twice … usually in the same group" has no output behind it | [foundations.md](foundations.md) | done |
 | 03-2 | B | no | The three skewness values are printed and never read | [foundations.md](foundations.md) | open |
 | 03-3 | B | ? | R's summary shows the upper CI limit as 2.65; the prose says 2.6 | [foundations.md](foundations.md) | open |
 | 03-4 | B | no | "About a third of a standard deviation" comes from page 2 | [foundations.md](foundations.md) | open |
@@ -118,7 +118,7 @@ All four were rechecked against the page text and the data after the audit.
 | 04-3 | A | yes | "13 scored exactly 42" and "62 of the 194 (32%)" are computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-4 | A | yes | Exercise 2: the skew, "4 to 6 days" and "0.9 ± 1.1" are shown nowhere | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-5 | A | no | "Every patient was followed for at least 30 days or until death" is checked only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-6 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | open |
+| 04-6 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | done |
 | 04-7 | B | yes | "263 patients at risk" appears only in R's output, and lifelines counts 258 | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-8 | B | no | "13.5% were revised" is not derived, and the summary output is never read | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-9 | B | no | "roughly 47 to 84 years" needs arithmetic the page does not show | [catalog-04-05.md](catalog-04-05.md) | open |
@@ -133,7 +133,7 @@ All four were rechecked against the page text and the data after the audit.
 | 05-2 | A | yes | Results quote the median 85.8 and IQR 74.7 to 93.9, which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-3 | A | yes | n = 260, V = 22698.5 and "more patients scored above 80 than below" have no visible source | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-4 | A | yes | The Wilson interval "84.1% to 88.0%" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-5 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | open |
+| 05-5 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | done |
 | 05-6 | B | no | "p < 0.001" is never tied to the e-notation the output prints | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-7 | B | no | "Read the output" uses R's labels only; Python names the same values differently, or omits them | [catalog-04-05.md](catalog-04-05.md) | open |
 | 05-8 | B | no | R prints a 95% CI for the rank-biserial r (0.21 to 0.46) that the page never mentions | [catalog-04-05.md](catalog-04-05.md) | open |
@@ -147,7 +147,7 @@ All four were rechecked against the page text and the data after the audit.
 | 06-2 | A | yes | Exercise 2: "13% with a boot and 17% with a cast scored 24" is not printed anywhere | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-3 | A | yes | Exercise 3: the two percentages and the risk difference are not printed | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-4 | A | yes | "Leaving out any one patient still gives −1" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 06-5 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and is not this page's number | [catalog-06-07.md](catalog-06-07.md) | open |
+| 06-5 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and is not this page's number | [catalog-06-07.md](catalog-06-07.md) | done |
 | 06-6 | B | no | Missed-visit counts need a subtraction from numbers the output never shows | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-7 | B | no | p-values are printed in e-notation and the bullets never say how to read them | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-8 | B | no | The mean difference (3.6) is printed only in Python; the bullets use R's labels only | [catalog-06-07.md](catalog-06-07.md) | open |
@@ -172,7 +172,7 @@ All four were rechecked against the page text and the data after the audit.
 | 07-7 | A | yes | Exercise 1: "reads high in hips with little torsion and low in hips with a lot" is shown nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-8 | A | no | d~av~ "0.33 here" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-9 | A | yes | "A hazard ratio of 3.4997 instead of 3.5" is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-10 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and no example on this page has 80 | [catalog-06-07.md](catalog-06-07.md) | open |
+| 07-10 | A | no | "The 80 patients who had both sides operated on" is shown nowhere, and no example on this page has 80 | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-11 | B | no | p-values: e-notation unexplained, and R and Python print different things for the Wilcoxon test | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-12 | B | no | The CI for d~z~ is printed in R only, and nothing says so | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-13 | B | yes | Exercise 1: R cuts the Budin SD off the table, so "SD 7.6" is visible in Python only | [catalog-06-07.md](catalog-06-07.md) | open |
@@ -194,11 +194,11 @@ All four were rechecked against the page text and the data after the audit.
 | 08-10 | B | yes | Cox overall test: Python prints neither df nor p, and "the second number" is ambiguous | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-11 | B | no | Chi-square: Python prints three unlabeled numbers, and its percentage table flips the columns | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-12 | B | no | "9,999 random tables" is a scipy default the code never shows | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-13 | B | yes | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | open |
+| 08-13 | B | yes | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | done |
 | 08-14 | C | no | R's `e` notation is used six times and never explained | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-15 | C | no | Half of R's Cox printout is never mentioned | [catalog-08-09.md](catalog-08-09.md) | open |
 | 08-16 | C | yes | Two Results sentences leave out the group figures the page asks for | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-1 | ERROR | comments | The "patients" counted on this page are procedures | [catalog-08-09.md](catalog-08-09.md) | open |
+| 09-1 | ERROR | comments | The "patients" counted on this page are procedures | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-2 | A | yes | 574 pre-op scores, and the 246 and 43% built on it, are never shown | [catalog-08-09.md](catalog-08-09.md) | open |
 | 09-3 | A | yes | "28 of them sit at 57.0" is never shown | [catalog-08-09.md](catalog-08-09.md) | open |
 | 09-4 | A | yes | "60 randomized patients" in the boot arm is never shown | [catalog-08-09.md](catalog-08-09.md) | open |
@@ -210,10 +210,10 @@ All four were rechecked against the page text and the data after the audit.
 | 09-10 | B | no | Python's row and column names are not matched to the bullets | [catalog-08-09.md](catalog-08-09.md) | open |
 | 09-11 | C | no | One-sided CIs, Huynh-Feldt columns and "type III" vs "Type I" are printed but never explained | [catalog-08-09.md](catalog-08-09.md) | open |
 | 09-12 | C | comments | The Wilson interval line has no comment | [catalog-08-09.md](catalog-08-09.md) | open |
-| 09-13 | B | no | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | open |
+| 09-13 | B | no | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | done |
 | 10-1 | A | yes | Budin vs CT disagreement figures come only from the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
 | 10-2 | A | yes | Bias-corrected V = 0.18 is never printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-3 | A | no | "the 80 patients who had both sides operated on" is asserted, never counted | [catalog-10-12.md](catalog-10-12.md) | open |
+| 10-3 | A | no | "the 80 patients who had both sides operated on" is asserted, never counted | [catalog-10-12.md](catalog-10-12.md) | done |
 | 10-4 | B | yes | Exercise 3: the percentages and denominators are not in the Solution's output | [catalog-10-12.md](catalog-10-12.md) | open |
 | 10-5 | B | yes | "404 procedures" has to be added up from the table | [catalog-10-12.md](catalog-10-12.md) | open |
 | 10-6 | B | yes | Which cell has the smallest expected count is not shown | [catalog-10-12.md](catalog-10-12.md) | open |
@@ -227,7 +227,7 @@ All four were rechecked against the page text and the data after the audit.
 | 11-4 | A | yes | "BMI here runs from 18.0 to 44.5" is never printed | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-5 | A | no | "each knee appears up to four times" is not shown and not even guarded | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-6 | A | yes | Code comment "pre-op visits (1-27 days before surgery)" quotes an unshown range | [catalog-10-12.md](catalog-10-12.md) | open |
-| 11-7 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | open |
+| 11-7 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | done |
 | 11-8 | B | yes | Half-gain CI "49 to 64 days" is printed in R only, and Python's own CI gives 48 to 64 | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-9 | B | no | Cox CI "1.09 to 1.48" looks wrong against R's printed 1.095 and 1.485 | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-10 | B | yes | "74 of 1,200" and "6.2%" need adding and dividing | [catalog-10-12.md](catalog-10-12.md) | open |
@@ -243,7 +243,7 @@ All four were rechecked against the page text and the data after the audit.
 | 11-20 | C | no | Logistic: "Null and residual deviance (R) or LLR p-value (Python)" leaves the R reader without the link | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-1 | A | yes | Logistic ⚠️ box: "15 of 350" and "all 6 patients whose graft failed in the first year" are never shown | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-2 | A | no | lifelines' default result "0.82915" is computed only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-3 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | open |
+| 12-3 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | done |
 | 12-4 | B | no | Python prints p = 0.001 for both grafts; the text says p < 0.001 | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-5 | B | yes | Python prints proportions where the text quotes percentages | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-6 | B | yes | "a difference of 19 days (95% CI 11 to 28)": 19 is not printed, and the CI is in R only | [catalog-10-12.md](catalog-10-12.md) | open |
@@ -254,7 +254,7 @@ All four were rechecked against the page text and the data after the audit.
 | 12-11 | B | no | Model-comparison tables: the reported df and χ² are never tied to their columns | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-12 | B | yes | Cox overall test: df and p are in R's output only | [catalog-10-12.md](catalog-10-12.md) | open |
 | 12-13 | C | no | The spline is run before it is explained, inside a section about something else | [catalog-10-12.md](catalog-10-12.md) | open |
-| 13-1 | A | no | "the 80 patients who had both sides operated on" is never counted | [survival.md](survival.md) | open |
+| 13-1 | A | no | "the 80 patients who had both sides operated on" is never counted | [survival.md](survival.md) | done |
 | 13-2 | B | yes | Log-rank p-values and χ² quoted to more digits than R prints | [survival.md](survival.md) | open |
 | 13-3 | B | no | Observed and Expected revisions appear in R's output only | [survival.md](survival.md) | open |
 | 13-4 | B | yes | Cumulative incidence of death (24.0%, CI 19.3% to 29.0%) is printed in R only | [survival.md](survival.md) | open |
@@ -268,7 +268,7 @@ All four were rechecked against the page text and the data after the audit.
 | 13-12 | C | no | Python prints rows of unlabeled numbers; the bullets use R's column names | [survival.md](survival.md) | open |
 | 13-13 | C | no | Toy example: the "Year 2" bullet has no row in R's output | [survival.md](survival.md) | open |
 | 14-1 | A | yes | The single hazard ratio for approach (1.37, CI 0.72 to 2.61, log 0.31) is never printed | [survival.md](survival.md) | open |
-| 14-2 | A | yes | "80 bilateral patients", "only 20 of the 80 had a revision" | [survival.md](survival.md) | open |
+| 14-2 | A | yes | "80 bilateral patients", "only 20 of the 80 had a revision" | [survival.md](survival.md) | done |
 | 14-3 | A | yes | "it rests on 16 early revisions" is not shown | [survival.md](survival.md) | open |
 | 14-4 | B | yes | Proportional-hazards p-values: prose says 0.359 and 0.106, R prints 0.36 and 0.11, Python has neither | [survival.md](survival.md) | open |
 | 14-5 | B | no | "2.85 times as many" cannot be reproduced from the quoted percentages | [survival.md](survival.md) | open |
@@ -284,7 +284,7 @@ All four were rechecked against the page text and the data after the audit.
 | 15-4 | A | yes | F(3, 596) = 23.9 in two Results sentences | [beyond.md](beyond.md) | open |
 | 15-5 | A | yes | Overall log-rank χ² = 33.5 (df = 2) | [beyond.md](beyond.md) | open |
 | 15-6 | A | yes | "Two of the expected counts are below 5" | [beyond.md](beyond.md) | open |
-| 15-7 | A | no | "the 80 patients who had both sides operated on" | [beyond.md](beyond.md) | open |
+| 15-7 | A | no | "the 80 patients who had both sides operated on" | [beyond.md](beyond.md) | done |
 | 15-8 | B | yes | PROMIS "improved between each visit", "changes this large": no means shown | [beyond.md](beyond.md) | open |
 | 15-9 | B | yes | EFAS "rose" with no medians; n = 50 printed in Python only | [beyond.md](beyond.md) | open |
 | 15-10 | B | no | Holm's 0.044 and BH's 0.026: the arithmetic is not shown | [beyond.md](beyond.md) | open |

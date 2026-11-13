@@ -23,12 +23,12 @@ Les mêmes patients mesurés **trois fois ou plus** (avant l'opération, puis à
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : les PROM (mesures des résultats rapportés par le patient) et les ensembles appariés de la cohorte de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
-Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les 80 patients opérés des deux côtés. Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
+Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Attention : ces tests écartent tout patient qui a manqué une visite
-L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exigent que chaque patient soit mesuré à **chaque** visite. Un patient qui a manqué une visite est écarté complètement, avec ses autres mesures. Ci-dessous, 574 patients avaient un score de fonction physique PROMIS préopératoire, mais seulement 328 en avaient quatre : l'analyse perd donc 246 patients (43 %). Si les patients qui manquent des visites diffèrent des autres, le résultat est biaisé. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) utilisent toutes les données disponibles de chacun et sont en général le meilleur choix pour des PROM répétés.
+L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exigent que chaque patient soit mesuré à **chaque** visite. Un patient qui a manqué une visite est écarté complètement, avec ses autres mesures. Ci-dessous, 574 interventions avaient un score de fonction physique PROMIS préopératoire, mais seulement 328 en avaient quatre : l'analyse perd donc 246 interventions (43 %). Si les patients qui manquent des visites diffèrent des autres, le résultat est biaisé. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) utilisent toutes les données disponibles de chacun et sont en général le meilleur choix pour des PROM répétés.
 :::
 
 ## ANOVA à mesures répétées {#repeated-measures-anova}
@@ -60,11 +60,11 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 pf <- proms |>
   select(case_id, visit, promis_pf) |>
   group_by(case_id) |>
-  filter(all(!is.na(promis_pf))) |>     # garder les patients mesurés aux quatre visites
+  filter(all(!is.na(promis_pf))) |>     # garder les interventions mesurées aux quatre visites
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))   # dans l'ordre du temps
 
-n_distinct(pf$case_id)                # patients avec des données complètes
+n_distinct(pf$case_id)                # interventions avec des données complètes
 
 ggplot(pf, aes(visit, promis_pf)) +
   geom_boxplot() +
@@ -87,9 +87,9 @@ visits = ["preop", "6wk", "3mo", "1yr"]   # dans l'ordre du temps
 
 pf = proms[["case_id", "visit", "promis_pf"]]
 complete = pf.groupby("case_id")["promis_pf"].transform(lambda scores: scores.notna().all())
-pf = pf[complete]                        # garder les patients mesurés aux quatre visites
+pf = pf[complete]                        # garder les interventions mesurées aux quatre visites
 
-print(pf["case_id"].nunique())            # patients avec des données complètes
+print(pf["case_id"].nunique())            # interventions avec des données complètes
 
 fig, ax = plt.subplots(figsize=(6, 3))
 parts = ax.boxplot([pf.loc[pf["visit"] == v, "promis_pf"] for v in visits], tick_labels=visits)   # nommer le résultat l'empêche de s'afficher
@@ -101,7 +101,7 @@ print(pf.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[visits])
 ```
 :::
 
-328 patients ont été mesurés aux quatre visites. Leur score T moyen augmente à chaque visite, et les dispersions restent semblables. À 1 an, 28 d'entre eux sont à 57.0, le meilleur score que le questionnaire puisse enregistrer. C'est une petite part, à une seule visite, parmi 328 patients : l'ANOVA à mesures répétées reste donc un choix raisonnable ici.
+328 interventions ont été mesurées aux quatre visites. Leur score T moyen augmente à chaque visite, et les dispersions restent semblables. À 1 an, 28 d'entre elles sont à 57.0, le meilleur score que le questionnaire puisse enregistrer. C'est une petite part, à une seule visite, parmi 328 interventions : l'ANOVA à mesures répétées reste donc un choix raisonnable ici.
 
 ### Exécuter l'analyse
 
@@ -146,7 +146,7 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 
 ### Lire le résultat
 
-- **F = 326.1, avec 3 et 981 degrés de liberté** (DFn/DFd en R, DF en Python) : à quel point les moyennes des visites diffèrent, par rapport à la variation des scores de chaque patient autour de sa propre moyenne. 3 = quatre visites moins une ; 981 = 3 × (328 patients − 1).
+- **F = 326.1, avec 3 et 981 degrés de liberté** (DFn/DFd en R, DF en Python) : à quel point les moyennes des visites diffèrent, par rapport à la variation des scores de chaque intervention autour de sa propre moyenne. 3 = quatre visites moins une ; 981 = 3 × (328 interventions − 1).
 - **p** (R affiche `7.55e-147` ; le tableau de pingouin l'arrondit à `0.0` dans la ligne `p_unc`) : très inférieure à 0.001.
 - **Mauchly's Test for Sphericity** (R) : W = 0.995, p = 0.903. Aucune preuve que la sphéricité soit violée : le résultat non corrigé reste valable.
 - **Sphericity Corrections** (R) ou **eps** et **p_GG_corr** (Python) : l'epsilon de Greenhouse-Geisser vaut 0.997 (1 signifie une sphéricité parfaite), et la valeur p corrigée reste très inférieure à 0.001.
@@ -177,11 +177,11 @@ print(pf_anova.loc[0, "np2"])    # pingouin n'en calcule pas l'IC
 
 > **Methods:** PROMIS-29+2 physical function T-scores across the four visits were compared with one-way repeated-measures ANOVA in patients with all four measurements. Sphericity was assessed with Mauchly's test, with the Greenhouse-Geisser correction planned if it was violated. Partial eta squared (η²~p~) is reported as the effect size.
 >
-> **Results:** Of 574 patients with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, one-sided 95% CI 0.47 to 1.00; Mauchly's test of sphericity p = 0.903).
+> **Results:** Of 574 procedures with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, one-sided 95% CI 0.47 to 1.00; Mauchly's test of sphericity p = 0.903).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un F significatif ne dit pas quelles visites diffèrent
-L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *quand*, comparez les visites avec des tests appariés et une correction pour comparaisons multiples ([page 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Et rappelez-vous qui manque : les 246 patients sans données complètes ont peut-être récupéré différemment.
+L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *quand*, comparez les visites avec des tests appariés et une correction pour comparaisons multiples ([page 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Et rappelez-vous qui manque : les patients derrière les 246 interventions sans données complètes ont peut-être récupéré différemment.
 :::
 
 ::: {.callout-tip}
@@ -373,13 +373,13 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 aid <- proms |>
   select(case_id, visit, walking_aid) |>
   group_by(case_id) |>
-  filter(all(!is.na(walking_aid))) |>    # garder les patients mesurés aux quatre visites
+  filter(all(!is.na(walking_aid))) |>    # garder les interventions mesurées aux quatre visites
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
 
 aid |>
   group_by(visit) |>
-  summarise(patients = n(), using_aid = sum(walking_aid), percent = 100 * mean(walking_aid))
+  summarise(procedures = n(), using_aid = sum(walking_aid), percent = 100 * mean(walking_aid))
 ```
 
 ## Python
@@ -394,13 +394,13 @@ visits = ["preop", "6wk", "3mo", "1yr"]
 
 aid = proms[["case_id", "visit", "walking_aid"]]
 complete = aid.groupby("case_id")["walking_aid"].transform(lambda answers: answers.notna().all())
-aid = aid[complete]                     # garder les patients mesurés aux quatre visites
+aid = aid[complete]                     # garder les interventions mesurées aux quatre visites
 
 print(aid.groupby("visit")["walking_aid"].agg(["count", "sum", "mean"]).loc[visits])
 ```
 :::
 
-328 patients ont répondu aux quatre visites. Un tiers utilisait une aide à la marche avant l'opération, plus de la moitié à 6 semaines, et un sur dix à 1 an.
+Pour 328 interventions, une réponse existe aux quatre visites. Une aide à la marche était utilisée pour un tiers avant l'opération, pour plus de la moitié à 6 semaines, et pour une sur dix à 1 an.
 
 ### Exécuter l'analyse
 
@@ -443,11 +443,11 @@ Le test Q de Cochran n'a pas de taille d'effet unique et standard. Décrivez la 
 ## R
 
 ```{r}
-aid_by_visit <- aid |> group_by(visit) |> summarise(using = sum(walking_aid), patients = n())
-aid_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, aid_by_visit$using, aid_by_visit$patients)
+aid_by_visit <- aid |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
+aid_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, aid_by_visit$using, aid_by_visit$procedures)
 
 aid_by_visit |>
-  mutate(percent = 100 * using / patients, ci_low = 100 * aid_ci[1, ], ci_high = 100 * aid_ci[2, ])
+  mutate(percent = 100 * using / procedures, ci_low = 100 * aid_ci[1, ], ci_high = 100 * aid_ci[2, ])
 ```
 
 ## Python
@@ -479,7 +479,7 @@ L'utilisation a augmenté de 24.4 points de pourcentage entre la visite préopé
 
 > **Methods:** Walking-aid use at the four visits was compared with Cochran's Q test in patients assessed at all four. Proportions are reported with Wilson 95% CIs.
 >
-> **Results:** Among 328 patients assessed at all four visits, walking-aid use was 34.8% (95% CI 29.8% to 40.1%) before surgery, 59.1% (95% CI 53.8% to 64.3%) at 6 weeks, 24.4% (95% CI 20.1% to 29.3%) at 3 months and 10.4% (95% CI 7.5% to 14.1%) at 1 year (Cochran's Q = 186.8, df = 3, p < 0.001).
+> **Results:** Among 328 procedures assessed at all four visits, walking-aid use was 34.8% (95% CI 29.8% to 40.1%) before surgery, 59.1% (95% CI 53.8% to 64.3%) at 6 weeks, 24.4% (95% CI 20.1% to 29.3%) at 3 months and 10.4% (95% CI 7.5% to 14.1%) at 1 year (Cochran's Q = 186.8, df = 3, p < 0.001).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le test Q ne donne pas la direction
@@ -621,7 +621,7 @@ Pour des PROM répétés, un [modèle mixte](../beyond/16-mixed-models.qmd#why-m
 pf_by_visit <- pf |> group_by(visit) |> summarise(mean = mean(promis_pf), sd = sd(promis_pf))
 efas_quartiles <- efas_boot |> group_by(visit) |>
   summarise(median = median(efas), q1 = quantile(efas, 0.25), q3 = quantile(efas, 0.75))
-aid_percent <- 100 * aid_by_visit$using / aid_by_visit$patients
+aid_percent <- 100 * aid_by_visit$using / aid_by_visit$procedures
 complete_cases <- function(data, value, visits) {   # long data, patients measured at every one of these visits
   data |> filter(visit %in% visits) |> select(case_id, visit, value = all_of(value)) |> group_by(case_id) |>
     filter(all(!is.na(value))) |> ungroup() |> mutate(visit = factor(visit, levels = visits)) |> rename(!!value := value)
@@ -655,7 +655,7 @@ stopifnot(
   sum(efas_boot$efas[efas_boot$visit == "12mo"] == 24) == 6,
   round(unname(efas_test$statistic), 1) == 84.9, unname(efas_test$parameter) == 2, efas_test$p.value < 0.001,
   round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.78,
-  n_distinct(aid$case_id) == 328, aid_by_visit$patients == c(328, 328, 328, 328),
+  n_distinct(aid$case_id) == 328, aid_by_visit$procedures == c(328, 328, 328, 328),
   round(aid_percent, 1) == c(34.8, 59.1, 24.4, 10.4),
   round(100 * aid_ci[1, ], 1) == c(29.8, 53.8, 20.1, 7.5), round(100 * aid_ci[2, ], 1) == c(40.1, 64.3, 29.3, 14.1),
   round(aid_percent[2] - aid_percent[1], 1) == 24.4, round(aid_percent[1] - aid_percent[4], 1) == 24.4,
@@ -785,9 +785,9 @@ after_surgery <- proms |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "1yr")))
 
 DescTools::CochranQTest(walking_aid ~ visit | case_id, data = after_surgery)
-after_counts <- after_surgery |> group_by(visit) |> summarise(using = sum(walking_aid), patients = n())
+after_counts <- after_surgery |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
 after_counts
-mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$patients)
+mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$procedures)
 ```
 
 ## Python
@@ -802,7 +802,7 @@ print([stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k, n i
 ```
 :::
 
-> **Results:** Among 345 patients assessed at all three post-operative visits, walking-aid use was 58.8% (95% CI 53.6% to 63.9%) at 6 weeks, 25.2% (95% CI 20.9% to 30.1%) at 3 months and 10.7% (95% CI 7.9% to 14.4%) at 1 year (Cochran's Q = 185.9, df = 2, p < 0.001).
+> **Results:** Among 345 procedures assessed at all three post-operative visits, walking-aid use was 58.8% (95% CI 53.6% to 63.9%) at 6 weeks, 25.2% (95% CI 20.9% to 30.1%) at 3 months and 10.7% (95% CI 7.9% to 14.4%) at 1 year (Cochran's Q = 185.9, df = 2, p < 0.001).
 
-Plus de patients sont inclus ici (345 contre 328), parce que les patients qui n'ont manqué que la visite préopératoire comptent maintenant.
+Plus d'interventions sont incluses ici (345 contre 328), parce que celles pour lesquelles seule la visite préopératoire manque comptent maintenant.
 :::

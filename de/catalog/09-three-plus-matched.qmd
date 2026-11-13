@@ -23,12 +23,12 @@ Dieselben Patientinnen und Patienten, **drei- oder mehrmals** gemessen (vor der 
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zu den PROMs (patientenberichtete Messinstrumente) und gematchten Gruppen der Gelenkersatz-Kohorte oder zur Studie zu Walker und Gips von [Seite 6](06-two-unpaired-groups.qmd#unpaired-t). Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
 
-Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch die 80 Patientinnen und Patienten, die auf beiden Seiten operiert wurden. Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
+Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Diese Tests schliessen jede Person mit einer verpassten Kontrolle aus
-Die ANOVA mit Messwiederholung, der Friedman-Test und der Cochran-Q-Test brauchen Patientinnen und Patienten, die bei **jeder** Kontrolle gemessen wurden. Wer eine Kontrolle verpasst hat, fällt samt den übrigen Messungen ganz heraus. Unten hatten 574 Personen vor der Operation einen Score für die körperliche Funktion PROMIS, aber nur 328 hatten alle vier, die Analyse verliert also 246 Personen (43 %). Wenn sich Personen, die Kontrollen verpassen, von den übrigen unterscheiden, ist das Resultat verzerrt. [Gemischte Modelle](../beyond/16-mixed-models.qmd#why-mixed-models) verwenden die verfügbaren Daten aller Personen und sind bei wiederholt erhobenen PROMs meist die bessere Wahl.
+Die ANOVA mit Messwiederholung, der Friedman-Test und der Cochran-Q-Test brauchen Patientinnen und Patienten, die bei **jeder** Kontrolle gemessen wurden. Wer eine Kontrolle verpasst hat, fällt samt den übrigen Messungen ganz heraus. Unten hatten 574 Eingriffe vor der Operation einen Score für die körperliche Funktion PROMIS, aber nur 328 hatten alle vier, die Analyse verliert also 246 Eingriffe (43 %). Wenn sich Personen, die Kontrollen verpassen, von den übrigen unterscheiden, ist das Resultat verzerrt. [Gemischte Modelle](../beyond/16-mixed-models.qmd#why-mixed-models) verwenden die verfügbaren Daten aller Personen und sind bei wiederholt erhobenen PROMs meist die bessere Wahl.
 :::
 
 ## ANOVA mit Messwiederholung {#repeated-measures-anova}
@@ -60,11 +60,11 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 pf <- proms |>
   select(case_id, visit, promis_pf) |>
   group_by(case_id) |>
-  filter(all(!is.na(promis_pf))) |>     # Personen behalten, die bei allen vier Kontrollen gemessen wurden
+  filter(all(!is.na(promis_pf))) |>     # Eingriffe behalten, die bei allen vier Kontrollen gemessen wurden
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))   # in zeitlicher Reihenfolge
 
-n_distinct(pf$case_id)                # Personen mit vollständigen Daten
+n_distinct(pf$case_id)                # Eingriffe mit vollständigen Daten
 
 ggplot(pf, aes(visit, promis_pf)) +
   geom_boxplot() +
@@ -87,9 +87,9 @@ visits = ["preop", "6wk", "3mo", "1yr"]   # in zeitlicher Reihenfolge
 
 pf = proms[["case_id", "visit", "promis_pf"]]
 complete = pf.groupby("case_id")["promis_pf"].transform(lambda scores: scores.notna().all())
-pf = pf[complete]                        # Personen behalten, die bei allen vier Kontrollen gemessen wurden
+pf = pf[complete]                        # Eingriffe behalten, die bei allen vier Kontrollen gemessen wurden
 
-print(pf["case_id"].nunique())            # Personen mit vollständigen Daten
+print(pf["case_id"].nunique())            # Eingriffe mit vollständigen Daten
 
 fig, ax = plt.subplots(figsize=(6, 3))
 parts = ax.boxplot([pf.loc[pf["visit"] == v, "promis_pf"] for v in visits], tick_labels=visits)   # mit einem Namen für den Rückgabewert erscheint er nicht in der Ausgabe
@@ -101,7 +101,7 @@ print(pf.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[visits])
 ```
 :::
 
-328 Patientinnen und Patienten wurden bei allen vier Kontrollen gemessen. Ihr mittlerer T-Score steigt bei jeder Kontrolle, und die Streuungen bleiben ähnlich. Nach 1 Jahr liegen 28 von ihnen bei 57.0, dem besten Wert, den der Fragebogen erfassen kann. Das ist ein kleiner Anteil, bei einer einzigen Kontrolle, unter 328 Personen, die ANOVA mit Messwiederholung ist hier also weiterhin eine vernünftige Wahl.
+328 Eingriffe wurden bei allen vier Kontrollen gemessen. Ihr mittlerer T-Score steigt bei jeder Kontrolle, und die Streuungen bleiben ähnlich. Nach 1 Jahr liegen 28 von ihnen bei 57.0, dem besten Wert, den der Fragebogen erfassen kann. Das ist ein kleiner Anteil, bei einer einzigen Kontrolle, unter 328 Eingriffen, die ANOVA mit Messwiederholung ist hier also weiterhin eine vernünftige Wahl.
 
 ### Analyse durchführen
 
@@ -146,7 +146,7 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 
 ### Ausgabe lesen
 
-- **F = 326.1 mit 3 und 981 Freiheitsgraden** (DFn/DFd in R, DF in Python): wie stark sich die Mittelwerte der Kontrollen unterscheiden, verglichen damit, wie stark die Scores jeder Person um ihren eigenen Mittelwert schwanken. 3 = vier Kontrollen minus eins; 981 = 3 × (328 Patientinnen und Patienten − 1).
+- **F = 326.1 mit 3 und 981 Freiheitsgraden** (DFn/DFd in R, DF in Python): wie stark sich die Mittelwerte der Kontrollen unterscheiden, verglichen damit, wie stark die Scores jedes Eingriffs um ihren eigenen Mittelwert schwanken. 3 = vier Kontrollen minus eins; 981 = 3 × (328 Eingriffe − 1).
 - **p** (R gibt `7.55e-147` aus; die Tabelle von pingouin rundet ihn auf `0.0` in der Zeile `p_unc`): weit unter 0.001.
 - **Mauchly-Test, W = 0.995, p = 0.903:** kein Hinweis darauf, dass die Sphärizität verletzt ist, das unkorrigierte Resultat gilt also.
 - **Sphericity Corrections** (R) oder **eps** und **p_GG_corr** (Python): Das Epsilon nach Greenhouse-Geisser beträgt 0.997 (1 bedeutet perfekte Sphärizität), und der korrigierte p-Wert liegt weiterhin weit unter 0.001.
@@ -177,11 +177,11 @@ print(pf_anova.loc[0, "np2"])    # pingouin berechnet dafür kein KI
 
 > **Methods:** PROMIS-29+2 physical function T-scores across the four visits were compared with one-way repeated-measures ANOVA in patients with all four measurements. Sphericity was assessed with Mauchly's test, with the Greenhouse-Geisser correction planned if it was violated. Partial eta squared (η²~p~) is reported as the effect size.
 >
-> **Results:** Of 574 patients with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, one-sided 95% CI 0.47 to 1.00; Mauchly's test of sphericity p = 0.903).
+> **Results:** Of 574 procedures with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, one-sided 95% CI 0.47 to 1.00; Mauchly's test of sphericity p = 0.903).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Ein signifikantes F sagt nicht, welche Kontrollen sich unterscheiden
-Die ANOVA sagt, dass die Mittelwerte der Kontrollen nicht alle gleich sind. Um zu sagen, *wann*, vergleichen Sie die Kontrollen mit gepaarten Tests und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Und denken Sie an die fehlenden Personen: Die 246 Personen ohne vollständige Daten können sich anders erholt haben.
+Die ANOVA sagt, dass die Mittelwerte der Kontrollen nicht alle gleich sind. Um zu sagen, *wann*, vergleichen Sie die Kontrollen mit gepaarten Tests und einer Korrektur für multiple Vergleiche ([Seite 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Und denken Sie an die fehlenden Personen: Die Personen hinter den 246 Eingriffen ohne vollständige Daten können sich anders erholt haben.
 :::
 
 ::: {.callout-tip}
@@ -373,13 +373,13 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 aid <- proms |>
   select(case_id, visit, walking_aid) |>
   group_by(case_id) |>
-  filter(all(!is.na(walking_aid))) |>    # Personen behalten, die bei allen vier Kontrollen gemessen wurden
+  filter(all(!is.na(walking_aid))) |>    # Eingriffe behalten, die bei allen vier Kontrollen gemessen wurden
   ungroup() |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
 
 aid |>
   group_by(visit) |>
-  summarise(patients = n(), using_aid = sum(walking_aid), percent = 100 * mean(walking_aid))
+  summarise(procedures = n(), using_aid = sum(walking_aid), percent = 100 * mean(walking_aid))
 ```
 
 ## Python
@@ -394,13 +394,13 @@ visits = ["preop", "6wk", "3mo", "1yr"]
 
 aid = proms[["case_id", "visit", "walking_aid"]]
 complete = aid.groupby("case_id")["walking_aid"].transform(lambda answers: answers.notna().all())
-aid = aid[complete]                     # Personen behalten, die bei allen vier Kontrollen gemessen wurden
+aid = aid[complete]                     # Eingriffe behalten, die bei allen vier Kontrollen gemessen wurden
 
 print(aid.groupby("visit")["walking_aid"].agg(["count", "sum", "mean"]).loc[visits])
 ```
 :::
 
-328 Patientinnen und Patienten antworteten bei allen vier Kontrollen. Ein Drittel benutzte vor der Operation eine Gehhilfe, mehr als die Hälfte nach 6 Wochen und eine von zehn Personen nach 1 Jahr.
+Für 328 Eingriffe liegt bei allen vier Kontrollen eine Antwort vor. Bei einem Drittel wurde vor der Operation eine Gehhilfe benutzt, bei mehr als der Hälfte nach 6 Wochen und bei einem von zehn nach 1 Jahr.
 
 ### Analyse durchführen
 
@@ -443,11 +443,11 @@ Der Cochran-Q-Test hat keine einheitliche Standard-Effektstärke. Beschreiben Si
 ## R
 
 ```{r}
-aid_by_visit <- aid |> group_by(visit) |> summarise(using = sum(walking_aid), patients = n())
-aid_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, aid_by_visit$using, aid_by_visit$patients)
+aid_by_visit <- aid |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
+aid_ci <- mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, aid_by_visit$using, aid_by_visit$procedures)
 
 aid_by_visit |>
-  mutate(percent = 100 * using / patients, ci_low = 100 * aid_ci[1, ], ci_high = 100 * aid_ci[2, ])
+  mutate(percent = 100 * using / procedures, ci_low = 100 * aid_ci[1, ], ci_high = 100 * aid_ci[2, ])
 ```
 
 ## Python
@@ -479,7 +479,7 @@ Die Benutzung stieg um 24.4 Prozentpunkte von vor der Operation bis 6 Wochen und
 
 > **Methods:** Walking-aid use at the four visits was compared with Cochran's Q test in patients assessed at all four. Proportions are reported with Wilson 95% CIs.
 >
-> **Results:** Among 328 patients assessed at all four visits, walking-aid use was 34.8% (95% CI 29.8% to 40.1%) before surgery, 59.1% (95% CI 53.8% to 64.3%) at 6 weeks, 24.4% (95% CI 20.1% to 29.3%) at 3 months and 10.4% (95% CI 7.5% to 14.1%) at 1 year (Cochran's Q = 186.8, df = 3, p < 0.001).
+> **Results:** Among 328 procedures assessed at all four visits, walking-aid use was 34.8% (95% CI 29.8% to 40.1%) before surgery, 59.1% (95% CI 53.8% to 64.3%) at 6 weeks, 24.4% (95% CI 20.1% to 29.3%) at 3 months and 10.4% (95% CI 7.5% to 14.1%) at 1 year (Cochran's Q = 186.8, df = 3, p < 0.001).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Q sagt nichts über die Richtung
@@ -621,7 +621,7 @@ Bei wiederholt erhobenen PROMs beantwortet ein [gemischtes Modell](../beyond/16-
 pf_by_visit <- pf |> group_by(visit) |> summarise(mean = mean(promis_pf), sd = sd(promis_pf))
 efas_quartiles <- efas_boot |> group_by(visit) |>
   summarise(median = median(efas), q1 = quantile(efas, 0.25), q3 = quantile(efas, 0.75))
-aid_percent <- 100 * aid_by_visit$using / aid_by_visit$patients
+aid_percent <- 100 * aid_by_visit$using / aid_by_visit$procedures
 complete_cases <- function(data, value, visits) {   # long data, patients measured at every one of these visits
   data |> filter(visit %in% visits) |> select(case_id, visit, value = all_of(value)) |> group_by(case_id) |>
     filter(all(!is.na(value))) |> ungroup() |> mutate(visit = factor(visit, levels = visits)) |> rename(!!value := value)
@@ -655,7 +655,7 @@ stopifnot(
   sum(efas_boot$efas[efas_boot$visit == "12mo"] == 24) == 6,
   round(unname(efas_test$statistic), 1) == 84.9, unname(efas_test$parameter) == 2, efas_test$p.value < 0.001,
   round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.78,
-  n_distinct(aid$case_id) == 328, aid_by_visit$patients == c(328, 328, 328, 328),
+  n_distinct(aid$case_id) == 328, aid_by_visit$procedures == c(328, 328, 328, 328),
   round(aid_percent, 1) == c(34.8, 59.1, 24.4, 10.4),
   round(100 * aid_ci[1, ], 1) == c(29.8, 53.8, 20.1, 7.5), round(100 * aid_ci[2, ], 1) == c(40.1, 64.3, 29.3, 14.1),
   round(aid_percent[2] - aid_percent[1], 1) == 24.4, round(aid_percent[1] - aid_percent[4], 1) == 24.4,
@@ -785,9 +785,9 @@ after_surgery <- proms |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "1yr")))
 
 DescTools::CochranQTest(walking_aid ~ visit | case_id, data = after_surgery)
-after_counts <- after_surgery |> group_by(visit) |> summarise(using = sum(walking_aid), patients = n())
+after_counts <- after_surgery |> group_by(visit) |> summarise(using = sum(walking_aid), procedures = n())
 after_counts
-mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$patients)
+mapply(function(k, n) prop.test(k, n, correct = FALSE)$conf.int, after_counts$using, after_counts$procedures)
 ```
 
 ## Python
@@ -802,7 +802,7 @@ print([stats.binomtest(int(k), int(n)).proportion_ci(method="wilson") for k, n i
 ```
 :::
 
-> **Results:** Among 345 patients assessed at all three post-operative visits, walking-aid use was 58.8% (95% CI 53.6% to 63.9%) at 6 weeks, 25.2% (95% CI 20.9% to 30.1%) at 3 months and 10.7% (95% CI 7.9% to 14.4%) at 1 year (Cochran's Q = 185.9, df = 2, p < 0.001).
+> **Results:** Among 345 procedures assessed at all three post-operative visits, walking-aid use was 58.8% (95% CI 53.6% to 63.9%) at 6 weeks, 25.2% (95% CI 20.9% to 30.1%) at 3 months and 10.7% (95% CI 7.9% to 14.4%) at 1 year (Cochran's Q = 185.9, df = 2, p < 0.001).
 
-Hier sind mehr Personen eingeschlossen (345 gegenüber 328), weil nun auch Personen zählen, die nur die präoperative Kontrolle verpasst haben.
+Hier sind mehr Eingriffe eingeschlossen (345 gegenüber 328), weil nun auch jene zählen, bei denen nur die präoperative Kontrolle fehlt.
 :::

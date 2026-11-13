@@ -43,6 +43,11 @@ table1_vars <- c("age", "sex", "bmi", "asa", "diabetes", "smoker", "los_days")
 labels <- list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
                diabetes ~ "Diabetes", smoker ~ "Smoking status",
                los_days ~ "Length of stay, days")
+
+nrow(cohort)                                  # rows: one per procedure
+cohort |>
+  count(patient_id, name = "procedures") |>   # how many procedures each patient had
+  count(procedures, name = "patients")        # how many patients had 1 procedure, how many had 2
 ```
 
 ## Python
@@ -60,12 +65,28 @@ categorical = ["sex", "asa", "diabetes", "smoker"]
 labels = {"age": "Age, years", "sex": "Sex", "bmi": "BMI, kg/m²", "asa": "ASA class",
           "diabetes": "Diabetes", "smoker": "Smoking status",
           "los_days": "Length of stay, days"}
+
+print(len(cohort))                                    # rows: one per procedure
+per_patient = cohort["patient_id"].value_counts()     # how many procedures each patient had
+# how many patients had 1 procedure, how many had 2
+print(per_patient.value_counts().rename_axis("procedures").rename("patients"))
 ```
 :::
 
+```{python}
+#| include: false
+chk = {"rows": float(len(cohort)), "one": float((per_patient == 1).sum()), "two": float((per_patient == 2).sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(rows = nrow(cohort), one = sum(table(cohort$patient_id) == 1), two = sum(table(cohort$patient_id) == 2)),
+            reticulate::py$chk)
+```
+
 ::: {.callout-warning}
 ## ⚠️ Watch out: one row per procedure, not per patient
-The cohort has one row per *procedure*. 80 patients had both sides done, so 600 procedures come from 520 patients. Say which one your table counts, for example in a footnote: "600 procedures in 520 patients". The two procedures of a bilateral patient are not independent (same person, same age, sex and health), so tests that treat every row as a separate patient are slightly overconfident. [Distributions & choosing a test](03-distributions.qmd#paired) explains the options.
+The cohort has one row per *procedure*. The count above shows 440 patients with one procedure and 80 with two (both sides): 440 + 80 = 520 patients, and 440 + 2 × 80 = 600 procedures. Say which one your table counts, for example in a footnote: "600 procedures in 520 patients". The two procedures of a bilateral patient are not independent (same person, same age, sex and health), so tests that treat every row as a separate patient are slightly overconfident. [Distributions & choosing a test](03-distributions.qmd#paired) explains the options.
 :::
 
 ## One group {#one-group}
@@ -360,6 +381,7 @@ site_rows <- site_table$table_body |> filter(row_type == "label")
 site_smd <- setNames(abs(site_rows$estimate), site_rows$variable)
 stopifnot(
   nrow(cohort) == 600, n_distinct(cohort$patient_id) == 520,
+  sum(table(cohort$patient_id) == 1) == 440, 440 + 80 == 520, 440 + 2 * 80 == 600,
   sum(table(cohort$patient_id) == 2) == 80,
   sum(cohort$procedure == "THA") == 270, sum(cohort$procedure == "TKA") == 330,
   pct(cohort$sex[cohort$procedure == "THA"] == "Female") == 66,
@@ -439,5 +461,5 @@ SMDs. The matching was designed to make the groups alike, so testing whether the
 ## Solution
 "We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
-Check every number against your own table: mean and SD for age, n (%) for sex, median (IQR) for length of stay.
+Check every number against your own table: mean and SD for age, n (%) for sex, median (IQR) for length of stay. The 520 patients come from the count in [the first step](#setup).
 :::
