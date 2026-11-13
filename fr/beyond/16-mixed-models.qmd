@@ -83,7 +83,7 @@ per_knee <- count(knees, case_id)
 check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores = nrow(knees)), reticulate::py$chk)
 ```
 
-Les 330 genoux ont tous au moins un score, 1146 au total, mais seulement 192 genoux ont les quatre. L'ANOVA à mesures répétées écarterait les 138 autres genoux (42 %) avec tous les scores qu'ils ont donnés. Un modèle mixte garde les 1146 scores.
+Les 330 genoux ont tous au moins un score (4 + 28 + 106 + 192 = 330), 1146 scores au total (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), mais seulement 192 genoux ont les quatre. L'ANOVA à mesures répétées écarterait les 138 autres genoux (138 / 330 = 42 %) avec tous les scores qu'ils ont donnés. Un modèle mixte garde les 1146 scores.
 
 Écarter des patients n'est pas seulement du gaspillage. Cela peut biaiser le résultat, et cela dépend de la raison pour laquelle des scores manquent :
 - **Données manquantes complètement au hasard :** une visite manquée n'a rien à voir avec la récupération du patient (le service a reporté le rendez-vous, le patient a déménagé). Les deux méthodes sont non biaisées ; le modèle mixte est plus précis parce qu'il utilise plus de données.
@@ -134,9 +134,63 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 
 Lire le résultat :
 - **Fixed effects :** le KOOS JR moyen était de 50.0 avant l'opération (l'intercept), et plus haut de 12.5 points à 6 semaines, de 24.2 à 3 mois et de 33.9 à 1 an. Le coefficient de chaque visite est sa différence avec la visite préopératoire.
-- **Random effects :** les niveaux de départ propres aux genoux varient autour de la moyenne avec un écart-type (ET) de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la variance, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET résiduel de 8.6 points.
-- **Part de la variation qui se situe entre les genoux :** 78.1 / (78.1 + 73.5) = 0.52, le coefficient de corrélation intraclasse (CCI ; la [page 17](17-agreement.qmd#icc) reprend la même idée pour les évaluateurs). Environ la moitié de la dispersion des scores vient du fait que les genoux diffèrent les uns des autres ; c'est pourquoi les scores ne peuvent pas être traités comme indépendants.
+- **Random effects :** les niveaux de départ propres aux genoux varient autour de la moyenne avec un [écart-type (ET)](../glossary.qmd#standard-deviation){.term} de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET résiduel de 8.6 points (ligne « Residual » de R : variance 73.45, ET 8.570 ; Python n'affiche que la variance, sous la forme « Scale: 73.4507 » dans l'en-tête, et √73.45 = 8.57).
+- **Part de la variation qui se situe entre les genoux :** la variance des genoux divisée par la variance des genoux plus la variance résiduelle, 78.1 / (78.1 + 73.5) = 0.52, le coefficient de corrélation intraclasse (CCI ; la [page 17](17-agreement.qmd#icc) reprend la même idée pour les évaluateurs). Environ la moitié de la dispersion des scores vient du fait que les genoux diffèrent les uns des autres ; c'est pourquoi les scores ne peuvent pas être traités comme indépendants.
 - **REML :** les deux programmes ajustent le modèle par maximum de vraisemblance restreint, le choix habituel pour l'estimer.
+
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot : les deux variances à la main
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+around <- knees |>
+  group_by(visit) |>
+  mutate(from_visit_mean = prom_score - mean(prom_score)) |>   # chaque score moins la moyenne de sa visite
+  ungroup()
+var(around$from_visit_mean)                                    # la dispersion totale autour des moyennes des visites, en variance
+78.1 + 73.5                                                    # les deux variances du modèle, additionnées
+
+side_by_side <- around |>                                      # une ligne par genou, une colonne par visite
+  select(case_id, visit, from_visit_mean) |>
+  pivot_wider(names_from = visit, values_from = from_visit_mean)
+# à quel point deux scores du même genou se ressemblent-ils ? La corrélation, pour chaque paire de visites
+round(cor(side_by_side[, c("preop", "6wk", "3mo", "1yr")], use = "pairwise.complete.obs"), 2)
+```
+
+## Python
+
+```{python}
+visit_mean = knees.groupby("visit", observed=True)["prom_score"].transform("mean")
+around = knees.assign(from_visit_mean=knees["prom_score"] - visit_mean)   # chaque score moins la moyenne de sa visite
+print(around["from_visit_mean"].var())                                    # la dispersion totale autour des moyennes des visites, en variance
+print(78.1 + 73.5)                                                        # les deux variances du modèle, additionnées
+
+side_by_side = around.pivot(index="case_id", columns="visit", values="from_visit_mean")   # une ligne par genou, une colonne par visite
+# à quel point deux scores du même genou se ressemblent-ils ? La corrélation, pour chaque paire de visites
+print(side_by_side.corr().round(2))
+```
+:::
+
+Autour des moyennes des visites, les scores ont une variance de 150.8. Le modèle répartit cette dispersion en 78.1 entre les genoux et 73.5 au sein d'un genou, soit 151.6 au total, presque la même chose.
+
+Le tableau donne la corrélation entre les scores d'un même genou à deux visites. Les six corrélations vont de 0.43 à 0.57. Un intercept aléatoire les décrit par un seul nombre, le coefficient de corrélation intraclasse de 0.52 : deux scores du même genou se ressemblent à peu près autant, quelles que soient les deux visites choisies.
+:::
+
+```{python}
+#| include: false
+alike = side_by_side.corr()
+chk = {"total": float(around["from_visit_mean"].var()), "first_last": float(alike.loc["preop", "1yr"]),
+       "first_second": float(alike.loc["preop", "6wk"]), "middle": float(alike.loc["6wk", "3mo"])}
+```
+
+```{r}
+#| include: false
+alike <- cor(side_by_side[, c("preop", "6wk", "3mo", "1yr")], use = "pairwise.complete.obs")
+check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop", "1yr"],
+                 first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
+```
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : degrés de liberté
@@ -155,6 +209,8 @@ knee_means <- emmeans(knee_model, ~ visit, lmer.df = "satterthwaite")
 knee_means
 # la comparaison planifiée, 1 an moins préopératoire (une seule comparaison, donc pas d'ajustement, page 15)
 confint(contrast(knee_means, method = list("1yr - preop" = c(-1, 0, 0, 1))))
+# seulement les genoux qui ont les quatre scores : ce qu'utiliserait l'ANOVA à mesures répétées
+knees |> group_by(case_id) |> filter(n() == 4) |> group_by(visit) |> summarise(knees = n(), mean = mean(prom_score))
 ```
 
 ## Python
@@ -177,6 +233,9 @@ knee_means = marginal_means(knee_model, visit_grid)
 print(knee_means.round(2))
 # la comparaison planifiée, 1 an moins préopératoire
 print(knee_model.fe_params["visit[T.1yr]"], knee_model.conf_int().loc["visit[T.1yr]"].to_list())
+# seulement les genoux qui ont les quatre scores : ce qu'utiliserait l'ANOVA à mesures répétées
+complete = knees[knees.groupby("case_id")["prom_score"].transform("size") == 4]
+print(complete.groupby("visit", observed=True)["prom_score"].agg(["size", "mean"]).round(1))
 ```
 :::
 
@@ -184,6 +243,8 @@ print(knee_model.fe_params["visit[T.1yr]"], knee_model.conf_int().loc["visit[T.1
 #| include: false
 chk = {"emm_pre": float(knee_means["emmean"].iloc[0]), "emm_1yr": float(knee_means["emmean"].iloc[3])}
 chk_se = {"se_pre": float(knee_means["se"].iloc[0]), "se_1yr": float(knee_means["se"].iloc[3])}
+chk_complete = {"knees": float(complete["case_id"].nunique()), "preop": float(complete.loc[complete["visit"] == "preop", "prom_score"].mean()),
+                "one_year": float(complete.loc[complete["visit"] == "1yr", "prom_score"].mean())}
 ```
 
 ```{r}
@@ -192,12 +253,15 @@ knee_emm <- summary(knee_means)
 check_agree(list(emm_pre = knee_emm$emmean[1], emm_1yr = knee_emm$emmean[4]), reticulate::py$chk)
 # standard errors computed two ways, as in the check after the first model
 check_agree(list(se_pre = knee_emm$SE[1], se_1yr = knee_emm$SE[4]), reticulate::py$chk_se, tol = 1e-3)
+complete <- knees |> group_by(case_id) |> filter(n() == 4) |> ungroup()
+check_agree(list(knees = n_distinct(complete$case_id), preop = mean(complete$prom_score[complete$visit == "preop"]),
+                 one_year = mean(complete$prom_score[complete$visit == "1yr"])), reticulate::py$chk_complete)
 ```
 
 - **emmean, lower.CL / upper.CL :** le KOOS JR moyen était de 50.0 (IC à 95 % de 48.6 à 51.3) avant l'opération, de 62.5 à 6 semaines, de 74.2 à 3 mois et de 83.9 (IC à 95 % de 82.5 à 85.3) à 1 an.
-- **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % de 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)).
+- **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % de 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)). Dans R, les quatre poids correspondent aux quatre visites dans l'ordre : −1 pour la visite préopératoire, 0 pour 6 semaines et pour 3 mois, et +1 pour 1 an ; le contraste est donc la moyenne à 1 an moins la moyenne préopératoire. Dans Python, la même différence est le coefficient `visit[T.1yr]`, parce que la visite préopératoire est la référence.
 
-Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an. C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites manquées le sont presque entièrement au hasard ; par simple coïncidence, ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
+Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an (le dernier tableau de la sortie). C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites manquées le sont presque entièrement au hasard ; par simple coïncidence, ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
 
 ## Le temps : catégories ou courbe ? {#time}
 
@@ -216,6 +280,7 @@ on_days
 
 curve <- tibble(visit_days = -27:395)
 curve$prom_score <- predict(curve_model, newdata = curve, re.form = NA)
+curve[which.max(curve$prom_score), ]                           # le point le plus haut de la courbe
 ggplot(curve, aes(visit_days, prom_score)) +
   geom_line() +
   geom_point(data = summary(knee_means) |> mutate(visit_days = c(-14, 42, 90, 365)), aes(y = emmean)) +
@@ -235,8 +300,10 @@ on_days = curve_model.predict(days)                            # le genou moyen
 print(on_days.round(2))
 
 curve = pd.DataFrame({"visit_days": np.arange(-27, 396)})
+curve["prom_score"] = curve_model.predict(curve)
+print(curve.loc[curve["prom_score"].idxmax()].round(1).to_list())   # le point le plus haut de la courbe
 fig, ax = plt.subplots(figsize=(7, 3.5))
-ax.plot(curve["visit_days"], curve_model.predict(curve))
+ax.plot(curve["visit_days"], curve["prom_score"])
 ax.scatter(days["visit_days"], knee_means["emmean"])
 ax.set_xlabel("Days since surgery")
 ax.set_ylabel("KOOS JR")
@@ -248,15 +315,20 @@ plt.show()
 ```{python}
 #| include: false
 chk = {"day_42": float(on_days.iloc[1]), "day_365": float(on_days.iloc[3])}
+chk_peak = {"day": float(curve.loc[curve["prom_score"].idxmax(), "visit_days"])}
+chk_peak_score = {"score": float(curve["prom_score"].max())}
 ```
 
 ```{r}
 #| include: false
 # the two optimizers stop at slightly different points
 check_agree(list(day_42 = on_days[[2]], day_365 = on_days[[4]]), reticulate::py$chk, tol = 1e-4)
+check_agree(list(day = curve$visit_days[which.max(curve$prom_score)]), reticulate::py$chk_peak)
+# the height of the peak comes from two fits that stop at slightly different points, as above
+check_agree(list(score = max(curve$prom_score)), reticulate::py$chk_peak_score, tol = 1e-4)
 ```
 
-La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an, contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic d'environ 89 points vers 8 mois, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les catégories sont plus simples, ne font aucune affirmation de ce genre, et ce sont elles que le reste de cette page utilise.
+La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an (le deuxième et le quatrième nombre affichés), contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic de 88.6 points au jour 247, environ 8 mois après l'opération, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les catégories sont plus simples, ne font aucune affirmation de ce genre, et ce sont elles que le reste de cette page utilise.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une droite pour le temps
@@ -265,7 +337,7 @@ La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaine
 
 ## La récupération diffère-t-elle entre les groupes ? {#group-by-time}
 
-Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le bras de traitement (*arm*) et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'effet principal du bras seul ne compare que les niveaux moyens. Le modèle utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre.
+Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le bras de traitement (*arm*) et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'effet principal du bras seul ne compare que les niveaux moyens. Le modèle utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre (80 / 120 = 66.7 % ; la première ligne de la sortie les compte).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -276,6 +348,7 @@ trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE) |>
   filter(!is.na(efas)) |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "6mo", "12mo")),
          arm = factor(arm, levels = c("cast", "boot")))
+c(patients = n_distinct(trial$patient_id), scores = nrow(trial), complete = sum(table(trial$patient_id) == 4))   # patients, scores, patients qui ont les quatre scores
 
 arm_model <- lmer(efas ~ visit * arm + (1 | patient_id), data = trial)
 arm_anova <- anova(arm_model)                           # tests F, degrés de liberté de Satterthwaite
@@ -302,6 +375,7 @@ trial = trial[trial["efas"].notna()].copy()
 trial_visits = ["6wk", "3mo", "6mo", "12mo"]
 trial["visit"] = pd.Categorical(trial["visit"], categories=trial_visits)       # 6 semaines en premier, c'est la référence
 trial["arm"] = pd.Categorical(trial["arm"], categories=["cast", "boot"])        # plâtre en premier, c'est la référence
+print(trial["patient_id"].nunique(), len(trial), (trial.groupby("patient_id").size() == 4).sum())   # patients, scores, patients qui ont les quatre scores
 
 arm_model = smf.mixedlm("efas ~ visit * arm", trial, groups="patient_id").fit(reml=True)
 
@@ -364,10 +438,63 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. Le test de Wald de Python donne la statistique non divisée, 77.15 sur 3 degrés de liberté, avec aussi p < 0.001.
+- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds degrés de liberté comme `DenDF` 309.58 et la valeur p comme `6.924e-15`. Le test de Wald de Python est un test du khi-deux à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le F de R est cette statistique divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les erreurs standard des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
 - **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
 
-Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 dans chaque bras). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond ; 24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
+Deux autres regards sur les données expliquent le paragraphe qui suit : la dispersion des scores, et la visite à 12 mois.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+VarCorr(arm_model)                                              # écarts-types entre les patients et au sein d'un patient
+sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov))               # les deux ensemble : l'écart-type d'un score, le même à chaque visite
+sigma(lm(efas ~ arm, data = filter(trial, visit == "3mo")))     # les scores à 3 mois seuls : l'écart-type autour de la moyenne de chaque bras
+
+trial |>
+  group_by(arm) |>
+  summarise(patients = n_distinct(patient_id),                  # patients dans chaque bras
+            scored_12mo = sum(visit == "12mo"),                 # parmi eux, évalués à 12 mois
+            missed_12mo = patients - scored_12mo,
+            at_maximum = sum(visit == "12mo" & efas == 24))     # 24 est le score EFAS le plus élevé
+```
+
+## Python
+
+```{python}
+print(np.sqrt(arm_model.cov_re.iloc[0, 0]), np.sqrt(arm_model.scale))                  # écarts-types entre les patients et au sein d'un patient
+print(np.sqrt(arm_model.cov_re.iloc[0, 0] + arm_model.scale))                           # les deux ensemble : l'écart-type d'un score, le même à chaque visite
+print(np.sqrt(smf.ols("efas ~ arm", trial[trial["visit"] == "3mo"]).fit().mse_resid))   # les scores à 3 mois seuls : l'écart-type autour de la moyenne de chaque bras
+
+at_12 = trial[trial["visit"] == "12mo"]
+twelve = pd.DataFrame({"patients": trial.groupby("arm", observed=True)["patient_id"].nunique(),      # patients dans chaque bras
+                       "scored_12mo": at_12.groupby("arm", observed=True).size(),                    # parmi eux, évalués à 12 mois
+                       "at_maximum": at_12[at_12["efas"] == 24].groupby("arm", observed=True).size()})   # 24 est le score EFAS le plus élevé
+twelve["missed_12mo"] = twelve["patients"] - twelve["scored_12mo"]
+print(twelve)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"sd_3mo": float(np.sqrt(smf.ols("efas ~ arm", trial[trial["visit"] == "3mo"]).fit().mse_resid)),
+       "missed_cast": float(twelve.loc["cast", "missed_12mo"]), "missed_boot": float(twelve.loc["boot", "missed_12mo"]),
+       "top_cast": float(twelve.loc["cast", "at_maximum"]), "top_boot": float(twelve.loc["boot", "at_maximum"])}
+chk_sd = {"sd_score": float(np.sqrt(arm_model.cov_re.iloc[0, 0] + arm_model.scale))}
+```
+
+```{r}
+#| include: false
+twelve <- trial |> group_by(arm) |>
+  summarise(missed = n_distinct(patient_id) - sum(visit == "12mo"), at_maximum = sum(visit == "12mo" & efas == 24))
+check_agree(list(sd_3mo = sigma(lm(efas ~ arm, data = filter(trial, visit == "3mo"))),
+                 missed_cast = twelve$missed[1], missed_boot = twelve$missed[2],
+                 top_cast = twelve$at_maximum[1], top_boot = twelve$at_maximum[2]), reticulate::py$chk)
+# the two optimizers stop at slightly different variances, as in the check after the first model
+check_agree(list(sd_score = sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov))), reticulate::py$chk_sd, tol = 1e-5)
+```
+
+Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9, la deuxième sortie ci-dessus), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 autour des moyennes des bras, la troisième sortie ; la page 6 donne l'ET propre à chaque bras, 2.9 avec une orthèse et 3.4 avec un plâtre). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond ; 24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5, sur 60 patients par bras ; le tableau ci-dessus les compte) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : lisez une interaction d'après les moyennes
@@ -381,9 +508,50 @@ Python calcule les différences à partir des effets fixes avec des tests z : s
 
 ## Patients bilatéraux {#bilateral}
 
-46 des patients opérés du genou ont eu les deux genoux remplacés : 92 des 330 genoux forment donc des paires. Les deux genoux appartiennent à la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième intercept aléatoire, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
+46 des patients opérés du genou ont eu les deux genoux remplacés : 2 × 46 = 92 des 330 genoux forment donc des paires (la première sortie ci-dessous). Les deux genoux appartiennent à la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième intercept aléatoire, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
 
-Dans cette cohorte, l'intercept au niveau du patient est presque exactement nul (lme4 avertit que l'ajustement est « singulier »), et le modèle du genou ci-dessus suffit donc. Dans vos données, ajustez le modèle emboîté et rapportez-le, sauf s'il est singulier. La [page 3](../foundations/03-distributions.qmd#paired) explique pourquoi les patients bilatéraux demandent de l'attention, et la [page 14](../survival/14-cox-regression.qmd#stratified-cox) montre la version pour l'analyse de survie.
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+knees |> distinct(patient_id, case_id) |> count(patient_id, name = "knees") |> count(knees, name = "patients")   # patients avec un genou, patients avec deux
+
+nested_model <- lmer(prom_score ~ visit + (1 | patient_id/case_id), data = knees)   # genoux emboîtés dans les patients
+VarCorr(nested_model)                # l'écart-type de patient_id est presque exactement 0
+isSingular(nested_model)             # TRUE : les données ne permettent pas d'estimer l'intercept supplémentaire
+```
+
+## Python
+
+```{python}
+#| warning: false
+print(knees.groupby("patient_id")["case_id"].nunique().value_counts())   # patients avec un genou, patients avec deux
+
+nested_model = smf.mixedlm("prom_score ~ visit", knees, groups="patient_id", re_formula="1",
+                           vc_formula={"case_id": "0 + C(case_id)"}).fit(reml=True)   # genoux emboîtés dans les patients
+print(nested_model.cov_re.iloc[0, 0], nested_model.vcomp[0])   # la variance entre les patients (presque exactement 0) et entre les genoux
+```
+:::
+
+```{python}
+#| include: false
+chk = {"both_knees": float((knees.groupby("patient_id")["case_id"].nunique() == 2).sum()),
+       "patient_variance": float(nested_model.cov_re.iloc[0, 0])}
+chk_sd = {"sd_knee_nested": float(np.sqrt(nested_model.vcomp[0]))}
+```
+
+```{r}
+#| include: false
+nested_vc <- as.data.frame(VarCorr(nested_model))
+check_agree(list(both_knees = sum(table(distinct(knees, patient_id, case_id)$patient_id) == 2),
+                 patient_variance = nested_vc$vcov[nested_vc$grp == "patient_id"]), reticulate::py$chk)
+# The two optimizers stop at slightly different variances, as in the check after the first model;
+# on the boundary (a patient variance of zero) the knee SD agrees to about 1e-5, not 1e-6.
+check_agree(list(sd_knee_nested = nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"]), reticulate::py$chk_sd, tol = 1e-4)
+```
+
+Dans cette cohorte, l'intercept au niveau du patient est presque exactement nul : un ET de moins de 0.001 point entre les patients, contre 8.8 entre les genoux (Python affiche les deux variances, presque exactement 0 et 78.1). Les données ne montrent aucune ressemblance supplémentaire entre les deux genoux d'un même patient, et le modèle du genou ci-dessus suffit donc. Quand vous exécutez ce code, lme4 affiche « boundary (singular) fit » et un avertissement de convergence, et statsmodels avertit que l'estimation « may be on the boundary of the parameter space » ; la page masque ces messages. Dans vos données, ajustez le modèle emboîté et rapportez-le, sauf s'il est singulier. La [page 3](../foundations/03-distributions.qmd#paired) explique pourquoi les patients bilatéraux demandent de l'attention, et la [page 14](../survival/14-cox-regression.qmd#stratified-cox) montre la version pour l'analyse de survie.
 
 ## Rédiger les résultats {#reporting}
 
@@ -455,6 +623,23 @@ stopifnot(
   round(sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov)), 1) == 2.9,
   round(sqrt(sum(tapply(trial$efas[trial$visit == "3mo"], trial$arm[trial$visit == "3mo"], function(x) (length(x) - 1) * var(x))) / (sum(trial$visit == "3mo") - 2)), 1) == 3.2,
   round(page6_t$conf.int, 1) == c(2.4, 4.8), round(unname(page6_t$estimate[1] - page6_t$estimate[2]), 1) == 3.6,
+  # numbers added with the audit fixes and the by-hand box
+  as.vector(table(per_knee$n)) == c(4, 28, 106, 192), 4 + 28 + 106 + 192 == 330, 4 * 1 + 28 * 2 + 106 * 3 + 192 * 4 == 1146,
+  format(round(knee_vc$vcov[2], 2), nsmall = 2) == "73.45", format(round(knee_vc$sdcor[2], 3), nsmall = 3) == "8.570",
+  round(sqrt(73.45), 2) == 8.57,
+  round(var(around$from_visit_mean), 1) == 150.8, round(78.1 + 73.5, 1) == 151.6,
+  round(range(alike[upper.tri(alike)]), 2) == c(0.43, 0.57),
+  nrow(complete) / 4 == 192,
+  round(max(curve$prom_score), 1) == 88.6, curve$visit_days[which.max(curve$prom_score)] == 247,
+  format(round(arm_anova["visit:arm", "DenDF"], 2), nsmall = 2) == "309.58",
+  format(signif(arm_anova["visit:arm", "Pr(>F)"], 4)) == "6.924e-15", round(77.15 / 3, 2) == 25.72,
+  round(sigma(lm(efas ~ arm, data = filter(trial, visit == "3mo"))), 1) == 3.2,
+  round(tapply(trial$efas[trial$visit == "3mo"], trial$arm[trial$visit == "3mo"], sd), 1) == c(3.4, 2.9),
+  levels(trial$arm) == c("cast", "boot"), twelve$missed == c(13, 5), twelve$at_maximum == c(8, 7),
+  2 * 46 == 92, nested_vc$sdcor[nested_vc$grp == "patient_id"] < 0.001, isSingular(nested_model),
+  reticulate::py_eval("float(nested_model.cov_re.iloc[0, 0])") < 0.001^2,
+  round(nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"], 1) == 8.8,
+  round(14.43 / 3, 2) == 4.81,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   n_distinct(hips$case_id) == 270, nrow(hips) == 906, sum(table(hips$case_id) == 4) == 136,
   round(hip_emm$emmean, 1) == c(45.5, 68.6, 80.1, 88.2),
@@ -523,6 +708,8 @@ c(joint_replacements = n_distinct(pf_all$case_id), scores = nrow(pf_all))
 
 pf_model <- lmer(promis_pf ~ visit + (1 | case_id), data = pf_all)
 emmeans(pf_model, ~ visit, lmer.df = "satterthwaite")
+# l'analyse de la page 9 : seulement ceux qui ont les quatre scores
+pf_all |> group_by(case_id) |> filter(n() == 4) |> group_by(visit) |> summarise(joint_replacements = n(), mean = mean(promis_pf))
 ```
 
 ## Python
@@ -534,10 +721,13 @@ print(pf_all["case_id"].nunique(), len(pf_all))
 
 pf_model = smf.mixedlm("promis_pf ~ visit", pf_all, groups="case_id").fit(reml=True)
 print(marginal_means(pf_model, visit_grid).round(2))
+# l'analyse de la page 9 : seulement ceux qui ont les quatre scores
+pf_complete = pf_all[pf_all.groupby("case_id")["promis_pf"].transform("size") == 4]
+print(pf_complete.groupby("visit", observed=True)["promis_pf"].agg(["size", "mean"]).round(1))
 ```
 :::
 
-Le modèle mixte utilise les 600 prothèses articulaires (2052 scores) au lieu des 328 qui ont les quatre scores. Ses moyennes de visites, 36.1, 39.8, 44.9 et 48.2, sont presque les mêmes que celles de la page 9 pour ces 328 (36.1, 39.4, 44.9 et 48.2) : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, si bien qu'écarter les cas incomplets a coûté de la précision plutôt que de l'exactitude.
+Le modèle mixte utilise les 600 prothèses articulaires (2052 scores) au lieu des 328 qui ont les quatre scores. Ses moyennes de visites, 36.1, 39.8, 44.9 et 48.2, sont presque les mêmes que celles de la [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) pour ces 328 (36.1, 39.4, 44.9 et 48.2, le dernier tableau de la sortie) : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, si bien qu'écarter les cas incomplets a coûté de la précision plutôt que de l'exactitude.
 :::
 
 **3.** La douleur change-t-elle différemment avec une orthèse et avec un plâtre ? Ajustez le modèle visite × bras pour pain_nrs et rédigez la phrase de Résultats.
@@ -568,7 +758,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Le test de Wald de Python donne 14.43 sur 3 degrés de liberté, p = 0.002.
+Le test de Wald de Python donne 14.43 sur 3 degrés de liberté, p = 0.002. C'est la même statistique : 14.43 / 3 = 4.81. Les valeurs p diffèrent à la troisième décimale parce que le test F de R utilise les degrés de liberté de Satterthwaite (317) et que le test du khi-deux de Python les considère comme infinis, comme dans le premier encadré « R ou Python ». Rapportez celle de R.
 
 La douleur est un score en nombres entiers : un modèle linéaire n'en est donc qu'une approximation ; avec quatre visites et 120 patients, c'est une approximation raisonnable.
 :::

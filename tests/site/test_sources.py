@@ -309,7 +309,7 @@ def test_mixed_model_checks_loosen_the_tolerance_only_where_the_two_methods_diff
     checks = agreement_checks(dict(written_pages("beyond"))["beyond/16-mixed-models.qmd"])
     by_tol = {tol: {name for names, t in checks if t == tol for name in names} for tol in [None, "1e-5", "1e-3"]}
     assert by_tol["1e-3"] and all(name.startswith(("se_", "wald")) for name in by_tol["1e-3"]), by_tol["1e-3"]
-    assert by_tol["1e-5"] == {"sd_knee", "sd_residual"}
+    assert {"sd_knee", "sd_residual"} <= by_tol["1e-5"] and all(name.startswith("sd_") for name in by_tol["1e-5"]), by_tol["1e-5"]
     assert {"intercept", "visit_1yr", "emm_pre", "emm_1yr", "emm_boot_3mo", "emm_cast_12mo", "diff_3mo", "diff_12mo"} <= by_tol[None]
 
 

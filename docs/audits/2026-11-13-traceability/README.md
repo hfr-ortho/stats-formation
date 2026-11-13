@@ -292,19 +292,19 @@ All four were rechecked against the page text and the data after the audit.
 | 15-12 | B | no | Overall Fisher p = 0.016 appears in the R tab only | [beyond.md](beyond.md) | done |
 | 15-13 | B | no | Implant A vs B hazard ratio is printed but never read | [beyond.md](beyond.md) | done |
 | 15-14 | C | no | Tukey and Games-Howell bullets leave columns unexplained | [beyond.md](beyond.md) | done |
-| 16-1 | A | yes | Nested model: "patient-level intercept comes out at almost exactly zero", "singular" | [beyond.md](beyond.md) | open |
-| 16-2 | A | yes | Complete-case means 49.2 and 84.0 | [beyond.md](beyond.md) | open |
-| 16-3 | A | yes | 431 scores, 120 patients, 80 complete (66.7%) | [beyond.md](beyond.md) | open |
-| 16-4 | A | yes | "SD 2.9" for the model and "SD 3.2 within each arm" at 3 months | [beyond.md](beyond.md) | open |
-| 16-5 | A | yes | Ceiling and missed-visit counts at 12 months | [beyond.md](beyond.md) | open |
-| 16-6 | A | yes | "46 of the knee patients had both knees replaced, so 92 of the 330 knees" | [beyond.md](beyond.md) | open |
-| 16-7 | A | yes | The curve's "peak of about 89 points at around 8 months" is read off the plot | [beyond.md](beyond.md) | open |
-| 16-8 | B | no | 330 knees, 1146 scores, 138 (42%), 58.2%: sums not spelled out | [beyond.md](beyond.md) | open |
-| 16-9 | B | no | Residual variance 73.5 and residual SD 8.6: Python calls them "Scale" | [beyond.md](beyond.md) | open |
-| 16-10 | B | no | "The undivided statistic, 77.15" | [beyond.md](beyond.md) | open |
-| 16-11 | B | no | Exercise 2: page 9's complete-case means are quoted, not shown | [beyond.md](beyond.md) | open |
-| 16-12 | C | no | Exercise 3: R gives p = 0.003, Python p = 0.002, no reason given | [beyond.md](beyond.md) | open |
-| 16-13 | C | no | The contrast weights `c(-1, 0, 0, 1)` | [beyond.md](beyond.md) | open |
+| 16-1 | A | yes | Nested model: "patient-level intercept comes out at almost exactly zero", "singular" | [beyond.md](beyond.md) | done |
+| 16-2 | A | yes | Complete-case means 49.2 and 84.0 | [beyond.md](beyond.md) | done |
+| 16-3 | A | yes | 431 scores, 120 patients, 80 complete (66.7%) | [beyond.md](beyond.md) | done |
+| 16-4 | A | yes | "SD 2.9" for the model and "SD 3.2 within each arm" at 3 months | [beyond.md](beyond.md) | done |
+| 16-5 | A | yes | Ceiling and missed-visit counts at 12 months | [beyond.md](beyond.md) | done |
+| 16-6 | A | yes | "46 of the knee patients had both knees replaced, so 92 of the 330 knees" | [beyond.md](beyond.md) | done |
+| 16-7 | A | yes | The curve's "peak of about 89 points at around 8 months" is read off the plot | [beyond.md](beyond.md) | done |
+| 16-8 | B | no | 330 knees, 1146 scores, 138 (42%), 58.2%: sums not spelled out | [beyond.md](beyond.md) | done |
+| 16-9 | B | no | Residual variance 73.5 and residual SD 8.6: Python calls them "Scale" | [beyond.md](beyond.md) | done |
+| 16-10 | B | no | "The undivided statistic, 77.15" | [beyond.md](beyond.md) | done |
+| 16-11 | B | no | Exercise 2: page 9's complete-case means are quoted, not shown | [beyond.md](beyond.md) | done |
+| 16-12 | C | no | Exercise 3: R gives p = 0.003, Python p = 0.002, no reason given | [beyond.md](beyond.md) | done |
+| 16-13 | C | no | The contrast weights `c(-1, 0, 0, 1)` | [beyond.md](beyond.md) | done |
 | 17-1 | ERROR | no | "limits of ±3.7°" contradicts the limits shown | [beyond.md](beyond.md) | done |
 | 17-2 | A | yes | "`irr::kappa2(weight = "equal")` ... gives 0.63 here instead of 0.73" | [beyond.md](beyond.md) | open |
 | 17-3 | B | no | ICC 0.915 reported as 0.91, 0.935 as 0.93, −0.265 as −0.26 | [beyond.md](beyond.md) | open |

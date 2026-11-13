@@ -59,7 +59,7 @@ def test_planned_and_exploratory_comparisons_are_distinguished(site):
 
 def test_mixed_model_page_counts_what_repeated_measures_anova_drops(site):
     text = text_of(section(MIXED, "why-mixed-models"))
-    assert "192 knees" in text and "138 knees (42%)" in text
+    assert "192 knees" in text and "138 knees (138 / 330 = 42%)" in text
     for kind in ["Missing completely at random", "Missing at random", "Missing not at random"]:
         assert kind in text, kind
 
