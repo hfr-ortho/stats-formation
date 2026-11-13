@@ -312,25 +312,25 @@ All four were rechecked against the page text and the data after the audit.
 | 17-5 | B | no | "40 of the 60 knees" and "48 of 60 knees" are not printed | [beyond.md](beyond.md) | done |
 | 17-6 | B | yes | CIs of the limits: Python prints them in a different arrangement | [beyond.md](beyond.md) | done |
 | 17-7 | C | yes | Kappa: "some of that would happen by chance" is never quantified | [beyond.md](beyond.md) | done |
-| 18-1 | A | yes | The study period in the Methods is printed nowhere | [report-and-front.md](report-and-front.md) | open |
-| 18-2 | A | yes | The software versions in the Methods are printed nowhere | [report-and-front.md](report-and-front.md) | open |
-| 18-3 | B | yes | How many patients have both scores: 93, 77.5%, 86.8% and 70.1% are never computed | [report-and-front.md](report-and-front.md) | open |
-| 18-4 | B | yes | The ceiling percentages 32.6% and 14.9% are never computed | [report-and-front.md](report-and-front.md) | open |
-| 18-5 | B | yes | Exercise 3: the four percentages in the Results sentence are never computed; "27" is not derived | [report-and-front.md](report-and-front.md) | open |
-| 18-6 | B | yes | Results: 44.2% and 55.8% are never computed | [report-and-front.md](report-and-front.md) | open |
-| 18-7 | B | yes | Women: the text says 71.7% and 49.3%, the R table and the manuscript's own Table 1 say 72% and 49% | [report-and-front.md](report-and-front.md) | open |
-| 18-8 | B | no | Exercise 1: R prints "p-value = 0.0035", the Results sentence says p = 0.003 | [report-and-front.md](report-and-front.md) | open |
-| 18-9 | B | no | Exercise 2: the sign changes from 9.0 to −7.4, the outcome changes, and R prints p as `1.656337e-03` | [report-and-front.md](report-and-front.md) | open |
-| 18-10 | B | no | Step 6: the difference of 9.0 points is printed only in the Python tab | [report-and-front.md](report-and-front.md) | open |
-| 18-11 | B | yes | Step 7: the numbers at risk (17 at 8 years, 5 at 10) exist only under the R plot | [report-and-front.md](report-and-front.md) | open |
-| 18-12 | B | no | Step 7: the output gives proportions, the prose percentages | [report-and-front.md](report-and-front.md) | open |
-| 18-13 | B | no | Step 4: "2.9 points higher" is a subtraction the prose doesn't show | [report-and-front.md](report-and-front.md) | open |
-| 18-14 | B | no | "They differ in the sixth decimal" cannot be seen in the output | [report-and-front.md](report-and-front.md) | open |
-| 18-15 | B | no | "Five spellings of 'missing'", but the visible code lists four | [report-and-front.md](report-and-front.md) | open |
-| 18-16 | C | yes | Step 7, Python: the follow-up quartiles are labeled 0.75, 0.50, 0.25, the reverse of R's 25, 50, 75 | [report-and-front.md](report-and-front.md) | open |
-| 18-17 | C | no | The Methods name two methods that Step 7 never explains: "reverse Kaplan-Meier" and "Aalen-Johansen" | [report-and-front.md](report-and-front.md) | open |
-| 18-18 | C | no | Step 4: the R and Python tables look different, and the 🔀 box explains only the SMDs | [report-and-front.md](report-and-front.md) | open |
-| 18-19 | C | no | "Medium-to-large", "small" and "large" are used without the scale | [report-and-front.md](report-and-front.md) | open |
+| 18-1 | A | yes | The study period in the Methods is printed nowhere | [report-and-front.md](report-and-front.md) | done |
+| 18-2 | A | yes | The software versions in the Methods are printed nowhere | [report-and-front.md](report-and-front.md) | done |
+| 18-3 | B | yes | How many patients have both scores: 93, 77.5%, 86.8% and 70.1% are never computed | [report-and-front.md](report-and-front.md) | done |
+| 18-4 | B | yes | The ceiling percentages 32.6% and 14.9% are never computed | [report-and-front.md](report-and-front.md) | done |
+| 18-5 | B | yes | Exercise 3: the four percentages in the Results sentence are never computed; "27" is not derived | [report-and-front.md](report-and-front.md) | done |
+| 18-6 | B | yes | Results: 44.2% and 55.8% are never computed | [report-and-front.md](report-and-front.md) | done |
+| 18-7 | B | yes | Women: the text says 71.7% and 49.3%, the R table and the manuscript's own Table 1 say 72% and 49% | [report-and-front.md](report-and-front.md) | done |
+| 18-8 | B | no | Exercise 1: R prints "p-value = 0.0035", the Results sentence says p = 0.003 | [report-and-front.md](report-and-front.md) | done |
+| 18-9 | B | no | Exercise 2: the sign changes from 9.0 to −7.4, the outcome changes, and R prints p as `1.656337e-03` | [report-and-front.md](report-and-front.md) | done |
+| 18-10 | B | no | Step 6: the difference of 9.0 points is printed only in the Python tab | [report-and-front.md](report-and-front.md) | done |
+| 18-11 | B | yes | Step 7: the numbers at risk (17 at 8 years, 5 at 10) exist only under the R plot | [report-and-front.md](report-and-front.md) | done |
+| 18-12 | B | no | Step 7: the output gives proportions, the prose percentages | [report-and-front.md](report-and-front.md) | done |
+| 18-13 | B | no | Step 4: "2.9 points higher" is a subtraction the prose doesn't show | [report-and-front.md](report-and-front.md) | done |
+| 18-14 | B | no | "They differ in the sixth decimal" cannot be seen in the output | [report-and-front.md](report-and-front.md) | done |
+| 18-15 | B | no | "Five spellings of 'missing'", but the visible code lists four | [report-and-front.md](report-and-front.md) | done |
+| 18-16 | C | yes | Step 7, Python: the follow-up quartiles are labeled 0.75, 0.50, 0.25, the reverse of R's 25, 50, 75 | [report-and-front.md](report-and-front.md) | done |
+| 18-17 | C | no | The Methods name two methods that Step 7 never explains: "reverse Kaplan-Meier" and "Aalen-Johansen" | [report-and-front.md](report-and-front.md) | done |
+| 18-18 | C | no | Step 4: the R and Python tables look different, and the 🔀 box explains only the SMDs | [report-and-front.md](report-and-front.md) | done |
+| 18-19 | C | no | "Medium-to-large", "small" and "large" are used without the scale | [report-and-front.md](report-and-front.md) | done |
 | gs-use-1 | B | yes | The "Try it" answer is a typed comment, not output | [report-and-front.md](report-and-front.md) | open |
 | gs-use-2 | C | no | The illustration's medians differ by 2, its "Hodges-Lehmann difference" is 1, and the term is not explained | [report-and-front.md](report-and-front.md) | open |
 | gs-use-3 | C | no | "IQR" is used before it is explained | [report-and-front.md](report-and-front.md) | open |

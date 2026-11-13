@@ -35,7 +35,7 @@ Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants u
 
 - **Question :** les patients s'améliorent-ils autant pendant la première année après une prothèse totale de genou (PTG) qu'après une prothèse totale de hanche (PTH) ?
 - **Critère de jugement principal :** la variation du score propre à l'articulation entre l'avant-opération et 1 an : HOOS JR (score de la hanche pour prothèse articulaire, version abrégée) après une PTH, KOOS JR (score du genou pour prothèse articulaire, version abrégée) après une PTG, chacun noté de 0 à 100, un score plus élevé étant meilleur.
-- **Analyse principale :** la différence de variation moyenne entre PTH et PTG, avec son IC à 95 % (intervalle de confiance), par le test t de Welch ([page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)), si les variations sont à peu près symétriques dans chaque groupe ([page 3](../foundations/03-distributions.qmd)). Sinon, le test de Mann-Whitney.
+- **Analyse principale :** la différence de variation moyenne entre PTH et PTG, avec son IC à 95 % ([intervalle de confiance](../glossary.qmd#confidence-interval){.term}), par le test t de Welch ([page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)), si les variations sont à peu près symétriques dans chaque groupe ([page 3](../foundations/03-distributions.qmd)). Sinon, le test de Mann-Whitney.
 - **Critère de jugement secondaire :** la révision de n'importe quel composant, sous forme d'incidence cumulée avec le décès comme risque concurrent ([page 13](../survival/13-kaplan-meier.qmd#competing-risks)).
 
 ::: {.callout-warning}
@@ -45,7 +45,7 @@ Le HOOS JR et le KOOS JR sont deux questionnaires différents. Tous deux vont de
 
 ## 2 · Ordonner le classeur brut {#tidy}
 
-Les données viennent du classeur de dépouillement que la [page 1](../foundations/01-tidy-data.qmd#tidying) ordonne pas à pas : 60 cas par site, avec des lignes de bandeau, des en-têtes fusionnés, des dates de formats mélangés, cinq façons d'écrire « manquant » et des révisions signalées seulement par un remplissage rouge. Le code ci-dessous reprend les cinq étapes de la page 1 en un seul bloc ; ouvrez-le pour voir le code, et retournez à la page 1 pour savoir pourquoi chaque étape est là.
+Les données viennent du classeur de dépouillement que la [page 1](../foundations/01-tidy-data.qmd#tidying) ordonne pas à pas : 60 cas par site, avec des lignes de bandeau, des en-têtes fusionnés, des dates de formats mélangés, cinq façons d'écrire « manquant » (`N/A`, `unk`, `-`, `999` et les cellules vides) et des révisions signalées seulement par un remplissage rouge. Le code ci-dessous reprend les cinq étapes de la page 1 en un seul bloc ; ouvrez-le pour voir le code, et retournez à la page 1 pour savoir pourquoi chaque étape est là.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -254,7 +254,9 @@ registry <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
 
 study <- left_join(tidy, registry, by = "case_id")   # garde chaque cas du classeur
 nrow(study)
-count(study, procedure)
+count(study, procedure) |>
+  mutate(pct = 100 * n / sum(n))     # chaque intervention en pourcentage de tous les cas
+range(study$surgery_date)            # la première et la dernière date d'opération, pour les Méthodes
 ```
 
 ## Python
@@ -268,6 +270,8 @@ registry = (pd.read_csv("data/cohort.csv", parse_dates=["surgery_date"])
 study = tidy.merge(registry, on="case_id", how="left")   # garde chaque cas du classeur
 print(len(study))
 print(study["procedure"].value_counts().sort_index().to_string())
+print(study["procedure"].value_counts(normalize=True).sort_index().mul(100).round(1).to_string())   # en pourcentages
+print(study["surgery_date"].min().date(), study["surgery_date"].max().date())   # la première et la dernière date d'opération, pour les Méthodes
 ```
 :::
 
@@ -276,15 +280,19 @@ print(study["procedure"].value_counts().sort_index().to_string())
 chk = {"rows": float(len(study)), "patients": float(study["patient_id"].nunique()),
        "tha": float((study["procedure"] == "THA").sum()), "revised": float(study["revised"].sum()),
        "mean_bmi": float(study["bmi"].mean())}
+chk_period = {"first": float(study["surgery_date"].min().strftime("%Y%m%d")), "last": float(study["surgery_date"].max().strftime("%Y%m%d")),
+              "pct_tha": float(100 * (study["procedure"] == "THA").mean())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(study), patients = n_distinct(study$patient_id), tha = sum(study$procedure == "THA"),
                  revised = sum(study$revised), mean_bmi = mean(study$bmi, na.rm = TRUE)), reticulate::py$chk)
+check_agree(list(first = as.numeric(format(min(study$surgery_date), "%Y%m%d")), last = as.numeric(format(max(study$surgery_date), "%Y%m%d")),
+                 pct_tha = 100 * mean(study$procedure == "THA")), reticulate::py$chk_period)
 ```
 
-53 PTH et 67 PTG. Une jointure à gauche (*left join*) garde chaque cas du classeur même si le registre n'en a aucune trace ; l'étape suivante vérifie qu'aucun ne manque.
+53 PTH (44.2 %) et 67 PTG (55.8 %). La dernière ligne de la sortie donne la première et la dernière date d'opération : la période d'étude va de janvier 2015 à novembre 2024. Une jointure à gauche (*left join*) garde chaque cas du classeur même si le registre n'en a aucune trace ; l'étape suivante vérifie qu'aucun ne manque.
 
 ## 3 · Vérifier les données ordonnées {#integrity}
 
@@ -379,7 +387,7 @@ table_one <- study |>
   tbl_summary(
     by           = procedure,
     statistic    = all_continuous() ~ "{mean} ({sd})",
-    digits       = all_continuous() ~ 1,
+    digits       = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),   # 1 décimale pour les moyennes, les écarts-types et les pourcentages
     label        = list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
                         diabetes ~ "Diabetes", hypertension ~ "Hypertension", sleep_apnea ~ "Sleep apnea",
                         site ~ "Site", prom_preop ~ "Pre-op score (HOOS JR or KOOS JR), points"),
@@ -422,13 +430,13 @@ smd_r <- table_one$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Les groupes diffèrent surtout par le sexe : 72 % des patients PTH étaient des femmes contre 49 % des patients PTG (SMD 0.47). L'apnée du sommeil (0.31), la classe ASA (0.29) et le score préopératoire (0.26) diffèrent moins ; on lit en général une SMD inférieure à 0.1 comme une différence négligeable. Les patients PTG partaient en moyenne 2.9 points plus haut, ce qui compte pour un critère de jugement mesuré comme une variation : un groupe qui part plus haut a moins de marge pour s'améliorer.
+Les groupes diffèrent surtout par le sexe : 71.7 % des patients PTH étaient des femmes contre 49.3 % des patients PTG (SMD 0.47). L'apnée du sommeil (0.31), la classe ASA (0.29) et le score préopératoire (0.26) diffèrent moins ; on lit en général une SMD inférieure à 0.1 comme une différence négligeable. Les patients PTG partaient en moyenne 2.9 points plus haut (51.0 contre 48.1, la dernière ligne du tableau), ce qui compte pour un critère de jugement mesuré comme une variation : un groupe qui part plus haut a moins de marge pour s'améliorer.
 
 Il n'y a pas de colonne Overall. Pour la plupart des lignes, elle serait sans danger, mais pour le score préopératoire elle ferait la moyenne des scores HOOS JR et KOOS JR, ce qui est justement la comparaison contre laquelle l'étape 1 vous a mis en garde.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les SMD
-Les SMD concordent à deux décimales. Le package smd de R divise les variances par *n*, tableone par *n* − 1 : les SMD des variables continues peuvent donc différer à la troisième décimale ([page 2](../foundations/02-demographics.qmd#smd)). Le contrôle caché en tient compte. Les deux packages soustraient aussi les groupes dans des ordres opposés, donc leurs signes diffèrent : le tableau de R montre des valeurs absolues, comme le conseille la page 2, et celui de tableone garde ses signes.
+Les SMD concordent à deux décimales. Le package smd de R divise les variances par *n*, tableone par *n* − 1 : les SMD des variables continues peuvent donc différer à la troisième décimale ([page 2](../foundations/02-demographics.qmd#smd)). Le contrôle caché en tient compte. Les deux packages soustraient aussi les groupes dans des ordres opposés, donc leurs signes diffèrent : le tableau de R montre des valeurs absolues, comme le conseille la page 2, et celui de tableone garde ses signes. La présentation diffère aussi. gtsummary ajoute une ligne Missing avec un effectif par groupe ; tableone a une colonne Missing avec le total (IMC : 4 + 4 = 8). Pour une variable oui/non, gtsummary montre une seule ligne, pour « oui » ; tableone montre une ligne pour 0 et une ligne pour 1.
 :::
 
 ## 5 · Vérifier les distributions {#distributions}
@@ -451,8 +459,19 @@ ggplot(analysed, aes(change)) +
 
 change_summary <- analysed |>
   group_by(procedure) |>
-  summarise(n = n(), mean = mean(change), sd = sd(change), at_ceiling = sum(prom_1yr == 100))
+  summarise(n = n(), mean = mean(change), sd = sd(change),
+            at_ceiling = sum(prom_1yr == 100),               # patients au score maximal à 1 an
+            pct_at_ceiling = 100 * mean(prom_1yr == 100))    # ... en pourcentage du groupe
 change_summary
+
+# combien de patients ont les deux scores : en tout, puis par intervention
+c(both = nrow(analysed), pct = 100 * nrow(analysed) / nrow(study))
+both_scores <- study |>
+  group_by(procedure) |>
+  summarise(n = n(),                                     # tous les patients
+            both = sum(!is.na(prom_1yr - prom_preop)),   # patients qui ont les deux scores
+            pct = 100 * both / n)                        # ... en pourcentage
+both_scores
 ```
 
 ## Python
@@ -470,9 +489,16 @@ axes[1].set_xlabel("Change in score, pre-op to 1 year (points)")
 plt.tight_layout()
 plt.show()
 
-summary = analysed.groupby("procedure").agg(n=("change", "size"), mean=("change", "mean"),
-                                            sd=("change", "std"), at_ceiling=("prom_1yr", lambda s: int((s == 100).sum())))
+summary = analysed.groupby("procedure").agg(
+    n=("change", "size"), mean=("change", "mean"), sd=("change", "std"),
+    at_ceiling=("prom_1yr", lambda s: int((s == 100).sum())),          # patients au score maximal à 1 an
+    pct_at_ceiling=("prom_1yr", lambda s: 100 * (s == 100).mean()))    # ... en pourcentage du groupe
 print(summary.round(1).to_string())
+
+# combien de patients ont les deux scores : en tout, puis par intervention
+print(len(analysed), round(100 * len(analysed) / len(study), 1))
+both = (study["prom_1yr"] - study["prom_preop"]).notna().groupby(study["procedure"])   # True = a les deux scores
+print(pd.DataFrame({"n": both.size(), "both": both.sum(), "pct": (100 * both.mean()).round(1)}).to_string())
 ```
 :::
 
@@ -481,17 +507,23 @@ print(summary.round(1).to_string())
 chk = {"n_tha": float(summary.loc["THA", "n"]), "n_tka": float(summary.loc["TKA", "n"]),
        "mean_tha": float(summary.loc["THA", "mean"]), "sd_tka": float(summary.loc["TKA", "sd"]),
        "ceiling_tha": float(summary.loc["THA", "at_ceiling"])}
+chk_both = {"pct_ceiling_tha": float(summary.loc["THA", "pct_at_ceiling"]), "pct_ceiling_tka": float(summary.loc["TKA", "pct_at_ceiling"]),
+            "pct_both": float(100 * len(analysed) / len(study)), "pct_both_tha": float(100 * both.mean()["THA"]),
+            "pct_both_tka": float(100 * both.mean()["TKA"])}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(n_tha = change_summary$n[1], n_tka = change_summary$n[2], mean_tha = change_summary$mean[1],
                  sd_tka = change_summary$sd[2], ceiling_tha = change_summary$at_ceiling[1]), reticulate::py$chk)
+check_agree(list(pct_ceiling_tha = change_summary$pct_at_ceiling[1], pct_ceiling_tka = change_summary$pct_at_ceiling[2],
+                 pct_both = 100 * nrow(analysed) / nrow(study), pct_both_tha = both_scores$pct[1],
+                 pct_both_tka = both_scores$pct[2]), reticulate::py$chk_both)
 ```
 
-93 des 120 patients ont les deux scores : 46 PTH et 47 PTG. Dans chaque groupe, les variations sont à peu près symétriques, sans longue queue, et chaque groupe compte plus de 30 patients : le test t de Welch convient ([page 3](../foundations/03-distributions.qmd)).
+93 des 120 patients (77.5 %) ont les deux scores : 46 des 53 patients PTH (86.8 %) et 47 des 67 patients PTG (70.1 %), comme le montrent les deux dernières sorties. Dans chaque groupe, les variations sont à peu près symétriques, sans longue queue, et chaque groupe compte plus de 30 patients : le test t de Welch convient ([page 3](../foundations/03-distributions.qmd)).
 
-Un point à noter pour la Discussion : 15 des 46 patients PTH (32.6 %) ont obtenu le maximum, 100, à 1 an, contre 7 des 47 patients PTG (14.9 %). Un patient au plafond aurait peut-être progressé davantage si l'échelle le permettait : l'amélioration après PTH, et la différence entre les groupes, peuvent donc être sous-estimées. L'exercice 1 vérifie le résultat avec un test basé sur les rangs.
+Un point à noter pour la Discussion : 15 des 46 patients PTH (32.6 %) ont obtenu le maximum, 100, à 1 an, contre 7 des 47 patients PTG (14.9 %) : les colonnes `at_ceiling` et `pct_at_ceiling` du premier tableau. Un patient au [plafond](../glossary.qmd#ceiling-effect){.term} aurait peut-être progressé davantage si l'échelle le permettait : l'amélioration après PTH, et la différence entre les groupes, peuvent donc être sous-estimées. L'exercice 1 vérifie le résultat avec un test basé sur les rangs.
 
 ## 6 · L'analyse principale {#primary-analysis}
 
@@ -547,18 +579,18 @@ check_agree(list(low = primary_g$CI_low, high = primary_g$CI_high), reticulate::
 ```
 
 Lecture du résultat :
-- **La différence :** les patients PTH ont gagné en moyenne 42.4 points et les patients PTG 33.4, soit une différence de 9.0 points (IC à 95 % de 3.5 à 14.6). R met la PTH en premier parce qu'elle vient en premier par ordre alphabétique ; le code Python soustrait dans le même ordre.
+- **La différence :** les patients PTH ont gagné en moyenne 42.4 points et les patients PTG 33.4, soit une différence de 9.0 points (IC à 95 % de 3.5 à 14.6). R affiche les deux moyennes sous `sample estimates`, mais pas leur différence : 42.42 − 33.40 = 9.02. Python l'affiche sur la ligne `difference =`. L'IC de R se trouve sous `95 percent confidence interval`. R met la PTH en premier parce qu'elle vient en premier par ordre alphabétique ; le code Python soustrait dans le même ordre.
 - **p = 0.002 :** si les deux interventions ne faisaient vraiment aucune différence, un écart aussi grand serait rare.
-- **Hedges' g = 0.66** (IC à 95 % de 0.25 à 1.08) : la différence exprimée en écarts-types. Elle est moyenne à grande selon l'estimation seule, mais l'IC va d'une petite différence à une grande.
+- **Hedges' g = 0.66** (IC à 95 % de 0.25 à 1.08) : la différence exprimée en écarts-types. À titre indicatif, 0.2 est petit, 0.5 moyen et 0.8 grand ([page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)). 0.66 est donc moyen à grand selon l'estimation seule, mais l'IC va d'une petite différence à une grande.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : le g de Hedges
-Le g de Hedges est le d de Cohen réduit légèrement pour corriger les petits échantillons. effectsize utilise la correction exacte, pingouin une approximation proche : avec 93 patients, ils diffèrent à la sixième décimale. Pour l'IC, `compute_esci()` de pingouin utilise une formule approchée et arrondit à 2 décimales ; son IC, de 0.24 à 1.09, est donc un peu plus large que celui d'effectsize, de 0.25 à 1.08, qui vient de la distribution t non centrale. Dites lequel vous avez utilisé ; le manuscrit cite celui de R.
+Le g de Hedges est le d de Cohen réduit légèrement pour corriger les petits échantillons. effectsize utilise la correction exacte, pingouin une approximation proche : avec 93 patients, ils diffèrent à la sixième décimale : 0.664922 dans R, qui l'affiche arrondi à 0.66, et 0.664925 dans Python. Pour l'IC, `compute_esci()` de pingouin utilise une formule approchée et arrondit à 2 décimales ; son IC, de 0.24 à 1.09, est donc un peu plus large que celui d'effectsize, de 0.25 à 1.08, qui vient de la distribution t non centrale. Dites lequel vous avez utilisé ; le manuscrit cite celui de R.
 :::
 
 ## 7 · La révision : une analyse de survie {#survival}
 
-Le critère de jugement secondaire est la révision. D'abord, pendant combien de temps les patients ont-ils été suivis ? Ensuite, quelle proportion a été révisée au fil du temps ? 18 patients sont décédés pendant le suivi sans révision : le décès est donc un risque concurrent, et l'incidence cumulée donne la vraie proportion révisée, alors que 1 − Kaplan-Meier la surestimerait ([page 13](../survival/13-kaplan-meier.qmd#competing-risks)).
+Le critère de jugement secondaire est la révision. D'abord, pendant combien de temps les patients ont-ils été suivis ? La méthode de Kaplan-Meier inversé (*reverse Kaplan-Meier*) y répond : elle traite la fin du suivi comme l'événement ([page 13](../survival/13-kaplan-meier.qmd#follow-up)). Ensuite, quelle proportion a été révisée au fil du temps ? 18 patients sont décédés pendant le suivi sans révision : le décès est donc un risque concurrent, et l'incidence cumulée donne la vraie proportion révisée, alors que 1 − Kaplan-Meier la surestimerait ([page 13](../survival/13-kaplan-meier.qmd#competing-risks)). Son estimateur s'appelle Aalen-Johansen, le nom utilisé dans les Méthodes ; `survfit()` et `CumIncidenceRight()` le calculent tous deux.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -599,6 +631,7 @@ print(study["event_status"].value_counts().sort_index().to_string())   # 0 = cen
 # suivi médian et IIQ : méthode de Kaplan-Meier inversée
 reverse_km = KaplanMeierFitter().fit(study["followup_years"], event_observed=(study["event_status"] == 0))
 follow_up = qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_).iloc[:, 0]   # percentiles 25e, 50e, 75e
+follow_up.index = ["25%", "50%", "75%"]   # lifelines les étiquette par la part encore suivie : 0.75, 0.50, 0.25
 print(follow_up.to_string())
 
 # l'incidence cumulée de révision, avec le décès comme risque concurrent
@@ -611,6 +644,9 @@ spread = np.exp(z * revision_rows["se"] / (revision_rows["cif"] * np.log(revisio
 revision_rows = revision_rows.assign(time=[2, 5], low=revision_rows["cif"] ** (1 / spread),
                                      high=revision_rows["cif"] ** spread)
 print(revision_rows[["time", "cif", "low", "high"]].round(3).to_string(index=False))
+
+# les effectifs à risque : patients encore suivis à 0, 2, 4, 6, 8 et 10 ans
+print([int((study["followup_years"] >= years).sum()) for years in range(0, 12, 2)])
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.step(revision.index, revision["cif"], where="post")
@@ -636,7 +672,7 @@ check_agree(list(q1 = follow_up[[1]], median = follow_up[[2]], q3 = follow_up[[3
             reticulate::py$chk)
 ```
 
-Le suivi médian était de 6.05 ans (IIQ de 4.16 à 8.27). 18 patients ont été révisés et 18 sont décédés sans révision. L'incidence cumulée de révision était de 3.4 % (IC à 95 % de 1.1 % à 7.8 %) à 2 ans et de 12.6 % (IC à 95 % de 7.0 % à 19.8 %) à 5 ans. Avec 18 révisions, les IC sont larges : cette cohorte permet de décrire les révisions, pas de les comparer entre les interventions. Les effectifs à risque sous le graphique de R montrent à quelle vitesse les données s'amenuisent : 17 patients étaient encore suivis à 8 ans et 5 à 10 ans, si bien que la fin de la courbe repose sur très peu de patients. Publiez-les avec la courbe ([page 13](../survival/13-kaplan-meier.qmd#kaplan-meier)).
+Le suivi médian était de 6.05 ans ([IIQ](../glossary.qmd#iqr){.term} de 4.16 à 8.27). 18 patients ont été révisés et 18 sont décédés sans révision. Le tableau des incidences cumulées donne des proportions, à multiplier par 100 : la colonne `estimate` (Python : `cif`) contient l'estimation, et les deux colonnes suivantes son IC. L'incidence cumulée de révision était de 3.4 % (IC à 95 % de 1.1 % à 7.8 %) à 2 ans et de 12.6 % (IC à 95 % de 7.0 % à 19.8 %) à 5 ans. Avec 18 révisions, les IC sont larges : cette cohorte permet de décrire les révisions, pas de les comparer entre les interventions. Les effectifs à risque (la ligne `At Risk` sous le graphique de R, et la liste affichée avant le graphique de Python) montrent à quelle vitesse les données s'amenuisent : 17 patients étaient encore suivis à 8 ans et 5 à 10 ans, si bien que la fin de la courbe repose sur très peu de patients. Publiez-les avec la courbe ([page 13](../survival/13-kaplan-meier.qmd#kaplan-meier)).
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : l'incidence cumulée
@@ -655,6 +691,25 @@ Tout ce qui suit jusqu'aux exercices est le manuscrit, et c'est ce que contient 
 - Chaque estimation a son IC à 95 %, et les Methods nomment chaque test.
 - Le manuscrit est généré à partir du même fichier que l'analyse. Si les données changent, Table 1 et Figure 1 se mettent à jour d'elles-mêmes, et le contrôle caché arrête la génération tant que chaque nombre du texte n'est pas corrigé à la main.
 :::
+
+Les Méthodes nomment les versions des logiciels. Demandez à chaque langage la sienne :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+R.version.string   # la version de R, pour les Méthodes
+```
+
+## Python
+
+```{python}
+import sys
+print(sys.version.split()[0])   # la version de Python, pour les Méthodes
+```
+:::
+
+Le manuscrit les cite comme R 4.6 et Python 3.13.
 
 Le manuscrit s'arrête aux Results. La Discussion revient à l'auteur ; pour cette étude, elle devrait traiter l'effet plafond à 1 an, les patients absents de l'analyse, les deux questionnaires, et la question de savoir si une différence de 9 points compte pour les patients.
 :::
@@ -730,6 +785,16 @@ stopifnot(
   round(100 * revision_rows$conf.low, 1) == c(1.1, 7.0), round(100 * revision_rows$conf.high, 1) == c(7.8, 19.8),
   R.version$major == "4", startsWith(R.version$minor, "6"),
   reticulate::py_config()$version == "3.13",
+  # numbers added with the audit fixes
+  as.character(range(study$surgery_date)) == c("2015-01-22", "2024-11-11"),
+  tapply(is.na(study$bmi), study$procedure, sum) == c(4, 4), 4 + 4 == 8,
+  format(round(primary$estimate, 2), nsmall = 2) == c("42.42", "33.40"), round(42.42 - 33.40, 2) == 9.02,
+  round(primary_g$Hedges_g, 6) == 0.664922, round(reticulate::py$g, 6) == 0.664925,
+  sapply(seq(0, 10, by = 2), function(years) sum(study$followup_years >= years)) == c(120, 102, 77, 41, 17, 5),
+  120 - 93 == 27,
+  format(round(rank_check$p.value, 4), nsmall = 4) == "0.0035", round(rank_check$p.value, 7) == 0.0034996,
+  format(signif(summary(ancova)$coefficients["procedureTKA", "Pr(>|t|)"], 7)) == "0.001656337",
+  round(summary(ancova)$coefficients["procedureTKA", "Pr(>|t|)"], 6) == 0.001656,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(unname(rank_check$estimate), 1) == 9.5, round(rank_check$conf.int, 1) == c(3.6, 15.2),
   round(rank_check$p.value, 3) == 0.003,
@@ -772,7 +837,7 @@ print(np.median(np.subtract.outer(tha.to_numpy(), tka.to_numpy())))   # la diff�
 
 > **Results:** The Hodges-Lehmann difference in the change was 9.5 points (95% CI 3.6 to 15.2; p = 0.003).
 
-La conclusion ne change pas : 9.5 points est proche des 9.0 du test t. Python donne la même estimation et la même valeur p ; son IC demande un bootstrap ([page 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)).
+La conclusion ne change pas : 9.5 points est proche des 9.0 du test t. Python donne la même estimation et la même valeur p ; son IC demande un bootstrap ([page 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)). R affiche la valeur p comme 0.0035, déjà arrondie ; Python montre 0.0034996, soit 0.003 à trois décimales. Dans R, l'estimation est sur la ligne `difference in location` et son IC sous `95 percent confidence interval`.
 :::
 
 **2.** Un relecteur écrit : « Les patients PTG sont partis avec des scores plus élevés, donc ils avaient moins de marge pour s'améliorer. Ajustez sur le score préopératoire. » Quelle analyse répond à cela, et que montre-t-elle ?
@@ -803,10 +868,10 @@ print(adjusted.pvalues.round(3).to_string())
 
 > **Results:** Adjusted for the pre-op score, the difference in the 1-year score between TKA and THA was −7.4 points (95% CI −11.9 to −2.9; p = 0.002).
 
-La différence diminue un peu par rapport aux 9.0 points non ajustés mais ne disparaît pas : le point de départ plus élevé n'en explique donc qu'une partie.
+Lisez la ligne `procedureTKA` (Python : `procedure[T.TKA]` ; son IC se trouve dans les colonnes intitulées `0` et `1`). Le coefficient est PTG moins PTH : −7.4 signifie donc qu'à score préopératoire égal, les patients PTG avaient 7.4 points de moins à 1 an. R affiche la valeur p comme `1.656337e-03`, soit 0.001656. Une fois le score préopératoire dans le modèle, une différence du score à 1 an est aussi une différence de la variation : on peut donc la comparer à l'étape 6, où PTH moins PTG valait 9.0 points ; ici, elle vaut 7.4. La différence diminue un peu mais ne disparaît pas : le point de départ plus élevé n'en explique donc qu'une partie.
 :::
 
-**3.** 27 patients n'ont pas de variation du score : l'analyse principale les écarte donc. Ont-ils été écartés plus souvent après une des deux interventions, et quel score manquait ? Testez-le et écrivez la phrase de Résultats.
+**3.** 27 patients (120 − 93) n'ont pas de variation du score : l'analyse principale les écarte donc. Ont-ils été écartés plus souvent après une des deux interventions, et quel score manquait ? Testez-le et écrivez la phrase de Résultats.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -817,12 +882,14 @@ La différence diminue un peu par rapport aux 9.0 points non ajustés mais ne di
 ```{r}
 no_change_score <- is.na(study$prom_1yr - study$prom_preop)
 table(study$procedure, no_change_score)
+round(100 * prop.table(table(study$procedure, no_change_score), margin = 1), 1)   # le même tableau en pourcentages par ligne
 fisher.test(table(study$procedure, no_change_score))$p.value
 
 # quel score manquait ?
 study |>
   group_by(procedure) |>
-  summarise(no_preop = sum(is.na(prom_preop)), no_1yr = sum(is.na(prom_1yr)))
+  summarise(no_preop = sum(is.na(prom_preop)), no_1yr = sum(is.na(prom_1yr)),
+            pct_no_1yr = 100 * mean(is.na(prom_1yr)))                    # % sans score à 1 an
 fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value   # le score à 1 an seul
 ```
 
@@ -832,13 +899,17 @@ fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value   # le score 
 no_change_score = (study["prom_1yr"] - study["prom_preop"]).isna().rename("no_change_score")
 missing_table = pd.crosstab(study["procedure"], no_change_score)
 print(missing_table.to_string())
+print(pd.crosstab(study["procedure"], no_change_score, normalize="index").mul(100).round(1).to_string())   # le même tableau en pourcentages par ligne
 print(stats.fisher_exact(missing_table).pvalue)
 
 # quel score manquait ?
 print(study[["prom_preop", "prom_1yr"]].isna().groupby(study["procedure"]).sum().to_string())
+print(study["prom_1yr"].isna().groupby(study["procedure"]).mean().mul(100).round(1).to_string())   # % sans score à 1 an
 print(stats.fisher_exact(pd.crosstab(study["procedure"], study["prom_1yr"].isna())).pvalue)   # le score à 1 an seul
 ```
 :::
+
+Les pourcentages se trouvent dans le deuxième tableau (13.2 et 29.9) et, pour le score à 1 an seul, dans la colonne `pct_no_1yr` de R et le dernier tableau de Python (13.2 et 22.4).
 
 > **Results:** The change score was missing for 7 of 53 THA patients (13.2%) and 20 of 67 TKA patients (29.9%; Fisher's exact test p = 0.046): all 7 THA patients and 15 TKA patients had no 1-year score, and the other 5 TKA patients had no pre-op score. The 1-year score alone was missing for 7 THA patients (13.2%) and 15 TKA patients (22.4%; p = 0.239).
 

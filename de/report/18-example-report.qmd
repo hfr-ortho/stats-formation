@@ -35,7 +35,7 @@ Schreiben Sie die Frage auf, bevor Sie die Daten zur Zielgrösse ansehen, zusamm
 
 - **Frage:** Verbessern sich Patientinnen und Patienten im ersten Jahr nach einer Knie-TP (TKA) gleich stark wie nach einer Hüft-TP (THA)?
 - **Primäre Zielgrösse:** die Veränderung des gelenkspezifischen Scores von vor der Operation bis 1 Jahr danach: HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) nach Hüft-TP, KOOS JR (Score für Knie-Gelenkersatz, Kurzform) nach Knie-TP, jeweils von 0 bis 100 skaliert, höher ist besser.
-- **Primäre Analyse:** die Differenz der mittleren Veränderung zwischen Hüft-TP und Knie-TP mit ihrem 95%-Konfidenzintervall (KI), aus dem t-Test nach Welch ([Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)), wenn die Veränderungen in jeder Gruppe ungefähr symmetrisch aussehen ([Seite 3](../foundations/03-distributions.qmd)). Andernfalls der Mann-Whitney-Test.
+- **Primäre Analyse:** die Differenz der mittleren Veränderung zwischen Hüft-TP und Knie-TP mit ihrem 95%-[Konfidenzintervall (KI)](../glossary.qmd#confidence-interval){.term}, aus dem t-Test nach Welch ([Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)), wenn die Veränderungen in jeder Gruppe ungefähr symmetrisch aussehen ([Seite 3](../foundations/03-distributions.qmd)). Andernfalls der Mann-Whitney-Test.
 - **Sekundäre Zielgrösse:** Revision einer beliebigen Komponente, als kumulative Inzidenz mit dem Tod als konkurrierendem Risiko ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)).
 
 ::: {.callout-warning}
@@ -45,7 +45,7 @@ HOOS JR und KOOS JR sind verschiedene Fragebögen. Beide reichen von 0 bis 100, 
 
 ## 2 · Die rohe Arbeitsmappe aufräumen {#tidy}
 
-Die Daten stammen aus der Erhebungstabelle, die [Seite 1](../foundations/01-tidy-data.qmd#tidying) Schritt für Schritt aufräumt: 60 Fälle pro Standort, mit Banner-Zeilen, verbundenen Kopfzellen, gemischten Datumsformaten, fünf Schreibweisen für «fehlend» und Revisionen, die nur durch eine rote Füllung markiert sind. Der Code unten fasst die fünf Schritte von Seite 1 in einem Block zusammen; öffnen Sie ihn, um den Code zu sehen, und gehen Sie zu Seite 1 zurück, um zu erfahren, wozu jeder Schritt dient.
+Die Daten stammen aus der Erhebungstabelle, die [Seite 1](../foundations/01-tidy-data.qmd#tidying) Schritt für Schritt aufräumt: 60 Fälle pro Standort, mit Banner-Zeilen, verbundenen Kopfzellen, gemischten Datumsformaten, fünf Schreibweisen für «fehlend» (`N/A`, `unk`, `-`, `999` und leere Zellen) und Revisionen, die nur durch eine rote Füllung markiert sind. Der Code unten fasst die fünf Schritte von Seite 1 in einem Block zusammen; öffnen Sie ihn, um den Code zu sehen, und gehen Sie zu Seite 1 zurück, um zu erfahren, wozu jeder Schritt dient.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -254,7 +254,9 @@ registry <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
 
 study <- left_join(tidy, registry, by = "case_id")   # behält jeden Fall der Arbeitsmappe
 nrow(study)
-count(study, procedure)
+count(study, procedure) |>
+  mutate(pct = 100 * n / sum(n))     # jeder Eingriff als Prozentsatz aller Fälle
+range(study$surgery_date)            # das erste und das letzte Operationsdatum, für den Methodenteil
 ```
 
 ## Python
@@ -268,6 +270,8 @@ registry = (pd.read_csv("data/cohort.csv", parse_dates=["surgery_date"])
 study = tidy.merge(registry, on="case_id", how="left")   # behält jeden Fall der Arbeitsmappe
 print(len(study))
 print(study["procedure"].value_counts().sort_index().to_string())
+print(study["procedure"].value_counts(normalize=True).sort_index().mul(100).round(1).to_string())   # als Prozentsätze
+print(study["surgery_date"].min().date(), study["surgery_date"].max().date())   # das erste und das letzte Operationsdatum, für den Methodenteil
 ```
 :::
 
@@ -276,15 +280,19 @@ print(study["procedure"].value_counts().sort_index().to_string())
 chk = {"rows": float(len(study)), "patients": float(study["patient_id"].nunique()),
        "tha": float((study["procedure"] == "THA").sum()), "revised": float(study["revised"].sum()),
        "mean_bmi": float(study["bmi"].mean())}
+chk_period = {"first": float(study["surgery_date"].min().strftime("%Y%m%d")), "last": float(study["surgery_date"].max().strftime("%Y%m%d")),
+              "pct_tha": float(100 * (study["procedure"] == "THA").mean())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(study), patients = n_distinct(study$patient_id), tha = sum(study$procedure == "THA"),
                  revised = sum(study$revised), mean_bmi = mean(study$bmi, na.rm = TRUE)), reticulate::py$chk)
+check_agree(list(first = as.numeric(format(min(study$surgery_date), "%Y%m%d")), last = as.numeric(format(max(study$surgery_date), "%Y%m%d")),
+                 pct_tha = 100 * mean(study$procedure == "THA")), reticulate::py$chk_period)
 ```
 
-53 Hüft-TP und 67 Knie-TP. Ein Left Join behält jeden Fall der Arbeitsmappe, auch wenn das Register keinen Eintrag dazu hat; der nächste Schritt prüft, dass keiner fehlt.
+53 Hüft-TP (44.2 %) und 67 Knie-TP (55.8 %). Die letzte Zeile der Ausgabe zeigt das erste und das letzte Operationsdatum: Der Studienzeitraum reicht von Januar 2015 bis November 2024. Ein Left Join behält jeden Fall der Arbeitsmappe, auch wenn das Register keinen Eintrag dazu hat; der nächste Schritt prüft, dass keiner fehlt.
 
 ## 3 · Das Aufräumen prüfen {#integrity}
 
@@ -379,7 +387,7 @@ table_one <- study |>
   tbl_summary(
     by           = procedure,
     statistic    = all_continuous() ~ "{mean} ({sd})",
-    digits       = all_continuous() ~ 1,
+    digits       = list(all_continuous() ~ 1, all_categorical() ~ c(0, 1)),   # 1 Dezimalstelle für Mittelwerte, SDs und Prozentsätze
     label        = list(age ~ "Age, years", sex ~ "Sex", bmi ~ "BMI, kg/m²", asa ~ "ASA class",
                         diabetes ~ "Diabetes", hypertension ~ "Hypertension", sleep_apnea ~ "Sleep apnea",
                         site ~ "Site", prom_preop ~ "Pre-op score (HOOS JR or KOOS JR), points"),
@@ -422,13 +430,13 @@ smd_r <- table_one$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Am stärksten unterscheiden sich die Gruppen beim Geschlecht: 72 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49 % derjenigen mit Knie-TP (SMD 0.47). Schlafapnoe (0.31), ASA-Klasse (0.29) und der präoperative Score (0.26) unterscheiden sich weniger; eine SMD unter 0.1 wird üblicherweise als vernachlässigbarer Unterschied gelesen. Die Gruppe mit Knie-TP startete im Mittel 2.9 Punkte höher, was bei einer als Veränderung gemessenen Zielgrösse wichtig ist: Eine Gruppe, die höher startet, hat weniger Spielraum für eine Verbesserung.
+Am stärksten unterscheiden sich die Gruppen beim Geschlecht: 71.7 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49.3 % derjenigen mit Knie-TP (SMD 0.47). Schlafapnoe (0.31), ASA-Klasse (0.29) und der präoperative Score (0.26) unterscheiden sich weniger; eine SMD unter 0.1 wird üblicherweise als vernachlässigbarer Unterschied gelesen. Die Gruppe mit Knie-TP startete im Mittel 2.9 Punkte höher (51.0 gegenüber 48.1, die letzte Zeile der Tabelle), was bei einer als Veränderung gemessenen Zielgrösse wichtig ist: Eine Gruppe, die höher startet, hat weniger Spielraum für eine Verbesserung.
 
 Es gibt keine Spalte Overall. Bei den meisten Zeilen wäre sie harmlos, beim präoperativen Score würde sie aber die Scores von HOOS JR und KOOS JR zusammen mitteln, und genau vor diesem Vergleich hat Schritt 1 gewarnt.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: SMD
-Die SMD stimmen auf zwei Dezimalstellen überein. Das Package smd von R teilt die Varianzen durch *n*, tableone durch *n* − 1; die SMD kontinuierlicher Variablen können sich daher in der dritten Dezimalstelle unterscheiden ([Seite 2](../foundations/02-demographics.qmd#smd)). Die versteckte Prüfung berücksichtigt das. Die beiden Packages subtrahieren die Gruppen ausserdem in entgegengesetzter Reihenfolge, deshalb unterscheiden sich ihre Vorzeichen: Die Tabelle in R zeigt Absolutwerte, wie es Seite 2 empfiehlt, die von tableone behalten ihr Vorzeichen.
+Die SMD stimmen auf zwei Dezimalstellen überein. Das Package smd von R teilt die Varianzen durch *n*, tableone durch *n* − 1; die SMD kontinuierlicher Variablen können sich daher in der dritten Dezimalstelle unterscheiden ([Seite 2](../foundations/02-demographics.qmd#smd)). Die versteckte Prüfung berücksichtigt das. Die beiden Packages subtrahieren die Gruppen ausserdem in entgegengesetzter Reihenfolge, deshalb unterscheiden sich ihre Vorzeichen: Die Tabelle in R zeigt Absolutwerte, wie es Seite 2 empfiehlt, die von tableone behalten ihr Vorzeichen. Auch der Aufbau unterscheidet sich. gtsummary fügt eine Zeile Missing mit einer Anzahl pro Gruppe hinzu; tableone hat eine Spalte Missing mit der Gesamtzahl (BMI: 4 + 4 = 8). Bei einer Ja/Nein-Variable zeigt gtsummary eine Zeile, für «ja»; tableone zeigt eine Zeile für 0 und eine für 1.
 :::
 
 ## 5 · Die Verteilungen prüfen {#distributions}
@@ -451,8 +459,19 @@ ggplot(analysed, aes(change)) +
 
 change_summary <- analysed |>
   group_by(procedure) |>
-  summarise(n = n(), mean = mean(change), sd = sd(change), at_ceiling = sum(prom_1yr == 100))
+  summarise(n = n(), mean = mean(change), sd = sd(change),
+            at_ceiling = sum(prom_1yr == 100),               # Personen mit dem Höchstwert nach 1 Jahr
+            pct_at_ceiling = 100 * mean(prom_1yr == 100))    # ... als Prozentsatz der Gruppe
 change_summary
+
+# wie viele Personen beide Scores haben: insgesamt, dann nach Eingriff
+c(both = nrow(analysed), pct = 100 * nrow(analysed) / nrow(study))
+both_scores <- study |>
+  group_by(procedure) |>
+  summarise(n = n(),                                     # alle Personen
+            both = sum(!is.na(prom_1yr - prom_preop)),   # Personen mit beiden Scores
+            pct = 100 * both / n)                        # ... als Prozentsatz
+both_scores
 ```
 
 ## Python
@@ -470,9 +489,16 @@ axes[1].set_xlabel("Change in score, pre-op to 1 year (points)")
 plt.tight_layout()
 plt.show()
 
-summary = analysed.groupby("procedure").agg(n=("change", "size"), mean=("change", "mean"),
-                                            sd=("change", "std"), at_ceiling=("prom_1yr", lambda s: int((s == 100).sum())))
+summary = analysed.groupby("procedure").agg(
+    n=("change", "size"), mean=("change", "mean"), sd=("change", "std"),
+    at_ceiling=("prom_1yr", lambda s: int((s == 100).sum())),          # Personen mit dem Höchstwert nach 1 Jahr
+    pct_at_ceiling=("prom_1yr", lambda s: 100 * (s == 100).mean()))    # ... als Prozentsatz der Gruppe
 print(summary.round(1).to_string())
+
+# wie viele Personen beide Scores haben: insgesamt, dann nach Eingriff
+print(len(analysed), round(100 * len(analysed) / len(study), 1))
+both = (study["prom_1yr"] - study["prom_preop"]).notna().groupby(study["procedure"])   # True = hat beide Scores
+print(pd.DataFrame({"n": both.size(), "both": both.sum(), "pct": (100 * both.mean()).round(1)}).to_string())
 ```
 :::
 
@@ -481,17 +507,23 @@ print(summary.round(1).to_string())
 chk = {"n_tha": float(summary.loc["THA", "n"]), "n_tka": float(summary.loc["TKA", "n"]),
        "mean_tha": float(summary.loc["THA", "mean"]), "sd_tka": float(summary.loc["TKA", "sd"]),
        "ceiling_tha": float(summary.loc["THA", "at_ceiling"])}
+chk_both = {"pct_ceiling_tha": float(summary.loc["THA", "pct_at_ceiling"]), "pct_ceiling_tka": float(summary.loc["TKA", "pct_at_ceiling"]),
+            "pct_both": float(100 * len(analysed) / len(study)), "pct_both_tha": float(100 * both.mean()["THA"]),
+            "pct_both_tka": float(100 * both.mean()["TKA"])}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(n_tha = change_summary$n[1], n_tka = change_summary$n[2], mean_tha = change_summary$mean[1],
                  sd_tka = change_summary$sd[2], ceiling_tha = change_summary$at_ceiling[1]), reticulate::py$chk)
+check_agree(list(pct_ceiling_tha = change_summary$pct_at_ceiling[1], pct_ceiling_tka = change_summary$pct_at_ceiling[2],
+                 pct_both = 100 * nrow(analysed) / nrow(study), pct_both_tha = both_scores$pct[1],
+                 pct_both_tka = both_scores$pct[2]), reticulate::py$chk_both)
 ```
 
-93 der 120 Patientinnen und Patienten haben beide Scores: 46 mit Hüft-TP und 47 mit Knie-TP. Innerhalb jeder Gruppe sind die Veränderungen ungefähr symmetrisch, ohne langen Ausläufer, und jede Gruppe hat mehr als 30 Personen, deshalb passt der t-Test nach Welch ([Seite 3](../foundations/03-distributions.qmd)).
+93 der 120 Patientinnen und Patienten (77.5 %) haben beide Scores: 46 der 53 mit Hüft-TP (86.8 %) und 47 der 67 mit Knie-TP (70.1 %), wie die letzten beiden Ausgaben zeigen. Innerhalb jeder Gruppe sind die Veränderungen ungefähr symmetrisch, ohne langen Ausläufer, und jede Gruppe hat mehr als 30 Personen, deshalb passt der t-Test nach Welch ([Seite 3](../foundations/03-distributions.qmd)).
 
-Für die Diskussion ist Folgendes festzuhalten: 15 der 46 Patientinnen und Patienten mit Hüft-TP (32.6 %) erreichten den Höchstwert 100 nach 1 Jahr, gegenüber 7 der 47 mit Knie-TP (14.9 %). Personen, die am oberen Ende der Skala anstossen, hätten sich bei einer grösseren Skala vielleicht noch stärker verbessert; deshalb wird die Verbesserung nach Hüft-TP, und mit ihr die Differenz zwischen den Gruppen, möglicherweise unterschätzt. Übung 1 prüft das Resultat mit einem rangbasierten Test.
+Für die Diskussion ist Folgendes festzuhalten: 15 der 46 Patientinnen und Patienten mit Hüft-TP (32.6 %) erreichten den Höchstwert 100 nach 1 Jahr, gegenüber 7 der 47 mit Knie-TP (14.9 %): die Spalten `at_ceiling` und `pct_at_ceiling` der ersten Tabelle. Personen, die [am oberen Ende der Skala anstossen](../glossary.qmd#ceiling-effect){.term}, hätten sich bei einer grösseren Skala vielleicht noch stärker verbessert; deshalb wird die Verbesserung nach Hüft-TP, und mit ihr die Differenz zwischen den Gruppen, möglicherweise unterschätzt. Übung 1 prüft das Resultat mit einem rangbasierten Test.
 
 ## 6 · Die primäre Analyse {#primary-analysis}
 
@@ -547,18 +579,18 @@ check_agree(list(low = primary_g$CI_low, high = primary_g$CI_high), reticulate::
 ```
 
 So lesen Sie die Ausgabe:
-- **Die Differenz:** Patientinnen und Patienten mit Hüft-TP verbesserten sich im Mittel um 42.4 Punkte, solche mit Knie-TP um 33.4, eine Differenz von 9.0 Punkten (95%-KI 3.5 bis 14.6). R stellt Hüft-TP an die erste Stelle, weil THA im Code alphabetisch vor TKA kommt; der Python-Code subtrahiert in derselben Reihenfolge.
+- **Die Differenz:** Patientinnen und Patienten mit Hüft-TP verbesserten sich im Mittel um 42.4 Punkte, solche mit Knie-TP um 33.4, eine Differenz von 9.0 Punkten (95%-KI 3.5 bis 14.6). R gibt die beiden Mittelwerte unter `sample estimates` aus, aber nicht ihre Differenz: 42.42 − 33.40 = 9.02. Python gibt sie in der Zeile `difference =` aus. Das KI steht in R unter `95 percent confidence interval`. R stellt Hüft-TP an die erste Stelle, weil THA im Code alphabetisch vor TKA kommt; der Python-Code subtrahiert in derselben Reihenfolge.
 - **p = 0.002:** Wenn die Eingriffe wirklich keinen Unterschied machten, wäre ein so grosser Abstand selten.
-- **Hedges' g = 0.66** (95%-KI 0.25 bis 1.08): die Differenz in Standardabweichungen. Beim Schätzwert ist sie mittel bis gross, aber das KI reicht von einer kleinen Differenz bis zu einer grossen.
+- **Hedges' g = 0.66** (95%-KI 0.25 bis 1.08): die Differenz in Standardabweichungen. Als grobe Richtschnur gilt: 0.2 ist klein, 0.5 mittel und 0.8 gross ([Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)). 0.66 ist beim Schätzwert also mittel bis gross, aber das KI reicht von einer kleinen Differenz bis zu einer grossen.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Hedges' g
-Hedges' g ist Cohens d, leicht verkleinert, um kleine Stichproben zu korrigieren. effectsize verwendet die exakte Korrektur, pingouin eine enge Näherung; bei 93 Personen unterscheiden sie sich deshalb in der sechsten Dezimalstelle. Für das KI verwendet `compute_esci()` von pingouin eine Näherungsformel und rundet auf 2 Dezimalstellen, daher ist sein KI, 0.24 bis 1.09, etwas breiter als das von effectsize, 0.25 bis 1.08, das aus der nichtzentralen t-Verteilung stammt. Geben Sie an, welches Sie verwendet haben; das Manuskript nennt das von R.
+Hedges' g ist Cohens d, leicht verkleinert, um kleine Stichproben zu korrigieren. effectsize verwendet die exakte Korrektur, pingouin eine enge Näherung; bei 93 Personen unterscheiden sie sich deshalb in der sechsten Dezimalstelle: 0.664922 in R, das den Wert gerundet als 0.66 ausgibt, und 0.664925 in Python. Für das KI verwendet `compute_esci()` von pingouin eine Näherungsformel und rundet auf 2 Dezimalstellen, daher ist sein KI, 0.24 bis 1.09, etwas breiter als das von effectsize, 0.25 bis 1.08, das aus der nichtzentralen t-Verteilung stammt. Geben Sie an, welches Sie verwendet haben; das Manuskript nennt das von R.
 :::
 
 ## 7 · Revision: eine Überlebenszeitanalyse {#survival}
 
-Die sekundäre Zielgrösse ist die Revision. Zuerst: Wie lange wurden die Patientinnen und Patienten nachbeobachtet? Dann: Welcher Anteil wurde im Lauf der Zeit revidiert? 18 Personen starben während der Nachbeobachtung ohne Revision, der Tod ist also ein konkurrierendes Risiko: Die kumulative Inzidenz gibt den wahren Anteil der Patientinnen und Patienten mit einer Revision an, während 1 − Kaplan-Meier ihn überschätzen würde ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)).
+Die sekundäre Zielgrösse ist die Revision. Zuerst: Wie lange wurden die Patientinnen und Patienten nachbeobachtet? Das beantwortet die umgekehrte Kaplan-Meier-Methode (*reverse Kaplan-Meier*): Sie behandelt das Ende der Nachbeobachtung als Ereignis ([Seite 13](../survival/13-kaplan-meier.qmd#follow-up)). Dann: Welcher Anteil wurde im Lauf der Zeit revidiert? 18 Personen starben während der Nachbeobachtung ohne Revision, der Tod ist also ein konkurrierendes Risiko: Die kumulative Inzidenz gibt den wahren Anteil der Patientinnen und Patienten mit einer Revision an, während 1 − Kaplan-Meier ihn überschätzen würde ([Seite 13](../survival/13-kaplan-meier.qmd#competing-risks)). Ihr Schätzer heisst Aalen-Johansen, so nennt ihn der Methodenteil; `survfit()` und `CumIncidenceRight()` berechnen ihn beide.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -599,6 +631,7 @@ print(study["event_status"].value_counts().sort_index().to_string())   # 0 = zen
 # mediane Nachbeobachtungszeit und IQR: umgekehrte Kaplan-Meier-Methode
 reverse_km = KaplanMeierFitter().fit(study["followup_years"], event_observed=(study["event_status"] == 0))
 follow_up = qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_).iloc[:, 0]   # 25., 50., 75. Perzentil
+follow_up.index = ["25%", "50%", "75%"]   # lifelines beschriftet sie mit dem Anteil, der noch nachbeobachtet wird: 0.75, 0.50, 0.25
 print(follow_up.to_string())
 
 # die kumulative Inzidenz der Revision, mit dem Tod als konkurrierendem Risiko
@@ -611,6 +644,9 @@ spread = np.exp(z * revision_rows["se"] / (revision_rows["cif"] * np.log(revisio
 revision_rows = revision_rows.assign(time=[2, 5], low=revision_rows["cif"] ** (1 / spread),
                                      high=revision_rows["cif"] ** spread)
 print(revision_rows[["time", "cif", "low", "high"]].round(3).to_string(index=False))
+
+# die Anzahl Personen unter Risiko: nach 0, 2, 4, 6, 8 und 10 Jahren noch nachbeobachtet
+print([int((study["followup_years"] >= years).sum()) for years in range(0, 12, 2)])
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.step(revision.index, revision["cif"], where="post")
@@ -636,7 +672,7 @@ check_agree(list(q1 = follow_up[[1]], median = follow_up[[2]], q3 = follow_up[[3
             reticulate::py$chk)
 ```
 
-Die mediane Nachbeobachtungszeit betrug 6.05 Jahre (Interquartilsabstand, IQR, 4.16 bis 8.27). 18 Personen hatten eine Revision, und 18 starben ohne Revision. Die kumulative Inzidenz der Revision betrug 3.4 % (95%-KI 1.1 % bis 7.8 %) nach 2 Jahren und 12.6 % (95%-KI 7.0 % bis 19.8 %) nach 5 Jahren. Bei 18 Revisionen sind die KI breit: Diese Kohorte kann Revisionen beschreiben, aber nicht zwischen den Eingriffen vergleichen. Die Anzahl Personen unter Risiko unter dem Diagramm von R zeigt, wie schnell die Daten dünner werden: 17 Personen wurden nach 8 Jahren noch nachbeobachtet und 5 nach 10 Jahren, das Ende der Kurve beruht also auf sehr wenigen Personen. Veröffentlichen Sie diese Zahlen zusammen mit der Kurve ([Seite 13](../survival/13-kaplan-meier.qmd#kaplan-meier)).
+Die mediane Nachbeobachtungszeit betrug 6.05 Jahre ([Interquartilsabstand](../glossary.qmd#iqr){.term}, IQR, 4.16 bis 8.27). 18 Personen hatten eine Revision, und 18 starben ohne Revision. Die Tabelle der kumulativen Inzidenzen enthält Anteile, die Sie mit 100 multiplizieren: Die Spalte `estimate` (Python: `cif`) enthält den Schätzwert, die beiden Spalten danach sein KI. Die kumulative Inzidenz der Revision betrug 3.4 % (95%-KI 1.1 % bis 7.8 %) nach 2 Jahren und 12.6 % (95%-KI 7.0 % bis 19.8 %) nach 5 Jahren. Bei 18 Revisionen sind die KI breit: Diese Kohorte kann Revisionen beschreiben, aber nicht zwischen den Eingriffen vergleichen. Die Anzahl Personen unter Risiko (die Zeile `At Risk` unter dem Diagramm von R und die Liste vor dem Diagramm von Python) zeigt, wie schnell die Daten dünner werden: 17 Personen wurden nach 8 Jahren noch nachbeobachtet und 5 nach 10 Jahren, das Ende der Kurve beruht also auf sehr wenigen Personen. Veröffentlichen Sie diese Zahlen zusammen mit der Kurve ([Seite 13](../survival/13-kaplan-meier.qmd#kaplan-meier)).
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: die kumulative Inzidenz
@@ -655,6 +691,25 @@ Alles von hier bis zu den Übungen ist das Manuskript, und das ist der Inhalt de
 - Jeder Schätzwert hat ein 95%-KI, und der Methodenteil nennt jeden Test.
 - Das Manuskript wird aus derselben Datei erzeugt wie die Analyse. Ändern sich die Daten, aktualisieren sich Tabelle 1 und Abbildung 1 von selbst, und die versteckte Prüfung hält das Rendern an, bis jede Zahl im Text von Hand angepasst ist.
 :::
+
+Der Methodenteil nennt die Softwareversionen. Fragen Sie jede Sprache nach ihrer eigenen:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+R.version.string   # die R-Version, für den Methodenteil
+```
+
+## Python
+
+```{python}
+import sys
+print(sys.version.split()[0])   # die Python-Version, für den Methodenteil
+```
+:::
+
+Das Manuskript nennt sie als R 4.6 und Python 3.13.
 
 Das Manuskript endet bei den Results. Die Diskussion schreiben die Autorinnen und Autoren selbst; bei dieser Studie müsste sie den Deckeneffekt nach 1 Jahr behandeln, die Patientinnen und Patienten, die in der Analyse fehlen, die beiden Fragebögen und die Frage, ob eine Differenz von 9 Punkten für Patientinnen und Patienten von Bedeutung ist.
 :::
@@ -730,6 +785,16 @@ stopifnot(
   round(100 * revision_rows$conf.low, 1) == c(1.1, 7.0), round(100 * revision_rows$conf.high, 1) == c(7.8, 19.8),
   R.version$major == "4", startsWith(R.version$minor, "6"),
   reticulate::py_config()$version == "3.13",
+  # numbers added with the audit fixes
+  as.character(range(study$surgery_date)) == c("2015-01-22", "2024-11-11"),
+  tapply(is.na(study$bmi), study$procedure, sum) == c(4, 4), 4 + 4 == 8,
+  format(round(primary$estimate, 2), nsmall = 2) == c("42.42", "33.40"), round(42.42 - 33.40, 2) == 9.02,
+  round(primary_g$Hedges_g, 6) == 0.664922, round(reticulate::py$g, 6) == 0.664925,
+  sapply(seq(0, 10, by = 2), function(years) sum(study$followup_years >= years)) == c(120, 102, 77, 41, 17, 5),
+  120 - 93 == 27,
+  format(round(rank_check$p.value, 4), nsmall = 4) == "0.0035", round(rank_check$p.value, 7) == 0.0034996,
+  format(signif(summary(ancova)$coefficients["procedureTKA", "Pr(>|t|)"], 7)) == "0.001656337",
+  round(summary(ancova)$coefficients["procedureTKA", "Pr(>|t|)"], 6) == 0.001656,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(unname(rank_check$estimate), 1) == 9.5, round(rank_check$conf.int, 1) == c(3.6, 15.2),
   round(rank_check$p.value, 3) == 0.003,
@@ -772,7 +837,7 @@ print(np.median(np.subtract.outer(tha.to_numpy(), tka.to_numpy())))   # die Hodg
 
 > **Results:** The Hodges-Lehmann difference in the change was 9.5 points (95% CI 3.6 to 15.2; p = 0.003).
 
-Die Schlussfolgerung ändert sich nicht: 9.5 Punkte liegen nahe bei den 9.0 aus dem t-Test. Python ergibt denselben Schätzwert und denselben p-Wert; sein KI braucht einen Bootstrap ([Seite 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)).
+Die Schlussfolgerung ändert sich nicht: 9.5 Punkte liegen nahe bei den 9.0 aus dem t-Test. Python ergibt denselben Schätzwert und denselben p-Wert; sein KI braucht einen Bootstrap ([Seite 6](../catalog/06-two-unpaired-groups.qmd#mann-whitney)). R gibt den p-Wert als 0.0035 aus und hat ihn dabei bereits gerundet; Python zeigt 0.0034996, auf drei Dezimalstellen also 0.003. In R steht der Schätzwert in der Zeile `difference in location` und sein KI unter `95 percent confidence interval`.
 :::
 
 **2.** Gutachterinnen und Gutachter schreiben: «Patientinnen und Patienten mit Knie-TP starteten mit höheren Scores und hatten deshalb weniger Spielraum für eine Verbesserung. Adjustieren Sie für den präoperativen Score.» Welche Analyse beantwortet das, und was zeigt sie?
@@ -803,10 +868,10 @@ print(adjusted.pvalues.round(3).to_string())
 
 > **Results:** Adjusted for the pre-op score, the difference in the 1-year score between TKA and THA was −7.4 points (95% CI −11.9 to −2.9; p = 0.002).
 
-Die Differenz schrumpft gegenüber den unadjustierten 9.0 Punkten ein wenig, verschwindet aber nicht; der höhere Ausgangswert erklärt also nur einen Teil davon.
+Lesen Sie die Zeile `procedureTKA` (Python: `procedure[T.TKA]`; ihr KI steht in den Spalten mit den Überschriften `0` und `1`). Der Koeffizient ist Knie-TP minus Hüft-TP; −7.4 bedeutet also, dass Personen mit Knie-TP bei gleichem präoperativem Score um 7.4 Punkte tiefer lagen, gemessen nach 1 Jahr. R gibt den p-Wert als `1.656337e-03` aus, das ist 0.001656. Sobald der präoperative Score im Modell ist, ist eine Differenz im Score nach 1 Jahr auch eine Differenz in der Veränderung; sie lässt sich also mit Schritt 6 vergleichen: Dort betrug Hüft-TP minus Knie-TP 9.0 Punkte, hier sind es 7.4. Die Differenz schrumpft ein wenig, verschwindet aber nicht; der höhere Ausgangswert erklärt also nur einen Teil davon.
 :::
 
-**3.** Bei 27 Personen fehlt der Score für die Veränderung, die primäre Analyse lässt sie deshalb aus. Wurden Personen nach dem einen Eingriff häufiger ausgelassen als nach dem anderen, und welcher Score fehlte? Prüfen Sie das mit einem Test und formulieren Sie den Results-Satz.
+**3.** Bei 27 Personen (120 − 93) fehlt der Score für die Veränderung, die primäre Analyse lässt sie deshalb aus. Wurden Personen nach dem einen Eingriff häufiger ausgelassen als nach dem anderen, und welcher Score fehlte? Prüfen Sie das mit einem Test und formulieren Sie den Results-Satz.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -817,12 +882,14 @@ Die Differenz schrumpft gegenüber den unadjustierten 9.0 Punkten ein wenig, ver
 ```{r}
 no_change_score <- is.na(study$prom_1yr - study$prom_preop)
 table(study$procedure, no_change_score)
+round(100 * prop.table(table(study$procedure, no_change_score), margin = 1), 1)   # dieselbe Tabelle als Zeilenprozente
 fisher.test(table(study$procedure, no_change_score))$p.value
 
 # welcher Score fehlte?
 study |>
   group_by(procedure) |>
-  summarise(no_preop = sum(is.na(prom_preop)), no_1yr = sum(is.na(prom_1yr)))
+  summarise(no_preop = sum(is.na(prom_preop)), no_1yr = sum(is.na(prom_1yr)),
+            pct_no_1yr = 100 * mean(is.na(prom_1yr)))                    # % ohne Score nach 1 Jahr
 fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value   # nur der Score nach 1 Jahr
 ```
 
@@ -832,13 +899,17 @@ fisher.test(table(study$procedure, is.na(study$prom_1yr)))$p.value   # nur der S
 no_change_score = (study["prom_1yr"] - study["prom_preop"]).isna().rename("no_change_score")
 missing_table = pd.crosstab(study["procedure"], no_change_score)
 print(missing_table.to_string())
+print(pd.crosstab(study["procedure"], no_change_score, normalize="index").mul(100).round(1).to_string())   # dieselbe Tabelle als Zeilenprozente
 print(stats.fisher_exact(missing_table).pvalue)
 
 # welcher Score fehlte?
 print(study[["prom_preop", "prom_1yr"]].isna().groupby(study["procedure"]).sum().to_string())
+print(study["prom_1yr"].isna().groupby(study["procedure"]).mean().mul(100).round(1).to_string())   # % ohne Score nach 1 Jahr
 print(stats.fisher_exact(pd.crosstab(study["procedure"], study["prom_1yr"].isna())).pvalue)   # nur der Score nach 1 Jahr
 ```
 :::
+
+Die Prozentsätze stehen in der zweiten Tabelle (13.2 und 29.9) und, für den Score nach 1 Jahr allein, in der Spalte `pct_no_1yr` in R und in der letzten Tabelle in Python (13.2 und 22.4).
 
 > **Results:** The change score was missing for 7 of 53 THA patients (13.2%) and 20 of 67 TKA patients (29.9%; Fisher's exact test p = 0.046): all 7 THA patients and 15 TKA patients had no 1-year score, and the other 5 TKA patients had no pre-op score. The 1-year score alone was missing for 7 THA patients (13.2%) and 15 TKA patients (22.4%; p = 0.239).
 
