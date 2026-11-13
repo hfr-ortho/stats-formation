@@ -34,7 +34,19 @@ To keep the code short, the joint replacement examples use every case, including
 
 - The variable is a **measurement** (age, BMI, operative time), not a category.
 - Its distribution is **roughly symmetric**, without extreme outliers. Check with a histogram ([page 3](../foundations/03-distributions.qmd#look)).
-- If it's **skewed**, has a **ceiling or floor**, or is **ordinal** → use the [median and IQR](#median-iqr) instead.
+- If it's **[skewed](../glossary.qmd#skewed){.term}**, has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, or is **ordinal** → use the [median and IQR](#median-iqr) instead.
+
+### What the calculation really does
+
+The mean and the SD are two short pieces of arithmetic. The confidence interval adds a third.
+
+1. **[Mean](../glossary.qmd#mean){.term}:** add up all the ages and divide by the number of cases.
+2. **Distances:** subtract the mean from each age. Some distances are positive and some negative, and together they always add up to 0, so they can't simply be averaged.
+3. **[Variance](../glossary.qmd#variance){.term}:** square each distance, which makes them all positive. Add the squares up and divide by n − 1, one less than the number of cases.
+4. **[Standard deviation](../glossary.qmd#standard-deviation){.term} (SD):** take the square root of the variance. That brings the result back to years: the typical distance of a patient's age from the mean.
+5. **[Confidence interval](../glossary.qmd#confidence-interval){.term} (CI):** divide the SD by √n to get the [standard error](../glossary.qmd#standard-error){.term} of the mean, then go about 2 standard errors either side of the mean.
+
+Once the numbers are in, a box under "Read the output" does each step by hand.
 
 ### Look at the data first
 
@@ -119,13 +131,65 @@ check_agree(list(n = age_summary$n, mean = age_summary$mean, sd = age_summary$sd
 
 - **n = 600:** the number of cases with an age recorded.
 - **Mean = 65.5 years:** the average age.
-- **SD = 9.4 years:** the standard deviation, the typical distance of a patient's age from the mean. In a bell-shaped distribution about 95% of patients lie within 2 SDs of the mean, here roughly 47 to 84 years.
+- **SD = 9.4 years:** the standard deviation, the typical distance of a patient's age from the mean. In a bell-shaped distribution about 95% of patients lie within 2 SDs of the mean, here 65.5 ± 2 × 9.4, roughly 47 to 84 years.
 - **95% CI 64.8 to 66.3:** the confidence interval for the **mean**. It tells you how precisely 600 patients pin down the average age of patients like ours. It says nothing about how spread out individual patients are; that's the SD's job.
 
 ::: {.callout-note collapse="true"}
-## 🔍 Under the hood: the CI for a mean
-The **standard error** of the mean is SD / √n = 9.44 / √600 ≈ 0.39 years (9.44 is the SD to two decimals, as the output prints it). The 95% CI is the mean ± *t* × standard error, where *t* ≈ 1.96 for large samples (it's a little bigger for small ones): here 65.52 ± 1.96 × 0.39 = 64.76 to 66.28, the CI in the output. Quadruple the sample size and the standard error halves; the SD stays about the same.
+## 🔍 Under the hood: the mean, SD and CI by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ages <- cohort$age
+head(ages, 5)                                          # the first 5 ages
+sum(ages) / 600                                        # step 1: the mean, the sum of the ages ÷ 600 cases
+distance <- ages - mean(ages)                          # step 2: each case's distance from the mean
+head(distance, 5)
+age_variance <- sum(distance^2) / (600 - 1)            # step 3: the variance, the squared distances added up ÷ (n − 1)
+c(variance = age_variance, sd = sqrt(age_variance))    # step 4: the SD is its square root
+age_se <- sqrt(age_variance) / sqrt(600)               # step 5: the standard error, SD ÷ √n
+t_multiplier <- qt(0.975, df = 600 - 1)                # the exact multiplier that "about 2" stands for
+c(standard_error = age_se, t = t_multiplier)
+mean(ages) + c(-1, 1) * t_multiplier * age_se          # the 95% CI
+```
+
+## Python
+
+```{python}
+ages = cohort["age"]
+print(ages.head(5).to_list())                          # the first 5 ages
+print(ages.sum() / 600)                                # step 1: the mean, the sum of the ages ÷ 600 cases
+distance = ages - ages.mean()                          # step 2: each case's distance from the mean
+print(distance.head(5).round(2).to_list())
+age_variance = (distance ** 2).sum() / (600 - 1)       # step 3: the variance, the squared distances added up ÷ (n − 1)
+print(age_variance, age_variance ** 0.5)               # step 4: the SD is its square root
+age_se = age_variance ** 0.5 / 600 ** 0.5              # step 5: the standard error, SD ÷ √n
+t_multiplier = stats.t.ppf(0.975, df=600 - 1)          # the exact multiplier that "about 2" stands for
+print(age_se, t_multiplier)
+print(ages.mean() - t_multiplier * age_se, ages.mean() + t_multiplier * age_se)   # the 95% CI
+```
 :::
+
+The first case was 56 years old, which is 56 − 65.52 = −9.52 years from the mean. The variance comes to 89.02, and its square root is the SD the software printed, 9.44 years. The standard error is 0.385 years and the exact multiplier is 1.964, so the CI is 65.52 ± 1.964 × 0.385: from 64.76 to 66.28, as in the output.
+
+The multiplier is called *t*. It is close to 1.96 for large samples and a little bigger for small ones. Quadruple the sample size and the standard error halves; the SD stays about the same.
+:::
+
+```{python}
+#| include: false
+chk = {"mean": float(ages.sum() / 600), "variance": float(age_variance), "se": float(age_se),
+       "t": float(t_multiplier), "ci_low": float(ages.mean() - t_multiplier * age_se),
+       "ci_high": float(ages.mean() + t_multiplier * age_se)}
+```
+
+```{r}
+#| include: false
+check_agree(list(mean = sum(ages) / 600, variance = age_variance, se = age_se, t = t_multiplier,
+                 ci_low = mean(ages) - t_multiplier * age_se, ci_high = mean(ages) + t_multiplier * age_se),
+            reticulate::py$chk)
+```
+
 
 ### How to report it
 
@@ -135,7 +199,7 @@ The **standard error** of the mean is SD / √n = 9.44 / √600 ≈ 0.39 years (
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: SD or SEM?
-The **standard error of the mean (SEM)** is much smaller than the SD (0.39 vs 9.4 years here), which is why some papers report "mean ± SEM": it looks tidier. But it describes the precision of the mean, not your patients. Use the **SD** to describe patients and a **95% CI** to show the precision of an estimate. Never report a bare "±" without saying which one it is.
+The **standard error of the mean (SEM)** is the SD divided by √n: 9.44 / √600 ≈ 0.39 years here, much smaller than the SD of 9.4 years. That is why some papers report "mean ± SEM": it looks tidier. But it describes the precision of the mean, not your patients. Use the **SD** to describe patients and a **95% CI** to show the precision of an estimate. Never report a bare "±" without saying which one it is.
 :::
 
 ::: {.callout-tip}
@@ -149,9 +213,20 @@ R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is wh
 
 ### When to use it
 
-- The variable is **skewed**, has a **ceiling or floor**, has **outliers**, or is **ordinal** (an ordered scale such as satisfaction from 1 to 5).
-- The median is the middle value: half the patients are above it and half below. The **interquartile range (IQR)** runs from the 25th to the 75th percentile (the first and third quartiles), so it holds the middle half of the patients.
+- The variable is **[skewed](../glossary.qmd#skewed){.term}**, has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, has **outliers**, or is **ordinal** (an ordered scale such as satisfaction from 1 to 5).
+- The [median](../glossary.qmd#median){.term} is the middle value: half the patients are above it and half below. The **[interquartile range (IQR)](../glossary.qmd#iqr){.term}** runs from the 25th to the 75th [percentile](../glossary.qmd#percentile){.term} (the first and third quartiles), so it holds the middle half of the patients.
 - If the variable is a roughly symmetric measurement → the [mean and SD](#mean-sd) are fine and more familiar.
+
+### What the calculation really does
+
+The median and the quartiles come from sorting, not from adding.
+
+1. **Sort** the scores from lowest to highest.
+2. **Median:** take the score in the middle of the sorted list. With an even number of scores there are two middle scores, and the median is halfway between them.
+3. **Quartiles:** do the same a quarter and three quarters of the way along the list. The interquartile range runs from the first of these scores to the second.
+4. Only the order matters, so extreme scores don't move the median: the lowest score could drop to 0 and the middle of the list would stay where it is.
+
+Once the numbers are in, a box under "Read the output" finds the same scores by their position in the list.
 
 ### Look at the data first
 
@@ -170,6 +245,9 @@ ohs_1yr <- proms |>
   filter(visit == "1yr", !is.na(ohs)) |>   # ohs is blank for knee replacements and missed visits
   pull(ohs)
 
+length(ohs_1yr)                            # how many scores
+sum(ohs_1yr == 48)                         # how many of them are the maximum, 48
+
 ggplot(tibble(score = ohs_1yr), aes(score)) +
   geom_bar() +                             # one bar per whole score
   coord_cartesian(xlim = c(0, 48)) +       # the whole scale
@@ -187,6 +265,9 @@ from scipy import stats
 proms = pd.read_csv("data/proms_long.csv")
 ohs_1yr = proms.loc[proms["visit"] == "1yr", "ohs"].dropna()   # ohs is blank for knee replacements and missed visits
 
+print(len(ohs_1yr))                          # how many scores
+print((ohs_1yr == 48).sum())                 # how many of them are the maximum, 48
+
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.hist(ohs_1yr, bins=np.arange(-0.5, 49))   # one bar per whole score, over the whole scale
 ax.set_xlabel("Oxford Hip Score at 1 year (48 = best)")
@@ -195,7 +276,7 @@ plt.show()
 ```
 :::
 
-Scores pile up against the maximum of 48 (a **ceiling**): 39 of the 194 scores were 48. Below the pile there's a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn't.
+Scores pile up against the maximum of 48 (a **ceiling**): 39 of the 194 scores were 48 (the two numbers printed above the plot, in reverse order). Below the pile there's a long tail of patients who did less well. A mean would be dragged down by that tail; the median isn't.
 
 ### Run it
 
@@ -207,6 +288,10 @@ length(ohs_1yr)                                # how many patients
 quantile(ohs_1yr, probs = c(0.25, 0.50, 0.75)) # first quartile, median, third quartile
 
 DescTools::MedianCI(ohs_1yr, method = "exact") # the median with its 95% CI
+
+sum(ohs_1yr == 42)                             # how many scored exactly the median, 42
+sum(ohs_1yr <= 39)                             # how many scored the first quartile, 39, or less
+mean(ohs_1yr <= 39)                            # the same as a proportion
 ```
 
 ## Python
@@ -219,6 +304,10 @@ print(np.quantile(ohs_1yr, [0.25, 0.50, 0.75]))          # first quartile, media
 # Its q argument is the value it would test against; it doesn't change the CI.
 median_ci = stats.quantile_test(ohs_1yr, q=ohs_1yr.median(), p=0.5).confidence_interval()
 print(median_ci)
+
+print((ohs_1yr == 42).sum())                             # how many scored exactly the median, 42
+print((ohs_1yr <= 39).sum())                             # how many scored the first quartile, 39, or less
+print((ohs_1yr <= 39).mean())                            # the same as a proportion
 ```
 :::
 
@@ -240,14 +329,64 @@ check_agree(list(n = length(ohs_1yr), q1 = q[[1]], median = q[[2]], q3 = q[[3]],
 ### Read the output
 
 - **n = 194:** hip replacements with an Oxford Hip Score at 1 year.
-- **Median = 42:** the middle score. With whole-number scores many patients share it (13 scored exactly 42), so "half above, half below" is only roughly true.
-- **IQR 39 to 46:** the middle half of the patients scored between these two values. At least a quarter scored 39 or less: with ties, 62 of the 194 (32%) did.
-- **95% CI for the median 41 to 43:** how precisely 194 patients pin down the median.
+- **Median = 42:** the middle score. With whole-number scores many patients share it (13 scored exactly 42: the first of the three numbers at the end of the output), so "half above, half below" is only roughly true.
+- **IQR 39 to 46:** the middle half of the patients scored between these two values. At least a quarter scored 39 or less: with ties, 62 of the 194 did, a proportion of 0.32 or 32% (the last two numbers of the output).
+- **95% CI for the median 41 to 43:** how precisely 194 patients pin down the median. Under the interval, R prints `conf.level` and 0.9629: the confidence this interval really has, a little more than the 95% asked for (the box below shows why). Python doesn't print it.
 
 ::: {.callout-note collapse="true"}
-## 🔍 Under the hood: where the median's CI comes from
-The CI for a median uses no formula with an SD in it. It counts instead. Sort the scores, then pick two positions such that, if the study were repeated many times, the true median would fall between the scores at those positions at least 95% of the time. The binomial distribution says which positions those are, and the CI is the pair of scores sitting there. Because positions are whole numbers, the actual confidence is a little over 95% (R reports 0.9629 here). This "exact" method needs no assumption about the shape of the data.
+## 🔍 Under the hood: the median, the quartiles and the CI by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+sorted_scores <- sort(ohs_1yr)                              # step 1: sort the 194 scores
+sorted_scores[c(97, 98)]                                    # step 2: the two middle scores, the 97th and the 98th
+1 + (194 - 1) * c(0.25, 0.75)                               # step 3: the positions a quarter and three quarters of the way along the list
+sorted_scores[c(49, 50)]                                    # the 49th and the 50th score: the first quartile lies between them
+sorted_scores[c(145, 146)]                                  # the 145th and the 146th score: the third quartile lies between them
+ci_position <- qbinom(0.025, size = 194, prob = 0.5)        # the CI: the binomial distribution gives a position below the middle
+c(ci_position, 194 - ci_position + 1)                       # that position, and the same position counted from the top
+sorted_scores[c(ci_position, 194 - ci_position + 1)]        # the scores at those two positions are the CI
+1 - 2 * pbinom(ci_position - 1, size = 194, prob = 0.5)     # the confidence these two positions really give
+```
+
+## Python
+
+```{python}
+sorted_scores = np.sort(ohs_1yr)                            # step 1: sort the 194 scores
+print(sorted_scores[[97 - 1, 98 - 1]])                      # step 2: the two middle scores, the 97th and the 98th (Python counts from 0, so subtract 1)
+print(1 + (194 - 1) * np.array([0.25, 0.75]))               # step 3: the positions a quarter and three quarters of the way along the list
+print(sorted_scores[[49 - 1, 50 - 1]])                      # the 49th and the 50th score: the first quartile lies between them
+print(sorted_scores[[145 - 1, 146 - 1]])                    # the 145th and the 146th score: the third quartile lies between them
+ci_position = int(stats.binom.ppf(0.025, 194, 0.5))         # the CI: the binomial distribution gives a position below the middle
+print(ci_position, 194 - ci_position + 1)                   # that position, and the same position counted from the top
+print(sorted_scores[[ci_position - 1, 194 - ci_position]])  # the scores at those two positions are the CI
+print(1 - 2 * stats.binom.cdf(ci_position - 1, 194, 0.5))   # the confidence these two positions really give
+```
 :::
+
+Both middle scores are 42, so the median is 42. The quartiles sit at positions 49.25 and 145.75. The 49th and 50th scores are both 39, and the 145th and 146th are both 46, so the quartiles are 39 and 46.
+
+The CI for a median uses no formula with an SD in it. It counts instead. Each patient is as likely to score above the true median as below it, like a coin toss. The binomial distribution, which describes coin tosses, says that out of 194 patients, fewer than 83 landing on one side would happen less than 2.5% of the time. So the 83rd score from the bottom is rarely above the true median, and the 83rd from the top (the 112th from the bottom) is rarely below it. Those two scores are 41 and 43, the CI in the output. Because positions are whole numbers, the confidence comes out a little over 95%: 0.9629, the number R reports. This "exact" method needs no assumption about the shape of the data.
+:::
+
+```{python}
+#| include: false
+chk = {"middle": float(sorted_scores[[97 - 1, 98 - 1]].mean()), "q1": float(sorted_scores[[49 - 1, 50 - 1]].mean()),
+       "q3": float(sorted_scores[[145 - 1, 146 - 1]].mean()), "position": float(ci_position),
+       "ci_low": float(sorted_scores[ci_position - 1]), "ci_high": float(sorted_scores[194 - ci_position]),
+       "confidence": float(1 - 2 * stats.binom.cdf(ci_position - 1, 194, 0.5))}
+```
+
+```{r}
+#| include: false
+check_agree(list(middle = mean(sorted_scores[c(97, 98)]), q1 = mean(sorted_scores[c(49, 50)]),
+                 q3 = mean(sorted_scores[c(145, 146)]), position = ci_position,
+                 ci_low = sorted_scores[ci_position], ci_high = sorted_scores[194 - ci_position + 1],
+                 confidence = 1 - 2 * pbinom(ci_position - 1, size = 194, prob = 0.5)), reticulate::py$chk)
+```
+
 
 ### How to report it
 
@@ -273,7 +412,18 @@ R's `quantile()` and NumPy's `np.quantile()` use the same default method (R call
 
 - The outcome is **yes/no** (binomial): death within 30 days, complication, discharge home.
 - Report the count, the percentage, and a 95% CI for the percentage.
-- If patients were followed for **different lengths of time** and the event can happen at any time (revision, death) → use a [Kaplan-Meier curve](#kaplan-meier) instead. Here every patient was followed for at least 30 days or until death, so the 30-day proportion is complete.
+- If patients were followed for **different lengths of time** and the event can happen at any time (revision, death) → use a [Kaplan-Meier curve](#kaplan-meier) instead. Here every patient was followed for at least 30 days or until death, so the 30-day proportion is complete ("Look at the data first" checks this).
+
+### What the calculation really does
+
+A proportion is one count divided by another. The work is in its confidence interval.
+
+1. **Count** the patients with the event, and the patients whose outcome is known.
+2. **Divide** the first count by the second. That is the proportion; multiply it by 100 for a percentage.
+3. The simple recipe for the [CI](../glossary.qmd#confidence-interval){.term} is the proportion ± 1.96 [standard errors](../glossary.qmd#standard-error){.term}, with the standard error worked out from the sample's own proportion. This is the [Wald interval](../glossary.qmd#wald-interval){.term}, and it works badly when the event is rare or the group is small.
+4. The **Wilson interval** turns the question around. It collects every true proportion from which our observed proportion would lie no more than 1.96 standard errors away, and it works the standard error out from each of those candidates in turn. The result is not centered on the observed proportion: it is pulled a little toward 50%, and it can never go below 0% or above 100%.
+
+Once the numbers are in, a box under "Read the output" calculates both intervals by hand.
 
 ### Look at the data first
 
@@ -289,6 +439,7 @@ library(tidyverse)
 hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 
 count(hip_fracture, death_30d)   # 1 = died within 30 days, 0 = alive at 30 days
+count(hip_fracture, died, followup_days <= 30)   # died: 1 = died during follow-up. Did the follow-up end by day 30?
 ```
 
 ## Python
@@ -300,10 +451,11 @@ from scipy import stats
 hip_fracture = pd.read_csv("data/hip_fracture.csv")
 
 print(hip_fracture["death_30d"].value_counts(dropna=False))   # 1 = died within 30 days, 0 = alive at 30 days
+print(pd.crosstab(hip_fracture["died"], hip_fracture["followup_days"] <= 30))   # died: 1 = died during follow-up. Did the follow-up end by day 30?
 ```
 :::
 
-No missing values, and only the two codes the codebook allows (0 and 1).
+No missing values, and only the two codes the codebook allows (0 and 1). The second table checks the follow-up. It ended by day 30 only for the 74 patients who died in that time. All 847 patients who were still alive at the end of their follow-up (`died` = 0) were followed for longer, so nobody's 30-day outcome is unknown.
 
 ### Run it
 
@@ -349,8 +501,64 @@ check_agree(list(deaths = deaths, patients = patients, ci_low = wilson[1], ci_hi
 
 ### Read the output
 
-- **74 of 1,200 = 0.062:** 6.2% of patients died within 30 days of admission.
+- **74 of 1,200 = 0.062:** the first count shows 74 deaths and 1,126 survivors, 1,200 patients in all. 74 / 1,200 = 0.0617, so 6.2% of patients died within 30 days of admission.
 - **95% CI 0.049 to 0.077:** the true 30-day mortality for patients like ours is plausibly anywhere from 4.9% to 7.7%.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the Wald and Wilson intervals by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+p_hat <- deaths / patients                                     # the observed proportion
+z <- qnorm(0.975)                                              # the multiplier for 95%, 1.96
+wald_se <- sqrt(p_hat * (1 - p_hat) / patients)                # the standard error, worked out from our own proportion
+p_hat + c(-1, 1) * z * wald_se                                 # the Wald interval: the proportion ± 1.96 standard errors
+
+wilson_center <- (p_hat + z^2 / (2 * patients)) / (1 + z^2 / patients)   # Wilson: the center, pulled toward 0.5, and the half-width
+wilson_half <- z * sqrt(p_hat * (1 - p_hat) / patients + z^2 / (4 * patients^2)) / (1 + z^2 / patients)
+c(center = wilson_center, half_width = wilson_half)
+wilson_center + c(-1, 1) * wilson_half                         # the Wilson interval
+
+lower_limit <- wilson_center - wilson_half
+c(p_hat - lower_limit, z * sqrt(lower_limit * (1 - lower_limit) / patients))   # at the lower limit: the distance to our proportion, and 1.96 standard errors worked out from the limit
+```
+
+## Python
+
+```{python}
+p_hat = deaths / patients                                      # the observed proportion
+z = stats.norm.ppf(0.975)                                      # the multiplier for 95%, 1.96
+wald_se = (p_hat * (1 - p_hat) / patients) ** 0.5              # the standard error, worked out from our own proportion
+print(p_hat - z * wald_se, p_hat + z * wald_se)                # the Wald interval: the proportion ± 1.96 standard errors
+
+wilson_center = (p_hat + z ** 2 / (2 * patients)) / (1 + z ** 2 / patients)   # Wilson: the center, pulled toward 0.5, and the half-width
+wilson_half = z * (p_hat * (1 - p_hat) / patients + z ** 2 / (4 * patients ** 2)) ** 0.5 / (1 + z ** 2 / patients)
+print(wilson_center, wilson_half)
+print(wilson_center - wilson_half, wilson_center + wilson_half)   # the Wilson interval
+
+lower_limit = wilson_center - wilson_half
+print(p_hat - lower_limit, z * (lower_limit * (1 - lower_limit) / patients) ** 0.5)   # at the lower limit: the distance to our proportion, and 1.96 standard errors worked out from the limit
+```
+:::
+
+The Wald interval would run from 0.048 to 0.075. The Wilson interval runs from 0.049 to 0.077, as in the output. It sits a little higher because its center is 0.0631, not our proportion of 0.0617. The last line shows what defines it: the lower limit, 0.0494, lies 0.0123 below our proportion, and 1.96 standard errors worked out from 0.0494 are also 0.0123. With 74 deaths among 1,200 patients the two intervals are close. With fewer patients or a rarer event they move apart.
+:::
+
+```{python}
+#| include: false
+chk = {"z": float(z), "wald_low": float(p_hat - z * wald_se), "wald_high": float(p_hat + z * wald_se),
+       "center": float(wilson_center), "half": float(wilson_half), "gap": float(p_hat - lower_limit),
+       "allowed": float(z * (lower_limit * (1 - lower_limit) / patients) ** 0.5)}
+```
+
+```{r}
+#| include: false
+check_agree(list(z = z, wald_low = p_hat - z * wald_se, wald_high = p_hat + z * wald_se, center = wilson_center,
+                 half = wilson_half, gap = p_hat - lower_limit,
+                 allowed = z * sqrt(lower_limit * (1 - lower_limit) / patients)), reticulate::py$chk)
+```
 
 ### How to report it
 
@@ -376,10 +584,21 @@ R's `prop.test()` gives the Wilson interval, but adds a continuity correction un
 ### When to use it
 
 - The outcome is **time until an event** (revision, death), and patients were followed for **different lengths of time**.
-- Some patients are **censored**: their follow-up ended (the study closed, they moved away, they died) before any revision. We know they went *at least* that long without one.
-- A plain percentage ("13.5% were revised") ignores follow-up time: a patient operated on last year hasn't had time to need a revision. The Kaplan-Meier method uses each patient's follow-up for as long as it lasts.
+- Some patients are **[censored](../glossary.qmd#censored){.term}**: their follow-up ended (the study closed, they moved away, they died) before any revision. We know they went *at least* that long without one.
+- A plain percentage (81 of our 600 cases were revised, 13.5%; the next step counts them) ignores follow-up time: a patient operated on last year hasn't had time to need a revision. The Kaplan-Meier method uses each patient's follow-up for as long as it lasts.
 
 [Page 13](../survival/13-kaplan-meier.qmd) covers survival analysis in depth. This section shows the basic curve.
+
+### What the calculation really does
+
+The Kaplan-Meier method builds the curve one revision at a time.
+
+1. Put the cases in order of follow-up time. At any moment, the cases still being followed and not yet revised are [at risk](../glossary.qmd#at-risk){.term}.
+2. Each time a revision happens, work out the fraction of the cases at risk that **got past** that moment without one: 1 − revisions ÷ cases at risk.
+3. **Multiply** these fractions together, from the day of surgery up to the time you are interested in. The product is the estimated proportion still unrevised at that time. Plotted against time, it is the curve.
+4. A censored case counts among those at risk until its follow-up ends, and then leaves the count. It never makes the curve step down. But every later revision is divided by fewer cases at risk, so each later step is a little bigger.
+
+Once the curve is drawn, a box under "Read the output" rebuilds the 5-year estimate by hand.
 
 ### Look at the data first
 
@@ -416,7 +635,7 @@ print(len(cohort), cohort["revised"].sum(), cohort["followup_years"].median())
 ```
 :::
 
-Each row needs exactly two things: **how long** the patient was followed and **whether** the follow-up ended with the event (1) or was censored (0). The first case was followed for 6.2 years without a revision; the fifth was revised at 5.8 years.
+Each row needs exactly two things: **how long** the patient was followed and **whether** the follow-up ended with the event (1) or was censored (0). The first case was followed for 6.2 years without a revision; the fifth was revised at 5.8 years. The second output counts 600 cases and 81 revisions, the 81 / 600 = 0.135 above, with a median follow-up of 4.365 years (R shows it as 4.36). Python prints the three numbers without labels.
 
 ### Run it
 
@@ -456,6 +675,7 @@ plt.show()
 at_5 = km.survival_function_at_times(5).iloc[0]
 ci_5 = km.confidence_interval_survival_function_.loc[:5].iloc[-1]   # last step at or before 5 years
 print(at_5, ci_5.to_list())
+print((cohort["followup_years"] >= 5).sum())   # cases still being followed at 5 years (n.risk in R)
 ```
 :::
 
@@ -474,8 +694,55 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 
 - **The curve** starts at 100% and steps down at each revision. Censored patients don't make it step; they just leave the group "at risk".
 - **The shaded band** is the 95% CI. It widens to the right as fewer patients remain under follow-up.
-- **The numbers at risk** under the plot show how many patients were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only a handful remain.
-- **At 5 years:** survival 0.863 (95% CI 0.828 to 0.892), with 263 patients still at risk.
+- **The numbers at risk** under the plot show how many patients were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only 21 of the 600 cases remain (the last number in the first row under the plot).
+- **At 5 years:** survival 0.863 (95% CI 0.828 to 0.892), with 263 patients still at risk (`n.risk` in R, the last number Python prints).
+- **The rest of what is printed:** in R's line, `n.event` 66 is the number of revisions up to 5 years (81 over the whole follow-up) and `std.err` is the standard error of the estimate. Python's first line, "600 total observations, 519 right-censored observations", restates the data: 600 cases − 81 revisions = 519 censored.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the 5-year estimate by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+km_steps <- cohort |>
+  filter(revised == 1, followup_years <= 5) |>                # the revisions in the first 5 years
+  count(followup_years, name = "revisions") |>                # one row per moment at which a revision happened
+  mutate(at_risk = map_int(followup_years, \(t) sum(cohort$followup_years >= t)),   # step 1: the cases still at risk at that moment
+         got_past = 1 - revisions / at_risk)                  # step 2: the fraction that got past it
+head(km_steps, 4)
+c(moments = nrow(km_steps), revisions = sum(km_steps$revisions))
+prod(km_steps$got_past)                                       # step 3: multiply the fractions together
+```
+
+## Python
+
+```{python}
+early = cohort[(cohort["revised"] == 1) & (cohort["followup_years"] <= 5)]   # the revisions in the first 5 years
+km_steps = early.groupby("followup_years").size().rename("revisions").reset_index()   # one row per moment at which a revision happened
+km_steps["at_risk"] = [(cohort["followup_years"] >= t).sum() for t in km_steps["followup_years"]]   # step 1: the cases still at risk at that moment
+km_steps["got_past"] = 1 - km_steps["revisions"] / km_steps["at_risk"]       # step 2: the fraction that got past it
+print(km_steps.head(4))
+print(len(km_steps), km_steps["revisions"].sum())
+print(km_steps["got_past"].prod())                                           # step 3: multiply the fractions together
+```
+:::
+
+The first revisions came 0.03 years after surgery: 2 among the 599 cases still at risk, so a fraction of 0.997 got past that moment. The first 5 years hold 59 such moments, with 66 revisions between them. The 59 fractions multiplied together give 0.863, the estimate at 5 years.
+:::
+
+```{python}
+#| include: false
+chk = {"moments": float(len(km_steps)), "revisions": float(km_steps["revisions"].sum()),
+       "first_at_risk": float(km_steps["at_risk"].iloc[0]), "by_hand": float(km_steps["got_past"].prod()),
+       "software": float(at_5)}
+```
+
+```{r}
+#| include: false
+check_agree(list(moments = nrow(km_steps), revisions = sum(km_steps$revisions), first_at_risk = km_steps$at_risk[1],
+                 by_hand = prod(km_steps$got_past), software = km_5$surv), reticulate::py$chk)
+```
 
 ### How to report it
 
@@ -491,6 +758,8 @@ Treating deaths as censored, as here, assumes the patients who died would have g
 ::: {.callout-tip}
 ## 🔀 R vs Python: the confidence band
 R's `survfit()` uses a "log" CI by default; lifelines uses "log-log". The estimates are identical but the CIs differ slightly. We set `conf.type = "log-log"` in R so the two match. Log-log keeps the CI between 0% and 100%; say which you used.
+
+The tables under the two plots differ by one case at 4 years and at 8 years (332 and 84 in R, 331 and 83 in Python). R counts a case whose follow-up ends exactly at that time as still at risk; lifelines doesn't. For the same reason lifelines' own count at 5 years would be 258, not 263: the follow-up of 5 cases ends at exactly 5 years. The Python code above counts the way R does. lifelines also adds a row for the cases censored so far.
 :::
 
 ```{r}
@@ -503,7 +772,33 @@ stopifnot(
   round(age_ci[1], 1) == 64.8, round(age_ci[2], 1) == 66.3,
   round(sd(cohort$age) / sqrt(600), 2) == 0.39,
   round(sd(cohort$age), 2) == 9.44, round(9.44 / sqrt(600), 2) == 0.39, round(mean(cohort$age), 2) == 65.52,
-  round(65.52 + c(-1, 1) * 1.96 * 0.39, 2) == c(64.76, 66.28), round(age_ci[1:2], 2) == c(64.76, 66.28),
+  round(age_ci[1:2], 2) == c(64.76, 66.28), round(65.5 + c(-1, 1) * 2 * 9.4) == c(47, 84),
+  # the by-hand boxes, and the numbers added with them
+  ages[1] == 56, round(distance[1], 2) == -9.52, round(age_variance, 2) == 89.02, round(age_se, 3) == 0.385,
+  round(t_multiplier, 3) == 1.964, round(65.52 + c(-1, 1) * 1.964 * 0.385, 2) == c(64.76, 66.28),
+  isTRUE(all.equal(sqrt(age_variance), sd(cohort$age))),
+  isTRUE(all.equal(mean(ages) + c(-1, 1) * t_multiplier * age_se, as.vector(age_ci))),
+  sorted_scores[c(97, 98)] == 42, 1 + 193 * c(0.25, 0.75) == c(49.25, 145.75),
+  sorted_scores[c(49, 50)] == 39, sorted_scores[c(145, 146)] == 46,
+  ci_position == 83, 194 - 83 + 1 == 112, sorted_scores[c(83, 112)] == c(41, 43),
+  pbinom(82, 194, 0.5) < 0.025, round(1 - 2 * pbinom(82, 194, 0.5), 4) == 0.9629,
+  round(mean(ohs_1yr <= 39), 2) == 0.32,
+  sum(hip_fracture$death_30d == 0) == 1126, round(74 / 1200, 4) == 0.0617,
+  sum(hip_fracture$followup_days <= 30) == 74, all(hip_fracture$died[hip_fracture$followup_days <= 30] == 1),
+  all(hip_fracture$death_30d[hip_fracture$followup_days <= 30] == 1),
+  sum(hip_fracture$died == 0) == 847, all(hip_fracture$followup_days[hip_fracture$died == 0] > 30),
+  round(p_hat + c(-1, 1) * z * wald_se, 3) == c(0.048, 0.075), round(z, 2) == 1.96,
+  round(wilson_center, 4) == 0.0631, round(lower_limit, 4) == 0.0494, round(p_hat - lower_limit, 4) == 0.0123,
+  round(z * sqrt(lower_limit * (1 - lower_limit) / patients), 4) == 0.0123,
+  isTRUE(all.equal(wilson_center + c(-1, 1) * wilson_half, as.vector(wilson))),
+  sum(cohort$revised) == 81, 81 / 600 == 0.135, median(cohort$followup_years) == 4.365, 600 - 81 == 519,
+  km_5$n.event == 66, sum(cohort$followup_years >= 10) == 21,
+  km_steps$followup_years[1] == 0.03, km_steps$revisions[1] == 2, km_steps$at_risk[1] == 599,
+  round(km_steps$got_past[1], 3) == 0.997, nrow(km_steps) == 59, sum(km_steps$revisions) == 66,
+  isTRUE(all.equal(prod(km_steps$got_past), km_5$surv)),
+  sum(cohort$followup_years >= 4) == 332, sum(cohort$followup_years > 4) == 331,
+  sum(cohort$followup_years >= 8) == 84, sum(cohort$followup_years > 8) == 83,
+  sum(cohort$followup_years > 5) == 258, sum(cohort$followup_years == 5) == 5,
   length(ohs_1yr) == 194, sum(ohs_1yr == 48) == 39, max(ohs_1yr) == 48, sum(ohs_1yr == 42) == 13,
   q[[1]] == 39, q[[2]] == 42, q[[3]] == 46, q[[3]] - q[[1]] == 7,
   sum(ohs_1yr <= 39) == 62, round(100 * mean(ohs_1yr <= 39)) == 32,
@@ -523,6 +818,9 @@ stopifnot(
   round(t.test(cohort$bmi)$conf.int[1], 1) == 30.0, round(t.test(cohort$bmi)$conf.int[2], 1) == 30.9,
   round(mean(cohort$los_days), 1) == 0.9, round(sd(cohort$los_days), 1) == 1.1,
   all(quantile(cohort$los_days, c(0.25, 0.5, 0.75)) == c(0, 1, 1)),
+  as.vector(table(cohort$los_days)) == c(291, 173, 88, 22, 16, 8, 2), 291 + 173 == 464, 16 + 8 + 2 == 26,
+  round(mean(cohort$los_days), 3) == 0.885, round(sd(cohort$los_days), 2) == 1.14,
+  round(257 / 1200, 4) == 0.2142,
   sum(hip_fracture$residence == "nursing home") == 257, round(100 * 257 / 1200, 1) == 21.4,
   round(100 * prop.test(257, 1200, correct = FALSE)$conf.int, 1) == c(19.2, 23.8)
 )
@@ -566,20 +864,24 @@ The histogram is roughly symmetric, so the mean is a fair summary.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Length of stay is strongly right-skewed (most patients go home on day 0 or 1, a few stay 4 to 6 days), so report the median (IQR). "±" is also ambiguous: SD or SEM?
+Length of stay is strongly right-skewed. The first output below counts the cases by day: 291 + 173 = 464 of the 600 went home on day 0 or 1, and 16 + 8 + 2 = 26 stayed 4 to 6 days. So report the median (IQR). The second output is the resident's mean and SD, 0.885 and 1.14. "±" is also ambiguous: SD or SEM?
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-quantile(cohort$los_days, probs = c(0.25, 0.50, 0.75))
+count(cohort, los_days)                                         # how many cases stayed 0, 1, 2 ... days
+cohort |> summarise(mean = mean(los_days), sd = sd(los_days))   # the resident's mean and SD
+quantile(cohort$los_days, probs = c(0.25, 0.50, 0.75))          # the median and the quartiles
 ```
 
 ## Python
 
 ```{python}
 import numpy as np
-print(np.quantile(cohort["los_days"], [0.25, 0.50, 0.75]))
+print(cohort["los_days"].value_counts().sort_index())           # how many cases stayed 0, 1, 2 ... days
+print(cohort["los_days"].mean(), cohort["los_days"].std())      # the resident's mean and SD
+print(np.quantile(cohort["los_days"], [0.25, 0.50, 0.75]))      # the median and the quartiles
 ```
 :::
 
@@ -597,6 +899,7 @@ print(np.quantile(cohort["los_days"], [0.25, 0.50, 0.75]))
 ```{r}
 count(hip_fracture, residence)
 nursing_home <- sum(hip_fracture$residence == "nursing home")
+nursing_home / nrow(hip_fracture)                                        # the proportion
 prop.test(nursing_home, nrow(hip_fracture), correct = FALSE)$conf.int
 ```
 
@@ -605,9 +908,12 @@ prop.test(nursing_home, nrow(hip_fracture), correct = FALSE)$conf.int
 ```{python}
 print(hip_fracture["residence"].value_counts())
 nursing_home = int((hip_fracture["residence"] == "nursing home").sum())
+print(nursing_home / len(hip_fracture))                                  # the proportion
 print(stats.binomtest(nursing_home, len(hip_fracture)).proportion_ci(method="wilson"))
 ```
 :::
+
+The second output is the proportion, 0.2142, or 21.4%.
 
 > **Results:** Before the fracture, 257 of 1,200 patients (21.4%; 95% CI 19.2% to 23.8%) lived in a nursing home.
 :::

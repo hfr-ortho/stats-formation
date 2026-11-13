@@ -114,21 +114,21 @@ All four were rechecked against the page text and the data after the audit.
 | 03-8 | C | no | Numbers like `9.267769e-11` and `5.341e-05` are never explained | [foundations.md](foundations.md) | open |
 | 03-9 | C | no | `W`, `t` and `df` are printed and never explained | [foundations.md](foundations.md) | open |
 | 04-1 | ERROR | no | The standard error arithmetic as written gives 0.38, not 0.39 | [catalog-04-05.md](catalog-04-05.md) | done |
-| 04-2 | A | yes | "39 of the 194 scores were 48" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-3 | A | yes | "13 scored exactly 42" and "62 of the 194 (32%)" are computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-4 | A | yes | Exercise 2: the skew, "4 to 6 days" and "0.9 ± 1.1" are shown nowhere | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-5 | A | no | "Every patient was followed for at least 30 days or until death" is checked only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
+| 04-2 | A | yes | "39 of the 194 scores were 48" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-3 | A | yes | "13 scored exactly 42" and "62 of the 194 (32%)" are computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-4 | A | yes | Exercise 2: the skew, "4 to 6 days" and "0.9 ± 1.1" are shown nowhere | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-5 | A | no | "Every patient was followed for at least 30 days or until death" is checked only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
 | 04-6 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | done |
-| 04-7 | B | yes | "263 patients at risk" appears only in R's output, and lifelines counts 258 | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-8 | B | no | "13.5% were revised" is not derived, and the summary output is never read | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-9 | B | no | "roughly 47 to 84 years" needs arithmetic the page does not show | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-10 | B | no | The SEM of 0.39 in the Watch-out box is explained only inside a collapsed box | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-11 | B | no | The denominator 1,200 is never printed | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-12 | B | no | R prints a confidence level of 0.9629 under a bullet that says "95% CI" | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-13 | B | yes | Exercise 3: 21.4% is not computed in the Solution | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-14 | B | no | "by 10 years only a handful remain": the table says 21 | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-15 | C | no | The tables under the R and Python plots differ (332 vs 331, 84 vs 83) with no explanation | [catalog-04-05.md](catalog-04-05.md) | open |
-| 04-16 | C | no | Printed survival output that is never explained: `n.event`, `std.err`, "519 right-censored" | [catalog-04-05.md](catalog-04-05.md) | open |
+| 04-7 | B | yes | "263 patients at risk" appears only in R's output, and lifelines counts 258 | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-8 | B | no | "13.5% were revised" is not derived, and the summary output is never read | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-9 | B | no | "roughly 47 to 84 years" needs arithmetic the page does not show | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-10 | B | no | The SEM of 0.39 in the Watch-out box is explained only inside a collapsed box | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-11 | B | no | The denominator 1,200 is never printed | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-12 | B | no | R prints a confidence level of 0.9629 under a bullet that says "95% CI" | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-13 | B | yes | Exercise 3: 21.4% is not computed in the Solution | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-14 | B | no | "by 10 years only a handful remain": the table says 21 | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-15 | C | no | The tables under the R and Python plots differ (332 vs 331, 84 vs 83) with no explanation | [catalog-04-05.md](catalog-04-05.md) | done |
+| 04-16 | C | no | Printed survival output that is never explained: `n.event`, `std.err`, "519 right-censored" | [catalog-04-05.md](catalog-04-05.md) | done |
 | 05-1 | A | yes | Results quote "SD 16.4", which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | done |
 | 05-2 | A | yes | Results quote the median 85.8 and IQR 74.7 to 93.9, which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | done |
 | 05-3 | A | yes | n = 260, V = 22698.5 and "more patients scored above 80 than below" have no visible source | [catalog-04-05.md](catalog-04-05.md) | done |

@@ -21,12 +21,13 @@ FENCE_OPEN = re.compile(r"^\s*(`{3,}|~{3,})\s*(.*?)\s*$")
 EXEC_INFO = re.compile(r"^\{(r|python)\b")
 HTML_ONLY = '::: {.content-visible when-format="html"}'
 
-# The six catalog steps (glossary rows "When to use it" ... "How to report it"), in spec §6 order.
+# The catalog steps (glossary rows "When to use it" ... "How to report it"), in spec §6 order.
 LANGS = ["fr", "de"]
 STEPS = {
     "fr": {
         "When to use it": "Quand l'utiliser",
         "What the test really does": "Ce que fait vraiment le test",
+        "What the calculation really does": "Ce que fait vraiment le calcul",
         "Look at the data first": "Regarder d'abord les données",
         "Run it": "Exécuter l'analyse",
         "Read the output": "Lire le résultat",
@@ -36,6 +37,7 @@ STEPS = {
     "de": {
         "When to use it": "Wann verwenden",
         "What the test really does": "Was der Test wirklich macht",
+        "What the calculation really does": "Was die Berechnung wirklich macht",
         "Look at the data first": "Zuerst die Daten ansehen",
         "Run it": "Analyse durchführen",
         "Read the output": "Ausgabe lesen",

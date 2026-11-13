@@ -19,24 +19,17 @@ WRITTEN = [
     "catalog/12-predict-from-several.html",
 ]
 
-# Spec section 6, steps 2-7, as h3 headings in this order. Page 4 describes a
+# Spec section 6, steps 2-8, as h3 headings in this order. Page 4 describes a
 # group rather than testing it: its estimate and CI are the result, so it has
-# no separate effect-size step.
-ANATOMY = ["When to use it", "Look at the data first", "Run it", "Read the output",
+# no separate effect-size step, and its plain-words step explains a calculation.
+ANATOMY = ["When to use it", "What the test really does", "Look at the data first", "Run it", "Read the output",
            "Effect size and 95% CI", "How to report it"]
-DESCRIBE = [step for step in ANATOMY if step != "Effect size and 95% CI"]
-# A plain-words step after "When to use it", added page by page. List a page here once every section on it
-# has the step; when every catalog page is listed, move the step into ANATOMY and delete this set.
-EXPLAINED = "What the test really does"
-WITH_EXPLANATION = {"catalog/05-one-group-vs-hypothetical.html", "catalog/06-two-unpaired-groups.html", "catalog/07-two-paired-groups.html",
-                    "catalog/08-three-plus-unmatched.html", "catalog/09-three-plus-matched.html",
-                    "catalog/10-association.html", "catalog/11-predict-from-one.html",
-                    "catalog/12-predict-from-several.html"}
+DESCRIBE = ["When to use it", "What the calculation really does", "Look at the data first", "Run it",
+            "Read the output", "How to report it"]
 
 
 def anatomy(page):
-    steps = DESCRIBE if page.startswith("catalog/04-") else ANATOMY
-    return [steps[0], EXPLAINED, *steps[1:]] if page in WITH_EXPLANATION else steps
+    return DESCRIBE if page.startswith("catalog/04-") else ANATOMY
 
 SECTIONS = [(page, anchor) for page in WRITTEN for anchor in CELL_ANCHORS[page]]
 
