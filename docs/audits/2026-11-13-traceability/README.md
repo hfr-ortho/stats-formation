@@ -113,7 +113,7 @@ All four were rechecked against the page text and the data after the audit.
 | 03-7 | B | no | "Nearly half" and "17% of patients" are printed as proportions, with the denominator unstated | [foundations.md](foundations.md) | open |
 | 03-8 | C | no | Numbers like `9.267769e-11` and `5.341e-05` are never explained | [foundations.md](foundations.md) | open |
 | 03-9 | C | no | `W`, `t` and `df` are printed and never explained | [foundations.md](foundations.md) | open |
-| 04-1 | ERROR | no | The standard error arithmetic as written gives 0.38, not 0.39 | [catalog-04-05.md](catalog-04-05.md) | open |
+| 04-1 | ERROR | no | The standard error arithmetic as written gives 0.38, not 0.39 | [catalog-04-05.md](catalog-04-05.md) | done |
 | 04-2 | A | yes | "39 of the 194 scores were 48" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-3 | A | yes | "13 scored exactly 42" and "62 of the 194 (32%)" are computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-4 | A | yes | Exercise 2: the skew, "4 to 6 days" and "0.9 ± 1.1" are shown nowhere | [catalog-04-05.md](catalog-04-05.md) | open |
@@ -163,7 +163,7 @@ All four were rechecked against the page text and the data after the audit.
 | 06-18 | C | no | `conf.type = "log-log"` and the 5-year table get no explanation in this section | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-19 | C | no | The quartile bullet sits under the wrong output and skips its reasoning | [catalog-06-07.md](catalog-06-07.md) | open |
 | 06-20 | C | no | "Wald" is used in the Methods sentence and the Python code without explanation | [catalog-06-07.md](catalog-06-07.md) | open |
-| 07-1 | ERROR | yes | "Only 22 revisions inform it": 18 do, and they explain the hazard ratio of exactly 3.5 | [catalog-06-07.md](catalog-06-07.md) | open |
+| 07-1 | ERROR | yes | "Only 22 revisions inform it": 18 do, and they explain the hazard ratio of exactly 3.5 | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-2 | A | yes | Results sentence: the mean and SD of each view are printed nowhere | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-3 | A | yes | "62 of the 80 hips (78%)" and "56 ... and 48" cam-positive hips are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
 | 07-4 | A | yes | The unpaired p = 0.037 and the "11° spread" are computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | open |
@@ -305,7 +305,7 @@ All four were rechecked against the page text and the data after the audit.
 | 16-11 | B | no | Exercise 2: page 9's complete-case means are quoted, not shown | [beyond.md](beyond.md) | open |
 | 16-12 | C | no | Exercise 3: R gives p = 0.003, Python p = 0.002, no reason given | [beyond.md](beyond.md) | open |
 | 16-13 | C | no | The contrast weights `c(-1, 0, 0, 1)` | [beyond.md](beyond.md) | open |
-| 17-1 | ERROR | no | "limits of ±3.7°" contradicts the limits shown | [beyond.md](beyond.md) | open |
+| 17-1 | ERROR | no | "limits of ±3.7°" contradicts the limits shown | [beyond.md](beyond.md) | done |
 | 17-2 | A | yes | "`irr::kappa2(weight = "equal")` ... gives 0.63 here instead of 0.73" | [beyond.md](beyond.md) | open |
 | 17-3 | B | no | ICC 0.915 reported as 0.91, 0.935 as 0.93, −0.265 as −0.26 | [beyond.md](beyond.md) | open |
 | 17-4 | B | no | "0.896 for consistency, and 0.94 for the average of the two raters" | [beyond.md](beyond.md) | open |

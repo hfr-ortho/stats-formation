@@ -533,6 +533,15 @@ pairs <- matched |>
 
 pairs |> select(set_id, implant, age, sex, bmi, followup_years, revised) |> head(4)
 pairs |> group_by(implant) |> summarise(patients = n(), revisions = sum(revised))
+
+# Which revisions can the model use? In each pair, take the patient whose follow-up ended first,
+# and keep the pairs where it ended with a revision: the partner was still being followed.
+informative <- pairs |>
+  group_by(set_id) |>
+  slice_min(followup_years, n = 1) |>                # the patient whose follow-up ended first
+  ungroup() |>
+  filter(revised == 1)                               # ... and ended with a revision
+count(informative, implant)
 ```
 
 ## Python
@@ -549,10 +558,26 @@ pairs["revised"] = (pairs["event_status"] == 1).astype(int)   # 1 = revised; dea
 
 print(pairs[["set_id", "implant", "age", "sex", "bmi", "followup_years", "revised"]].head(4))
 print(pairs.groupby("implant")["revised"].agg(["count", "sum"]))
+
+# Which revisions can the model use? In each pair, take the patient whose follow-up ended first,
+# and keep the pairs where it ended with a revision: the partner was still being followed.
+first_out = pairs.loc[pairs.groupby("set_id")["followup_years"].idxmin()]   # the patient whose follow-up ended first
+informative = first_out[first_out["revised"] == 1]                           # ... and ended with a revision
+print(informative["implant"].value_counts().sort_index())
 ```
 :::
 
-52 pairs: 5 revisions with implant A and 17 with implant C.
+```{python}
+#| include: false
+chk = {"a_first": float((informative["implant"] == "A").sum()), "c_first": float((informative["implant"] == "C").sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(a_first = sum(informative$implant == "A"), c_first = sum(informative$implant == "C")), reticulate::py$chk)
+```
+
+52 pairs: 5 revisions with implant A and 17 with implant C. The last table counts the revisions the model can use, those that happened while the matched partner was still being followed: 4 with implant A and 14 with implant C, 18 of the 22. The other 4 happened when the partner was no longer being followed, so there was no one left in the pair to compare with.
 
 ### Run it
 
@@ -594,8 +619,8 @@ check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"],
 ### Read the output
 
 - **n = 104, number of events = 22:** 52 pairs, 22 revisions.
-- **exp(coef) = 3.5:** the hazard ratio, implant C vs implant A, within pairs.
-- **lower .95 = 1.15, upper .95 = 10.63:** its 95% CI. Wide, because only 22 revisions inform it.
+- **exp(coef) = 3.5:** the hazard ratio, implant C vs implant A, within pairs. Because every pair holds one patient with each implant, it is simply the ratio of the two counts above: 14 / 4 = 3.5.
+- **lower .95 = 1.15, upper .95 = 10.63:** its 95% CI. Wide, because only 18 revisions inform it.
 - **Pr(>|z|) = 0.027:** the p-value for implant.
 - R also prints a likelihood ratio, Wald and score test for the whole model; with one predictor they all test the same thing.
 
@@ -668,6 +693,8 @@ stopifnot(
   round(started / stopped, 1) == 2.8,
   n_distinct(pairs$set_id) == 52, nrow(pairs) == 104, sum(pairs$revised) == 22,
   sum(pairs$revised[pairs$implant == "A"]) == 5, sum(pairs$revised[pairs$implant == "C"]) == 17,
+  as.vector(table(informative$implant)) == c(4, 14), nrow(informative) == 18, 22 - nrow(informative) == 4,
+  isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
   round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs))), 2) == 3.60,

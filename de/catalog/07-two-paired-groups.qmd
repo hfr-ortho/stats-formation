@@ -533,6 +533,15 @@ pairs <- matched |>
 
 pairs |> select(set_id, implant, age, sex, bmi, followup_years, revised) |> head(4)
 pairs |> group_by(implant) |> summarise(patients = n(), revisions = sum(revised))
+
+# Welche Revisionen kann das Modell nutzen? In jedem Paar die Person nehmen, deren Nachbeobachtung zuerst endete,
+# und die Paare behalten, in denen sie mit einer Revision endete: Die andere Person wurde noch nachbeobachtet.
+informative <- pairs |>
+  group_by(set_id) |>
+  slice_min(followup_years, n = 1) |>                # die Person, deren Nachbeobachtung zuerst endete
+  ungroup() |>
+  filter(revised == 1)                               # ... und mit einer Revision endete
+count(informative, implant)
 ```
 
 ## Python
@@ -549,10 +558,26 @@ pairs["revised"] = (pairs["event_status"] == 1).astype(int)   # 1 = revidiert; T
 
 print(pairs[["set_id", "implant", "age", "sex", "bmi", "followup_years", "revised"]].head(4))
 print(pairs.groupby("implant")["revised"].agg(["count", "sum"]))
+
+# Welche Revisionen kann das Modell nutzen? In jedem Paar die Person nehmen, deren Nachbeobachtung zuerst endete,
+# und die Paare behalten, in denen sie mit einer Revision endete: Die andere Person wurde noch nachbeobachtet.
+first_out = pairs.loc[pairs.groupby("set_id")["followup_years"].idxmin()]   # die Person, deren Nachbeobachtung zuerst endete
+informative = first_out[first_out["revised"] == 1]                           # ... und mit einer Revision endete
+print(informative["implant"].value_counts().sort_index())
 ```
 :::
 
-52 Paare: 5 Revisionen mit Implantat A und 17 mit Implantat C.
+```{python}
+#| include: false
+chk = {"a_first": float((informative["implant"] == "A").sum()), "c_first": float((informative["implant"] == "C").sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(a_first = sum(informative$implant == "A"), c_first = sum(informative$implant == "C")), reticulate::py$chk)
+```
+
+52 Paare: 5 Revisionen mit Implantat A und 17 mit Implantat C. Die letzte Tabelle zählt die Revisionen, die das Modell nutzen kann, also jene, die eintraten, während die andere Person des Paars noch nachbeobachtet wurde: 4 mit Implantat A und 14 mit Implantat C, 18 der 22. Die übrigen 4 traten ein, als die andere Person nicht mehr nachbeobachtet wurde; im Paar war also niemand mehr zum Vergleichen da.
 
 ### Analyse durchführen
 
@@ -594,8 +619,8 @@ check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"],
 ### Ausgabe lesen
 
 - **n = 104, number of events = 22:** 52 Paare, 22 Revisionen.
-- **exp(coef) = 3.5:** das Hazard Ratio (HR), das Verhältnis der momentanen Ereignisraten, Implantat C gegenüber Implantat A, innerhalb der Paare.
-- **lower .95 = 1.15, upper .95 = 10.63:** sein 95%-KI. Breit, weil nur 22 Revisionen dazu beitragen.
+- **exp(coef) = 3.5:** das Hazard Ratio (HR), das Verhältnis der momentanen Ereignisraten, Implantat C gegenüber Implantat A, innerhalb der Paare. Weil jedes Paar eine Person mit jedem Implantat enthält, ist es einfach das Verhältnis der beiden Anzahlen oben: 14 / 4 = 3.5.
+- **lower .95 = 1.15, upper .95 = 10.63:** sein 95%-KI. Breit, weil nur 18 Revisionen dazu beitragen.
 - **Pr(>|z|) = 0.027:** der p-Wert für Implantat.
 - R gibt ausserdem einen Likelihood-Quotienten-, einen Wald- und einen Score-Test für das ganze Modell aus; bei einem Prädiktor testen alle dasselbe.
 
@@ -668,6 +693,8 @@ stopifnot(
   round(started / stopped, 1) == 2.8,
   n_distinct(pairs$set_id) == 52, nrow(pairs) == 104, sum(pairs$revised) == 22,
   sum(pairs$revised[pairs$implant == "A"]) == 5, sum(pairs$revised[pairs$implant == "C"]) == 17,
+  as.vector(table(informative$implant)) == c(4, 14), nrow(informative) == 18, 22 - nrow(informative) == 4,
+  isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
   round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs))), 2) == 3.60,

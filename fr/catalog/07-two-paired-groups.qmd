@@ -533,6 +533,15 @@ pairs <- matched |>
 
 pairs |> select(set_id, implant, age, sex, bmi, followup_years, revised) |> head(4)
 pairs |> group_by(implant) |> summarise(patients = n(), revisions = sum(revised))
+
+# quelles révisions le modèle peut-il utiliser ? dans chaque paire, prendre le patient dont le suivi s'est terminé en premier,
+# et garder les paires où il s'est terminé par une révision : l'autre patient était encore suivi.
+informative <- pairs |>
+  group_by(set_id) |>
+  slice_min(followup_years, n = 1) |>                # le patient dont le suivi s'est terminé en premier
+  ungroup() |>
+  filter(revised == 1)                               # ... et s'est terminé par une révision
+count(informative, implant)
 ```
 
 ## Python
@@ -549,10 +558,26 @@ pairs["revised"] = (pairs["event_status"] == 1).astype(int)   # 1 = révisé, d�
 
 print(pairs[["set_id", "implant", "age", "sex", "bmi", "followup_years", "revised"]].head(4))
 print(pairs.groupby("implant")["revised"].agg(["count", "sum"]))
+
+# quelles révisions le modèle peut-il utiliser ? dans chaque paire, prendre le patient dont le suivi s'est terminé en premier,
+# et garder les paires où il s'est terminé par une révision : l'autre patient était encore suivi.
+first_out = pairs.loc[pairs.groupby("set_id")["followup_years"].idxmin()]   # le patient dont le suivi s'est terminé en premier
+informative = first_out[first_out["revised"] == 1]                           # ... et s'est terminé par une révision
+print(informative["implant"].value_counts().sort_index())
 ```
 :::
 
-52 paires : 5 révisions avec l'implant A et 17 avec l'implant C.
+```{python}
+#| include: false
+chk = {"a_first": float((informative["implant"] == "A").sum()), "c_first": float((informative["implant"] == "C").sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(a_first = sum(informative$implant == "A"), c_first = sum(informative$implant == "C")), reticulate::py$chk)
+```
+
+52 paires : 5 révisions avec l'implant A et 17 avec l'implant C. Le dernier tableau compte les révisions que le modèle peut utiliser, celles qui sont survenues alors que l'autre patient de la paire était encore suivi : 4 avec l'implant A et 14 avec l'implant C, soit 18 des 22. Les 4 autres sont survenues alors que l'autre patient n'était plus suivi : il ne restait donc personne dans la paire à qui les comparer.
 
 ### Exécuter l'analyse
 
@@ -594,8 +619,8 @@ check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"],
 ### Lire le résultat
 
 - **n = 104, number of events = 22 :** 52 paires, 22 révisions.
-- **exp(coef) = 3.5 :** le hazard ratio, implant C contre implant A, au sein des paires.
-- **lower .95 = 1.15, upper .95 = 10.63 :** son IC à 95 %. Large, parce qu'il ne repose que sur 22 révisions.
+- **exp(coef) = 3.5 :** le hazard ratio, implant C contre implant A, au sein des paires. Comme chaque paire contient un patient avec chaque implant, c'est simplement le rapport des deux effectifs ci-dessus : 14 / 4 = 3.5.
+- **lower .95 = 1.15, upper .95 = 10.63 :** son IC à 95 %. Large, parce qu'il ne repose que sur 18 révisions.
 - **Pr(>|z|) = 0.027 :** la valeur p pour l'implant.
 - R affiche aussi un test du rapport de vraisemblance, un test de Wald et un test du score pour le modèle entier ; avec un seul prédicteur, ils testent tous la même chose.
 
@@ -668,6 +693,8 @@ stopifnot(
   round(started / stopped, 1) == 2.8,
   n_distinct(pairs$set_id) == 52, nrow(pairs) == 104, sum(pairs$revised) == 22,
   sum(pairs$revised[pairs$implant == "A"]) == 5, sum(pairs$revised[pairs$implant == "C"]) == 17,
+  as.vector(table(informative$implant)) == c(4, 14), nrow(informative) == 18, 22 - nrow(informative) == 4,
+  isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
   round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs))), 2) == 3.60,
