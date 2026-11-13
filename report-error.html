@@ -32,15 +32,18 @@ function reportPage(pathname) {
   return { lang: parts[i], page: parts[i] + "/" + (rest || "index") };
 }
 
-// Highlighted text as one line, cut to REPORT_MAX characters.
+// Highlighted text as one line, cut to REPORT_MAX characters. Array.from() counts whole characters: the callout
+// icons (🔀 💡 🔍) are two units each, and half of one cannot be put in an address.
 function trimSelection(text) {
-  const line = String(text || "").replace(/\s+/g, " ").trim();
-  return line.length > REPORT_MAX ? line.slice(0, REPORT_MAX) + "…" : line;
+  const characters = Array.from(String(text || "").replace(/\s+/g, " ").trim());
+  return characters.length > REPORT_MAX ? characters.slice(0, REPORT_MAX).join("") + "…" : characters.join("");
 }
 
 // The page's address with its section: the section that holds the highlight, else the one in the address bar.
+// German and French step headings give ids with accents ("analyse-durchführen-2"); percent-encoded, the link
+// stays whole in every mail app. The address bar's own #section already is.
 function reportUrl(base, sectionId, hash) {
-  return sectionId ? base + "#" + sectionId : base + (hash || "");
+  return sectionId ? base + "#" + encodeURIComponent(sectionId) : base + (hash || "");
 }
 
 // The mailto: address. Line breaks are \r\n, and everything is percent-encoded, as mail apps expect.

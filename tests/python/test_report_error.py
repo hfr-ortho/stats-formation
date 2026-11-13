@@ -1,6 +1,7 @@
 """The "Report an error" link's logic (spec 2026-11-13-report-error-design.md), run in Node.js: which page an
-address names, how highlighted text is trimmed, and the prefilled email. What the script does to a page in the
-browser (adding the two links, reading the selection) is checked by hand in a preview."""
+address names, how highlighted text is trimmed, the prefilled email, and, against a stand-in for the page, where
+the links go and what pressing one sends. How a real browser orders a press and the clearing of a highlight is
+checked by hand in a preview."""
 
 import json
 import re
@@ -160,3 +161,67 @@ globalThis.document = { readyState: "loading", createElement: element,
 def test_link_joins_every_action_list_once_the_whole_page_is_there():
     counts = "[lists[0].children.length, lists[1].children.length, main.children.length]"
     assert run([counts, f"(ready(), {counts})"], setup=LATE_PAGE) == [[0, 0, 0], [1, 1, 1]]
+
+
+def test_cut_never_splits_a_character():
+    # The callout icons (🔀 💡 🔍) are two UTF-16 units each. Half of one cannot be put in an address:
+    # the link would keep its last address and send an earlier highlight.
+    text = "a" * 299 + "\U0001F500" + "b" * 50
+    assert run([f"trimSelection({json.dumps(text)})"]) == ["a" * 299 + "\U0001F500" + "…"]
+    assert 'Highlighted text: "' + "a" * 299 + "\U0001F500" + '…"' in mail(href("en", text))[2]
+
+
+def test_section_with_an_accent_is_percent_encoded():
+    # German and French step headings give ids like "analyse-durchführen-2"; mail apps may end a link at the "ü".
+    base = "https://hfr-ortho.github.io/stats-formation/de/x.html"
+    assert run([f'reportUrl("{base}", "analyse-durchführen-2", "")', f'reportUrl("{base}", "mann-whitney", "")']) == \
+        [base + "#analyse-durchf%C3%BChren-2", base + "#mann-whitney"]
+
+
+# A page with Quarto's own entry in the list, and a reader who highlights text: `select(node, text)` sets what is
+# highlighted, `inside` is in the page text (in the step with id "run-it-1"), `outside` is in the sidebar.
+LIVE_PAGE = """
+const element = () => { const e = { children: [], listeners: {}, classList: { add() {} },
+                                    addEventListener(name, f) { e.listeners[name] = f; },
+                                    append(...c) { e.children.push(...c); }, prepend(...c) { e.children.unshift(...c); } };
+                        return e; };
+const quartoEntry = element();
+const list = element(); list.children.push(quartoEntry);
+const inside = { nodeType: 1, closest: (q) => (q === "section[id]" ? { id: "run-it-1" } : null) };
+const outside = { nodeType: 1, closest: () => null };
+const main = element(); main.contains = (node) => node === inside;
+let picked = null;
+const select = (node, text) => { picked = node ? { isCollapsed: false, anchorNode: node, toString: () => text } : null; };
+globalThis.window = { location: { pathname: "/stats-formation/en/catalog/06-two-unpaired-groups.html",
+                                  origin: "https://x", hash: "#unpaired-t" }, getSelection: () => picked };
+globalThis.document = { readyState: "complete", createElement: element, addEventListener() {},
+                        querySelector: (q) => (q.startsWith("main") ? main : null),
+                        querySelectorAll: (q) => (q === ".toc-actions ul" ? [list] : []) };
+const body = (a) => decodeURIComponent(a.href.split("body=")[1]);
+const listLink = () => list.children[0].children[0];
+const endLink = () => main.children[0].children[1];
+"""
+LIVE_URL = "https://x/stats-formation/en/catalog/06-two-unpaired-groups.html"
+NO_HIGHLIGHT = f"Page: {LIVE_URL}#unpaired-t\r\n\r\nWhat is wrong or confusing:\r\n"
+
+
+def test_link_goes_above_quartos_own_entry():
+    assert run(["list.children.length", "list.children[1] === quartoEntry"], setup=LIVE_PAGE) == [2, True]
+
+
+def test_links_work_before_they_are_pressed():
+    assert run(["body(listLink())", "body(endLink())"], setup=LIVE_PAGE) == [NO_HIGHLIGHT, NO_HIGHLIGHT]
+
+
+def test_pressing_a_link_sends_the_highlight_and_its_section():
+    quoted = f'Page: {LIVE_URL}#run-it-1\r\nHighlighted text: "the mean"\r\n\r\nWhat is wrong or confusing:\r\n'
+    assert run(['(select(inside, "the mean"), listLink().listeners.pointerdown(), body(listLink()))',
+                '(select(inside, "the mean"), endLink().listeners.pointerdown(), body(endLink()))',
+                '(select(null), select(inside, "the mean"), endLink().listeners.keydown(), body(endLink()))'],
+               setup=LIVE_PAGE) == [quoted, quoted, quoted]
+
+
+def test_a_highlight_outside_the_page_text_or_since_cleared_is_not_sent():
+    assert run(['(select(outside, "Tidy data"), endLink().listeners.pointerdown(), body(endLink()))',
+                '(select(inside, "the mean"), endLink().listeners.pointerdown(), select(null), '
+                'endLink().listeners.pointerdown(), body(endLink()))'], setup=LIVE_PAGE) == [NO_HIGHLIGHT, NO_HIGHLIGHT]

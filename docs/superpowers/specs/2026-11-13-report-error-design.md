@@ -47,7 +47,8 @@ Decided by Doc: prefilled email, approach 1, the address above. The rest are Cla
 **Where the link appears.**
 
 - Under "On this page" in the right column, as the first entry of Quarto's `.toc-actions` list, above "Report an issue", with an envelope icon.
-- At the end of the page text, above the previous/next links, as one muted line. This is the one phone readers see.
+- At the end of the page text, above the previous/next links, as one muted line. Phone readers see this one.
+- Quarto writes its `.toc-actions` list a second time in the page footer (shown on phones and on pages with no table of contents). The link is the first entry there too, so it appears wherever "Report an issue" does. Added during the build, 13.11.2026.
 
 **Wording.** Native reviewers correct these on the published site like any other text.
 
