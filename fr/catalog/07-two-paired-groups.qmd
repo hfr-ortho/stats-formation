@@ -42,6 +42,19 @@ Un test pour données appariées ne peut utiliser que les patients mesurés aux 
 - Les paires sont indépendantes les unes des autres.
 - Si les différences sont asymétriques, ou si les mesures sont bornées ou ordinales → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
 
+### Ce que fait vraiment le test
+
+Le test t apparié transforme deux colonnes en une seule. Chaque hanche a deux mesures, et le test ne regarde que la différence entre elles.
+
+1. Pour chaque hanche, soustraire une mesure de l'autre. À partir d'ici, les deux colonnes d'origine ne servent plus.
+2. Calculer la [moyenne](../glossary.qmd#mean){.term} de ces différences.
+3. Estimer le bruit de cette moyenne, son [erreur standard](../glossary.qmd#standard-error){.term} : l'ET des différences divisé par √n, où n est le nombre de hanches.
+4. Diviser : **t = différence moyenne ÷ erreur standard**, puis convertir t en [valeur p](../glossary.qmd#p-value){.term}.
+
+Comme chaque hanche est comparée à elle-même, les grandes différences entre hanches disparaissent. C'est pourquoi un test apparié peut détecter une petite différence qu'un test non apparié manquerait.
+
+Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule t à la main.
+
 ### Regarder d'abord les données
 
 L'angle alpha mesure à quel point la partie antérieure de la jonction tête-col fémorale fait saillie (morphologie cam) : plus l'angle est grand, plus la bosse est importante. Les données de préservation de la hanche contiennent une ligne par hanche (une hanche par patient), chez de jeunes adultes évalués pour une chirurgie de préservation de la hanche, avec l'angle alpha mesuré sur deux incidences : l'**incidence en grenouille** (profil, *frog-leg*) et l'**incidence de Dunn à 45°**.
@@ -136,6 +149,40 @@ check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parame
 - **mean difference 3.67 :** en moyenne, l'incidence de Dunn donnait 3.7° de plus que l'incidence en grenouille pour la même hanche.
 - **IC à 95 % de 2.73 à 4.61 :** l'intervalle de confiance (IC) de la différence moyenne.
 
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot : la statistique t à la main
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+mean_difference <- mean(imaging$difference)                      # étape 2 : la moyenne des différences
+difference_se <- sd(imaging$difference) / sqrt(nrow(imaging))    # étape 3 : son erreur standard, ET des différences ÷ √n
+c(mean_difference = mean_difference, standard_error = difference_se, t = mean_difference / difference_se)   # étape 4 : diviser
+```
+
+## Python
+
+```{python}
+mean_difference = imaging["difference"].mean()                            # étape 2 : la moyenne des différences
+difference_se = imaging["difference"].std() / len(imaging) ** 0.5         # étape 3 : son erreur standard, ET des différences ÷ √n
+print(mean_difference, difference_se, mean_difference / difference_se)    # étape 4 : diviser
+```
+:::
+
+La différence moyenne de 3.67° vaut 7.75 fois son erreur standard de 0.47°. C'est le **t = 7.75** affiché par le test.
+:::
+
+```{python}
+#| include: false
+chk = {"mean": float(mean_difference), "se": float(difference_se), "t": float(mean_difference / difference_se)}
+```
+
+```{r}
+#| include: false
+check_agree(list(mean = mean_difference, se = difference_se, t = mean_difference / difference_se), reticulate::py$chk)
+```
+
 ### Taille d'effet et IC à 95 %
 
 - La **différence de moyennes** avec son IC, en degrés : 3.7° (IC à 95 % de 2.7 à 4.6).
@@ -204,6 +251,18 @@ Faire un test t pour échantillons indépendants sur les deux colonnes ignore qu
 - Le test classe les tailles des changements et compare les rangs des améliorations à ceux des détériorations.
 - Les changements exactement nuls ne disent rien sur la direction et sont écartés.
 - Si les changements sont à peu près normaux → le [test t pour échantillons appariés](#paired-t).
+
+### Ce que fait vraiment le test
+
+Le test des rangs signés de Wilcoxon travaille lui aussi sur le changement de chaque patient, mais il utilise l'ordre des changements plutôt que leur ampleur.
+
+1. Pour chaque patient, calculer le changement (ici, 1 an moins préopératoire).
+2. Mettre de côté tout patient dont le changement vaut exactement 0.
+3. Classer les changements par ampleur, sans tenir compte du fait qu'il s'agit d'améliorations ou de dégradations, et donner à chacun sa position : son [rang](../glossary.qmd#rank){.term}. Le plus petit changement reçoit le rang 1.
+4. Additionner les rangs des améliorations et, séparément, ceux des dégradations. L'une ou l'autre somme peut servir de [statistique de test](../glossary.qmd#test-statistic){.term} : R affiche la première (V), Python la plus petite des deux (W).
+5. S'il n'y avait aucun changement réel, améliorations et dégradations se partageraient les rangs à peu près également. Plus les deux sommes sont déséquilibrées, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
+
+Une fois le test exécuté, un encadré sous « Lire le résultat » additionne les rangs à la main.
 
 ### Regarder d'abord les données
 
@@ -309,6 +368,39 @@ check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticula
 - **(pseudo)median 34.1, IC à 95 % de 32.3 à 35.9 :** l'estimateur de Hodges-Lehmann du changement typique, ci-dessous.
 - **RBC = 1.0** (Python) : la taille d'effet bisériale par rangs, ci-dessous.
 
+::: {.callout-note collapse="true"}
+## 🔍 Sous le capot : les sommes des rangs à la main
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+change_ranks <- rank(abs(koos$change))                       # étape 3 : classer les changements par ampleur, sans le signe
+c(improvements = sum(change_ranks[koos$change > 0]),         # étape 4 : la somme des rangs des améliorations (le V de R)
+  declines = sum(change_ranks[koos$change < 0]))             # ... et celle des dégradations (le W_val de Python)
+```
+
+## Python
+
+```{python}
+change_ranks = koos["change"].abs().rank()                                               # étape 3 : classer les changements par ampleur, sans le signe
+print(change_ranks[koos["change"] > 0].sum(), change_ranks[koos["change"] < 0].sum())    # étape 4 : les deux sommes
+```
+:::
+
+Ici, aucun changement ne vaut exactement 0 : l'étape 2 n'écarte donc personne. Tous les patients se sont améliorés, donc tous les rangs de 1 à 246 appartiennent à des améliorations : leur somme vaut 30381, le V de R. La somme des dégradations vaut 0, le W_val de Python.
+:::
+
+```{python}
+#| include: false
+chk = {"up": float(change_ranks[koos["change"] > 0].sum()), "down": float(change_ranks[koos["change"] < 0].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(up = sum(change_ranks[koos$change > 0]), down = sum(change_ranks[koos$change < 0])), reticulate::py$chk)
+```
+
 ### Taille d'effet et IC à 95 %
 
 - L'**estimateur de Hodges-Lehmann** du changement (la médiane des moyennes de chaque paire de changements), avec son IC, en points.
@@ -382,6 +474,17 @@ Une valeur p minuscule dit que les scores ont augmenté en moyenne ; elle ne di
 - Un critère **oui/non** mesuré **deux fois chez les mêmes patients** (ou une fois chez chaque membre d'une paire appariée).
 - Le test n'utilise que les **paires discordantes** : les patients qui ont changé (non → oui, ou oui → non). Les patients qui sont restés les mêmes ne renseignent pas sur la direction du changement.
 - La version du khi-deux demande au moins 10 paires discordantes environ au total. Avec moins, utilisez la version **exacte** (voir l'encadré R ou Python).
+
+### Ce que fait vraiment le test
+
+Le test de McNemar ne regarde que les patients dont la réponse a changé.
+
+1. Croiser les deux réponses : avant en lignes, après en colonnes.
+2. Mettre de côté les patients qui ont donné la même réponse les deux fois. Ils ne disent rien du changement.
+3. Parmi les patients dont la réponse a changé, compter chaque sens : de non à oui, et de oui à non.
+4. Si rien n'avait réellement changé, les deux sens seraient également probables, comme pile et face. La [statistique de test](../glossary.qmd#test-statistic){.term} mesure à quel point la répartition s'écarte de l'égalité ; plus elle s'en écarte, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
+
+Le premier point sous « Lire le résultat » la recalcule à la main.
 
 ### Regarder d'abord les données
 
@@ -531,6 +634,17 @@ Une erreur fréquente consiste à croiser « aide oui/non » avec « avant l'
 - Un modèle de Cox **stratifié** par paire laisse chaque paire avoir son propre hazard (risque instantané) de base, et compare les implants seulement **au sein** des paires. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*.
 - Seules les paires où un patient a été révisé alors que l'autre était encore suivi apportent une information au modèle ; avec peu d'événements, attendez-vous à un IC large.
 - La [page 14](../survival/14-cox-regression.qmd) traite la régression de Cox en détail.
+
+### Ce que fait vraiment le test
+
+Un modèle de Cox stratifié compare les implants à l'intérieur de chaque paire appariée, jamais d'une paire à l'autre.
+
+1. Prendre une paire à la fois et suivre ses deux patients à partir de l'opération.
+2. Trouver celui des deux dont le suivi se termine en premier. S'il a été révisé alors que l'autre était encore suivi, la paire est informative : noter quel implant a échoué en premier. Sinon, la paire n'apprend rien au modèle.
+3. Compter les paires informatives dans chaque sens : implant C révisé en premier, ou implant A révisé en premier.
+4. Avec un patient par implant dans chaque paire, le [hazard ratio](../glossary.qmd#hazard-ratio){.term} est le rapport de ces deux effectifs. Moins il y a de paires informatives, plus son IC est large.
+
+« Regarder d'abord les données » compte les paires pour nos données.
 
 ### Regarder d'abord les données
 
@@ -728,6 +842,10 @@ stopifnot(
   round(193 / 263, 3) == 0.734, round(0.734 / 0.266, 2) == 2.76, round(193 / 70, 2) == 2.76, round(binom.test(193, 263)$conf.int[1:2], 3) == c(0.676, 0.786),
   round(summary(pair_cox)$coefficients[1, "z"], 2) == 2.21, round(2.21^2, 2) == 4.88, round(coef(pair_cox)[[1]], 2) == 1.25, round(exp(-coef(pair_cox)[[1]]), 2) == 0.29,
   round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs)))[[1]], 3) == 3.597,
+  round(mean_difference, 2) == 3.67, round(difference_se, 2) == 0.47, round(mean_difference / difference_se, 2) == 7.75,
+  isTRUE(all.equal(mean_difference / difference_se, unname(alpha_test$statistic))),
+  sum(koos$change == 0) == 0, nrow(koos) == 246, sum(change_ranks[koos$change > 0]) == 30381, sum(change_ranks[koos$change < 0]) == 0,
+  unname(koos_test$statistic) == 30381,
   isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,

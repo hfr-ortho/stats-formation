@@ -28,7 +28,7 @@ DESCRIBE = [step for step in ANATOMY if step != "Effect size and 95% CI"]
 # A plain-words step after "When to use it", added page by page. List a page here once every section on it
 # has the step; when every catalog page is listed, move the step into ANATOMY and delete this set.
 EXPLAINED = "What the test really does"
-WITH_EXPLANATION = {"catalog/06-two-unpaired-groups.html"}
+WITH_EXPLANATION = {"catalog/06-two-unpaired-groups.html", "catalog/07-two-paired-groups.html"}
 
 
 def anatomy(page):

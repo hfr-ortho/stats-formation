@@ -42,6 +42,19 @@ A paired test can only use patients measured at **both** times. Patients who mis
 - Pairs are independent of each other.
 - If the differences are skewed, or the measurements are bounded or ordinal → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
 
+### What the test really does
+
+The paired t test turns two columns into one. Each hip has two readings, and the test looks only at the difference between them.
+
+1. For each hip, subtract one reading from the other. From here on, the two original columns are not used again.
+2. Take the [mean](../glossary.qmd#mean){.term} of these differences.
+3. Estimate the noise in that mean, its [standard error](../glossary.qmd#standard-error){.term}: the SD of the differences divided by √n, where n is the number of hips.
+4. Divide: **t = mean difference ÷ standard error**, and turn t into a [p-value](../glossary.qmd#p-value){.term}.
+
+Because each hip is compared with itself, the large differences between hips drop out. That is why a paired test can detect a small difference that an unpaired test would miss.
+
+Once the test has run, a box under "Read the output" rebuilds t by hand.
+
 ### Look at the data first
 
 The alpha angle measures how far the front of the femoral head-neck junction bulges (cam morphology): the larger the angle, the bigger the bump. The hip-preservation data hold one row per hip (one hip per patient), from young adults assessed for hip-preservation surgery, with the alpha angle measured on two views: the **frog-leg lateral** and the **Dunn 45°**.
@@ -136,6 +149,40 @@ check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parame
 - **mean difference 3.67:** on average, the Dunn view read 3.7° higher than the frog-leg view of the same hip.
 - **95% CI 2.73 to 4.61:** the CI for the mean difference.
 
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the t statistic by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+mean_difference <- mean(imaging$difference)                      # step 2: the mean of the differences
+difference_se <- sd(imaging$difference) / sqrt(nrow(imaging))    # step 3: its standard error, SD of the differences ÷ √n
+c(mean_difference = mean_difference, standard_error = difference_se, t = mean_difference / difference_se)   # step 4: divide
+```
+
+## Python
+
+```{python}
+mean_difference = imaging["difference"].mean()                            # step 2: the mean of the differences
+difference_se = imaging["difference"].std() / len(imaging) ** 0.5         # step 3: its standard error, SD of the differences ÷ √n
+print(mean_difference, difference_se, mean_difference / difference_se)    # step 4: divide
+```
+:::
+
+The mean difference of 3.67° is 7.75 times its standard error of 0.47°. That is the **t = 7.75** the test printed.
+:::
+
+```{python}
+#| include: false
+chk = {"mean": float(mean_difference), "se": float(difference_se), "t": float(mean_difference / difference_se)}
+```
+
+```{r}
+#| include: false
+check_agree(list(mean = mean_difference, se = difference_se, t = mean_difference / difference_se), reticulate::py$chk)
+```
+
 ### Effect size and 95% CI
 
 - The **mean difference** with its CI, in degrees: 3.7° (95% CI 2.7 to 4.6).
@@ -204,6 +251,18 @@ pingouin's `compute_effsize(x, y, paired=True)` does **not** return d~z~: it ret
 - It ranks the sizes of the changes and compares the ranks of improvements with the ranks of declines.
 - Changes of exactly zero carry no information about direction and are dropped.
 - If the changes are roughly normal → the [paired t test](#paired-t).
+
+### What the test really does
+
+The Wilcoxon signed-rank test also works on each patient's change, but it uses the order of the changes instead of their size.
+
+1. For each patient, take the change (here, 1 year minus pre-op).
+2. Set aside any patient whose change is exactly 0.
+3. Line the changes up by size, ignoring whether they are improvements or declines, and give each one its position: its [rank](../glossary.qmd#rank){.term}. The smallest change gets rank 1.
+4. Add up the ranks of the improvements, and separately the ranks of the declines. Either sum can serve as the [test statistic](../glossary.qmd#test-statistic){.term}: R reports the first (V), Python the smaller of the two (W).
+5. If there were no real change, improvements and declines would share the ranks about evenly. The more one-sided the two sums, the smaller the [p-value](../glossary.qmd#p-value){.term}.
+
+Once the test has run, a box under "Read the output" adds up the ranks by hand.
 
 ### Look at the data first
 
@@ -309,6 +368,39 @@ check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticula
 - **(pseudo)median 34.1, 95% CI 32.3 to 35.9:** the Hodges-Lehmann estimate of the typical change, below.
 - **RBC = 1.0** (Python): the rank-biserial effect size, below.
 
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the rank sums by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+change_ranks <- rank(abs(koos$change))                       # step 3: rank the changes by size, ignoring the sign
+c(improvements = sum(change_ranks[koos$change > 0]),         # step 4: the sum of the improvements' ranks (R's V)
+  declines = sum(change_ranks[koos$change < 0]))             # ... and of the declines' ranks (Python's W_val)
+```
+
+## Python
+
+```{python}
+change_ranks = koos["change"].abs().rank()                                               # step 3: rank the changes by size, ignoring the sign
+print(change_ranks[koos["change"] > 0].sum(), change_ranks[koos["change"] < 0].sum())    # step 4: the two sums
+```
+:::
+
+No change is exactly 0 here, so step 2 sets nobody aside. Every patient improved, so all the ranks from 1 to 246 belong to improvements: they add up to 30381, R's V. The declines' sum is 0, Python's W_val.
+:::
+
+```{python}
+#| include: false
+chk = {"up": float(change_ranks[koos["change"] > 0].sum()), "down": float(change_ranks[koos["change"] < 0].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(up = sum(change_ranks[koos$change > 0]), down = sum(change_ranks[koos$change < 0])), reticulate::py$chk)
+```
+
 ### Effect size and 95% CI
 
 - The **Hodges-Lehmann estimate** of the change (the median of the averages of every pair of changes), with its CI, in points.
@@ -382,6 +474,17 @@ A tiny p-value says the scores went up on average; it doesn't say how many patie
 - A **yes/no** outcome measured **twice in the same patients** (or once in each member of a matched pair).
 - It uses only the **discordant pairs**: the patients who changed (no → yes, or yes → no). Patients who stayed the same tell you nothing about the direction of change.
 - The chi-square version needs at least about 10 discordant pairs in total. With fewer, use the **exact** version (see the R vs Python box).
+
+### What the test really does
+
+McNemar's test looks only at the patients whose answer changed.
+
+1. Cross-tabulate the two answers: before in the rows, after in the columns.
+2. Set aside the patients who gave the same answer both times. They say nothing about change.
+3. Among the patients who changed, count each direction: from no to yes, and from yes to no.
+4. If nothing had really changed, the two directions would be equally likely, like heads and tails. The [test statistic](../glossary.qmd#test-statistic){.term} measures how far the split is from even, and the further it is, the smaller the [p-value](../glossary.qmd#p-value){.term}.
+
+The first bullet under "Read the output" works it out by hand.
 
 ### Look at the data first
 
@@ -531,6 +634,17 @@ R's `mcnemar.test()` gives the chi-square version, with a continuity correction 
 - A Cox model **stratified** by pair lets each pair have its own baseline risk, and compares implants only **within** pairs. The decision table calls this *conditional proportional hazards regression*.
 - Only pairs in which one patient was revised while the other was still being followed tell the model anything; with few events, expect a wide CI.
 - [Page 14](../survival/14-cox-regression.qmd) covers Cox regression in full.
+
+### What the test really does
+
+A stratified Cox model compares the implants within each matched pair, never across pairs.
+
+1. Take one pair at a time and follow its two patients forward from surgery.
+2. Find the one whose follow-up ends first. If that patient was revised while the partner was still being followed, the pair is informative: note which implant failed first. Otherwise the pair tells the model nothing.
+3. Count the informative pairs in each direction: implant C revised first, or implant A revised first.
+4. With one patient per implant in each pair, the [hazard ratio](../glossary.qmd#hazard-ratio){.term} is the ratio of these two counts. The fewer informative pairs there are, the wider its CI.
+
+"Look at the data first" counts the pairs for our data.
 
 ### Look at the data first
 
@@ -728,6 +842,10 @@ stopifnot(
   round(193 / 263, 3) == 0.734, round(0.734 / 0.266, 2) == 2.76, round(193 / 70, 2) == 2.76, round(binom.test(193, 263)$conf.int[1:2], 3) == c(0.676, 0.786),
   round(summary(pair_cox)$coefficients[1, "z"], 2) == 2.21, round(2.21^2, 2) == 4.88, round(coef(pair_cox)[[1]], 2) == 1.25, round(exp(-coef(pair_cox)[[1]]), 2) == 0.29,
   round(exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs)))[[1]], 3) == 3.597,
+  round(mean_difference, 2) == 3.67, round(difference_se, 2) == 0.47, round(mean_difference / difference_se, 2) == 7.75,
+  isTRUE(all.equal(mean_difference / difference_se, unname(alpha_test$statistic))),
+  sum(koos$change == 0) == 0, nrow(koos) == 246, sum(change_ranks[koos$change > 0]) == 30381, sum(change_ranks[koos$change < 0]) == 0,
+  unname(koos_test$statistic) == 30381,
   isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
