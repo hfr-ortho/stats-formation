@@ -278,20 +278,20 @@ All four were rechecked against the page text and the data after the audit.
 | 14-9 | C | no | R's `exp(-coef)` column is printed seven times and never explained | [survival.md](survival.md) | done |
 | 14-10 | C | no | The clustered model's p-values are printed in scientific notation and not read | [survival.md](survival.md) | done |
 | 14-11 | C | no | The final table's univariable CIs differ from the ones at the top of the page | [survival.md](survival.md) | done |
-| 15-1 | A | yes | "About 20%" false-positive chance for four groups | [beyond.md](beyond.md) | open |
-| 15-2 | A | yes | Walking-aid use "rose", "fell", "below its pre-op level"; n = 328 | [beyond.md](beyond.md) | open |
-| 15-3 | A | yes | "The SDs are similar (8.7 to 9.3 years)" and "the two small classes" | [beyond.md](beyond.md) | open |
-| 15-4 | A | yes | F(3, 596) = 23.9 in two Results sentences | [beyond.md](beyond.md) | open |
-| 15-5 | A | yes | Overall log-rank χ² = 33.5 (df = 2) | [beyond.md](beyond.md) | open |
-| 15-6 | A | yes | "Two of the expected counts are below 5" | [beyond.md](beyond.md) | open |
+| 15-1 | A | yes | "About 20%" false-positive chance for four groups | [beyond.md](beyond.md) | done |
+| 15-2 | A | yes | Walking-aid use "rose", "fell", "below its pre-op level"; n = 328 | [beyond.md](beyond.md) | done |
+| 15-3 | A | yes | "The SDs are similar (8.7 to 9.3 years)" and "the two small classes" | [beyond.md](beyond.md) | done |
+| 15-4 | A | yes | F(3, 596) = 23.9 in two Results sentences | [beyond.md](beyond.md) | done |
+| 15-5 | A | yes | Overall log-rank χ² = 33.5 (df = 2) | [beyond.md](beyond.md) | done |
+| 15-6 | A | yes | "Two of the expected counts are below 5" | [beyond.md](beyond.md) | done |
 | 15-7 | A | no | "the 80 patients who had both sides operated on" | [beyond.md](beyond.md) | done |
-| 15-8 | B | yes | PROMIS "improved between each visit", "changes this large": no means shown | [beyond.md](beyond.md) | open |
-| 15-9 | B | yes | EFAS "rose" with no medians; n = 50 printed in Python only | [beyond.md](beyond.md) | open |
-| 15-10 | B | no | Holm's 0.044 and BH's 0.026: the arithmetic is not shown | [beyond.md](beyond.md) | open |
-| 15-11 | B | no | Kruskal-Wallis "H = 24.3, df = 3, p < 0.001" not tied to the output | [beyond.md](beyond.md) | open |
-| 15-12 | B | no | Overall Fisher p = 0.016 appears in the R tab only | [beyond.md](beyond.md) | open |
-| 15-13 | B | no | Implant A vs B hazard ratio is printed but never read | [beyond.md](beyond.md) | open |
-| 15-14 | C | no | Tukey and Games-Howell bullets leave columns unexplained | [beyond.md](beyond.md) | open |
+| 15-8 | B | yes | PROMIS "improved between each visit", "changes this large": no means shown | [beyond.md](beyond.md) | done |
+| 15-9 | B | yes | EFAS "rose" with no medians; n = 50 printed in Python only | [beyond.md](beyond.md) | done |
+| 15-10 | B | no | Holm's 0.044 and BH's 0.026: the arithmetic is not shown | [beyond.md](beyond.md) | done |
+| 15-11 | B | no | Kruskal-Wallis "H = 24.3, df = 3, p < 0.001" not tied to the output | [beyond.md](beyond.md) | done |
+| 15-12 | B | no | Overall Fisher p = 0.016 appears in the R tab only | [beyond.md](beyond.md) | done |
+| 15-13 | B | no | Implant A vs B hazard ratio is printed but never read | [beyond.md](beyond.md) | done |
+| 15-14 | C | no | Tukey and Games-Howell bullets leave columns unexplained | [beyond.md](beyond.md) | done |
 | 16-1 | A | yes | Nested model: "patient-level intercept comes out at almost exactly zero", "singular" | [beyond.md](beyond.md) | open |
 | 16-2 | A | yes | Complete-case means 49.2 and 84.0 | [beyond.md](beyond.md) | open |
 | 16-3 | A | yes | 431 scores, 120 patients, 80 complete (66.7%) | [beyond.md](beyond.md) | open |

@@ -44,6 +44,9 @@ trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)
 tests <- c(1, 3, 6, 10, 20)
 false_positives <- tibble(tests, chance_of_a_false_positive = round(1 - 0.95^tests, 2))
 false_positives
+
+# four equal groups, six pairwise tests: the chance that at least one gives p < 0.05
+1 - ptukey(qnorm(0.975) * sqrt(2), nmeans = 4, df = Inf)
 ```
 
 ## Python
@@ -59,7 +62,7 @@ from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.contingency_tables import mcnemar
 from lifelines import CoxPHFitter
-from lifelines.statistics import pairwise_logrank_test
+from lifelines.statistics import multivariate_logrank_test, pairwise_logrank_test
 
 cohort = pd.read_csv("data/cohort.csv")
 proms = pd.read_csv("data/proms_long.csv")
@@ -68,6 +71,9 @@ trial = pd.read_csv("data/foot_ankle_rct_long.csv")
 tests = np.array([1, 3, 6, 10, 20])
 false_positives = pd.DataFrame({"tests": tests, "chance_of_a_false_positive": (1 - 0.95**tests).round(2)})
 print(false_positives)
+
+# four equal groups, six pairwise tests: the chance that at least one gives p < 0.05
+print(1 - stats.studentized_range.cdf(stats.norm.ppf(0.975) * np.sqrt(2), 4, np.inf))
 ```
 :::
 
@@ -75,15 +81,17 @@ print(false_positives)
 #| include: false
 chance = false_positives.set_index("tests")["chance_of_a_false_positive"]
 chk = {"six": float(chance[6]), "twenty": float(chance[20])}
+chk_four = {"four_groups": float(1 - stats.studentized_range.cdf(stats.norm.ppf(0.975) * np.sqrt(2), 4, np.inf))}
 ```
 
 ```{r}
 #| include: false
 chance <- false_positives$chance_of_a_false_positive
 check_agree(list(six = chance[tests == 6], twenty = chance[tests == 20]), reticulate::py$chk)
+check_agree(list(four_groups = 1 - ptukey(qnorm(0.975) * sqrt(2), nmeans = 4, df = Inf)), reticulate::py$chk_four)
 ```
 
-Four groups make six pairs. Six independent tests at the 5% level give a 26% chance of at least one false alarm, even when nothing is going on; twenty tests give 64%. Pairwise comparisons aren't independent, because each group appears in three of the six pairs, so for four groups of equal size the chance is a little lower: about 20%. That's still four times the 5% you meant to allow. Comparing pairs therefore needs an **adjustment**: a stricter rule that keeps the chance of any false positive across the whole set of comparisons at 5%.
+Four groups make six pairs. Six independent tests at the 5% level give a 26% chance of at least one false alarm, even when nothing is going on; twenty tests give 64%. Pairwise comparisons aren't independent, because each group appears in three of the six pairs, so for four groups of equal size the chance is a little lower: about 20% (the last line of the output, 0.203). That's still four times the 5% you meant to allow. Comparing pairs therefore needs an **adjustment**: a stricter rule that keeps the chance of any false positive across the whole set of comparisons at 5%.
 
 ::: {.callout-note}
 ## 💡 In plain language
@@ -147,8 +155,54 @@ check_agree(list(raw_12 = adjusted$unadjusted[1], raw_34 = adjusted$unadjusted[6
 Follow the ASA 1 vs ASA 2 comparison across the row:
 - **Unadjusted, p = 0.022:** "significant" on its own, but it's one of six tests.
 - **Bonferroni, p = 0.132:** multiplies every p-value by the number of tests (here 6). Simple, but the strictest: it often throws away real differences.
-- **Holm, p = 0.044:** a step-down version of Bonferroni. It multiplies the smallest p-value by 6, the next smallest by 5, and so on, but an adjusted p-value can't be smaller than the one before it in that order. ASA 3 vs 4 has the largest unadjusted p-value (0.030), so it's multiplied by 1, but it takes 0.044 from ASA 1 vs 2, the one before it. It controls the family-wise error rate just as well as Bonferroni and is never less powerful, so **use Holm rather than Bonferroni**.
-- **Benjamini-Hochberg (BH), p = 0.026:** controls something different, the **false discovery rate**: the expected share of false positives among the results you call significant. It's the most lenient of the three. It suits screening many outcomes for leads, not confirming a claim.
+- **Holm, p = 0.044:** a step-down version of Bonferroni. It multiplies the smallest p-value by 6, the next smallest by 5, and so on, but an adjusted p-value can't be smaller than the one before it in that order. ASA 1 vs 2 has the fifth smallest of the six p-values, so it's multiplied by 2: 0.022 × 2 = 0.044. ASA 3 vs 4 has the largest unadjusted p-value (0.030), so it's multiplied by 1, but it takes 0.044 from ASA 1 vs 2, the one before it. It controls the family-wise error rate just as well as Bonferroni and is never less powerful, so **use Holm rather than Bonferroni**.
+- **Benjamini-Hochberg (BH), p = 0.026:** controls something different, the **false discovery rate**: the expected share of false positives among the results you call significant. It's the most lenient of the three. It suits screening many outcomes for leads, not confirming a claim. To get it, each p-value is multiplied by the number of tests and divided by its [rank](../glossary.qmd#rank){.term}, counted from the smallest: here 0.022 × 6 / 5 = 0.026.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: Holm and Benjamini-Hochberg by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+by_hand <- adjusted |>
+  select(pair, unadjusted) |>
+  arrange(unadjusted) |>                                          # the smallest p-value first
+  mutate(rank = row_number(),
+         times_holm = 6 - rank + 1,                               # Holm: × 6, × 5, ... × 1
+         holm = pmin(1, cummax(unadjusted * times_holm)),         # never smaller than the one before it
+         times_bh = 6 / rank,                                     # BH: × 6 ÷ rank
+         bh = rev(cummin(rev(pmin(1, unadjusted * times_bh)))))   # never larger than the one after it
+by_hand |> mutate(across(c(unadjusted, holm, bh), \(p) signif(p, 3)))
+```
+
+## Python
+
+```{python}
+by_hand = adjusted[["pair", "unadjusted"]].sort_values("unadjusted").reset_index(drop=True)        # the smallest p-value first
+by_hand["rank"] = by_hand.index + 1
+by_hand["times_holm"] = 6 - by_hand["rank"] + 1                                                    # Holm: × 6, × 5, ... × 1
+by_hand["holm"] = (by_hand["unadjusted"] * by_hand["times_holm"]).cummax().clip(upper=1)           # never smaller than the one before it
+by_hand["times_bh"] = 6 / by_hand["rank"]                                                          # BH: × 6 ÷ rank
+by_hand["bh"] = (by_hand["unadjusted"] * by_hand["times_bh"])[::-1].cummin()[::-1].clip(upper=1)   # never larger than the one after it
+print(by_hand.to_string(float_format=lambda p: f"{p:.3g}"))
+```
+:::
+
+The six p-values are sorted from the smallest to the largest. ASA 1 vs 2 comes fifth: Holm multiplies it by 2 (0.022 × 2 = 0.044), and Benjamini-Hochberg by 6 ÷ 5 = 1.2 (0.022 × 1.2 = 0.026). ASA 3 vs 4 comes last. Holm multiplies it by 1, which leaves 0.030, less than the 0.044 before it, so it takes 0.044. The `holm` and `bh` columns match the ones the software gave above.
+:::
+
+```{python}
+#| include: false
+chk = {"holm_5": float(by_hand["holm"].iloc[4]), "holm_6": float(by_hand["holm"].iloc[5]),
+       "bh_2": float(by_hand["bh"].iloc[1]), "bh_5": float(by_hand["bh"].iloc[4])}
+```
+
+```{r}
+#| include: false
+check_agree(list(holm_5 = by_hand$holm[5], holm_6 = by_hand$holm[6], bh_2 = by_hand$bh[2], bh_5 = by_hand$bh[5]),
+            reticulate::py$chk)
+```
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: decide the adjustment before you see the p-values
@@ -163,7 +217,10 @@ After a one-way ANOVA, **Tukey's honestly significant difference** (HSD) compare
 ## R
 
 ```{r}
+cohort |> group_by(asa) |> summarise(n = n(), mean = mean(age), sd = sd(age))   # look first: group sizes, means and SDs
+
 age_anova <- aov(age ~ factor(asa), data = cohort)
+summary(age_anova)                                        # the overall test, as on page 8
 age_tukey <- TukeyHSD(age_anova)                          # diff, adjusted 95% CI, adjusted p
 age_tukey
 
@@ -174,6 +231,9 @@ games_howell |> select(group1, group2, estimate, conf.low, conf.high, p.adj)
 ## Python
 
 ```{python}
+print(cohort.groupby("asa")["age"].agg(["count", "mean", "std"]).round(2))   # look first: group sizes, means and SDs
+print(pg.anova(data=cohort, dv="age", between="asa"))                        # the overall test, as on page 8
+
 age_tukey = pairwise_tukeyhsd(cohort["age"], cohort["asa"])
 print(age_tukey.summary())
 
@@ -187,6 +247,8 @@ print(games_howell[["A", "B", "diff", "se", "pval"]].round(4))
 chk = {"diff_12": float(age_tukey.meandiffs[0]), "low_12": float(age_tukey.confint[0][0]),
        "high_12": float(age_tukey.confint[0][1]), "p_12": float(age_tukey.pvalues[0]), "p_34": float(age_tukey.pvalues[5]),
        "gh_12": float(games_howell["pval"].iloc[0]), "gh_34": float(games_howell["pval"].iloc[5])}
+chk_look = {"sd_1": float(cohort.loc[cohort["asa"] == 1, "age"].std()), "sd_4": float(cohort.loc[cohort["asa"] == 4, "age"].std()),
+            "f": float(pg.anova(data=cohort, dv="age", between="asa")["F"].iloc[0])}
 ```
 
 ```{r}
@@ -196,13 +258,19 @@ check_agree(list(diff_12 = tukey["2-1", "diff"], low_12 = tukey["2-1", "lwr"], h
                  p_12 = tukey["2-1", "p adj"], p_34 = tukey["4-3", "p adj"],
                  gh_12 = games_howell$p.adj[1], gh_34 = games_howell$p.adj[6]),
             reticulate::py$chk)
+check_agree(list(sd_1 = sd(cohort$age[cohort$asa == 1]), sd_4 = sd(cohort$age[cohort$asa == 4]),
+                 f = summary(age_anova)[[1]][1, "F value"]), reticulate::py$chk_look)
 ```
 
+- **The first table:** each ASA class's size, mean age and SD.
+- **The ANOVA table:** the overall test from [page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova), F = 23.9 on 3 and 596 degrees of freedom (`Df` in R; `ddof1` and `ddof2` in Python).
 - **diff / meandiff:** the difference in mean age between two ASA classes, in years.
 - **lwr, upr / lower, upper:** the 95% CI of that difference, adjusted for all six comparisons.
 - **p adj / p-adj:** the adjusted p-value.
+- **reject** (Python): True when the adjusted p-value is below 0.05.
+- **Games-Howell** shows the same three things under other names: `estimate`, `conf.low`, `conf.high` and `p.adj` in R; `diff` and `pval` in Python, which prints the standard error (`se`) in place of a CI.
 
-Four of the six pairs differ clearly (p < 0.001 or, for ASA 2 vs 4 in the Games-Howell test, p = 0.001). Two don't: ASA 2 patients were 3.6 years older than ASA 1 patients (95% CI −0.4 to 7.7, p = 0.096), and ASA 4 patients 5.3 years older than ASA 3 patients (95% CI −0.3 to 10.9, p = 0.072). Both CIs include 0, and both comparisons involve one of the two small classes. The SDs are similar (8.7 to 9.3 years), so Games-Howell reaches the same conclusions.
+Four of the six pairs differ clearly (p < 0.001 or, for ASA 2 vs 4 in the Games-Howell test, p = 0.001). Two don't: ASA 2 patients were 3.6 years older than ASA 1 patients (95% CI −0.4 to 7.7, p = 0.096), and ASA 4 patients 5.3 years older than ASA 3 patients (95% CI −0.3 to 10.9, p = 0.072). Both CIs include 0, and both comparisons involve one of the two small classes (ASA 1 with 36 patients and ASA 4 with 18). The SDs are similar (8.7 to 9.3 years: `sd` in R's first table, `std` in Python's), so Games-Howell reaches the same conclusions.
 
 > **Methods:** Age was compared across ASA classes with one-way ANOVA, followed by Tukey's honestly significant difference test for pairwise comparisons.
 >
@@ -259,7 +327,7 @@ check_agree(list(h = unname(los_kw$statistic), p_12 = dunn$p.adj[1], p_23 = dunn
             reticulate::py$chk)
 ```
 
-- **Kruskal-Wallis H = 24.3, df = 3, p < 0.001:** LOS differs somewhere across the classes.
+- **Kruskal-Wallis chi-squared = 24.286** (R; the first number Python prints): the H statistic, 24.3. **df = 3:** four classes minus one (Python doesn't print it). **p < 0.001:** R prints `2.177e-05` and Python the same number with more digits, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.00002177. LOS differs somewhere across the classes.
 - **Dunn's test:** ASA 1 differs from every other class (adjusted p = 0.011 against ASA 2, p < 0.001 against ASAs 3 and 4), and ASA 2 differs from ASAs 3 (p = 0.047) and 4 (p = 0.022). There was no clear evidence of a difference between ASA 3 and 4 (p = 0.061).
 - **The statistic** in R's output is a z score: positive means the second group's ranks are higher (longer stays).
 
@@ -272,14 +340,16 @@ Both correct the z scores for tied ranks, which matter here because many patient
 
 ## After chi-square: pairwise Fisher's exact tests {#after-chi-square}
 
-After a chi-square (or Fisher) test on a table with three or more groups, compare the groups two at a time with **Fisher's exact test**, then adjust with Holm. Take 90-day complications across the four ASA classes. Two of the expected counts are below 5, too few for the chi-square test ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)), so the overall test is Fisher's exact test too:
+After a chi-square (or Fisher) test on a table with three or more groups, compare the groups two at a time with **Fisher's exact test**, then adjust with Holm. Take 90-day complications across the four ASA classes. Two of the [expected counts](../glossary.qmd#expected-count){.term} are below 5 (3.06 in ASA 1 and 1.53 in ASA 4, in the second table below), too few for the chi-square test ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)), so the overall test is Fisher's exact test too:
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+#| warning: false
 complications <- table(asa = cohort$asa, complication = cohort$complication_90d)
 complications
+chisq.test(complications)$expected                # two expected counts are below 5
 fisher_overall <- fisher.test(complications)      # overall: expected counts are too small for chi-square
 fisher_overall
 
@@ -292,6 +362,7 @@ pairwise_fisher
 ```{python}
 complications = pd.crosstab(cohort["asa"], cohort["complication_90d"])
 print(complications)
+print(stats.chi2_contingency(complications).expected_freq.round(2))   # two expected counts are below 5
 
 fisher_p = []
 for a, b in asa_pairs:
@@ -306,6 +377,8 @@ print(pd.DataFrame({"pair": [f"{a} vs {b}" for a, b in asa_pairs], "p": fisher_p
 #| include: false
 chk = {"p_14": float(fisher_p[2]), "holm_14": float(fisher_holm[2]), "holm_24": float(fisher_holm[4]),
        "holm_12": float(fisher_holm[0])}
+chk_expected = {"smallest": float(stats.chi2_contingency(complications).expected_freq.min()),
+                "asa_1": float(stats.chi2_contingency(complications).expected_freq[0, 1])}
 ```
 
 ```{r}
@@ -313,9 +386,11 @@ chk = {"p_14": float(fisher_p[2]), "holm_14": float(fisher_holm[2]), "holm_24": 
 check_agree(list(p_14 = pairwise_fisher$p[3], holm_14 = pairwise_fisher$p.adj[3], holm_24 = pairwise_fisher$p.adj[5],
                  holm_12 = pairwise_fisher$p.adj[1]),
             reticulate::py$chk)
+check_agree(list(smallest = min(suppressWarnings(chisq.test(complications))$expected),
+                 asa_1 = suppressWarnings(chisq.test(complications))$expected["1", "1"]), reticulate::py$chk_expected)
 ```
 
-The overall Fisher test says the complication rate differs across ASA classes (p = 0.016). But no single pair differs clearly after Holm's adjustment: the closest is ASA 1 vs ASA 4 (0 of 36 vs 4 of 18 patients; p = 0.010 unadjusted, 0.058 adjusted). [A later section](#overall-test-first) explains why that can happen.
+The overall Fisher test says the complication rate differs across ASA classes (p = 0.016; R prints 0.01587). scipy can only estimate this p-value for a table larger than 2 × 2 ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)), so the Python tab runs the pairs only. But no single pair differs clearly after Holm's adjustment: the closest is ASA 1 vs ASA 4 (0 of 36 vs 4 of 18 patients; p = 0.010 unadjusted, 0.058 adjusted). [A later section](#overall-test-first) explains why that can happen.
 
 ## After repeated-measures ANOVA: paired t tests {#after-repeated-measures-anova}
 
@@ -333,6 +408,8 @@ pf <- proms |>
   mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr"))) |>
   arrange(case_id, visit)                           # paired tests match rows by position
 
+pf |> group_by(visit) |> summarise(mean = mean(promis_pf))   # mean score at each visit
+
 pf_pairs <- rstatix::pairwise_t_test(pf, promis_pf ~ visit, paired = TRUE, p.adjust.method = "holm")
 pf_pairs |> select(group1, group2, n1, statistic, df, p.adj)
 ```
@@ -342,6 +419,8 @@ pf_pairs |> select(group1, group2, n1, statistic, df, p.adj)
 ```{python}
 pf = proms[["case_id", "visit", "promis_pf"]]
 pf = pf[pf.groupby("case_id")["promis_pf"].transform(lambda scores: scores.notna().all())]
+
+print(pf.groupby("visit")["promis_pf"].mean().round(1)[["preop", "6wk", "3mo", "1yr"]])   # mean score at each visit
 
 pf_pairs = pg.pairwise_tests(data=pf, dv="promis_pf", within="visit", subject="case_id", padjust="holm")
 print(pf_pairs[["A", "B", "T", "dof", "p_corr"]])
@@ -354,6 +433,8 @@ def paired_t(a, b):
     row = pf_pairs[((pf_pairs["A"] == a) & (pf_pairs["B"] == b)) | ((pf_pairs["A"] == b) & (pf_pairs["B"] == a))]
     return float(abs(row["T"].iloc[0]))
 chk = {"t_pre_6wk": paired_t("preop", "6wk"), "t_3mo_1yr": paired_t("3mo", "1yr"), "t_pre_1yr": paired_t("preop", "1yr")}
+chk_means = {"preop": float(pf.loc[pf["visit"] == "preop", "promis_pf"].mean()),
+             "one_year": float(pf.loc[pf["visit"] == "1yr", "promis_pf"].mean())}
 ```
 
 ```{r}
@@ -361,9 +442,11 @@ chk = {"t_pre_6wk": paired_t("preop", "6wk"), "t_3mo_1yr": paired_t("3mo", "1yr"
 check_agree(list(t_pre_6wk = abs(pf_pairs$statistic[1]), t_3mo_1yr = abs(pf_pairs$statistic[6]),
                  t_pre_1yr = abs(pf_pairs$statistic[3])),
             reticulate::py$chk)
+check_agree(list(preop = mean(pf$promis_pf[pf$visit == "preop"]), one_year = mean(pf$promis_pf[pf$visit == "1yr"])),
+            reticulate::py$chk_means)
 ```
 
-Every pair of visits differs (all adjusted p < 0.001): PROMIS physical function improved between each visit and the next, from pre-op to 6 weeks (t = 8.0) through to 3 months and 1 year (t = 7.5 for the last step). With 328 procedures and changes this large, the adjustment changes nothing. It matters most when results sit near p = 0.05.
+The mean T-score was 36.1 before surgery, 39.4 at 6 weeks, 44.9 at 3 months and 48.2 at 1 year (the first output). Every pair of visits differs: all adjusted p-values are below 0.001, and the largest is printed as `5.59e-13` in R. R's `statistic` is negative because it subtracts the later visit from the earlier one: pre-op minus 6 weeks gives t = −7.98. Python subtracts the other way round and prints 7.98. With 328 procedures and changes this large, the adjustment changes nothing. It matters most when results sit near p = 0.05.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: which way round
@@ -387,6 +470,8 @@ efas_boot <- trial |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "12mo"))) |>
   arrange(patient_id, visit)
 
+efas_boot |> group_by(visit) |> summarise(n = n(), median = median(efas))   # patients and median score at each visit
+
 efas_pairs <- rstatix::pairwise_wilcox_test(efas_boot, efas ~ visit, paired = TRUE, exact = FALSE, correct = FALSE,
                                             p.adjust.method = "holm")
 efas_pairs |> select(group1, group2, statistic, p, p.adj)
@@ -403,6 +488,7 @@ visits = ["6wk", "3mo", "12mo"]
 efas_boot = trial[(trial["arm"] == "boot") & trial["visit"].isin(visits)]
 efas_wide = efas_boot.pivot(index="patient_id", columns="visit", values="efas")[visits].dropna()
 print(len(efas_wide))                                    # patients scored at all three visits
+print(efas_wide.median())                                # median score at each visit
 
 wilcoxon = {}
 for a, b in [("6wk", "3mo"), ("6wk", "12mo"), ("3mo", "12mo")]:
@@ -422,6 +508,7 @@ chk = {"v_6wk_3mo": float(wilcoxon[("6wk", "3mo")].statistic), "v_3mo_12mo": flo
        # p-values this small would pass any check on their own, so compare their logarithms
        "log10_p_6wk_12mo": float(np.log10(efas_conover.loc["6wk", "12mo"])),
        "log10_p_3mo_12mo": float(np.log10(efas_conover.loc["3mo", "12mo"]))}
+chk_medians = {"first": float(efas_wide["6wk"].median()), "last": float(efas_wide["12mo"].median())}
 ```
 
 ```{r}
@@ -431,9 +518,11 @@ check_agree(list(v_6wk_3mo = efas_pairs$statistic[1], v_3mo_12mo = efas_pairs$st
                  log10_p_6wk_12mo = log10(efas_conover$p.value["12mo", "6wk"]),
                  log10_p_3mo_12mo = log10(efas_conover$p.value["12mo", "3mo"])),
             reticulate::py$chk)
+check_agree(list(first = median(efas_boot$efas[efas_boot$visit == "6wk"]), last = median(efas_boot$efas[efas_boot$visit == "12mo"])),
+            reticulate::py$chk_medians)
 ```
 
-All three pairs differ (adjusted p < 0.001 with either method): the EFAS score rose between 6 weeks and 3 months and again between 3 months and 12 months.
+The median EFAS score was 12.5 at 6 weeks, 17 at 3 months and 20 at 12 months, in 50 patients (the first lines of the output). All three pairs differ (adjusted p < 0.001 with either method).
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: the statistic
@@ -455,6 +544,9 @@ aid <- proms |>
   ungroup() |>
   pivot_wider(names_from = visit, values_from = walking_aid)
 
+nrow(aid)                                                            # procedures assessed at all four visits
+round(100 * colMeans(aid[, c("preop", "6wk", "3mo", "1yr")]), 1)     # % using a walking aid at each visit
+
 visit_pairs <- combn(c("preop", "6wk", "3mo", "1yr"), 2)    # six pairs, one per column
 mcnemar_p <- apply(visit_pairs, 2, function(pair) {
   mcnemar.test(table(factor(aid[[pair[1]]], levels = 0:1), factor(aid[[pair[2]]], levels = 0:1)))$p.value
@@ -468,6 +560,8 @@ mcnemar_results
 
 ```{python}
 aid = proms.pivot(index="case_id", columns="visit", values="walking_aid").dropna()   # assessed at all four visits
+print(len(aid))                                                           # procedures assessed at all four visits
+print((100 * aid[["preop", "6wk", "3mo", "1yr"]].mean()).round(1))        # % using a walking aid at each visit
 
 mcnemar_p = []
 visit_pairs = list(itertools.combinations(["preop", "6wk", "3mo", "1yr"], 2))
@@ -482,15 +576,17 @@ print(pd.DataFrame({"pair": visit_pairs, "p": mcnemar_p, "p_holm": mcnemar_holm}
 ```{python}
 #| include: false
 chk = {"p_pre_3mo": float(mcnemar_p[1]), "holm_pre_3mo": float(mcnemar_holm[1]), "n": float(len(aid))}
+chk_aid = {"preop": float(aid["preop"].mean()), "six_weeks": float(aid["6wk"].mean()), "one_year": float(aid["1yr"].mean())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(p_pre_3mo = mcnemar_results$p[2], holm_pre_3mo = mcnemar_results$p_holm[2], n = nrow(aid)),
             reticulate::py$chk)
+check_agree(list(preop = mean(aid$preop), six_weeks = mean(aid$`6wk`), one_year = mean(aid$`1yr`)), reticulate::py$chk_aid)
 ```
 
-Every pair of visits differs after adjustment. Use rose from pre-op to 6 weeks and fell at each visit after that; by 3 months it was already below its pre-op level (adjusted p = 0.005), and by 1 year lower still.
+A walking aid was used in 34.8% of the 328 procedures before surgery, 59.1% at 6 weeks, 24.4% at 3 months and 10.4% at 1 year (the first two outputs). Every pair of visits differs after adjustment (the `p_holm` column). The largest adjusted p-value is for pre-op against 3 months: 0.005, printed in scientific notation as `4.66e- 3` in R and `4.658779e-03` in Python.
 
 ## After a log-rank test: pairwise survival comparisons {#after-log-rank}
 
@@ -500,6 +596,8 @@ Every pair of visits differs after adjustment. Use rose from pre-op to 6 weeks a
 ## R
 
 ```{r}
+survdiff(Surv(followup_years, revised) ~ implant, data = cohort)   # the overall log-rank test, as on page 13
+
 implant_pairs <- combn(c("A", "B", "C"), 2)
 logrank <- apply(implant_pairs, 2, function(pair) {
   two_implants <- cohort |> filter(implant %in% pair)
@@ -519,6 +617,9 @@ summary(implant_vs_b_model)$conf.int
 ## Python
 
 ```{python}
+overall_logrank = multivariate_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"])
+print(overall_logrank.test_statistic, overall_logrank.p_value)   # the overall log-rank test, as on page 13
+
 pairwise_logrank = pairwise_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"])
 logrank_p = pairwise_logrank.summary["p"]
 logrank_holm = multipletests(logrank_p, method="holm")[1]
@@ -540,6 +641,7 @@ chk = {"p_ab": float(logrank_p.iloc[0]), "holm_ab": float(logrank_holm[0]), "chi
        "hr_cb": float(hr_rows.loc["implant_vs_b[T.C]", "exp(coef)"]),
        "low_cb": float(hr_rows.loc["implant_vs_b[T.C]", "exp(coef) lower 95%"]),
        "high_cb": float(hr_rows.loc["implant_vs_b[T.C]", "exp(coef) upper 95%"])}
+chk_overall = {"chisq": float(overall_logrank.test_statistic), "hr_ab": float(hr_rows.loc["implant_vs_b[T.A]", "exp(coef)"])}
 ```
 
 ```{r}
@@ -549,9 +651,11 @@ check_agree(list(p_ab = logrank_results$p[1], holm_ab = logrank_results$p_holm[1
                  hr_cb = implant_vs_b_hr["implant_vs_bC", "exp(coef)"], low_cb = implant_vs_b_hr["implant_vs_bC", "lower .95"],
                  high_cb = implant_vs_b_hr["implant_vs_bC", "upper .95"]),
             reticulate::py$chk)
+check_agree(list(chisq = survdiff(Surv(followup_years, revised) ~ implant, data = cohort)$chisq,
+                 hr_ab = implant_vs_b_hr["implant_vs_bA", "exp(coef)"]), reticulate::py$chk_overall)
 ```
 
-Implant C differs from both A and B (adjusted p < 0.001 for each). There was no clear evidence of a difference between A and B (p = 0.520). Against implant B, implant C's hazard ratio was 3.75 (95% CI 2.14 to 6.58); against implant A it was 3.07 (95% CI 1.85 to 5.09; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)).
+Implant C differs from both A and B (adjusted p < 0.001 for each). There was no clear evidence of a difference between A and B (p = 0.520; hazard ratio for A against B 1.22, 95% CI 0.67 to 2.24, the first row of the Cox output). Against implant B, implant C's hazard ratio was 3.75 (95% CI 2.14 to 6.58, the second row); against implant A it was 3.07 (95% CI 1.85 to 5.09; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)). R's `exp(-coef)` column is the same ratio the other way round. The first output is the overall test: χ² = 33.5 on 2 degrees of freedom (Python prints the statistic and the p-value only).
 
 > **Results:** The log-rank test for revision-free survival across implants gave χ² = 33.5 (df = 2, p < 0.001). In pairwise log-rank tests with Holm's adjustment, p < 0.001 for implant C against implant A and against implant B, and p = 0.520 for implant A against implant B.
 
@@ -634,6 +738,23 @@ stopifnot(
   round(survdiff(Surv(followup_years, revised) ~ implant, data = cohort)$chisq, 1) == 33.5,
   round(summary(coxph(Surv(followup_years, revised) ~ implant, data = cohort))$conf.int["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.07, 1.85, 5.09),
   round(implant_vs_b_hr["implant_vs_bC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.75, 2.14, 6.58),
+  # numbers added with the audit fixes and the by-hand box
+  round(1 - ptukey(qnorm(0.975) * sqrt(2), nmeans = 4, df = Inf), 3) == 0.203,
+  by_hand$pair[5] == "1 vs 2", by_hand$pair[6] == "3 vs 4", by_hand$times_holm[5] == 2, by_hand$times_bh[5] == 1.2,
+  round(0.022 * 2, 3) == 0.044, round(0.022 * 6 / 5, 3) == 0.026, round(0.022 * 1.2, 3) == 0.026,
+  round(by_hand$unadjusted[6], 3) == 0.030, round(by_hand$holm[5:6], 3) == 0.044,
+  isTRUE(all.equal(by_hand$holm, sort(adjusted$holm))), isTRUE(all.equal(by_hand$bh, sort(adjusted$bh))),
+  as.vector(table(cohort$asa)) == c(36, 300, 246, 18),
+  format(round(kruskal.test(los_days ~ factor(asa), data = cohort)$statistic, 3)) == "24.286",
+  format(signif(los_kw$p.value, 4)) == "2.177e-05", los_kw$parameter == 3,
+  round(suppressWarnings(chisq.test(complications))$expected[c("1", "4"), "1"], 2) == c(3.06, 1.53),
+  round(fisher_overall$p.value, 5) == 0.01587,
+  round(tapply(pf$promis_pf, pf$visit, mean), 1) == c(36.1, 39.4, 44.9, 48.2),
+  round(pf_pairs$statistic[1], 2) == -7.98, format(signif(max(pf_pairs$p.adj), 3)) == "5.59e-13",
+  tapply(efas_boot$efas, efas_boot$visit, median) == c(12.5, 17, 20),
+  round(100 * colMeans(aid[, c("preop", "6wk", "3mo", "1yr")]), 1) == c(34.8, 59.1, 24.4, 10.4),
+  which.max(mcnemar_results$p_holm) == 2, format(signif(mcnemar_results$p_holm[2], 3)) == "0.00466",
+  round(implant_vs_b_hr["implant_vs_bA", c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.22, 0.67, 2.24),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   all(tukey_bmi[, "p adj"] < 0.01), round(tukey_bmi["2-1", c("diff", "lwr", "upr")], 1) == c(2.9, 0.6, 5.2),
   round(tukey_bmi["4-3", c("diff", "lwr", "upr")], 1) == c(4.1, 0.9, 7.2),
