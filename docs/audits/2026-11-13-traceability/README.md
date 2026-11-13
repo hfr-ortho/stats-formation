@@ -23,6 +23,16 @@ A fix marked "code: yes" changes R or Python code. It must be copied identically
 
 The proposed fixes are proposals. The agents ran most proposed code lines against `data/`, but none was rendered inside a page, so the hidden agreement checks and the Prose guard have not been run against them.
 
+## Still open: three findings that need Doc's answer
+
+Status on 13.11.2026: every other finding is done.
+
+| ID | What is needed |
+|---|---|
+| gs-real-1 | Where an export from REDCap may be stored for analysis (which computer or drive), so the page can say it. |
+| gs-real-2 | What "the secure environment" is (REDCap only, HFR-managed computers and drives, ...). |
+| gs-setup-1 | The page no longer promises a check after every step, and step 1's check now points to step 6. The proposed new checks for steps 5 to 7 are not added: their wording should be confirmed on a fresh install. |
+
 ## Counts
 
 | Page | ERROR | A | B | C | Total |
@@ -331,14 +341,14 @@ All four were rechecked against the page text and the data after the audit.
 | 18-17 | C | no | The Methods name two methods that Step 7 never explains: "reverse Kaplan-Meier" and "Aalen-Johansen" | [report-and-front.md](report-and-front.md) | done |
 | 18-18 | C | no | Step 4: the R and Python tables look different, and the 🔀 box explains only the SMDs | [report-and-front.md](report-and-front.md) | done |
 | 18-19 | C | no | "Medium-to-large", "small" and "large" are used without the scale | [report-and-front.md](report-and-front.md) | done |
-| gs-use-1 | B | yes | The "Try it" answer is a typed comment, not output | [report-and-front.md](report-and-front.md) | open |
-| gs-use-2 | C | no | The illustration's medians differ by 2, its "Hodges-Lehmann difference" is 1, and the term is not explained | [report-and-front.md](report-and-front.md) | open |
-| gs-use-3 | C | no | "IQR" is used before it is explained | [report-and-front.md](report-and-front.md) | open |
+| gs-use-1 | B | yes | The "Try it" answer is a typed comment, not output | [report-and-front.md](report-and-front.md) | done |
+| gs-use-2 | C | no | The illustration's medians differ by 2, its "Hodges-Lehmann difference" is 1, and the term is not explained | [report-and-front.md](report-and-front.md) | done |
+| gs-use-3 | C | no | "IQR" is used before it is explained | [report-and-front.md](report-and-front.md) | done |
 | gs-setup-1 | C | no | "Each step ends with a quick check", but steps 4 to 7 have none, and step 1's check points to a step that doesn't mention R | [report-and-front.md](report-and-front.md) | open |
-| gs-setup-2 | C | no | The page never says how to open Terminal or PowerShell | [report-and-front.md](report-and-front.md) | open |
-| gs-setup-3 | C | no | "Reading the data without cloning": which steps are still needed, and "any example" needs more than two packages | [report-and-front.md](report-and-front.md) | open |
+| gs-setup-2 | C | no | The page never says how to open Terminal or PowerShell | [report-and-front.md](report-and-front.md) | done |
+| gs-setup-3 | C | no | "Reading the data without cloning": which steps are still needed, and "any example" needs more than two packages | [report-and-front.md](report-and-front.md) | done |
 | gs-real-1 | C | no | "Don't copy them anywhere else", then a repository that reads data from local folders | [report-and-front.md](report-and-front.md) | open |
 | gs-real-2 | C | no | "The secure environment" is never defined | [report-and-front.md](report-and-front.md) | open |
-| gs-real-3 | C | no | "Before every commit": a data file that `git status` lists as untracked can't be "unstaged" | [report-and-front.md](report-and-front.md) | open |
-| gs-real-4 | C | no | BASEC and REDCap are named without saying what they are | [report-and-front.md](report-and-front.md) | open |
-| choose-1 | C | no | The rows turn on "paired", "unpaired", "matched" and "unmatched", which the page neither explains nor links; the dashes are unexplained | [report-and-front.md](report-and-front.md) | open |
+| gs-real-3 | C | no | "Before every commit": a data file that `git status` lists as untracked can't be "unstaged" | [report-and-front.md](report-and-front.md) | done |
+| gs-real-4 | C | no | BASEC and REDCap are named without saying what they are | [report-and-front.md](report-and-front.md) | done |
+| choose-1 | C | no | The rows turn on "paired", "unpaired", "matched" and "unmatched", which the page neither explains nor links; the dashes are unexplained | [report-and-front.md](report-and-front.md) | done |
