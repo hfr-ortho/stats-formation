@@ -33,7 +33,9 @@ Until the section on [bilateral patients](#stratified-cox), the examples use eve
 
 ## The hazard ratio {#hazard-ratio}
 
-The **hazard** is the rate of revision at a given moment among the implants still in place: the chance, per unit of time, that an unrevised implant is revised at that moment. It can rise or fall over time. The **hazard ratio** (HR) divides one group's hazard by another's. A Cox model assumes that this ratio stays the same over the whole follow-up, even if the hazards themselves change: the hazards are **proportional**.
+The **hazard** is the rate of revision at a given moment among the implants still in place: the chance, per unit of time, that an unrevised implant is revised at that moment. It can rise or fall over time. The **[hazard ratio](../glossary.qmd#hazard-ratio){.term}** (HR) divides one group's hazard by another's. A Cox model assumes that this ratio stays the same over the whole follow-up, even if the hazards themselves change: the hazards are **proportional**.
+
+How does the model find the hazard ratio? At each revision, it compares the implant that was revised with all the implants still at risk at that moment. It then keeps the hazard ratios under which the revisions that really happened, taken together, were most likely. [Page 8](../catalog/08-three-plus-unmatched.qmd#cox) goes through this step by step. A box under the output below checks the result against a simple ratio of revision rates.
 
 Here is the Cox model for implant alone, with implant A as the reference:
 
@@ -73,8 +75,10 @@ implant_model = CoxPHFitter().fit(
 )
 print(implant_model.summary[["coef", "exp(coef)", "se(coef)", "exp(coef) lower 95%",
                              "exp(coef) upper 95%", "z", "p"]].round(3).to_string())   # to_string(): show every column
+print(len(cohort), cohort["revised"].sum())                         # procedures and revisions
 print(implant_model.concordance_index_)                              # concordance
-print(implant_model.log_likelihood_ratio_test().test_statistic)     # overall likelihood ratio test
+overall = implant_model.log_likelihood_ratio_test()                  # overall likelihood ratio test
+print(overall.test_statistic, overall.degrees_freedom, overall.p_value)
 ```
 :::
 
@@ -101,13 +105,59 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 ```
 
 Reading the output, line by line:
-- **n = 600, number of events = 81:** the procedures and the revisions. The revisions, not the procedures, set how much a Cox model can learn.
+- **n = 600, number of events = 81** (Python: the line `600 81` under the table): the procedures and the revisions. The revisions, not the procedures, set how much a Cox model can learn.
 - **coef:** the log hazard ratio. Nobody reports it; it's what the model estimates.
 - **exp(coef):** the **hazard ratio**. Implant C: 3.07. At any moment during follow-up, an unrevised implant C was revised at about three times the rate of an unrevised implant A. Implant B: 0.82.
-- **se(coef), z, Pr(>|z|):** the standard error of the coefficient, and the Wald test of whether the hazard ratio differs from 1 (p < 0.001 for C, p = 0.514 for B).
-- **lower .95 / upper .95:** the 95% CI of each hazard ratio: 1.85 to 5.09 for C, 0.45 to 1.50 for B.
+- **se(coef), z, Pr(>|z|)** (Python: **p**): the [standard error](../glossary.qmd#standard-error){.term} of the coefficient, and the Wald test of whether the hazard ratio differs from 1 (p < 0.001 for C, p = 0.514 for B). R prints implant C's p-value as `1.39e-05`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.0000139. Python rounds it to 0.000.
+- **lower .95 / upper .95** (Python: `exp(coef) lower 95%` and `exp(coef) upper 95%`): the 95% [CI](../glossary.qmd#confidence-interval){.term} of each hazard ratio: 1.85 to 5.09 for C, 0.45 to 1.50 for B.
+- **exp(-coef)** (R only): the same hazard ratio the other way round. For implant A against implant C it is 1 / 3.07 = 0.33.
 - **Concordance = 0.659:** how often, in pairs of patients, the one revised sooner had the higher predicted risk. 0.5 is a coin toss and 1 is perfect.
-- **Likelihood ratio, Wald and score tests:** three versions of the overall test that implant matters at all. With enough events they agree; the likelihood ratio test (27.6 on 2 df, p < 0.001) is the most reliable. Python prints the concordance and then this test under the table.
+- **Likelihood ratio, Wald and score tests:** three versions of the overall test that implant matters at all. With enough events they agree; the likelihood ratio test (27.6 on 2 df, p < 0.001) is the most reliable. R prints its p-value as `1e-06`, which is 0.000001. Python prints the concordance and then this test's statistic, df and p-value under the table.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: a rough check with revision rates
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+rates <- cohort |>
+  group_by(implant) |>
+  summarise(procedures = n(), revisions = sum(revised),
+            years = sum(followup_years)) |>             # every case's years of follow-up, added up
+  mutate(per_100_years = 100 * revisions / years)       # revisions per 100 years of follow-up
+rates
+rates$per_100_years / rates$per_100_years[1]            # each implant's rate ÷ implant A's rate
+```
+
+## Python
+
+```{python}
+rates = cohort.groupby("implant").agg(procedures=("revised", "size"), revisions=("revised", "sum"),
+                                      years=("followup_years", "sum"))       # every case's years of follow-up, added up
+rates["per_100_years"] = 100 * rates["revisions"] / rates["years"]            # revisions per 100 years of follow-up
+print(rates.round(2))
+print((rates["per_100_years"] / rates.loc["A", "per_100_years"]).round(3))    # each implant's rate ÷ implant A's rate
+```
+:::
+
+Implant C had 38 revisions in 567 years of follow-up, which is 6.70 per 100 years. Implant A had 25 in 1,186 years, or 2.11 per 100 years. The ratio is 3.18, close to the model's hazard ratio of 3.07. For implant B the ratio is 0.83, against a hazard ratio of 0.82.
+
+The Cox model doesn't calculate it this way. It compares the implants at each revision, among the cases still at risk at that moment, so it doesn't need the rate to stay the same over the years. But a hazard ratio is a ratio of rates, and this simple version shows what it measures.
+:::
+
+```{python}
+#| include: false
+chk = {"years_a": float(rates.loc["A", "years"]), "years_c": float(rates.loc["C", "years"]),
+       "rate_a": float(rates.loc["A", "per_100_years"]), "rate_b": float(rates.loc["B", "per_100_years"]),
+       "rate_c": float(rates.loc["C", "per_100_years"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(years_a = rates$years[1], years_c = rates$years[3], rate_a = rates$per_100_years[1],
+                 rate_b = rates$per_100_years[2], rate_c = rates$per_100_years[3]), reticulate::py$chk)
+```
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and the printout
@@ -116,7 +166,7 @@ Both programs handle tied revision times with Efron's method and use the first g
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a hazard ratio isn't a risk ratio
-"Three times the hazard" doesn't mean three times as many revisions by 5 years. By 5 years, 28.9% of implant C knees and hips had been revised (1 − Kaplan-Meier), against 10.1% of implant A: 2.85 times as many, not 3.07. The two ratios are close when revisions are rare and drift apart as they become common. Report the hazard ratio as a ratio of rates, and give the cumulative risks separately.
+"Three times the hazard" doesn't mean three times as many revisions by 5 years. By 5 years, 28.9% of implant C knees and hips had been revised (1 − Kaplan-Meier), against 10.1% of implant A: 2.85 times as many, not 3.07 (the code below prints the three risks and this ratio). The two ratios are close when revisions are rare and drift apart as they become common. Report the hazard ratio as a ratio of rates, and give the cumulative risks separately.
 :::
 
 ::: {.panel-tabset group="language"}
@@ -124,15 +174,20 @@ Both programs handle tied revision times with Efron's method and use the first g
 
 ```{r}
 km_by_implant <- survfit(Surv(followup_years, revised) ~ implant, data = cohort)
-1 - summary(km_by_implant, times = 5)$surv    # revised by 5 years: A, B, C
+risk_5 <- 1 - summary(km_by_implant, times = 5)$surv    # revised by 5 years: A, B, C
+risk_5
+risk_5[3] / risk_5[1]                                   # C ÷ A: the risk ratio
 ```
 
 ## Python
 
 ```{python}
+risk_5 = {}
 for implant, group in cohort.groupby("implant"):
     implant_km = KaplanMeierFitter().fit(group["followup_years"], group["revised"])
-    print(implant, round(1 - implant_km.survival_function_at_times(5).iloc[0], 3))   # revised by 5 years
+    risk_5[implant] = 1 - implant_km.survival_function_at_times(5).iloc[0]            # revised by 5 years
+    print(implant, round(risk_5[implant], 3))
+print(risk_5["C"] / risk_5["A"])                                                      # C ÷ A: the risk ratio
 ```
 :::
 
@@ -269,6 +324,7 @@ The Cox model assumes each hazard ratio stays the same over the whole follow-up.
 
 ```{r}
 cox.zph(adjusted_model)    # one test per predictor, and a global test
+cox.zph(adjusted_model)$table    # the same table with every digit
 ```
 
 ## Python
@@ -293,7 +349,7 @@ chk = {"hr_age": float(adjusted_model.summary.loc["age_10", "exp(coef)"])}
 check_agree(list(hr_age = adjusted_hr["age_10", "exp(coef)"]), reticulate::py$chk)
 ```
 
-No predictor's hazard ratio clearly changed over time (global test p = 0.359; BMI had the smallest p-value, 0.106). That's no clear evidence against proportional hazards, which isn't the same as proof that they hold: with 81 revisions, the test can miss a modest change.
+No predictor's hazard ratio clearly changed over time (R's `GLOBAL` line: p = 0.359; BMI had the smallest p-value, 0.106; R's second table shows these digits). lifelines has no global test, tests implant B and implant C separately and uses a slightly different formula, so its p-value for BMI is 0.100. The R vs Python box below explains. That's no clear evidence against proportional hazards, which isn't the same as proof that they hold: with 81 revisions, the test can miss a modest change.
 
 **Now a real violation.** The practice data have one built in: in total hips, the posterior approach has a much higher revision rate in the first months after surgery (early dislocation), and no higher rate after that. [Page 13](13-kaplan-meier.qmd#log-rank) showed the curves crossing.
 
@@ -304,6 +360,8 @@ No predictor's hazard ratio clearly changed over time (global test p = 0.359; BM
 #| fig-height: 4
 tha <- cohort |> filter(procedure == "THA")
 approach_model <- coxph(Surv(followup_years, revised) ~ approach, data = tha)
+coef(approach_model)                                 # the log hazard ratio: where the dashed line will sit
+summary(approach_model)$conf.int                     # the single hazard ratio the model assumes, with its 95% CI
 approach_zph <- cox.zph(approach_model)
 approach_zph
 
@@ -320,6 +378,8 @@ tha = cohort[cohort["procedure"] == "THA"]
 tha_data = tha[["followup_years", "revised", "approach"]]
 approach_model = CoxPHFitter().fit(tha_data, duration_col="followup_years", event_col="revised",
                                    formula="approach", fit_options={"precision": 1e-12})
+print(approach_model.summary[["coef", "exp(coef)", "exp(coef) lower 95%",
+                              "exp(coef) upper 95%"]].round(3).to_string())   # log hazard ratio, hazard ratio, 95% CI
 print(proportional_hazard_test(approach_model, tha_data, time_transform="km").summary[["test_statistic", "p"]])
 
 # scaled Schoenfeld residuals, one per revision; adding the coefficient gives the log hazard ratio over time
@@ -355,6 +415,7 @@ check_agree(list(hr = unname(exp(coef(approach_model))), mean_log_hr = mean(appr
             reticulate::py$chk)
 ```
 
+- **The model:** one hazard ratio for the whole follow-up, 1.37 (95% CI 0.72 to 2.61). `coef`, 0.31, is its logarithm. Both are in the first lines of the output.
 - **The test:** p < 0.001 (R's χ² = 11.3 on 1 df). The posterior approach's hazard ratio isn't constant.
 - **The points:** one per revision. Points near +2 are posterior hips and points near −2 are anterior hips, so early on almost every point sits high.
 - **The solid line** smooths the points into an estimate of the log hazard ratio at each time. It starts high in the first months, when posterior hips were revised far more often, then falls below the dashed line, which marks the model's single hazard ratio of 1.37 (log hazard ratio 0.31).
@@ -368,7 +429,7 @@ With many events, the test flags changes too small to matter; with few, it misse
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two versions of the test
-R's `cox.zph()` (survival 3.0 and later) computes the full score test, one per predictor, with implant's two terms tested together. lifelines' `proportional_hazard_test()` uses Grambsch and Therneau's simpler original approximation and tests every column separately (implant B and implant C each get their own line). The statistics differ slightly (11.3 in R, 11.2 in Python for the approach) and lead to the same conclusions here. lifelines' scaled Schoenfeld residuals leave out the coefficient that R adds, so the Python code adds it back. R's plot spaces the revisions evenly along the time axis (its "km" scale); the Python plot uses a log scale for the same reason: to keep the many early revisions from piling up at zero.
+R's `cox.zph()` (survival 3.0 and later) computes the full score test, one per predictor, with implant's two terms tested together. lifelines' `proportional_hazard_test()` uses Grambsch and Therneau's simpler original approximation and tests every column separately (implant B and implant C each get their own line), and it has no global test. The statistics differ slightly (11.3 in R, 11.2 in Python for the approach) and lead to the same conclusions here. lifelines' scaled Schoenfeld residuals leave out the coefficient that R adds, so the Python code adds it back. R's plot spaces the revisions evenly along the time axis (its "km" scale); the Python plot uses a log scale for the same reason: to keep the many early revisions from piling up at zero.
 :::
 
 ## When hazards aren't proportional {#remedies}
@@ -419,6 +480,8 @@ In total hips, with approach as a stratum, implant C's hazard ratio was 2.11 (95
 ## R
 
 ```{r}
+tha |> filter(revised == 1, followup_years <= 0.5) |> count(approach)   # revisions in the first 6 months
+
 # one row per patient per period: (0, 0.5] years and (0.5, end of follow-up]
 tha_split <- survSplit(Surv(followup_years, revised) ~ ., data = tha, cut = 0.5, episode = "period") |>
   mutate(posterior_early = as.numeric(approach == "posterior" & period == 1),
@@ -433,6 +496,8 @@ summary(split_model)$conf.int
 
 ```{python}
 from lifelines import CoxTimeVaryingFitter
+
+print(tha[(tha["revised"] == 1) & (tha["followup_years"] <= 0.5)]["approach"].value_counts())   # revisions in the first 6 months
 
 hips = tha.reset_index(drop=True)
 hips["id"] = hips.index                                   # one ID per hip, shared by its rows
@@ -480,7 +545,7 @@ check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early 
             reticulate::py$chk)
 ```
 
-In the first 6 months, the hazard of revision was 8.47 times as high after the posterior approach (95% CI 1.93 to 37.3). After 6 months the estimate was 0.43 (95% CI 0.16 to 1.16), which is imprecise. The CI for the early effect is wide because it rests on 16 early revisions.
+In the first 6 months, the hazard of revision was 8.47 times as high after the posterior approach (95% CI 1.93 to 37.3). After 6 months the estimate was 0.43 (95% CI 0.16 to 1.16), which is imprecise. The CI for the early effect is wide because it rests on 16 early revisions: 14 after the posterior approach and only 2 after the anterior approach (the first output).
 
 Choose the cut point before you look, from clinical reasoning: here, the period of highest dislocation risk after hip replacement. Trying several cut points until one gives a striking result is data dredging. R can also let a hazard ratio change smoothly with time (the `tt()` argument of `coxph()`), which avoids choosing a cut point.
 
@@ -558,6 +623,7 @@ check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), 
 
 - **exp(coef):** unchanged: implant C's hazard ratio is still 3.19.
 - **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same (0.259 and 0.258 for implant C), so the CI barely moves (1.92 to 5.28). Only 20 of the 80 bilateral patients had a revision (the two numbers the code prints first), so the pairing matters little in this cohort. It can matter much more in yours: check, and say in the Methods what you did.
+- **Pr(>|z|)** (R's table): the p-values, now from the robust standard errors. R prints them in [scientific notation](../glossary.qmd#scientific-notation){.term}: `5.463870e-01` is 0.546, and `6.743766e-06` is 0.00000674, reported as p < 0.001. The table under [Reporting](#reporting) shows them rounded.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: robust standard errors
@@ -583,7 +649,7 @@ fine_gray <- crr(Surv(followup_years, status) ~ implant + age_10 + sex + bmi_5,
 fine_gray
 ```
 
-Compare it with the cause-specific model:
+`crr()` heads the column `HR`, but these are subdistribution hazard ratios. Compare them with the cause-specific model (`adjusted_model`, [above](#univariable-multivariable)):
 - **Implant C:** SHR 3.09 (95% CI 1.86 to 5.14), close to the cause-specific HR of 3.19. The cumulative incidence of death didn't clearly differ between implants (Gray's test on [page 13](13-kaplan-meier.qmd#competing-risks)), so allowing for death changes little.
 - **Age:** SHR 1.07 per 10 years (95% CI 0.86 to 1.33), against a cause-specific HR of 1.22. Older patients may be revised at a somewhat higher rate while alive, but more of them die before they can be revised, so the subdistribution estimate is closer to 1: there's no clear evidence that age changes how many patients are actually revised.
 
@@ -598,7 +664,7 @@ The SHR has no simple meaning as a rate: patients who have died stay in its "at 
 
 ## Reporting a Cox model {#reporting}
 
-Most papers present Cox models as a table: one row per predictor, with the univariable and the multivariable hazard ratios side by side. Both columns use robust standard errors clustered on patient ([above](#stratified-cox)), so their CIs allow for the bilateral patients.
+Most papers present Cox models as a table: one row per predictor, with the univariable and the multivariable hazard ratios side by side. Both columns use robust standard errors clustered on patient ([above](#stratified-cox)), so their CIs allow for the bilateral patients. That is why the univariable column differs slightly from the first model on this page: implant C's CI is 1.87 to 5.04 here and was 1.85 to 5.09 there, and implant B's p-value is 0.511 here and was 0.514 there.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -663,6 +729,8 @@ check_agree(list(uni_age = unname(uni_hr("age_10")), uni_male = unname(uni_hr("s
             reticulate::py$chk)
 ```
 
+The Results start with the events: 81 revisions in 600 procedures (the first line of the implant model's output), and 81 / 600 = 0.135, or 13.5%.
+
 > **Methods:** The association between implant and revision for any reason was estimated with Cox proportional hazards regression, with time from surgery as the time scale and implant A as the reference. Age, sex and body mass index were chosen in advance as covariates. Age entered the model as a linear term after a natural cubic spline showed no clear evidence of non-linearity. Proportional hazards were checked with scaled Schoenfeld residuals. In the Cox models, robust standard errors clustered on patient accounted for patients who had both sides replaced. A Fine-Gray model, treating death as a competing risk, was fitted as a sensitivity analysis.
 >
 > **Results:** During follow-up, 81 of 600 procedures (13.5%) were revised. After adjustment for age, sex and body mass index, the hazard ratio for revision compared with implant A was 3.19 (95% CI 1.92 to 5.28) for implant C and 0.83 (95% CI 0.45 to 1.52) for implant B (test of proportional hazards, global p = 0.359). With death treated as a competing risk, the subdistribution hazard ratio for implant C was 3.09 (95% CI 1.86 to 5.14).
@@ -684,6 +752,7 @@ fg <- fine_gray$tidy
 fg_hr <- function(term) round(exp(fg$estimate[fg$term == term]), 2)
 fg_ci <- function(term) round(exp(c(fg$conf.low[fg$term == term], fg$conf.high[fg$term == term])), 2)
 bilateral <- cohort |> group_by(patient_id) |> filter(n() == 2) |> ungroup()
+clustered_implant <- summary(coxph(Surv(followup_years, revised) ~ implant, data = cohort, cluster = patient_id))
 asa_model <- coxph(Surv(followup_years, revised) ~ asa, data = cohort)
 bmi_spline_model <- coxph(Surv(followup_years, revised) ~ implant + age_10 + sex + ns(bmi, df = 3), data = cohort)
 bmi_bend <- anova(adjusted_model, bmi_spline_model)
@@ -722,6 +791,23 @@ stopifnot(
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
   fg_hr("age_10") == 1.07, fg_ci("age_10") == c(0.86, 1.33),
   round(adjusted_hr["age_10", "exp(coef)"], 2) == 1.22,
+  # numbers added with the audit fixes and the by-hand box
+  format(signif(implant_summary$coefficients["implantC", "Pr(>|z|)"], 3)) == "1.39e-05",
+  format(signif(implant_summary$logtest[["pvalue"]], 1)) == "1e-06", implant_summary$logtest[["df"]] == 2,
+  round(1 / 3.07, 2) == 0.33, round(implant_hr["implantC", "exp(-coef)"], 2) == 0.33,
+  rates$revisions == c(25, 18, 38), round(rates$years) == c(1186, 1032, 567),
+  format(round(rates$per_100_years, 2), nsmall = 2) == c("2.11", "1.74", "6.70"),
+  round(rates$per_100_years / rates$per_100_years[1], 2) == c(1, 0.83, 3.18),
+  isTRUE(all.equal(risk_5[3] / risk_5[1], reticulate::py_eval("float(risk_5['C'] / risk_5['A'])"))),
+  round(reticulate::py_eval("float(ph_test.summary.loc['bmi_5', 'p'])"), 3) == 0.100,
+  round(coef(approach_model), 2) == 0.31,
+  as.vector(table(tha$approach[tha$revised == 1 & tha$followup_years <= 0.5])) == c(2, 14),
+  names(table(tha$approach)) == c("anterior", "posterior"),
+  round(summary(clustered_model)$coefficients[c("implantB", "age_10", "sexMale", "bmi_5"), "Pr(>|z|)"], 3) == c(0.546, 0.101, 0.005, 0.771),
+  format(signif(summary(clustered_model)$coefficients["implantC", "Pr(>|z|)"], 3)) == "6.74e-06",
+  round(clustered_implant$conf.int["implantC", c("lower .95", "upper .95")], 2) == c(1.87, 5.04),
+  round(clustered_implant$coefficients["implantB", "Pr(>|z|)"], 3) == 0.511,
+  81 / 600 == 0.135,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(summary(asa_model)$conf.int[, c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.38, 0.99, 1.93),
   round(summary(asa_model)$coefficients[, "Pr(>|z|)"], 3) == 0.060,

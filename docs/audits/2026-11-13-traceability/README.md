@@ -267,17 +267,17 @@ All four were rechecked against the page text and the data after the audit.
 | 13-11 | B | no | "5.9% at 2 years" against R's printed 0.0595 | [survival.md](survival.md) | done |
 | 13-12 | C | no | Python prints rows of unlabeled numbers; the bullets use R's column names | [survival.md](survival.md) | done |
 | 13-13 | C | no | Toy example: the "Year 2" bullet has no row in R's output | [survival.md](survival.md) | done |
-| 14-1 | A | yes | The single hazard ratio for approach (1.37, CI 0.72 to 2.61, log 0.31) is never printed | [survival.md](survival.md) | open |
+| 14-1 | A | yes | The single hazard ratio for approach (1.37, CI 0.72 to 2.61, log 0.31) is never printed | [survival.md](survival.md) | done |
 | 14-2 | A | yes | "80 bilateral patients", "only 20 of the 80 had a revision" | [survival.md](survival.md) | done |
-| 14-3 | A | yes | "it rests on 16 early revisions" is not shown | [survival.md](survival.md) | open |
-| 14-4 | B | yes | Proportional-hazards p-values: prose says 0.359 and 0.106, R prints 0.36 and 0.11, Python has neither | [survival.md](survival.md) | open |
-| 14-5 | B | no | "2.85 times as many" cannot be reproduced from the quoted percentages | [survival.md](survival.md) | open |
-| 14-6 | B | yes | "Reading the output, line by line" follows R's printout; Python lacks four of the items | [survival.md](survival.md) | open |
-| 14-7 | B | no | Fine-Gray output calls the estimate "HR"; the prose calls it SHR | [survival.md](survival.md) | open |
-| 14-8 | B | no | "81 of 600 procedures (13.5%)" | [survival.md](survival.md) | open |
-| 14-9 | C | no | R's `exp(-coef)` column is printed seven times and never explained | [survival.md](survival.md) | open |
-| 14-10 | C | no | The clustered model's p-values are printed in scientific notation and not read | [survival.md](survival.md) | open |
-| 14-11 | C | no | The final table's univariable CIs differ from the ones at the top of the page | [survival.md](survival.md) | open |
+| 14-3 | A | yes | "it rests on 16 early revisions" is not shown | [survival.md](survival.md) | done |
+| 14-4 | B | yes | Proportional-hazards p-values: prose says 0.359 and 0.106, R prints 0.36 and 0.11, Python has neither | [survival.md](survival.md) | done |
+| 14-5 | B | no | "2.85 times as many" cannot be reproduced from the quoted percentages | [survival.md](survival.md) | done |
+| 14-6 | B | yes | "Reading the output, line by line" follows R's printout; Python lacks four of the items | [survival.md](survival.md) | done |
+| 14-7 | B | no | Fine-Gray output calls the estimate "HR"; the prose calls it SHR | [survival.md](survival.md) | done |
+| 14-8 | B | no | "81 of 600 procedures (13.5%)" | [survival.md](survival.md) | done |
+| 14-9 | C | no | R's `exp(-coef)` column is printed seven times and never explained | [survival.md](survival.md) | done |
+| 14-10 | C | no | The clustered model's p-values are printed in scientific notation and not read | [survival.md](survival.md) | done |
+| 14-11 | C | no | The final table's univariable CIs differ from the ones at the top of the page | [survival.md](survival.md) | done |
 | 15-1 | A | yes | "About 20%" false-positive chance for four groups | [beyond.md](beyond.md) | open |
 | 15-2 | A | yes | Walking-aid use "rose", "fell", "below its pre-op level"; n = 328 | [beyond.md](beyond.md) | open |
 | 15-3 | A | yes | "The SDs are similar (8.7 to 9.3 years)" and "the two small classes" | [beyond.md](beyond.md) | open |
