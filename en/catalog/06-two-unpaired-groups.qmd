@@ -309,6 +309,14 @@ pain_test$estimate                                       # Hodges-Lehmann estima
 pain_test$conf.int                                       # its 95% CI
 
 effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
+
+# Where r comes from: compare every boot patient with every cast patient (58 × 58 pairs)
+pain_pairs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"],   # every boot score ...
+                    pain_6wk$pain_nrs[pain_6wk$arm == "cast"],   # ... minus every cast score
+                    "-")
+length(pain_pairs)                                       # the number of pairs
+# Percentage of pairs in which the boot patient reported less pain, more pain, or the same pain
+round(100 * c(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied = mean(pain_pairs == 0)))
 ```
 
 ## Python
@@ -327,12 +335,20 @@ hl_boot = stats.bootstrap((pain_boot.to_numpy(), pain_cast.to_numpy()), hodges_l
 print(hl_boot.confidence_interval)
 
 print(pain_test["RBC"])                                  # rank-biserial r
+
+# Where r comes from: compare every boot patient with every cast patient (58 × 58 pairs)
+pain_pairs = np.subtract.outer(pain_boot.to_numpy(), pain_cast.to_numpy())   # every boot score minus every cast score
+print(pain_pairs.size)                                   # the number of pairs
+# Percentage of pairs in which the boot patient reported less pain, more pain, or the same pain
+pair_shares = {"less": (pain_pairs < 0).mean(), "more": (pain_pairs > 0).mean(), "tied": (pain_pairs == 0).mean()}
+print({name: round(100 * share) for name, share in pair_shares.items()})
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"hl": float(hodges_lehmann(pain_boot, pain_cast)), "rbc": float(pain_test["RBC"].iloc[0])}
+chk_pairs = {name: float(share) for name, share in pair_shares.items()}
 ```
 
 ```{r}
@@ -340,9 +356,11 @@ chk = {"hl": float(hodges_lehmann(pain_boot, pain_cast)), "rbc": float(pain_test
 pain_rb <- effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
 check_agree(list(hl = unname(pain_test$estimate), rbc = pain_rb$r_rank_biserial), reticulate::py$chk,
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by a numerical search, accurate to about 1e-4
+check_agree(list(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied = mean(pain_pairs == 0)),
+            reticulate::py$chk_pairs)
 ```
 
-With a boot, pain was typically 1 point lower (95% CI 2 points to 1 point lower), and r = −0.36. Of all 3,364 (boot, cast) pairs, the boot patient reported less pain in 61%, more in 25%, and 14% were tied. With whole-number scores every difference between two patients is a whole number, so the Hodges-Lehmann estimate and its CI land on whole numbers too, and the estimate can sit on the edge of its own CI, as here.
+With a boot, pain was typically 1 point lower (95% CI 2 points to 1 point lower), and r = −0.36. The last lines of the code show where r comes from. Of all 3,364 (boot, cast) pairs, the boot patient reported less pain in 61%, more in 25%, and 14% were tied. r is the difference between the "more" share and the "less" share: 0.25 − 0.61 = −0.36. U counts the same pairs: 1,074.5 ÷ 3,364 = 0.32, the "more" share plus half the tied share (0.25 + 0.07). With whole-number scores every difference between two patients is a whole number, so the Hodges-Lehmann estimate and its CI land on whole numbers too, and the estimate can sit on the edge of its own CI, as here.
 
 ### How to report it
 
@@ -732,7 +750,6 @@ pain_b <- pain_6wk$pain_nrs[pain_6wk$arm == "boot"]
 pain_c <- pain_6wk$pain_nrs[pain_6wk$arm == "cast"]
 jackknife_hl <- c(sapply(seq_along(pain_b), function(i) median(outer(pain_b[-i], pain_c, "-"))),   # leave one patient out
                   sapply(seq_along(pain_c), function(i) median(outer(pain_b, pain_c[-i], "-"))))
-pain_diffs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], pain_6wk$pain_nrs[pain_6wk$arm == "cast"], "-")
 expected_counts <- chisq.test(failure_table)$expected
 km5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = 5)
 ex_6wk <- trial |> filter(visit == "6wk", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
@@ -750,7 +767,7 @@ stopifnot(
   round(efas_means, 1) == c(17.4, 13.8), round(efas_sds, 1) == c(2.9, 3.4), round(diff(rev(efas_means)), 1) == 3.6,
   round(efas_g$Hedges_g, 2) == 1.13, round(efas_g$CI_low, 2) == 0.73, round(efas_g$CI_high, 2) == 1.52,
   round(reticulate::py_eval("float(pg.compute_esci(stat=g, nx=len(efas_boot), ny=len(efas_cast), eftype='hedges', decimals=3)[1])"), 2) == 1.53,
-  as.vector(table(pain_6wk$arm)) == c(58, 58), length(pain_diffs) == 3364,
+  as.vector(table(pain_6wk$arm)) == c(58, 58), length(pain_pairs) == 3364,
   mean(between(pain_6wk$pain_nrs, 2, 6)) > 0.75,
   unname(pain_test$statistic) == 1074.5, pain_test$p.value < 0.001,
   round(unname(pain_test$estimate), 2) == -1.00, round(pain_test$conf.int, 2) == c(-2.00, -1.00),
@@ -762,8 +779,10 @@ stopifnot(
   tapply(pain_6wk$pain_nrs, pain_6wk$arm, median) == c(4, 5),
   quantile(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], c(0.25, 0.75)) == c(3, 4.75),
   quantile(pain_6wk$pain_nrs[pain_6wk$arm == "cast"], c(0.25, 0.75)) == c(4, 6),
-  round(100 * c(mean(pain_diffs < 0), mean(pain_diffs > 0), mean(pain_diffs == 0))) == c(61, 25, 14),
-  sum(pain_diffs > 0) + sum(pain_diffs == 0) / 2 == 1074.5,
+  round(100 * c(mean(pain_pairs < 0), mean(pain_pairs > 0), mean(pain_pairs == 0))) == c(61, 25, 14),
+  sum(pain_pairs > 0) + sum(pain_pairs == 0) / 2 == 1074.5,
+  round(c(mean(pain_pairs > 0), mean(pain_pairs < 0), mean(pain_pairs == 0) / 2), 2) == c(0.25, 0.61, 0.07),
+  round(unname(pain_test$statistic) / length(pain_pairs), 2) == 0.32,
   failure_table["hamstring", "yes"] == 6, sum(failure_table["hamstring", ]) == 154,
   failure_table["BPTB", "yes"] == 6, sum(failure_table["BPTB", ]) == 129, sum(failure_table[, "yes"]) == 12,
   round(100 * prop.table(failure_table, 1)[, "yes"], 1) == c(3.9, 4.7),

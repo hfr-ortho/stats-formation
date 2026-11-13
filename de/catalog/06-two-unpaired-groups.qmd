@@ -309,6 +309,14 @@ pain_test$estimate                                       # Hodges-Lehmann-Schät
 pain_test$conf.int                                       # sein 95%-KI
 
 effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
+
+# Woher r kommt: jede Person mit Walker mit jeder Person mit Gips vergleichen (58 × 58 Paare)
+pain_pairs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"],   # jeder Score mit Walker ...
+                    pain_6wk$pain_nrs[pain_6wk$arm == "cast"],   # ... minus jeder Score mit Gips
+                    "-")
+length(pain_pairs)                                       # die Anzahl Paare
+# Prozentsatz der Paare, in denen die Person mit Walker weniger, mehr oder gleich viel Schmerz angab
+round(100 * c(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied = mean(pain_pairs == 0)))
 ```
 
 ## Python
@@ -327,12 +335,20 @@ hl_boot = stats.bootstrap((pain_boot.to_numpy(), pain_cast.to_numpy()), hodges_l
 print(hl_boot.confidence_interval)
 
 print(pain_test["RBC"])                                  # biseriale Rangkorrelation r
+
+# Woher r kommt: jede Person mit Walker mit jeder Person mit Gips vergleichen (58 × 58 Paare)
+pain_pairs = np.subtract.outer(pain_boot.to_numpy(), pain_cast.to_numpy())   # jeder Score mit Walker minus jeder Score mit Gips
+print(pain_pairs.size)                                   # die Anzahl Paare
+# Prozentsatz der Paare, in denen die Person mit Walker weniger, mehr oder gleich viel Schmerz angab
+pair_shares = {"less": (pain_pairs < 0).mean(), "more": (pain_pairs > 0).mean(), "tied": (pain_pairs == 0).mean()}
+print({name: round(100 * share) for name, share in pair_shares.items()})
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"hl": float(hodges_lehmann(pain_boot, pain_cast)), "rbc": float(pain_test["RBC"].iloc[0])}
+chk_pairs = {name: float(share) for name, share in pair_shares.items()}
 ```
 
 ```{r}
@@ -340,9 +356,11 @@ chk = {"hl": float(hodges_lehmann(pain_boot, pain_cast)), "rbc": float(pain_test
 pain_rb <- effectsize::rank_biserial(pain_nrs ~ arm, data = pain_6wk)
 check_agree(list(hl = unname(pain_test$estimate), rbc = pain_rb$r_rank_biserial), reticulate::py$chk,
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by a numerical search, accurate to about 1e-4
+check_agree(list(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied = mean(pain_pairs == 0)),
+            reticulate::py$chk_pairs)
 ```
 
-Mit Walker war der Schmerz typischerweise 1 Punkt tiefer (95%-KI 2 Punkte tiefer bis 1 Punkt tiefer), und r = −0.36. Von allen 3,364 Paaren (Walker, Gips) gab die Person mit Walker in 61 % weniger Schmerz an, in 25 % mehr, und 14 % waren gebunden. Bei ganzzahligen Scores ist jede Differenz zwischen zwei Personen eine ganze Zahl, daher liegen auch der Hodges-Lehmann-Schätzer und sein KI auf ganzen Zahlen, und der Schätzwert kann am Rand seines eigenen KI liegen, wie hier.
+Mit Walker war der Schmerz typischerweise 1 Punkt tiefer (95%-KI 2 Punkte tiefer bis 1 Punkt tiefer), und r = −0.36. Die letzten Codezeilen zeigen, woher r kommt. Von allen 3,364 Paaren (Walker, Gips) gab die Person mit Walker in 61 % weniger Schmerz an, in 25 % mehr, und 14 % waren gebunden. r ist die Differenz zwischen dem Anteil «mehr» und dem Anteil «weniger»: 0.25 − 0.61 = −0.36. U zählt dieselben Paare: 1,074.5 ÷ 3,364 = 0.32, der Anteil «mehr» plus der halbe Anteil der Bindungen (0.25 + 0.07). Bei ganzzahligen Scores ist jede Differenz zwischen zwei Personen eine ganze Zahl, daher liegen auch der Hodges-Lehmann-Schätzer und sein KI auf ganzen Zahlen, und der Schätzwert kann am Rand seines eigenen KI liegen, wie hier.
 
 ### Resultate formulieren
 
@@ -732,7 +750,6 @@ pain_b <- pain_6wk$pain_nrs[pain_6wk$arm == "boot"]
 pain_c <- pain_6wk$pain_nrs[pain_6wk$arm == "cast"]
 jackknife_hl <- c(sapply(seq_along(pain_b), function(i) median(outer(pain_b[-i], pain_c, "-"))),   # leave one patient out
                   sapply(seq_along(pain_c), function(i) median(outer(pain_b, pain_c[-i], "-"))))
-pain_diffs <- outer(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], pain_6wk$pain_nrs[pain_6wk$arm == "cast"], "-")
 expected_counts <- chisq.test(failure_table)$expected
 km5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = 5)
 ex_6wk <- trial |> filter(visit == "6wk", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
@@ -750,7 +767,7 @@ stopifnot(
   round(efas_means, 1) == c(17.4, 13.8), round(efas_sds, 1) == c(2.9, 3.4), round(diff(rev(efas_means)), 1) == 3.6,
   round(efas_g$Hedges_g, 2) == 1.13, round(efas_g$CI_low, 2) == 0.73, round(efas_g$CI_high, 2) == 1.52,
   round(reticulate::py_eval("float(pg.compute_esci(stat=g, nx=len(efas_boot), ny=len(efas_cast), eftype='hedges', decimals=3)[1])"), 2) == 1.53,
-  as.vector(table(pain_6wk$arm)) == c(58, 58), length(pain_diffs) == 3364,
+  as.vector(table(pain_6wk$arm)) == c(58, 58), length(pain_pairs) == 3364,
   mean(between(pain_6wk$pain_nrs, 2, 6)) > 0.75,
   unname(pain_test$statistic) == 1074.5, pain_test$p.value < 0.001,
   round(unname(pain_test$estimate), 2) == -1.00, round(pain_test$conf.int, 2) == c(-2.00, -1.00),
@@ -762,8 +779,10 @@ stopifnot(
   tapply(pain_6wk$pain_nrs, pain_6wk$arm, median) == c(4, 5),
   quantile(pain_6wk$pain_nrs[pain_6wk$arm == "boot"], c(0.25, 0.75)) == c(3, 4.75),
   quantile(pain_6wk$pain_nrs[pain_6wk$arm == "cast"], c(0.25, 0.75)) == c(4, 6),
-  round(100 * c(mean(pain_diffs < 0), mean(pain_diffs > 0), mean(pain_diffs == 0))) == c(61, 25, 14),
-  sum(pain_diffs > 0) + sum(pain_diffs == 0) / 2 == 1074.5,
+  round(100 * c(mean(pain_pairs < 0), mean(pain_pairs > 0), mean(pain_pairs == 0))) == c(61, 25, 14),
+  sum(pain_pairs > 0) + sum(pain_pairs == 0) / 2 == 1074.5,
+  round(c(mean(pain_pairs > 0), mean(pain_pairs < 0), mean(pain_pairs == 0) / 2), 2) == c(0.25, 0.61, 0.07),
+  round(unname(pain_test$statistic) / length(pain_pairs), 2) == 0.32,
   failure_table["hamstring", "yes"] == 6, sum(failure_table["hamstring", ]) == 154,
   failure_table["BPTB", "yes"] == 6, sum(failure_table["BPTB", ]) == 129, sum(failure_table[, "yes"]) == 12,
   round(100 * prop.table(failure_table, 1)[, "yes"], 1) == c(3.9, 4.7),
