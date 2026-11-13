@@ -182,22 +182,22 @@ All four were rechecked against the page text and the data after the audit.
 | 07-17 | C | yes | The reason for choosing the Wilcoxon test (a ceiling at 1 year) is never shown, and the plot points the other way | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-18 | C | no | The step from the binomial CI to the odds-ratio CI is unexplained | [catalog-06-07.md](catalog-06-07.md) | done |
 | 07-19 | C | no | Cox output: three tests with different p-values "test the same thing", and half the table is unexplained | [catalog-06-07.md](catalog-06-07.md) | done |
-| 08-1 | A | yes | Welch's ANOVA result appears from nowhere | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-2 | A | yes | Bias-corrected Cramér's V "0.24 here" is never printed | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-3 | A | yes | lifelines' default hazard ratio 0.81713 is never printed | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-4 | A | no | "roughly a one-in-four chance" has no calculation | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-5 | B | yes | "502 of the 600 procedures" and "missing for 98" need unstated sums | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-6 | B | no | Row totals 129, 154 and 67 in the Results are not in the output | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-7 | B | yes | Exercise 3: the percentages 4.7%, 3.9%, 4.5% and the totals are never computed | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-8 | B | no | F = 23.9 is not tied to the Mean Sq column; Python's column names and `np2` are unexplained | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-9 | B | no | ε² = 0.001 is printed by R as `1.35e-03` | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-10 | B | yes | Cox overall test: Python prints neither df nor p, and "the second number" is ambiguous | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-11 | B | no | Chi-square: Python prints three unlabeled numbers, and its percentage table flips the columns | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-12 | B | no | "9,999 random tables" is a scipy default the code never shows | [catalog-08-09.md](catalog-08-09.md) | open |
+| 08-1 | A | yes | Welch's ANOVA result appears from nowhere | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-2 | A | yes | Bias-corrected Cramér's V "0.24 here" is never printed | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-3 | A | yes | lifelines' default hazard ratio 0.81713 is never printed | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-4 | A | no | "roughly a one-in-four chance" has no calculation | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-5 | B | yes | "502 of the 600 procedures" and "missing for 98" need unstated sums | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-6 | B | no | Row totals 129, 154 and 67 in the Results are not in the output | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-7 | B | yes | Exercise 3: the percentages 4.7%, 3.9%, 4.5% and the totals are never computed | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-8 | B | no | F = 23.9 is not tied to the Mean Sq column; Python's column names and `np2` are unexplained | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-9 | B | no | ε² = 0.001 is printed by R as `1.35e-03` | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-10 | B | yes | Cox overall test: Python prints neither df nor p, and "the second number" is ambiguous | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-11 | B | no | Chi-square: Python prints three unlabeled numbers, and its percentage table flips the columns | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-12 | B | no | "9,999 random tables" is a scipy default the code never shows | [catalog-08-09.md](catalog-08-09.md) | done |
 | 08-13 | B | yes | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | done |
-| 08-14 | C | no | R's `e` notation is used six times and never explained | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-15 | C | no | Half of R's Cox printout is never mentioned | [catalog-08-09.md](catalog-08-09.md) | open |
-| 08-16 | C | yes | Two Results sentences leave out the group figures the page asks for | [catalog-08-09.md](catalog-08-09.md) | open |
+| 08-14 | C | no | R's `e` notation is used six times and never explained | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-15 | C | no | Half of R's Cox printout is never mentioned | [catalog-08-09.md](catalog-08-09.md) | done |
+| 08-16 | C | yes | Two Results sentences leave out the group figures the page asks for | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-1 | ERROR | comments | The "patients" counted on this page are procedures | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-2 | A | yes | 574 pre-op scores, and the 246 and 43% built on it, are never shown | [catalog-08-09.md](catalog-08-09.md) | open |
 | 09-3 | A | yes | "28 of them sit at 57.0" is never shown | [catalog-08-09.md](catalog-08-09.md) | open |

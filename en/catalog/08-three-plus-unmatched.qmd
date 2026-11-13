@@ -33,9 +33,20 @@ To keep the code short, the joint replacement examples use every case, including
 ### When to use it
 
 - The outcome is a **measurement**, compared across **three or more independent groups**.
-- Within **each group** it's roughly normal, or each group is reasonably large and not badly skewed ([page 3](../foundations/03-distributions.qmd#within-groups)).
+- Within **each group** it's roughly normal, or each group is reasonably large and not badly [skewed](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#within-groups)).
 - The groups have **similar spreads**: as a rule of thumb, the largest SD is no more than about twice the smallest. If not, use **Welch's ANOVA** (see the R vs Python box), especially when the group sizes are unequal.
 - If the outcome is skewed, bounded or ordinal → the [Kruskal-Wallis test](#kruskal-wallis).
+
+### What the test really does
+
+ANOVA compares the group [means](../glossary.qmd#mean){.term} by comparing two kinds of variation. That is where its name comes from: analysis of variance.
+
+1. **Between the groups.** Take the distance from each group's mean to the overall mean (the mean of everyone), square it, and count it once for every patient in the group. Add these up: the **sum of squares** between the groups.
+2. **Within the groups.** Take the distance from each patient's value to the mean of their own group, square it, and add these up: the sum of squares within the groups. This is the noise: patients differ even when they are in the same group.
+3. Divide each sum of squares by its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}: the number of groups minus 1 for the first, the number of patients minus the number of groups for the second. The results are two [variances](../glossary.qmd#variance){.term}, called **mean squares**.
+4. Divide: **F = mean square between ÷ mean square within**. If every group had the same true mean, the group means would differ only as much as the noise makes them, and F would be close to 1. Turn F into a [p-value](../glossary.qmd#p-value){.term}: the chance of an F at least this large if every group really had the same mean.
+
+Once the test has run, a box under "Read the output" rebuilds F by hand.
 
 ### Look at the data first
 
@@ -115,10 +126,56 @@ check_agree(list(f = age_table[1, "F value"], ss_between = age_table[1, "Sum Sq"
 
 ### Read the output
 
-- **asa row:** the variation **between** the group means. **Df = 3** (four groups minus one), **Sum Sq = 5727**.
-- **Residuals** (R) or **Within** (Python): the variation of patients **within** their groups. **Df = 596** (600 procedures minus four groups).
-- **F = 23.9:** the between-group variation divided by the within-group variation, each per degree of freedom. If the groups had the same mean, F would be close to 1.
-- **p < 0.001** (R prints `1.28e-14`): ages this different across groups would be very unlikely if every ASA class had the same mean age.
+- **asa row:** the variation **between** the group means. **Df = 3** (four groups minus one), **Sum Sq = 5727** (`DF` and `SS` in Python).
+- **Residuals** (R) or **Within** (Python): the variation of patients **within** their groups. **Df = 596** (600 procedures, the sum of the `n` or `count` column above, minus four groups), **Sum Sq = 47599**.
+- **Mean Sq** (`MS` in Python): each Sum Sq divided by its Df. That gives 1908.9 between the groups (5727 ÷ 3; R rounded the 5727 it prints, Python shows 5726.69) and 79.9 within them (47599 ÷ 596).
+- **F = 23.9:** the first Mean Sq divided by the second, 1908.9 ÷ 79.9. If the groups had the same mean, F would be close to 1.
+- **p < 0.001:** ages this different across groups would be very unlikely if every ASA class had the same mean age. R prints the p-value as `1.28e-14` under `Pr(>F)`, Python as `1.284107e-14` under `p_unc`. This is [scientific notation](../glossary.qmd#scientific-notation){.term}: `e-14` means "move the decimal point 14 places to the left".
+- **np2 = 0.107** (Python only): eta squared (η²), the share of all the variation that lies between the groups, 5727 ÷ (5727 + 47599). pingouin's name stands for "partial eta squared", which is the same number when there is only one grouping variable. The next step corrects it slightly.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: F by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+overall_mean <- mean(cohort$age)                                          # the mean age of all 600 procedures
+class_means <- cohort |> group_by(asa) |> summarise(n = n(), mean = mean(age))
+between_ss <- sum(class_means$n * (class_means$mean - overall_mean)^2)   # step 1: each class mean against the overall mean, once per procedure
+within_ss <- sum((cohort$age - ave(cohort$age, cohort$asa))^2)           # step 2: each age against the mean of its own class, which ave() returns
+between_ms <- between_ss / (4 - 1)                                        # step 3: divide by the degrees of freedom: 4 classes − 1 ...
+within_ms <- within_ss / (600 - 4)                                        # ... and 600 procedures − 4 classes
+c(between_ss = between_ss, within_ss = within_ss, between_ms = between_ms, within_ms = within_ms)
+between_ms / within_ms                                                    # step 4: F
+```
+
+## Python
+
+```{python}
+overall_mean = cohort["age"].mean()                                                         # the mean age of all 600 procedures
+class_means = cohort.groupby("asa")["age"].agg(["count", "mean"])
+between_ss = (class_means["count"] * (class_means["mean"] - overall_mean) ** 2).sum()       # step 1: each class mean against the overall mean, once per procedure
+within_ss = ((cohort["age"] - cohort.groupby("asa")["age"].transform("mean")) ** 2).sum()   # step 2: each age against the mean of its own class, which transform("mean") returns
+between_ms = between_ss / (4 - 1)                                                           # step 3: divide by the degrees of freedom: 4 classes − 1 ...
+within_ms = within_ss / (600 - 4)                                                           # ... and 600 procedures − 4 classes
+print(between_ss, within_ss, between_ms, within_ms)
+print(between_ms / within_ms)                                                               # step 4: F
+```
+:::
+
+The first two numbers are the `Sum Sq` column of the ANOVA table (`SS` in Python), 5727 and 47599; the next two are its `Mean Sq` column (`MS`), 1908.9 and 79.9. Their ratio is the **F = 23.9** the test printed. The mean square within the groups is a variance, so its square root is an SD: √79.9 = 8.9 years, the typical spread of age within a class. That matches the SDs of about 9 in the table under "Look at the data first".
+:::
+
+```{python}
+#| include: false
+chk = {"between_ss": float(between_ss), "within_ss": float(within_ss), "f": float(between_ms / within_ms)}
+```
+
+```{r}
+#| include: false
+check_agree(list(between_ss = between_ss, within_ss = within_ss, f = between_ms / within_ms), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -170,7 +227,22 @@ A significant ANOVA means at least one group mean differs from another, not that
 ## 🔀 R vs Python: classic or Welch's ANOVA
 - **Classic ANOVA** assumes the groups have the same spread. R's `aov()`, scipy's `f_oneway()` and pingouin's `anova()` all run it by default.
 - **Welch's ANOVA** doesn't assume equal spreads. R's `oneway.test()` runs **Welch's** version by default (add `var.equal = TRUE` for the classic one), the opposite of `aov()`. In Python use `pg.welch_anova()` or `stats.f_oneway(..., equal_var=False)`.
-- Here the SDs are similar, and Welch's ANOVA agrees: F = 23.5, p < 0.001.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+oneway.test(age ~ asa, data = cohort)   # Welch's ANOVA: it doesn't assume equal spreads
+```
+
+## Python
+
+```{python}
+print(pg.welch_anova(data=cohort, dv="age", between="asa"))   # Welch's ANOVA: it doesn't assume equal spreads
+```
+:::
+
+Here the SDs are similar, and Welch's ANOVA agrees: F = 23.5 (classic: 23.9), p < 0.001 (R prints `3.49e-10`). In place of 596, its second degrees of freedom are estimated from the data: 60.3 (`denom df` in R, `ddof2` in Python).
 :::
 
 ```{python}
@@ -191,10 +263,21 @@ check_agree(list(f = unname(welch$statistic), df_denom = unname(welch$parameter[
 
 ### When to use it
 
-- The outcome is **ordinal** (satisfaction from 1 to 5), **skewed**, or has a **ceiling or floor**, compared across **three or more independent groups**.
+- The outcome is **ordinal** (satisfaction from 1 to 5), **[skewed](../glossary.qmd#skewed){.term}**, or has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, compared across **three or more independent groups**.
 - Like the [Mann-Whitney test](06-two-unpaired-groups.qmd#mann-whitney), it works on ranks: it asks whether values in some groups tend to be larger than in others.
 - With two groups it gives essentially the same result as the Mann-Whitney test.
 - If the outcome is a roughly normal measurement → [one-way ANOVA](#one-way-anova).
+
+### What the test really does
+
+The Kruskal-Wallis test does for three or more groups what the [Mann-Whitney test](06-two-unpaired-groups.qmd#mann-whitney) does for two: it sets the scores aside and works with their order.
+
+1. Line up all the scores from all the groups, from lowest to highest, and give each its position in the line: its [rank](../glossary.qmd#rank){.term}. Tied scores share the average of their positions.
+2. Work out the **mean rank** of each group.
+3. If the groups didn't differ, each group's mean rank would be close to the mean of all the ranks, which is (n + 1) ÷ 2 for n scores.
+4. The [test statistic](../glossary.qmd#test-statistic){.term}, **H**, measures how far the groups' mean ranks are from that overall mean rank: each distance is squared and counted once for every patient in the group, then everything is added up and rescaled. H is 0 when all the mean ranks are equal, and larger the further apart they are. The larger H, the smaller the [p-value](../glossary.qmd#p-value){.term}.
+
+Once the test has run, a box under "Read the output" rebuilds H by hand.
 
 ### Look at the data first
 
@@ -206,7 +289,11 @@ check_agree(list(f = unname(welch$statistic), df_denom = unname(welch$parameter[
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
-satisfied <- cohort |> filter(!is.na(satisfaction_1yr))   # patients who answered
+satisfied <- cohort |> filter(!is.na(satisfaction_1yr))   # only the procedures with a satisfaction score
+c(all = nrow(cohort), answered = nrow(satisfied))         # all procedures, and those with a score
+cohort |>
+  group_by(surgeon) |>
+  summarise(procedures = n(), answered = sum(!is.na(satisfaction_1yr)))   # the same two counts for each surgeon
 
 count(satisfied, surgeon, satisfaction_1yr) |>
   pivot_wider(names_from = satisfaction_1yr, values_from = n)   # one row per surgeon
@@ -224,14 +311,16 @@ import pandas as pd
 from scipy import stats
 
 cohort = pd.read_csv("data/cohort.csv")
-satisfied = cohort.dropna(subset=["satisfaction_1yr"])   # patients who answered
+satisfied = cohort.dropna(subset=["satisfaction_1yr"])   # only the procedures with a satisfaction score
+print(len(cohort), len(satisfied))                        # all procedures, and those with a score
+print(cohort.groupby("surgeon")["satisfaction_1yr"].agg(["size", "count"]))   # for each surgeon: size counts the procedures, count the scores
 
 print(pd.crosstab(satisfied["surgeon"], satisfied["satisfaction_1yr"]))
 print(satisfied.groupby("surgeon")["satisfaction_1yr"].describe()[["count", "25%", "50%", "75%"]])
 ```
 :::
 
-Satisfaction was reported for 502 of the 600 procedures. Most were satisfied (4) or very satisfied (5) with every surgeon, and the three distributions look much alike.
+Satisfaction was reported for 502 of the 600 procedures (the first output): 192 of 232 with surgeon S1, 177 of 211 with S2 and 133 of 157 with S3. Most were satisfied (4) or very satisfied (5) with every surgeon, and the three distributions look much alike.
 
 ### Run it
 
@@ -264,9 +353,57 @@ check_agree(list(h = unname(satisfaction_test$statistic), p = satisfaction_test$
 
 ### Read the output
 
-- **Kruskal-Wallis chi-squared = 0.68** (R) or **statistic** (Python): the H statistic. It measures how far apart the groups' average ranks are. Both programs correct it for the many tied scores.
+- **Kruskal-Wallis chi-squared = 0.68** (R) or **statistic** (Python): the H statistic. It measures how far apart the groups' mean ranks are. Both programs correct it for the many tied scores. R calls it "chi-squared" because H is turned into a p-value with the chi-square distribution.
 - **df = 2:** three groups minus one.
 - **p = 0.713:** differences in satisfaction this large or larger would be very common if the surgeons' patients were equally satisfied.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: H by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ranks <- rank(satisfied$satisfaction_1yr)                    # step 1: rank all 502 scores together; tied scores share the average rank
+n_scores <- length(ranks)
+mean_ranks <- tapply(ranks, satisfied$surgeon, mean)         # step 2: each surgeon's mean rank
+group_sizes <- tapply(ranks, satisfied$surgeon, length)
+mean_ranks
+(n_scores + 1) / 2                                           # step 3: the mean of all the ranks
+h_no_ties <- 12 / (n_scores * (n_scores + 1)) * sum(group_sizes * (mean_ranks - (n_scores + 1) / 2)^2)   # step 4: H, before the correction for ties
+tie_sizes <- table(satisfied$satisfaction_1yr)               # how many procedures share each score
+tie_correction <- 1 - sum(tie_sizes^3 - tie_sizes) / (n_scores^3 - n_scores)   # the correction factor for ties
+c(h_no_ties = h_no_ties, tie_correction = tie_correction, h = h_no_ties / tie_correction)
+```
+
+## Python
+
+```{python}
+ranks = satisfied["satisfaction_1yr"].rank()                    # step 1: rank all 502 scores together; tied scores share the average rank
+n_scores = len(ranks)
+mean_ranks = ranks.groupby(satisfied["surgeon"]).mean()         # step 2: each surgeon's mean rank
+group_sizes = ranks.groupby(satisfied["surgeon"]).size()
+print(mean_ranks)
+print((n_scores + 1) / 2)                                       # step 3: the mean of all the ranks
+h_no_ties = 12 / (n_scores * (n_scores + 1)) * (group_sizes * (mean_ranks - (n_scores + 1) / 2) ** 2).sum()   # step 4: H, before the correction for ties
+tie_sizes = satisfied["satisfaction_1yr"].value_counts()        # how many procedures share each score
+tie_correction = 1 - (tie_sizes ** 3 - tie_sizes).sum() / (n_scores ** 3 - n_scores)   # the correction factor for ties
+print(h_no_ties, tie_correction, h_no_ties / tie_correction)
+```
+:::
+
+The mean ranks are 248.0 (S1), 249.2 (S2) and 259.6 (S3), all close to the overall mean rank of 251.5, so H comes out at only 0.57. With only five possible scores, almost every score is tied with many others (250 procedures scored 5), and ties make H come out too small. Both programs therefore divide it by a correction factor, here 0.84, which gives the **H = 0.68** they printed.
+:::
+
+```{python}
+#| include: false
+chk = {"h_no_ties": float(h_no_ties), "tie_correction": float(tie_correction), "h": float(h_no_ties / tie_correction)}
+```
+
+```{r}
+#| include: false
+check_agree(list(h_no_ties = h_no_ties, tie_correction = tie_correction, h = h_no_ties / tie_correction), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -300,17 +437,17 @@ satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon,
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-ε² = 0.001: surgeon accounts for essentially none of the variation in satisfaction. R's one-sided CI runs from 0.00 to 1.00; it comes from a bootstrap, which is why the code sets a seed. scipy has no function for it.
+ε² = 0.001: H divided by n − 1 is 0.677 ÷ 501 = 0.00135. R prints it as `1.35e-03`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for the same number: the decimal point moves 3 places to the left. Surgeon accounts for essentially none of the variation in satisfaction. R's one-sided CI runs from 0.00 to 1.00; it comes from a bootstrap, which is why the code sets a seed. scipy has no function for it.
 
 ### How to report it
 
 > **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) as the effect size.
 >
-> **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+> **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year: 192 of 232 for surgeon S1, 177 of 211 for S2 and 133 of 157 for S3. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: missing answers aren't random
-Satisfaction is missing for 98 procedures. If unhappy patients were less likely to answer, every surgeon looks better than they are, and the comparison can be biased too. Always report how many answered in each group, and consider whether non-response differs between groups.
+Satisfaction is missing for 98 procedures (600 − 502). If unhappy patients were less likely to answer, every surgeon looks better than they are, and the comparison can be biased too. Always report how many answered in each group, as the Results above do, and consider whether non-response differs between groups. Here it barely does: 192 ÷ 232 = 83%, 177 ÷ 211 = 84% and 133 ÷ 157 = 85% of each surgeon's procedures have a score.
 :::
 
 ::: {.callout-tip}
@@ -327,6 +464,16 @@ Both `kruskal.test()` and `stats.kruskal()` correct H for ties, so they agree ev
 - The outcome is **categorical** (here yes/no), compared across **three or more independent groups**: an r × c table.
 - Every **expected** count should be at least 5. If not, combine categories that make sense together, or use Fisher's exact test, which R's `fisher.test()` runs exactly on larger tables too. scipy's `stats.fisher_exact()` accepts larger tables but estimates their p-value by random resampling, so it changes a little from run to run unless you give it a seed.
 - With two groups and a yes/no outcome → [Fisher's exact test](06-two-unpaired-groups.qmd#fisher-chi-square).
+
+### What the test really does
+
+The chi-square test compares the table you observed with the table you'd expect if return to sport had nothing to do with the graft. It works as it does for a 2 × 2 table ([page 6](06-two-unpaired-groups.qmd#fisher-chi-square)), with more cells.
+
+1. Work out the [expected count](../glossary.qmd#expected-count){.term} for each of the six cells: row total × column total ÷ grand total. That is the count you'd see if every graft had the same rate of return to sport.
+2. For each cell, take (observed − expected)² ÷ expected, then add up the six results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **χ²**: 0 when the table matches the expected counts exactly, and larger the further it is from them.
+3. Turn χ² into a [p-value](../glossary.qmd#p-value){.term} with the chi-square distribution. This step is an approximation, and a poor one when expected counts are small. That is where the "at least 5" rule comes from.
+
+The test gives one answer for the whole table: it doesn't say which grafts differ. Once the test has run, a box under "Read the output" rebuilds χ² by hand.
 
 ### Look at the data first
 
@@ -346,7 +493,7 @@ rts_table <- table(
   returned = factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no"))
 )
 rts_table
-prop.table(rts_table, margin = 1)   # row percentages: return to sport with each graft
+prop.table(rts_table, margin = 1)   # each count divided by its row total: the share back at their sport with each graft
 ```
 
 ## Python
@@ -360,11 +507,11 @@ acl = pd.read_csv("data/acl_cohort.csv")
 
 rts_table = pd.crosstab(acl["graft"], acl["rts_12mo"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]   # "yes" first
 print(rts_table)
-print(pd.crosstab(acl["graft"], acl["rts_12mo"], normalize="index"))   # row percentages
+print(rts_table.div(rts_table.sum(axis=1), axis=0))   # each count divided by its row total
 ```
 :::
 
-At 12 months, 65.1% of the BPTB reconstructions, 43.5% of the hamstring and 32.8% of the quadriceps reconstructions were back at their sport.
+Each row adds up to that graft's total: 84 + 45 = 129 BPTB, 67 + 87 = 154 hamstring and 22 + 45 = 67 quadriceps reconstructions, 350 in all. The second table divides each count by its row total: 84 ÷ 129 = 0.651. So at 12 months, 65.1% of the BPTB reconstructions, 43.5% of the hamstring and 32.8% of the quadriceps reconstructions were back at their sport.
 
 ### Run it
 
@@ -400,18 +547,58 @@ check_agree(list(chisq = unname(rts_test$statistic), df = unname(rts_test$parame
 ### Read the output
 
 - **Expected counts:** what each cell would hold if return to sport were the same with every graft. The smallest is 33.1, so the test is valid.
-- **X-squared = 22.24, df = 2:** the chi-square statistic, with (3 grafts − 1) × (2 outcomes − 1) = 2 degrees of freedom.
-- **p < 0.001:** differences this large would be very unlikely if all three grafts had the same rate of return to sport.
+- **X-squared = 22.24, df = 2** (the first two numbers on Python's last line): the chi-square statistic, with (3 grafts − 1) × (2 outcomes − 1) = 2 degrees of freedom.
+- **p < 0.001:** differences this large would be very unlikely if all three grafts had the same rate of return to sport. R prints `p-value = 1.481e-05`, and it is the third number on Python's last line. In [scientific notation](../glossary.qmd#scientific-notation){.term}, `e-05` moves the decimal point 5 places to the left: 0.0000148.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: chi-square by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+chisq_expected <- outer(rowSums(rts_table), colSums(rts_table)) / sum(rts_table)   # step 1: row total × column total ÷ grand total
+chisq_parts <- (rts_table - chisq_expected)^2 / chisq_expected                      # step 2: (observed − expected)² ÷ expected, for each cell ...
+chisq_parts
+sum(chisq_parts)                                                                    # ... and added up
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+chisq_observed = rts_table.to_numpy()
+chisq_expected = np.outer(chisq_observed.sum(axis=1), chisq_observed.sum(axis=0)) / chisq_observed.sum()   # step 1: row total × column total ÷ grand total
+chisq_parts = (chisq_observed - chisq_expected) ** 2 / chisq_expected                                       # step 2: (observed − expected)² ÷ expected, for each cell ...
+print(chisq_parts)
+print(chisq_parts.sum())                                                                                    # ... and added up
+```
+:::
+
+The six parts add up to 22.24, the χ² both programs printed. The BPTB row contributes most (6.4 and 6.3): 84 BPTB reconstructions were back at their sport where 63.8 were expected. The hamstring row is close to its expected counts and adds little (1.1 and 1.1). This shows where the table departs most from the expected counts; it is not a test of which grafts differ.
+:::
+
+```{python}
+#| include: false
+chk = {"by_hand": float(chisq_parts.sum()), "bptb_yes": float(chisq_parts[0, 0])}
+```
+
+```{r}
+#| include: false
+check_agree(list(by_hand = sum(chisq_parts), bptb_yes = unname(chisq_parts["BPTB", "yes"])), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
-**Cramér's V** measures the strength of association in a table, from 0 (none) to 1 (perfect). For a table with 2 columns, about 0.1 is small, 0.3 medium and 0.5 large.
+**Cramér's V** measures the strength of association in a table, from 0 (none) to 1 (perfect). It is √(χ² ÷ (n × (k − 1))), where n is the number of reconstructions and k the smaller of the number of rows and the number of columns: here √(22.24 ÷ (350 × 1)) = 0.25. For a table with 2 columns, about 0.1 is small, 0.3 medium and 0.5 large.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
 effectsize::cramers_v(rts_table, adjust = FALSE)   # see the R vs Python box
+effectsize::cramers_v(rts_table)                   # the default, with a bias correction: a little smaller
 ```
 
 ## Python
@@ -432,7 +619,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, between a small and a medium association. For yes/no outcomes, the rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V. And remember what the test doesn't tell you: which grafts differ ([Which groups differ?](#which-groups-differ) below), or why. The grafts weren't assigned at random, so a difference could come from the patients rather than the graft; [page 12](12-predict-from-several.qmd#multiple-logistic-regression) shows how to adjust for other factors.
+V = 0.25, between a small and a medium association (R's second output, headed `Cramer's V (adj.)`, is explained in the R vs Python box). R also prints a one-sided 95% CI, 0.16 to 1.00; scipy doesn't compute one. For yes/no outcomes, the rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V. And remember what the test doesn't tell you: which grafts differ ([Which groups differ?](#which-groups-differ) below), or why. The grafts weren't assigned at random, so a difference could come from the patients rather than the graft; [page 12](12-predict-from-several.qmd#multiple-logistic-regression) shows how to adjust for other factors.
 
 ### How to report it
 
@@ -447,7 +634,7 @@ Yates' continuity correction ([page 6](06-two-unpaired-groups.qmd#fisher-chi-squ
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two versions of Cramér's V
-effectsize's `cramers_v()` applies a small-sample **bias correction** by default (0.24 here). scipy's `association()` doesn't (0.25). We set `adjust = FALSE` in R so the two match. Either is acceptable; say which you report.
+effectsize's `cramers_v()` applies a small-sample **bias correction** by default: that is R's second output above, 0.24, headed `Cramer's V (adj.)`. scipy's `association()` doesn't (0.25). We set `adjust = FALSE` in R so the two match. Either is acceptable; say which you report.
 :::
 
 ## Cox regression {#cox}
@@ -457,8 +644,19 @@ effectsize's `cramers_v()` applies a small-sample **bias correction** by default
 ### When to use it
 
 - The outcome is **time until an event** (revision), compared across **three or more independent groups**.
-- The **log-rank test** extends to three or more groups and answers "do the curves differ?". **Cox regression** also gives a hazard ratio for each group against a reference group, and can adjust for other variables.
+- The **log-rank test** extends to three or more groups and answers "do the curves differ?". **Cox regression** also gives a [hazard ratio](../glossary.qmd#hazard-ratio){.term} for each group against a reference group, and can adjust for other variables.
 - It assumes each group's hazard is a steady multiple of the reference group's over time (**proportional hazards**). [Page 14](../survival/14-cox-regression.qmd#proportional-hazards) shows how to check that and covers Cox regression in full.
+
+### What the test really does
+
+Cox regression follows the groups over the whole follow-up, one revision at a time, as the [log-rank test](06-two-unpaired-groups.qmd#log-rank) does. It also estimates how large the difference between the groups is.
+
+1. Start at surgery and move forward in time. Each time a revision happens, look at who was still being followed just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
+2. Suppose the hazard with implant C were twice the hazard with implant A. Then, at that moment, each patient at risk with implant C would be twice as likely to be the one revised as each patient at risk with implant A.
+3. The model tries out values for each implant's hazard ratio against the reference group, and keeps the values under which the revisions that really happened, taken together, were most likely.
+4. The overall test compares this best fit with a model in which every hazard ratio is 1, that is, no difference between the implants. The more the hazard ratios improve the fit, the larger the [test statistic](../glossary.qmd#test-statistic){.term} and the smaller the [p-value](../glossary.qmd#p-value){.term}.
+
+The model only needs to know how the groups' hazards compare, never the hazard itself. So it leaves open how the risk of revision changes over the years; it only assumes that the groups' hazards stay in the same proportion (the third point under "When to use it"). A patient who leaves the study early is [censored](../glossary.qmd#censored){.term}: they count among the patients at risk for as long as they were followed, and not after. Once the model has run, a box under "Read the output" works out each implant's observed and expected revisions by hand.
 
 ### Look at the data first
 
@@ -528,8 +726,9 @@ implant_cox = CoxPHFitter().fit(
     fit_options={"precision": 1e-9},   # stop only when fully converged; see the R vs Python box
 )
 print(implant_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
-print(implant_cox.log_likelihood_ratio_test().test_statistic)            # overall test, all implants
-print(multivariate_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"]).test_statistic)
+overall = implant_cox.log_likelihood_ratio_test()                         # overall test, all implants
+print(overall.test_statistic, overall.degrees_freedom, overall.p_value)   # its statistic, degrees of freedom and p-value
+print(multivariate_logrank_test(cohort["followup_years"], cohort["implant"], cohort["revised"]).test_statistic)   # the log-rank test, all implants
 ```
 :::
 
@@ -555,11 +754,62 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 
 ### Read the output
 
+- **n = 600, number of events = 81** (R): 600 procedures and 81 revisions.
 - **exp(coef):** the hazard ratio of each implant against implant A, the reference. Implant B: 0.82; implant C: 3.07.
 - **lower .95 / upper .95:** the 95% CIs. Implant B's (0.45 to 1.50) includes 1, so the data are compatible with no difference from A. Implant C's (1.85 to 5.09) doesn't.
-- **Pr(>|z|):** the p-value for each implant against A (p = 0.514 for B, p < 0.001 for C).
-- **Likelihood ratio test = 27.6 on 2 df, p < 0.001:** the overall test that implant matters at all, the Cox counterpart of the ANOVA's F test. Python prints it as the second number.
-- **Score (logrank) test = 33.5:** the log-rank test for all three implants, which Python prints last. (The Cox score test and the log-rank test handle tied revision times slightly differently, so they agree to one decimal, not exactly.)
+- **Pr(>|z|)** (`p` in Python): the p-value for each implant against A (p = 0.514 for B, p < 0.001 for C). R prints C's as `1.39e-05`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.0000139; Python prints `0.000014`.
+- **Likelihood ratio test = 27.6 on 2 df, p < 0.001:** the overall test that implant matters at all, the Cox counterpart of the ANOVA's F test. R prints `27.64` and `p=1e-06`. Python prints it on the first line under the table: the statistic, its degrees of freedom and the p-value.
+- **Score (logrank) test = 33.5:** the log-rank test for all three implants, which Python prints on its last line (33.47; R's score test gives 33.48). The Cox score test and the log-rank test handle tied revision times slightly differently, so they agree to one decimal, not exactly.
+- **The rest of R's output:** `exp(-coef)` is each hazard ratio turned around, implant A against the other implant (1 ÷ 0.8171 = 1.224). `coef`, `se(coef)`, `z`, the concordance and the Wald test are explained on [page 14](../survival/14-cox-regression.qmd#hazard-ratio); you don't need them here.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: observed and expected revisions by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+revision_times <- sort(unique(cohort$followup_years[cohort$revised == 1]))    # every time at which a revision happened
+expected <- sapply(c(A = "A", B = "B", C = "C"), function(group) {
+  sum(sapply(revision_times, function(time) {
+    at_risk <- cohort$followup_years >= time                                  # still followed just before this time
+    revisions <- sum(cohort$followup_years == time & cohort$revised == 1)     # revisions at this time (usually 1)
+    revisions * sum(at_risk & cohort$implant == group) / sum(at_risk)         # this implant's expected share of them
+  }))                                                                         # added up over all the times
+})
+observed <- tapply(cohort$revised, cohort$implant, sum)
+rbind(observed, expected, ratio = observed / expected)                        # observed, expected and their ratio, for each implant
+```
+
+## Python
+
+```{python}
+revision_times = sorted(cohort.loc[cohort["revised"] == 1, "followup_years"].unique())   # every time at which a revision happened
+expected = pd.Series({"A": 0.0, "B": 0.0, "C": 0.0})
+for time in revision_times:
+    at_risk = cohort["followup_years"] >= time                                            # still followed just before this time
+    revisions = ((cohort["followup_years"] == time) & (cohort["revised"] == 1)).sum()     # revisions at this time (usually 1)
+    for group in expected.index:
+        expected[group] += revisions * (at_risk & (cohort["implant"] == group)).sum() / at_risk.sum()   # this implant's expected share, added up
+observed = cohort.groupby("implant")["revised"].sum()
+print(pd.DataFrame({"observed": observed, "expected": expected, "ratio": observed / expected}).T)   # observed, expected and their ratio, for each implant
+```
+:::
+
+If all three implants carried the same risk, the 81 revisions would have been shared out as 34.0 (A), 30.0 (B) and 16.9 (C). Implant C had 38, more than twice its share; implants A and B had 25 and 18, fewer than theirs. The log-rank test, the "Score (logrank) test" line above, asks how unlikely gaps this large would be by chance. The `ratio` row divides observed by expected: 0.73 for A, 0.60 for B and 2.24 for C. Comparing these ratios gives a rough idea of the hazard ratios: 2.24 ÷ 0.73 = 3.1 for C against A, and 0.60 ÷ 0.73 = 0.8 for B against A. The Cox model estimates them properly, as 3.07 and 0.82.
+:::
+
+```{python}
+#| include: false
+chk = {"expected_a": float(expected["A"]), "expected_b": float(expected["B"]), "expected_c": float(expected["C"]),
+       "observed_c": float(observed["C"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(expected_a = expected[["A"]], expected_b = expected[["B"]], expected_c = expected[["C"]],
+                 observed_c = observed[["C"]]), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -578,12 +828,44 @@ Every hazard ratio here is relative to implant A, so the output doesn't compare 
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and the reference group
-Both programs use the first group alphabetically (A) as the reference and handle tied revision times with Efron's method. lifelines' default convergence rule stops a little early here (a hazard ratio of 0.81713 for implant B instead of 0.81709), so we tighten it with `fit_options={"precision": 1e-9}`.
+Both programs use the first group alphabetically (A) as the reference and handle tied revision times with Efron's method. lifelines' default convergence rule stops a little early here, so we tighten it with `fit_options={"precision": 1e-9}`. This is the difference it makes:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+exp(coef(implant_cox))   # R's hazard ratios, to more decimals
+```
+
+## Python
+
+```{python}
+default_cox = CoxPHFitter().fit(
+    cohort[["followup_years", "revised", "implant"]],
+    duration_col="followup_years", event_col="revised", formula="implant",   # no fit_options: lifelines' default rule
+)
+print(default_cox.hazard_ratios_)   # compare with the table under "Run it"
+```
 :::
+
+With its default rule, lifelines gives a hazard ratio of 0.817125 for implant B, where R gives 0.8170908. Tightened, it gives 0.817091, the number in the table under "Run it".
+:::
+
+```{python}
+#| include: false
+chk = {"hr_b": float(default_cox.hazard_ratios_.iloc[0]), "hr_c": float(default_cox.hazard_ratios_.iloc[1])}
+```
+
+```{r}
+#| include: false
+# lifelines' default rule stops early, so the two agree only to about 4 decimals: that is what the box shows
+check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["implantC", "exp(coef)"]),
+            reticulate::py$chk, tol = 1e-4)
+```
 
 ## Which groups differ? {#which-groups-differ}
 
-The tests above answer "is there any difference among the groups?". When the answer is yes, the next question is which groups differ from which. Comparing every pair with an ordinary test inflates the chance of a false positive: with four ASA classes there are six pairs, and six tests at p < 0.05 give roughly a one-in-four chance of at least one false alarm even when nothing is going on.
+The tests above answer "is there any difference among the groups?". When the answer is yes, the next question is which groups differ from which. Comparing every pair with an ordinary test inflates the chance of a false positive. With four ASA classes there are six pairs (1 and 2, 1 and 3, 1 and 4, 2 and 3, 2 and 4, 3 and 4). Each test at the 5% level has a 95% chance of *not* raising a false alarm when nothing is going on. If the six tests were independent, all of them would stay quiet with probability 0.95^6^ = 0.74. That leaves 1 − 0.74 = 0.26, roughly a one-in-four chance of at least one false alarm ([page 15](../beyond/15-post-hoc.qmd#why-adjust) works this out in code).
 
 **Post-hoc tests** compare the pairs while keeping that overall error rate at 5%:
 
@@ -608,6 +890,9 @@ set.seed(2026)
 los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)   # as in exercise 2's solution
 sat_quartiles <- satisfied |> group_by(surgeon) |>
   summarise(median = median(satisfaction_1yr), q1 = quantile(satisfaction_1yr, 0.25), q3 = quantile(satisfaction_1yr, 0.75))
+answered_by <- cohort |> group_by(surgeon) |> summarise(procedures = n(), answered = sum(!is.na(satisfaction_1yr)))
+los_by <- cohort |> group_by(surgeon) |>
+  summarise(median = median(los_days), q1 = quantile(los_days, 0.25), q3 = quantile(los_days, 0.75))
 stopifnot(
   sum(table(cohort$patient_id) == 2) == 80,
   age_by_asa$n == c(36, 300, 246, 18),
@@ -637,9 +922,42 @@ stopifnot(
   summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
   round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
   round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,
-  round(reticulate::py_eval("float(np.exp(CoxPHFitter().fit(cohort[['followup_years', 'revised', 'implant']], duration_col='followup_years', event_col='revised', formula='implant').params_.iloc[0]))"), 5) == 0.81713,
-  round(implant_hr["implantB", "exp(coef)"], 5) == 0.81709,
+  round(reticulate::py_eval("float(default_cox.hazard_ratios_.iloc[0])"), 6) == 0.817125,
+  round(reticulate::py_eval("float(implant_cox.hazard_ratios_.iloc[0])"), 6) == 0.817091,
+  round(implant_hr["implantB", "exp(coef)"], 7) == 0.8170908, round(1 / 0.8171, 3) == 1.224,
   choose(4, 2) == 6, round(1 - 0.95^6, 2) == 0.26,
+  round(0.95^6, 2) == 0.74, round(1 - 0.74, 2) == 0.26,
+  # the by-hand boxes, and the numbers added with them
+  round(age_table[2, "Sum Sq"]) == 47599, round(age_table[, "Mean Sq"], 1) == c(1908.9, 79.9),
+  round(age_table[1, "Sum Sq"], 2) == 5726.69, round(47599 / 596, 1) == 79.9, round(1908.9 / 79.9, 1) == 23.9,
+  round(age_table[1, "Sum Sq"] / sum(age_table[, "Sum Sq"]), 3) == 0.107, round(5727 / (5727 + 47599), 3) == 0.107,
+  abs(reticulate::py_eval("float(age_anova.loc[0, 'p_unc'])") / 1.284107e-14 - 1) < 1e-6,
+  isTRUE(all.equal(reticulate::py_eval("float(age_anova.loc[0, 'np2'])"), age_table[1, "Sum Sq"] / sum(age_table[, "Sum Sq"]))),
+  sum(age_by_asa$n) == 600, nrow(class_means) == 4, nrow(cohort) == 600,
+  isTRUE(all.equal(between_ms / within_ms, age_table[1, "F value"])),
+  round(c(between_ss, within_ss)) == c(5727, 47599), round(c(between_ms, within_ms), 1) == c(1908.9, 79.9),
+  round(sqrt(79.9), 1) == 8.9, round(sqrt(within_ms), 1) == 8.9,
+  signif(welch$p.value, 3) == 3.49e-10, round(unname(welch$parameter[2]), 1) == 60.3,
+  answered_by$procedures == c(232, 211, 157), answered_by$answered == c(192, 177, 133),
+  round(100 * answered_by$answered / answered_by$procedures) == c(83, 84, 85), 600 - 502 == 98,
+  round(mean_ranks, 1) == c(248.0, 249.2, 259.6), (n_scores + 1) / 2 == 251.5, n_scores == 502,
+  round(h_no_ties, 2) == 0.57, round(tie_correction, 2) == 0.84, unname(tie_sizes["5"]) == 250, length(tie_sizes) == 5,
+  isTRUE(all.equal(h_no_ties / tie_correction, unname(satisfaction_test$statistic))),
+  round(unname(satisfaction_test$statistic), 3) == 0.677, round(0.677 / 501, 5) == 0.00135,
+  signif(satisfaction_eps$rank_epsilon_squared, 3) == 0.00135,
+  rts_table[, "no"] == c(45, 87, 45), sum(rts_table) == 350, round(84 / 129, 3) == 0.651,
+  round(chisq_parts[, "yes"], 1) == c(6.4, 1.1, 3.7), round(chisq_parts[, "no"], 1) == c(6.3, 1.1, 3.6),
+  isTRUE(all.equal(sum(chisq_parts), unname(rts_test$statistic))), round(chisq_expected["BPTB", "yes"], 1) == 63.8,
+  signif(rts_test$p.value, 4) == 1.481e-05, round(sqrt(22.24 / (350 * 1)), 2) == 0.25,
+  implant_cox$n == 600, implant_cox$nevent == 81,
+  signif(summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"], 3) == 1.39e-05,
+  round(unname(summary(implant_cox)$logtest["test"]), 2) == 27.64,
+  signif(unname(summary(implant_cox)$logtest["pvalue"]), 1) == 1e-06,
+  round(implant_logrank$chisq, 2) == 33.47, round(unname(summary(implant_cox)$sctest["test"]), 2) == 33.48,
+  observed == c(25, 18, 38), sum(observed) == 81, round(expected, 1) == c(34.0, 30.0, 16.9),
+  isTRUE(all.equal(unname(expected), unname(implant_logrank$exp))),
+  round(observed / expected, 2) == c(0.73, 0.60, 2.24), round(2.24 / 0.73, 1) == 3.1, round(0.60 / 0.73, 1) == 0.8,
+  observed[["C"]] / expected[["C"]] > 2,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][1, "F value"], 1) == 31.1,
   round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE)$Omega2, 2) == 0.13,
@@ -654,6 +972,9 @@ stopifnot(
   round(100 * prop.table(ex_failure, 1)[, "yes"], 1) == c(4.7, 3.9, 4.5),
   round(ex_expected[3, "yes"], 1) == 2.9, sum(ex_expected < 5) == 1,
   round(fisher.test(ex_failure)$p.value, 3) == 0.943,
+  los_by$median == c(0, 1, 0), los_by$q1 == c(0, 0, 0), los_by$q3 == c(1, 1, 1),
+  signif(los_eps$rank_epsilon_squared, 3) == 0.00122,
+  ex_failure[, "no"] == c(123, 148, 64), round(6 / 129, 3) == 0.047,
   round(reticulate::py_eval("float(stats.fisher_exact(pd.crosstab(acl['graft'], acl['failure_2y']).loc[['BPTB', 'hamstring', 'quadriceps'], [1, 0]].to_numpy(), method=stats.PermutationMethod(rng=np.random.default_rng(2026))).pvalue)"), 4) == 0.9405
 )
 ```
@@ -704,6 +1025,9 @@ Length of stay is strongly right-skewed with many ties ([page 3](../foundations/
 ## R
 
 ```{r}
+cohort |>
+  group_by(surgeon) |>
+  summarise(n = n(), median = median(los_days), q1 = quantile(los_days, 0.25), q3 = quantile(los_days, 0.75))
 kruskal.test(los_days ~ surgeon, data = cohort)
 set.seed(2026)
 effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)
@@ -712,15 +1036,16 @@ effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)
 ## Python
 
 ```{python}
+print(cohort.groupby("surgeon")["los_days"].describe()[["count", "25%", "50%", "75%"]])
 stays = [group["los_days"] for surgeon, group in cohort.groupby("surgeon")]
 los_test = stats.kruskal(*stays)
 print(los_test, los_test.statistic / (len(cohort) - 1))
 ```
 :::
 
-> **Results:** Across the three surgeons, Kruskal-Wallis H = 0.73 (df = 2, p = 0.694; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+> **Results:** Median length of stay was 0 days (IQR 0 to 1) for surgeon S1, 1 day (IQR 0 to 1) for S2 and 0 days (IQR 0 to 1) for S3 (Kruskal-Wallis H = 0.73, df = 2, p = 0.694; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
 
-There's no clear evidence that length of stay differs between the surgeons.
+There's no clear evidence that length of stay differs between the surgeons. R prints ε² as `1.22e-03`, that is 0.00122, which rounds to 0.001.
 :::
 
 **3.** Does graft failure within 2 years differ across the three grafts? Check the expected counts first. What do you do, and what do you find?
@@ -738,6 +1063,7 @@ failure_table <- table(
   failed = factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no"))
 )
 failure_table
+prop.table(failure_table, margin = 1)   # each count divided by its row total: the share that failed with each graft
 # R also warns here: "Chi-squared approximation may be incorrect"
 chisq.test(failure_table)$expected   # one expected count is below 5
 fisher.test(failure_table)           # exact, even for a 3 x 2 table
@@ -750,6 +1076,7 @@ import numpy as np
 
 failure_table = pd.crosstab(acl["graft"], acl["failure_2y"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]
 print(failure_table)
+print(failure_table.div(failure_table.sum(axis=1), axis=0))   # each count divided by its row total: the share that failed with each graft
 print(stats.chi2_contingency(failure_table).expected_freq)   # one expected count is below 5
 
 # For tables larger than 2 x 2, scipy estimates Fisher's p-value by random resampling; a seed makes it repeatable
@@ -759,7 +1086,7 @@ print(failure_fisher.pvalue)
 ```
 :::
 
-With a quadriceps graft the expected number of failures is 2.9, below 5, so the chi-square test isn't reliable; R says so itself, with the warning "Chi-squared approximation may be incorrect". Combining grafts would change the question, so use Fisher's exact test on the whole 3 × 2 table. R's `fisher.test()` computes it exactly (p = 0.943); scipy estimates it from 9,999 random tables (0.9405 with this seed), close to R's but not identical.
+Each row of the first table adds up to the graft's total (6 + 123 = 129 BPTB reconstructions), and the second table gives the share that failed (6 ÷ 129 = 0.047, or 4.7%). With a quadriceps graft the expected number of failures is 2.9, below 5, so the chi-square test isn't reliable; R says so itself, with the warning "Chi-squared approximation may be incorrect". Combining grafts would change the question, so use Fisher's exact test on the whole 3 × 2 table. R's `fisher.test()` computes it exactly (p = 0.943); scipy estimates it from 9,999 random tables (the default of `PermutationMethod`; 0.9405 with this seed), close to R's but not identical.
 
 > **Results:** Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher's exact test p = 0.943).
 
