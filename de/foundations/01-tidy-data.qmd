@@ -191,6 +191,11 @@ read_site <- function(sheet) {
 raw <- bind_rows(read_site("Site A"), read_site("Site B"))   # ordnet die Spalten nach Namen zu
 nrow(raw)
 names(raw)
+
+count(raw, site)                            # eingelesene Zeilen pro Reiter
+sum(raw$pt_name == "TOTAL", na.rm = TRUE)   # Summenzeilen
+sum(duplicated(raw))                        # Zeilen, die eine frühere Zeile genau wiederholen
+head(raw$dos)                               # die ersten sechs Operationsdaten, genau wie eingelesen
 ```
 
 ## Python
@@ -217,27 +222,36 @@ def read_site(sheet):
 raw = pd.concat([read_site("Site A"), read_site("Site B")], ignore_index=True)  # ordnet nach Namen zu
 print(len(raw))
 print(list(raw.columns))
+
+print(raw["site"].value_counts())           # eingelesene Zeilen pro Reiter
+print((raw["pt_name"] == "TOTAL").sum())    # Summenzeilen
+print(raw.duplicated().sum())               # Zeilen, die eine frühere Zeile genau wiederholen
+print(raw["dos"].head(6).tolist())          # die ersten sechs Operationsdaten, genau wie eingelesen
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(raw))}
+chk_raw = {"site_a": float((raw["site"] == "Site A").sum()), "totals": float((raw["pt_name"] == "TOTAL").sum()),
+           "duplicates": float(raw.duplicated().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(raw)), reticulate::py$chk)
+check_agree(list(site_a = sum(raw$site == "Site A"), totals = sum(raw$pt_name == "TOTAL", na.rm = TRUE),
+                 duplicates = sum(duplicated(raw))), reticulate::py$chk_raw)
 ```
 
-126 Zeilen: 60 Patientinnen und Patienten pro Reiter, dazu in jedem je 2 Duplikate und eine Summenzeile. Weil wir die Reiter **nach Spaltennamen** untereinander gestellt haben, hat die zusätzliche Spalte `MUA` von Site B nichts verschoben. Bei den Zeilen von Site A fehlt `mua` einfach. Wären die Zellen nach Position kopiert worden, stünden die LOS-Werte unter der falschen Überschrift.
+126 Zeilen: 63 aus jedem Reiter. Jeder Reiter hat 1 Summenzeile und 2 Zeilen, die eine frühere Zeile wiederholen (insgesamt 2 Summenzeilen und 4 Duplikate); das sind keine Patientinnen und Patienten. Es bleiben 63 − 1 − 2 = 60 Patientinnen und Patienten pro Reiter. Weil wir die Reiter **nach Spaltennamen** untereinander gestellt haben, hat die zusätzliche Spalte `MUA` von Site B nichts verschoben. Bei den Zeilen von Site A fehlt `mua` einfach. Wären die Zellen nach Position kopiert worden, stünden die LOS-Werte unter der falschen Überschrift.
 
 In R rufen wir `janitor::clean_names()` mit dem Package-Namen davor auf, statt janitor mit `library()` zu laden. Beim Laden von janitor werden die eigenen Funktionen `chisq.test()` und `fisher.test()` von R durch die Versionen aus janitor *überdeckt*. Bei gewöhnlichen Tabellen geben sie dieselben Antworten, aber die Meldung über das Überdecken verwirrt, und es wird schwerer zu erkennen, welche Funktion Sie tatsächlich aufrufen.
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: dieselbe Excel-Datei, anders eingelesen
 - **Wiederholte Spaltenköpfe.** R (mit `.name_repair = "minimal"`) behält beide `Date`-Spalten als `Date`. pandas benennt die zweite in `Date.1` um.
-- **Echte Excel-Datumsangaben.** Als Text eingelesen, liefert R die Excel-Seriennummer (`42010` bedeutet 6. Januar 2015). pandas liefert `2015-01-06 00:00:00`. Schritt 5 behandelt beide.
+- **Echte Excel-Datumsangaben.** Als Text eingelesen, liefert R die Excel-Seriennummer und pandas einen Datum-Uhrzeit-Text. Vergleichen Sie das erste Datum in den beiden Ausgaben: `42026` in R (22. Januar 2015), `2015-01-22 00:00:00` in pandas. Schritt 5 behandelt beide.
 :::
 
 ### Schritt 2: Zeilen und Spalten entfernen, die keine Daten sind {#step-2-drop-rows-and-columns-that-arent-data}
@@ -274,7 +288,7 @@ chk = {"rows": float(len(step2))}
 check_agree(list(rows = nrow(step2)), reticulate::py$chk)
 ```
 
-Namen und MRN entfernen Sie so früh wie möglich. Alles ab hier arbeitet nur noch mit einer Studien-ID.
+Es bleiben 120 Zeilen: 126 − 2 Summenzeilen − 4 Duplikate, also 60 Patientinnen und Patienten pro Standort. Namen und MRN entfernen Sie so früh wie möglich. Alles ab hier arbeitet nur noch mit einer Studien-ID.
 
 ### Schritt 3: eine einzige Art, «fehlend» zu sagen {#step-3-one-way-to-say-missing}
 
@@ -368,7 +382,45 @@ chk = {"revised": float(len(revised_ids))}
 check_agree(list(revised = length(revised_ids)), reticulate::py$chk)
 ```
 
-Die Spalte `Notes` erwähnt einige Revisionen («revised 2021 for loosening»), aber nicht alle. Hätten wir uns auf die Notizen verlassen, wären uns Fälle entgangen. Nur die Farben waren vollständig.
+Hätte die Spalte `Notes` genügt? Zählen Sie die Fälle, deren Notiz eine Revision erwähnt:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+# Fälle, deren Notiz eine Revision erwähnt
+noted <- step3 |>
+  filter(str_detect(notes, "revised")) |>
+  pull(study_id) |>
+  str_trim()
+
+length(noted)                         # Fälle, die die Notizen erwähnen
+length(setdiff(revised_ids, noted))   # rot markierte Fälle, die die Notizen nie erwähnen
+```
+
+## Python
+
+```{python}
+# Fälle, deren Notiz eine Revision erwähnt
+has_note = step3["notes"].str.contains("revised", na=False)
+noted = set(step3.loc[has_note, "study_id"].str.strip())
+
+print(len(noted))                 # Fälle, die die Notizen erwähnen
+print(len(revised_ids - noted))   # rot markierte Fälle, die die Notizen nie erwähnen
+```
+:::
+
+```{python}
+#| include: false
+chk = {"noted": float(len(noted)), "missed": float(len(revised_ids - noted))}
+```
+
+```{r}
+#| include: false
+check_agree(list(noted = length(noted), missed = length(setdiff(revised_ids, noted))), reticulate::py$chk)
+```
+
+Die rote Füllung markiert 18 revidierte Fälle. Die Spalte `Notes` erwähnt eine Revision («revised 2019 for loosening») nur bei 13 davon. Hätten wir uns auf die Notizen verlassen, wären uns 5 Fälle entgangen. Nur die Farben waren vollständig.
 
 ### Schritt 5: jeder Spalte ihren richtigen Typ geben {#step-5-give-every-column-its-real-type}
 
@@ -499,9 +551,11 @@ key = pd.read_csv("data/answer-keys/abstraction_workbook_tidy.csv",
 pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
 ```
 
+Vergleichen Sie die Ausgabe mit dem, was Sie erwarten: 120 Zeilen und 18 Spalten, Datumsangaben sind Datumsangaben, Zahlen sind Zahlen. R zeigt die ersten Werte jeder Spalte. Python zeigt, wie viele Werte nicht fehlen: `bmi` hat 112, das sind 120 minus die 8 fehlenden BMI-Werte aus Schritt 3.
+
 ::: {.callout-tip}
 ## 🔀 R oder Python: Datumsangaben
-R braucht für die Excel-Seriennummern einen eigenen Schritt (`janitor::excel_numeric_to_date()`). pandas hat diese Zellen schon in Datum-Uhrzeit-Text (`2015-01-06 00:00:00`) umgewandelt, den seine Funktion `parse_messy_date()` zusammen mit den übrigen ISO-Daten liest. Beide lesen `"13.01.15"` mit dem Tag zuerst: das ist der Schweizer Stil, den die Tabellen am HFR verwenden. Beide lesen ISO-Daten für sich, weil `dayfirst=True` in pandas auch diese vertauschen würde (`2015-11-02` würde zum 11. Februar).
+R braucht für die Excel-Seriennummern einen eigenen Schritt (`janitor::excel_numeric_to_date()`). pandas hat diese Zellen schon in Datum-Uhrzeit-Text (`2015-01-22 00:00:00`) umgewandelt, den seine Funktion `parse_messy_date()` zusammen mit den übrigen ISO-Daten liest. Beide lesen `"14.05.15"` mit dem Tag zuerst: das ist der Schweizer Stil, den die Tabellen am HFR verwenden. Beide lesen ISO-Daten für sich, weil `dayfirst=True` in pandas auch diese vertauschen würde (`2015-11-02` würde zum 11. Februar). pandas speichert ausserdem eine Spalte mit ganzen Zahlen und fehlenden Werten als Dezimalzahlen; die ASA-Klasse 2 erscheint deshalb als `2.0`. Der Wert ist derselbe.
 :::
 
 ## Einen Umfrage-Export umformen {#reshaping}
@@ -532,6 +586,9 @@ items <- wide |>
   select(case_id, instrument, visit, item, response)
 
 items
+
+items |> distinct(case_id, instrument) |> count(instrument)   # Personen pro Instrument
+sum(is.na(items$response))                                    # Zeilen ohne Antwort
 ```
 
 ## Python
@@ -555,17 +612,24 @@ items = (items.assign(item=items["item"].astype(int),
               [["case_id", "instrument", "visit", "item", "response"]]
               .reset_index(drop=True))
 print(items)
+
+print(items.drop_duplicates("case_id")["instrument"].value_counts())   # Personen pro Instrument
+print(items["response"].isna().sum())                                  # Zeilen ohne Antwort
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(items)), "mean": float(items["response"].mean())}
+chk_survey = {"koos": float((items.drop_duplicates("case_id")["instrument"] == "KOOS JR").sum()),
+              "blank": float(items["response"].isna().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(items), mean = mean(items$response, na.rm = TRUE)), reticulate::py$chk)
+check_agree(list(koos = n_distinct(items$case_id[items$instrument == "KOOS JR"]), blank = sum(is.na(items$response))),
+            reticulate::py$chk_survey)
 survey_key <- read_csv("data/answer-keys/survey_items_long.csv", show_col_types = FALSE)
 stopifnot(isTRUE(all.equal(as.data.frame(items), as.data.frame(survey_key), check.attributes = FALSE)))
 ```
@@ -576,7 +640,7 @@ pd.testing.assert_frame_equal(items, pd.read_csv("data/answer-keys/survey_items_
                               check_dtype=False)
 ```
 
-Für Patientinnen und Patienten mit KOOS JR (Score für Knie-Gelenkersatz, Kurzform) gibt es jetzt je 7 Items × 4 Kontrollen = 28 Zeilen. Auch eine versäumte Kontrolle behält ihre Zeilen, mit leerer Antwort, damit «erwartet, aber nicht beantwortet» sichtbar bleibt.
+Für Patientinnen und Patienten mit KOOS JR (Score für Knie-Gelenkersatz, Kurzform) gibt es jetzt je 7 Items × 4 Kontrollen = 28 Zeilen, für jene mit HOOS JR je 6 Items × 4 Kontrollen = 24. Bei 82 Personen mit KOOS JR und 68 mit HOOS JR ergibt das 82 × 28 + 68 × 24 = 3,928 Zeilen. Auch eine versäumte Kontrolle behält ihre Zeilen, mit leerer Antwort (hier 564 Zeilen), damit «erwartet, aber nicht beantwortet» sichtbar bleibt.
 
 ## Prüfen, dass sich nichts verändert hat {#integrity}
 
@@ -656,7 +720,8 @@ tidy |>
     prom_out_of_range = sum(prom_preop < 0 | prom_preop > 100 | prom_1yr < 0 | prom_1yr > 100, na.rm = TRUE),
     preop_after_surgery = sum(prom_preop_date > surgery_date, na.rm = TRUE),
     one_year_before_surgery = sum(prom_1yr_date < surgery_date, na.rm = TRUE)
-  )
+  ) |>
+  pivot_longer(everything(), names_to = "check", values_to = "rows")   # eine Prüfung pro Zeile
 ```
 
 ## Python
@@ -692,6 +757,8 @@ tidy |> slice_sample(n = 3) |> select(case_id, site, surgery_date, age, bmi, pro
 print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age", "bmi", "procedure", "side"]])
 ```
 :::
+
+R und Python ziehen unterschiedliche Zeilen, weil jede Sprache ihren eigenen Zufallszahlengenerator hat. Das ist in Ordnung: Beliebige drei Zeilen genügen. Der Startwert (`set.seed(1)`, `random_state=1`) sorgt nur dafür, dass jede Sprache bei jedem Durchlauf dieselben drei Zeilen zieht.
 
 ### Wie eine Prüfung aussieht, die anschlägt {#what-a-failing-check-looks-like}
 
@@ -741,8 +808,8 @@ assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 
 Beim richtigen Einlesen fehlt nichts, und jeder präoperative PROM-Score liegt in seinem Zeitfenster. Die Versionen mit dem Monat zuerst gehen auf verschiedene Arten schief:
 
-- **R** kann Datumsangaben wie `"13.01.15"` nicht mit dem Monat zuerst lesen (einen 13. Monat gibt es nicht), darum fehlen 30 Datumsangaben der Operationen. Andere, etwa `"04.03.24"`, werden «erfolgreich» als 3. April statt als 4. März eingelesen, und die Prüfung des Zeitfensters meldet 12 davon.
-- **pandas** liefert hier nie ein fehlendes Datum: Wenn der Monat zuerst unmöglich ist, wechselt es stillschweigend zum Tag zuerst. So kommt `"13.01.15"` durch Zufall richtig heraus, während `"04.03.24"` zum 3. April wird. Nur die Prüfung des Zeitfensters bemerkt es: Sie meldet 12 Datumsangaben.
+- **R** kann Datumsangaben wie `"14.05.15"` nicht mit dem Monat zuerst lesen (einen 14. Monat gibt es nicht), darum fehlen 30 Datumsangaben der Operationen. Andere, etwa `"08.02.15"`, werden «erfolgreich» als 2. August statt als 8. Februar eingelesen, und die Prüfung des Zeitfensters meldet 12 davon.
+- **pandas** liefert hier nie ein fehlendes Datum: Wenn der Monat zuerst unmöglich ist, wechselt es stillschweigend zum Tag zuerst. So kommt `"14.05.15"` durch Zufall richtig heraus, während `"08.02.15"` zum 2. August wird. Nur die Prüfung des Zeitfensters bemerkt es: Sie meldet 12 Datumsangaben.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: eine einzige Prüfung genügt nie
@@ -782,7 +849,24 @@ stopifnot(
   sum(items$case_id == koos_case) == 28,
   sum(is.na(wrong)) == 30,
   outside_window(wrong) == 12,
-  outside_window(parse_messy_date(step3$dos)) == 0
+  outside_window(parse_messy_date(step3$dos)) == 0,
+  # numbers added with the audit fixes
+  as.vector(table(raw$site)) == c(63, 63), sum(raw$pt_name == "TOTAL", na.rm = TRUE) == 2, sum(duplicated(raw)) == 4,
+  tapply(duplicated(raw), raw$site, sum) == c(2, 2), tapply(raw$pt_name %in% "TOTAL", raw$site, sum) == c(1, 1),
+  63 - 1 - 2 == 60, 126 - 2 - 4 == 120, nrow(step2) == 120,
+  raw$dos[1] == "42026", janitor::excel_numeric_to_date(42026) == as.Date("2015-01-22"),
+  length(revised_ids) == 18, length(noted) == 13, length(setdiff(revised_ids, noted)) == 5, all(noted %in% revised_ids),
+  any(step3$notes %in% "revised 2019 for loosening"),
+  ncol(tidy) == 18, sum(!is.na(tidy$bmi)) == 112, sum(is.na(step3$bmi)) == 8,
+  as.vector(table(distinct(items, case_id, instrument)$instrument)) == c(68, 82),
+  all(table(items$case_id[items$instrument == "HOOS JR"]) == 24), 82 * 28 + 68 * 24 == 3928, nrow(items) == 3928,
+  sum(is.na(items$response)) == 564,
+  all(c("14.05.15", "08.02.15") %in% step3$dos), all(is.na(wrong[step3$dos %in% "14.05.15"])),
+  all(wrong[step3$dos %in% "08.02.15"] == as.Date("2015-08-02")),
+  all(parse_messy_date(step3$dos)[step3$dos %in% "08.02.15"] == as.Date("2015-02-08")),
+  all(as.numeric(wrong - preop)[step3$dos %in% "08.02.15"] > 31),
+  as.vector(table(step3$asa)[c("2", "ASA 2", "II")]) == c(43, 4, 14), 43 + 4 + 14 == 61, sum(is.na(step3$asa)) == 3,
+  max(tidy$asa, na.rm = TRUE) == 3
 )
 ```
 
@@ -812,7 +896,7 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 ```
 :::
 
-`2`, `II` und `ASA 2` werden alle zu 2, und die Codes für fehlende Werte bleiben fehlend.
+`2`, `II` und `ASA 2` werden alle zu 2 (43 + 14 + 4 = 61 Fälle). Die letzte Zeile sind die 3 Fälle ohne ASA-Klasse: Schritt 3 hatte ihre Codes für fehlende Werte bereits in leere Zellen umgewandelt, und sie bleiben fehlend. Niemand in dieser Tabelle hat die ASA-Klasse 4.
 :::
 
 **2.** Eine Tabelle aus Ihrem Team hat eine Zeile pro Patientin oder Patient und die Spalten `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Ist sie aufgeräumt? Wenn nicht: Was sollte eine Zeile sein?

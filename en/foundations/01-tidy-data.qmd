@@ -191,6 +191,11 @@ read_site <- function(sheet) {
 raw <- bind_rows(read_site("Site A"), read_site("Site B"))   # matches columns by name
 nrow(raw)
 names(raw)
+
+count(raw, site)                            # rows read from each tab
+sum(raw$pt_name == "TOTAL", na.rm = TRUE)   # totals rows
+sum(duplicated(raw))                        # rows that exactly repeat an earlier row
+head(raw$dos)                               # the first six surgery dates, exactly as read
 ```
 
 ## Python
@@ -217,27 +222,36 @@ def read_site(sheet):
 raw = pd.concat([read_site("Site A"), read_site("Site B")], ignore_index=True)  # matches by name
 print(len(raw))
 print(list(raw.columns))
+
+print(raw["site"].value_counts())           # rows read from each tab
+print((raw["pt_name"] == "TOTAL").sum())    # totals rows
+print(raw.duplicated().sum())               # rows that exactly repeat an earlier row
+print(raw["dos"].head(6).tolist())          # the first six surgery dates, exactly as read
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(raw))}
+chk_raw = {"site_a": float((raw["site"] == "Site A").sum()), "totals": float((raw["pt_name"] == "TOTAL").sum()),
+           "duplicates": float(raw.duplicated().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(raw)), reticulate::py$chk)
+check_agree(list(site_a = sum(raw$site == "Site A"), totals = sum(raw$pt_name == "TOTAL", na.rm = TRUE),
+                 duplicates = sum(duplicated(raw))), reticulate::py$chk_raw)
 ```
 
-126 rows: 60 patients per tab, plus 2 duplicates and a totals row in each. Because we stacked the tabs **by column name**, Site B's extra `MUA` column didn't shift anything. Site A rows simply have `mua` missing. Copying cells by position would have put LOS values under the wrong heading.
+126 rows: 63 from each tab. Each tab has 1 totals row and 2 rows that repeat an earlier row (2 totals rows and 4 duplicates in all), and these are not patients. That leaves 63 − 1 − 2 = 60 patients per tab. Because we stacked the tabs **by column name**, Site B's extra `MUA` column didn't shift anything. Site A rows simply have `mua` missing. Copying cells by position would have put LOS values under the wrong heading.
 
 In R we call `janitor::clean_names()` with the package name in front instead of loading janitor with `library()`. Loading janitor *masks* R's own `chisq.test()` and `fisher.test()` with janitor's versions. They give the same answers for ordinary tables, but the masking message is confusing, and it becomes harder to tell which function you're actually calling.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: the same Excel file, read differently
 - **Repeated headers.** R (with `.name_repair = "minimal"`) keeps both `Date` columns as `Date`. pandas renames the second to `Date.1`.
-- **Real Excel dates.** Read as text, R gives the Excel serial number (`42010` means 6 Jan 2015). pandas gives `2015-01-06 00:00:00`. Step 5 handles both.
+- **Real Excel dates.** Read as text, R gives the Excel serial number and pandas a date-time text. Compare the first date in the two outputs: `42026` in R (22 Jan 2015), `2015-01-22 00:00:00` in pandas. Step 5 handles both.
 :::
 
 ### Step 2: drop rows and columns that aren't data {#step-2-drop-rows-and-columns-that-arent-data}
@@ -274,7 +288,7 @@ chk = {"rows": float(len(step2))}
 check_agree(list(rows = nrow(step2)), reticulate::py$chk)
 ```
 
-Names and MRNs go as early as possible. Everything after this point works on a study ID only.
+120 rows are left: 126 − 2 totals rows − 4 duplicates, which is 60 patients per site. Names and MRNs go as early as possible. Everything after this point works on a study ID only.
 
 ### Step 3: one way to say "missing" {#step-3-one-way-to-say-missing}
 
@@ -368,7 +382,45 @@ chk = {"revised": float(len(revised_ids))}
 check_agree(list(revised = length(revised_ids)), reticulate::py$chk)
 ```
 
-The `Notes` column mentions some revisions ("revised 2021 for loosening"), but not all of them. If we had trusted the notes we would have missed cases. Only the colors were complete.
+Could we have used the `Notes` column instead? Count the cases whose note mentions a revision:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+# cases whose note mentions a revision
+noted <- step3 |>
+  filter(str_detect(notes, "revised")) |>
+  pull(study_id) |>
+  str_trim()
+
+length(noted)                         # cases the notes mention
+length(setdiff(revised_ids, noted))   # red-filled cases the notes never mention
+```
+
+## Python
+
+```{python}
+# cases whose note mentions a revision
+has_note = step3["notes"].str.contains("revised", na=False)
+noted = set(step3.loc[has_note, "study_id"].str.strip())
+
+print(len(noted))                 # cases the notes mention
+print(len(revised_ids - noted))   # red-filled cases the notes never mention
+```
+:::
+
+```{python}
+#| include: false
+chk = {"noted": float(len(noted)), "missed": float(len(revised_ids - noted))}
+```
+
+```{r}
+#| include: false
+check_agree(list(noted = length(noted), missed = length(setdiff(revised_ids, noted))), reticulate::py$chk)
+```
+
+The red fill marks 18 revised cases. The `Notes` column mentions a revision ("revised 2019 for loosening") for only 13 of them. If we had trusted the notes we would have missed 5 cases. Only the colors were complete.
 
 ### Step 5: give every column its real type {#step-5-give-every-column-its-real-type}
 
@@ -499,9 +551,11 @@ key = pd.read_csv("data/answer-keys/abstraction_workbook_tidy.csv",
 pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
 ```
 
+Check the output against what you expect: 120 rows and 18 columns, dates are dates, numbers are numbers. R shows the first few values of each column. Python shows how many values are not missing: `bmi` has 112, which is 120 minus the 8 missing BMIs counted in step 3.
+
 ::: {.callout-tip}
 ## 🔀 R vs Python: dates
-R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_date()`). pandas already turned those cells into date-time text (`2015-01-06 00:00:00`), which its `parse_messy_date()` reads with the other ISO dates. Both read `"13.01.15"` day-first: Swiss style, which is what HFR sheets use. Both read ISO dates on their own, because pandas' `dayfirst=True` would also flip them (`2015-11-02` would become 11 February).
+R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_date()`). pandas already turned those cells into date-time text (`2015-01-22 00:00:00`), which its `parse_messy_date()` reads with the other ISO dates. Both read `"14.05.15"` day-first: Swiss style, which is what HFR sheets use. Both read ISO dates on their own, because pandas' `dayfirst=True` would also flip them (`2015-11-02` would become 11 February). pandas also stores a whole-number column that has missing values as decimals, so ASA class 2 prints as `2.0`. The value is the same.
 :::
 
 ## Reshaping a survey export {#reshaping}
@@ -532,6 +586,9 @@ items <- wide |>
   select(case_id, instrument, visit, item, response)
 
 items
+
+items |> distinct(case_id, instrument) |> count(instrument)   # patients per instrument
+sum(is.na(items$response))                                    # rows with no answer
 ```
 
 ## Python
@@ -555,17 +612,24 @@ items = (items.assign(item=items["item"].astype(int),
               [["case_id", "instrument", "visit", "item", "response"]]
               .reset_index(drop=True))
 print(items)
+
+print(items.drop_duplicates("case_id")["instrument"].value_counts())   # patients per instrument
+print(items["response"].isna().sum())                                  # rows with no answer
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(items)), "mean": float(items["response"].mean())}
+chk_survey = {"koos": float((items.drop_duplicates("case_id")["instrument"] == "KOOS JR").sum()),
+              "blank": float(items["response"].isna().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(items), mean = mean(items$response, na.rm = TRUE)), reticulate::py$chk)
+check_agree(list(koos = n_distinct(items$case_id[items$instrument == "KOOS JR"]), blank = sum(is.na(items$response))),
+            reticulate::py$chk_survey)
 survey_key <- read_csv("data/answer-keys/survey_items_long.csv", show_col_types = FALSE)
 stopifnot(isTRUE(all.equal(as.data.frame(items), as.data.frame(survey_key), check.attributes = FALSE)))
 ```
@@ -576,7 +640,7 @@ pd.testing.assert_frame_equal(items, pd.read_csv("data/answer-keys/survey_items_
                               check_dtype=False)
 ```
 
-A KOOS JR patient now has 7 items × 4 visits = 28 rows. A missed visit still has its rows, with the response blank, so "expected but not answered" stays visible.
+A KOOS JR patient now has 7 items × 4 visits = 28 rows, and a HOOS JR patient 6 items × 4 visits = 24. With 82 KOOS JR and 68 HOOS JR patients, that makes 82 × 28 + 68 × 24 = 3,928 rows. A missed visit still has its rows, with the response blank (564 rows here), so "expected but not answered" stays visible.
 
 ## Checking nothing changed {#integrity}
 
@@ -656,7 +720,8 @@ tidy |>
     prom_out_of_range = sum(prom_preop < 0 | prom_preop > 100 | prom_1yr < 0 | prom_1yr > 100, na.rm = TRUE),
     preop_after_surgery = sum(prom_preop_date > surgery_date, na.rm = TRUE),
     one_year_before_surgery = sum(prom_1yr_date < surgery_date, na.rm = TRUE)
-  )
+  ) |>
+  pivot_longer(everything(), names_to = "check", values_to = "rows")   # one check per line
 ```
 
 ## Python
@@ -692,6 +757,8 @@ tidy |> slice_sample(n = 3) |> select(case_id, site, surgery_date, age, bmi, pro
 print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age", "bmi", "procedure", "side"]])
 ```
 :::
+
+R and Python draw different rows, because each has its own random number generator. That's fine: any three rows will do. The seed (`set.seed(1)`, `random_state=1`) only makes each language draw the same three rows every time you run it.
 
 ### What a failing check looks like {#what-a-failing-check-looks-like}
 
@@ -741,8 +808,8 @@ assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 
 With the correct parse, nothing is missing and every pre-op PROM falls in its window. The month-first versions go wrong in different ways:
 
-- **R** can't read dates like `"13.01.15"` month-first (there's no 13th month), so 30 surgery dates go missing. Others, like `"04.03.24"`, parse "successfully" as 3 April instead of 4 March, and the window check flags 12 of them.
-- **pandas** never returns a missing date here: when month-first is impossible it quietly switches to day-first, so `"13.01.15"` comes out right by luck while `"04.03.24"` becomes 3 April. Only the window check notices: it flags 12 dates.
+- **R** can't read dates like `"14.05.15"` month-first (there's no 14th month), so 30 surgery dates go missing. Others, like `"08.02.15"`, parse "successfully" as 2 August instead of 8 February, and the window check flags 12 of them.
+- **pandas** never returns a missing date here: when month-first is impossible it quietly switches to day-first, so `"14.05.15"` comes out right by luck while `"08.02.15"` becomes 2 August. Only the window check notices: it flags 12 dates.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: one check is never enough
@@ -782,7 +849,24 @@ stopifnot(
   sum(items$case_id == koos_case) == 28,
   sum(is.na(wrong)) == 30,
   outside_window(wrong) == 12,
-  outside_window(parse_messy_date(step3$dos)) == 0
+  outside_window(parse_messy_date(step3$dos)) == 0,
+  # numbers added with the audit fixes
+  as.vector(table(raw$site)) == c(63, 63), sum(raw$pt_name == "TOTAL", na.rm = TRUE) == 2, sum(duplicated(raw)) == 4,
+  tapply(duplicated(raw), raw$site, sum) == c(2, 2), tapply(raw$pt_name %in% "TOTAL", raw$site, sum) == c(1, 1),
+  63 - 1 - 2 == 60, 126 - 2 - 4 == 120, nrow(step2) == 120,
+  raw$dos[1] == "42026", janitor::excel_numeric_to_date(42026) == as.Date("2015-01-22"),
+  length(revised_ids) == 18, length(noted) == 13, length(setdiff(revised_ids, noted)) == 5, all(noted %in% revised_ids),
+  any(step3$notes %in% "revised 2019 for loosening"),
+  ncol(tidy) == 18, sum(!is.na(tidy$bmi)) == 112, sum(is.na(step3$bmi)) == 8,
+  as.vector(table(distinct(items, case_id, instrument)$instrument)) == c(68, 82),
+  all(table(items$case_id[items$instrument == "HOOS JR"]) == 24), 82 * 28 + 68 * 24 == 3928, nrow(items) == 3928,
+  sum(is.na(items$response)) == 564,
+  all(c("14.05.15", "08.02.15") %in% step3$dos), all(is.na(wrong[step3$dos %in% "14.05.15"])),
+  all(wrong[step3$dos %in% "08.02.15"] == as.Date("2015-08-02")),
+  all(parse_messy_date(step3$dos)[step3$dos %in% "08.02.15"] == as.Date("2015-02-08")),
+  all(as.numeric(wrong - preop)[step3$dos %in% "08.02.15"] > 31),
+  as.vector(table(step3$asa)[c("2", "ASA 2", "II")]) == c(43, 4, 14), 43 + 4 + 14 == 61, sum(is.na(step3$asa)) == 3,
+  max(tidy$asa, na.rm = TRUE) == 3
 )
 ```
 
@@ -812,7 +896,7 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 ```
 :::
 
-`2`, `II` and `ASA 2` all become 2, and the missing codes stay missing.
+`2`, `II` and `ASA 2` all become 2 (43 + 14 + 4 = 61 cases). The last row is the 3 cases with no ASA class: step 3 had already turned their missing codes into blanks, and they stay missing. No one in this sheet has ASA class 4.
 :::
 
 **2.** A colleague's sheet has one row per patient and the columns `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Is it tidy? If not, what should one row be?

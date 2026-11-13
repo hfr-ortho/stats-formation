@@ -191,6 +191,11 @@ read_site <- function(sheet) {
 raw <- bind_rows(read_site("Site A"), read_site("Site B"))   # associe les colonnes par nom
 nrow(raw)
 names(raw)
+
+count(raw, site)                            # lignes lues dans chaque onglet
+sum(raw$pt_name == "TOTAL", na.rm = TRUE)   # lignes de totaux
+sum(duplicated(raw))                        # lignes qui répètent exactement une ligne précédente
+head(raw$dos)                               # les six premières dates d'opération, exactement comme elles ont été lues
 ```
 
 ## Python
@@ -217,27 +222,36 @@ def read_site(sheet):
 raw = pd.concat([read_site("Site A"), read_site("Site B")], ignore_index=True)  # associe par nom
 print(len(raw))
 print(list(raw.columns))
+
+print(raw["site"].value_counts())           # lignes lues dans chaque onglet
+print((raw["pt_name"] == "TOTAL").sum())    # lignes de totaux
+print(raw.duplicated().sum())               # lignes qui répètent exactement une ligne précédente
+print(raw["dos"].head(6).tolist())          # les six premières dates d'opération, exactement comme elles ont été lues
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(raw))}
+chk_raw = {"site_a": float((raw["site"] == "Site A").sum()), "totals": float((raw["pt_name"] == "TOTAL").sum()),
+           "duplicates": float(raw.duplicated().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(raw)), reticulate::py$chk)
+check_agree(list(site_a = sum(raw$site == "Site A"), totals = sum(raw$pt_name == "TOTAL", na.rm = TRUE),
+                 duplicates = sum(duplicated(raw))), reticulate::py$chk_raw)
 ```
 
-126 lignes : 60 patients par onglet, plus 2 doublons et une ligne de totaux dans chacun. Comme nous avons empilé les onglets **d'après le nom des colonnes**, la colonne `MUA` en plus de Site B n'a rien décalé. Les lignes de Site A ont simplement `mua` manquant. Copier les cellules d'après leur position aurait placé les valeurs de la durée de séjour (LOS) sous le mauvais titre.
+126 lignes : 63 par onglet. Chaque onglet a 1 ligne de totaux et 2 lignes qui répètent une ligne précédente (2 lignes de totaux et 4 doublons en tout) ; ce ne sont pas des patients. Il reste 63 − 1 − 2 = 60 patients par onglet. Comme nous avons empilé les onglets **d'après le nom des colonnes**, la colonne `MUA` en plus de Site B n'a rien décalé. Les lignes de Site A ont simplement `mua` manquant. Copier les cellules d'après leur position aurait placé les valeurs de la durée de séjour (LOS) sous le mauvais titre.
 
 En R, nous appelons `janitor::clean_names()` avec le nom du package devant, au lieu de charger janitor avec `library()`. Charger janitor *masque* les fonctions `chisq.test()` et `fisher.test()` de R par les versions de janitor. Elles donnent les mêmes réponses pour des tableaux ordinaires, mais le message de masquage prête à confusion, et il devient plus difficile de savoir quelle fonction vous appelez réellement.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : le même fichier Excel, lu différemment
 - **En-têtes répétés.** R (avec `.name_repair = "minimal"`) garde les deux colonnes `Date` sous le nom `Date`. pandas renomme la seconde en `Date.1`.
-- **Vraies dates Excel.** Lues comme du texte, R donne le numéro de série Excel (`42010` signifie le 6 janvier 2015). pandas donne `2015-01-06 00:00:00`. L'étape 5 s'occupe des deux.
+- **Vraies dates Excel.** Lues comme du texte, R donne le numéro de série Excel et pandas un texte date-heure. Comparez la première date dans les deux sorties : `42026` dans R (22 janvier 2015), `2015-01-22 00:00:00` dans pandas. L'étape 5 s'occupe des deux.
 :::
 
 ### Étape 2 : supprimer les lignes et les colonnes qui ne sont pas des données {#step-2-drop-rows-and-columns-that-arent-data}
@@ -274,7 +288,7 @@ chk = {"rows": float(len(step2))}
 check_agree(list(rows = nrow(step2)), reticulate::py$chk)
 ```
 
-Les noms et les numéros de dossier (MRN) disparaissent le plus tôt possible. Tout ce qui suit travaille uniquement avec un identifiant d'étude.
+Il reste 120 lignes : 126 − 2 lignes de totaux − 4 doublons, soit 60 patients par site. Les noms et les numéros de dossier (MRN) disparaissent le plus tôt possible. Tout ce qui suit travaille uniquement avec un identifiant d'étude.
 
 ### Étape 3 : une seule façon de dire « manquant » {#step-3-one-way-to-say-missing}
 
@@ -368,7 +382,45 @@ chk = {"revised": float(len(revised_ids))}
 check_agree(list(revised = length(revised_ids)), reticulate::py$chk)
 ```
 
-La colonne `Notes` mentionne certaines révisions (« revised 2021 for loosening »), mais pas toutes. Si nous nous étions fiés aux notes, nous aurions manqué des cas. Seules les couleurs étaient complètes.
+Aurions-nous pu utiliser la colonne `Notes` à la place ? Comptez les cas dont la note mentionne une révision :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+# cas dont la note mentionne une révision
+noted <- step3 |>
+  filter(str_detect(notes, "revised")) |>
+  pull(study_id) |>
+  str_trim()
+
+length(noted)                         # cas que les notes mentionnent
+length(setdiff(revised_ids, noted))   # cas marqués en rouge que les notes ne mentionnent jamais
+```
+
+## Python
+
+```{python}
+# cas dont la note mentionne une révision
+has_note = step3["notes"].str.contains("revised", na=False)
+noted = set(step3.loc[has_note, "study_id"].str.strip())
+
+print(len(noted))                 # cas que les notes mentionnent
+print(len(revised_ids - noted))   # cas marqués en rouge que les notes ne mentionnent jamais
+```
+:::
+
+```{python}
+#| include: false
+chk = {"noted": float(len(noted)), "missed": float(len(revised_ids - noted))}
+```
+
+```{r}
+#| include: false
+check_agree(list(noted = length(noted), missed = length(setdiff(revised_ids, noted))), reticulate::py$chk)
+```
+
+Le remplissage rouge marque 18 cas révisés. La colonne `Notes` ne mentionne une révision (« revised 2019 for loosening ») que pour 13 d'entre eux. Si nous nous étions fiés aux notes, nous aurions manqué 5 cas. Seules les couleurs étaient complètes.
 
 ### Étape 5 : donner à chaque colonne son vrai type {#step-5-give-every-column-its-real-type}
 
@@ -502,9 +554,11 @@ key = pd.read_csv("data/answer-keys/abstraction_workbook_tidy.csv",
 pd.testing.assert_frame_equal(tidy, key, check_dtype=False)
 ```
 
+Comparez la sortie à ce que vous attendez : 120 lignes et 18 colonnes, les dates sont des dates, les nombres sont des nombres. R montre les premières valeurs de chaque colonne. Python montre combien de valeurs ne sont pas manquantes : `bmi` en a 112, soit 120 moins les 8 IMC manquants comptés à l'étape 3.
+
 ::: {.callout-tip}
 ## 🔀 R ou Python : les dates
-R a besoin d'une étape séparée pour les numéros de série Excel (`janitor::excel_numeric_to_date()`). pandas a déjà transformé ces cellules en texte date-heure (`2015-01-06 00:00:00`), que sa fonction `parse_messy_date()` lit avec les autres dates ISO. Les deux lisent `"13.01.15"` avec le jour d'abord : c'est le style suisse, celui des feuilles de l'HFR. Les deux lisent les dates ISO séparément, parce que `dayfirst=True` de pandas les inverserait aussi (`2015-11-02` deviendrait le 11 février).
+R a besoin d'une étape séparée pour les numéros de série Excel (`janitor::excel_numeric_to_date()`). pandas a déjà transformé ces cellules en texte date-heure (`2015-01-22 00:00:00`), que sa fonction `parse_messy_date()` lit avec les autres dates ISO. Les deux lisent `"14.05.15"` avec le jour d'abord : c'est le style suisse, celui des feuilles de l'HFR. Les deux lisent les dates ISO séparément, parce que `dayfirst=True` de pandas les inverserait aussi (`2015-11-02` deviendrait le 11 février). pandas stocke aussi une colonne de nombres entiers avec des valeurs manquantes sous forme de nombres décimaux : la classe ASA 2 s'affiche donc comme `2.0`. La valeur est la même.
 :::
 
 ## Remodeler l'export d'un questionnaire {#reshaping}
@@ -535,6 +589,9 @@ items <- wide |>
   select(case_id, instrument, visit, item, response)
 
 items
+
+items |> distinct(case_id, instrument) |> count(instrument)   # patients par instrument
+sum(is.na(items$response))                                    # lignes sans réponse
 ```
 
 ## Python
@@ -558,17 +615,24 @@ items = (items.assign(item=items["item"].astype(int),
               [["case_id", "instrument", "visit", "item", "response"]]
               .reset_index(drop=True))
 print(items)
+
+print(items.drop_duplicates("case_id")["instrument"].value_counts())   # patients par instrument
+print(items["response"].isna().sum())                                  # lignes sans réponse
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"rows": float(len(items)), "mean": float(items["response"].mean())}
+chk_survey = {"koos": float((items.drop_duplicates("case_id")["instrument"] == "KOOS JR").sum()),
+              "blank": float(items["response"].isna().sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(items), mean = mean(items$response, na.rm = TRUE)), reticulate::py$chk)
+check_agree(list(koos = n_distinct(items$case_id[items$instrument == "KOOS JR"]), blank = sum(is.na(items$response))),
+            reticulate::py$chk_survey)
 survey_key <- read_csv("data/answer-keys/survey_items_long.csv", show_col_types = FALSE)
 stopifnot(isTRUE(all.equal(as.data.frame(items), as.data.frame(survey_key), check.attributes = FALSE)))
 ```
@@ -579,7 +643,7 @@ pd.testing.assert_frame_equal(items, pd.read_csv("data/answer-keys/survey_items_
                               check_dtype=False)
 ```
 
-Un patient KOOS JR (score du genou pour prothèse articulaire, version abrégée) a maintenant 7 items × 4 visites = 28 lignes. Une visite manquée garde ses lignes, avec la réponse vide : ainsi « attendu mais sans réponse » reste visible.
+Un patient KOOS JR (score du genou pour prothèse articulaire, version abrégée) a maintenant 7 items × 4 visites = 28 lignes, et un patient HOOS JR 6 items × 4 visites = 24. Avec 82 patients KOOS JR et 68 patients HOOS JR, cela fait 82 × 28 + 68 × 24 = 3,928 lignes. Une visite manquée garde ses lignes, avec la réponse vide (564 lignes ici) : ainsi « attendu mais sans réponse » reste visible.
 
 ## Vérifier que rien n'a changé {#integrity}
 
@@ -659,7 +723,8 @@ tidy |>
     prom_out_of_range = sum(prom_preop < 0 | prom_preop > 100 | prom_1yr < 0 | prom_1yr > 100, na.rm = TRUE),
     preop_after_surgery = sum(prom_preop_date > surgery_date, na.rm = TRUE),
     one_year_before_surgery = sum(prom_1yr_date < surgery_date, na.rm = TRUE)
-  )
+  ) |>
+  pivot_longer(everything(), names_to = "check", values_to = "rows")   # un contrôle par ligne
 ```
 
 ## Python
@@ -695,6 +760,8 @@ tidy |> slice_sample(n = 3) |> select(case_id, site, surgery_date, age, bmi, pro
 print(tidy.sample(n=3, random_state=1)[["case_id", "site", "surgery_date", "age", "bmi", "procedure", "side"]])
 ```
 :::
+
+R et Python tirent des lignes différentes, parce que chacun a son propre générateur de nombres aléatoires. Ce n'est pas un problème : n'importe quelles trois lignes conviennent. La graine (`set.seed(1)`, `random_state=1`) fait seulement que chaque langage tire les mêmes trois lignes à chaque exécution.
 
 ### À quoi ressemble un contrôle qui échoue {#what-a-failing-check-looks-like}
 
@@ -744,8 +811,8 @@ assert int(wrong.isna().sum()) == 0 and outside_window(wrong) == 12
 
 Avec la lecture correcte, rien ne manque et chaque PROM préopératoire tombe dans sa fenêtre de temps. Les versions avec le mois d'abord se trompent de manières différentes :
 
-- **R** ne peut pas lire avec le mois d'abord des dates comme `"13.01.15"` (il n'y a pas de 13e mois) : 30 dates d'opération deviennent donc manquantes. D'autres, comme `"04.03.24"`, sont lues « avec succès » comme le 3 avril au lieu du 4 mars, et le contrôle de la fenêtre temporelle en signale 12.
-- **pandas** ne renvoie jamais de date manquante ici : quand le mois d'abord est impossible, il passe discrètement au jour d'abord. `"13.01.15"` sort donc juste par chance, alors que `"04.03.24"` devient le 3 avril. Seul le contrôle de la fenêtre temporelle le remarque : il signale 12 dates.
+- **R** ne peut pas lire avec le mois d'abord des dates comme `"14.05.15"` (il n'y a pas de 14e mois) : 30 dates d'opération deviennent donc manquantes. D'autres, comme `"08.02.15"`, sont lues « avec succès » comme le 2 août au lieu du 8 février, et le contrôle de la fenêtre temporelle en signale 12.
+- **pandas** ne renvoie jamais de date manquante ici : quand le mois d'abord est impossible, il passe discrètement au jour d'abord. `"14.05.15"` sort donc juste par chance, alors que `"08.02.15"` devient le 2 août. Seul le contrôle de la fenêtre temporelle le remarque : il signale 12 dates.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un seul contrôle ne suffit jamais
@@ -785,7 +852,24 @@ stopifnot(
   sum(items$case_id == koos_case) == 28,
   sum(is.na(wrong)) == 30,
   outside_window(wrong) == 12,
-  outside_window(parse_messy_date(step3$dos)) == 0
+  outside_window(parse_messy_date(step3$dos)) == 0,
+  # numbers added with the audit fixes
+  as.vector(table(raw$site)) == c(63, 63), sum(raw$pt_name == "TOTAL", na.rm = TRUE) == 2, sum(duplicated(raw)) == 4,
+  tapply(duplicated(raw), raw$site, sum) == c(2, 2), tapply(raw$pt_name %in% "TOTAL", raw$site, sum) == c(1, 1),
+  63 - 1 - 2 == 60, 126 - 2 - 4 == 120, nrow(step2) == 120,
+  raw$dos[1] == "42026", janitor::excel_numeric_to_date(42026) == as.Date("2015-01-22"),
+  length(revised_ids) == 18, length(noted) == 13, length(setdiff(revised_ids, noted)) == 5, all(noted %in% revised_ids),
+  any(step3$notes %in% "revised 2019 for loosening"),
+  ncol(tidy) == 18, sum(!is.na(tidy$bmi)) == 112, sum(is.na(step3$bmi)) == 8,
+  as.vector(table(distinct(items, case_id, instrument)$instrument)) == c(68, 82),
+  all(table(items$case_id[items$instrument == "HOOS JR"]) == 24), 82 * 28 + 68 * 24 == 3928, nrow(items) == 3928,
+  sum(is.na(items$response)) == 564,
+  all(c("14.05.15", "08.02.15") %in% step3$dos), all(is.na(wrong[step3$dos %in% "14.05.15"])),
+  all(wrong[step3$dos %in% "08.02.15"] == as.Date("2015-08-02")),
+  all(parse_messy_date(step3$dos)[step3$dos %in% "08.02.15"] == as.Date("2015-02-08")),
+  all(as.numeric(wrong - preop)[step3$dos %in% "08.02.15"] > 31),
+  as.vector(table(step3$asa)[c("2", "ASA 2", "II")]) == c(43, 4, 14), 43 + 4 + 14 == 61, sum(is.na(step3$asa)) == 3,
+  max(tidy$asa, na.rm = TRUE) == 3
 )
 ```
 
@@ -815,7 +899,7 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 ```
 :::
 
-`2`, `II` et `ASA 2` deviennent tous 2, et les codes de valeur manquante restent manquants.
+`2`, `II` et `ASA 2` deviennent tous 2 (43 + 14 + 4 = 61 cas). La dernière ligne correspond aux 3 cas sans classe ASA : l'étape 3 avait déjà transformé leurs codes de valeur manquante en cellules vides, et ils restent manquants. Personne dans cette feuille n'a la classe ASA 4.
 :::
 
 **2.** La feuille d'un collègue a une ligne par patient et les colonnes `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Est-elle ordonnée ? Sinon, que devrait être une ligne ?

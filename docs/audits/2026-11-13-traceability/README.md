@@ -88,14 +88,14 @@ All four were rechecked against the page text and the data after the audit.
 
 | ID | Level | Code | Finding | Details | Status |
 |---|---|---|---|---|---|
-| 01-1 | A | yes | "The notes miss some revisions" is never counted | [foundations.md](foundations.md) | open |
-| 01-2 | A | yes | The make-up of the 126 rows is stated, not shown | [foundations.md](foundations.md) | open |
-| 01-3 | B | yes | "All zeros" but R's output hides the fifth check | [foundations.md](foundations.md) | open |
-| 01-4 | B | yes | 3,928 survey rows are never explained, and the blank answers are never shown | [foundations.md](foundations.md) | open |
-| 01-5 | B | yes | The raw values the text describes are never printed, and the examples are not in the workbook | [foundations.md](foundations.md) | open |
-| 01-6 | B | no | Exercise 1's answer points at spellings the output shows differently | [foundations.md](foundations.md) | open |
-| 01-7 | C | no | The spot check prints different patients in R and Python, with no explanation | [foundations.md](foundations.md) | open |
-| 01-8 | C | no | Step 5's output is never read, and whole numbers print as `2.0` in Python | [foundations.md](foundations.md) | open |
+| 01-1 | A | yes | "The notes miss some revisions" is never counted | [foundations.md](foundations.md) | done |
+| 01-2 | A | yes | The make-up of the 126 rows is stated, not shown | [foundations.md](foundations.md) | done |
+| 01-3 | B | yes | "All zeros" but R's output hides the fifth check | [foundations.md](foundations.md) | done |
+| 01-4 | B | yes | 3,928 survey rows are never explained, and the blank answers are never shown | [foundations.md](foundations.md) | done |
+| 01-5 | B | yes | The raw values the text describes are never printed, and the examples are not in the workbook | [foundations.md](foundations.md) | done |
+| 01-6 | B | no | Exercise 1's answer points at spellings the output shows differently | [foundations.md](foundations.md) | done |
+| 01-7 | C | no | The spot check prints different patients in R and Python, with no explanation | [foundations.md](foundations.md) | done |
+| 01-8 | C | no | Step 5's output is never read, and whole numbers print as `2.0` in Python | [foundations.md](foundations.md) | done |
 | 02-1 | A | yes | 80 bilateral patients and 520 patients appear in no output | [foundations.md](foundations.md) | done |
 | 02-2 | A | yes | R's age SMD of 0.1048 is not in any output | [foundations.md](foundations.md) | open |
 | 02-3 | B | no | The quartile box quotes THA numbers the reader has not seen yet | [foundations.md](foundations.md) | open |
