@@ -129,20 +129,20 @@ All four were rechecked against the page text and the data after the audit.
 | 04-14 | B | no | "by 10 years only a handful remain": the table says 21 | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-15 | C | no | The tables under the R and Python plots differ (332 vs 331, 84 vs 83) with no explanation | [catalog-04-05.md](catalog-04-05.md) | open |
 | 04-16 | C | no | Printed survival output that is never explained: `n.event`, `std.err`, "519 right-censored" | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-1 | A | yes | Results quote "SD 16.4", which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-2 | A | yes | Results quote the median 85.8 and IQR 74.7 to 93.9, which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-3 | A | yes | n = 260, V = 22698.5 and "more patients scored above 80 than below" have no visible source | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-4 | A | yes | The Wilson interval "84.1% to 88.0%" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | open |
+| 05-1 | A | yes | Results quote "SD 16.4", which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-2 | A | yes | Results quote the median 85.8 and IQR 74.7 to 93.9, which no visible code computes | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-3 | A | yes | n = 260, V = 22698.5 and "more patients scored above 80 than below" have no visible source | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-4 | A | yes | The Wilson interval "84.1% to 88.0%" is computed only in the Prose guard | [catalog-04-05.md](catalog-04-05.md) | done |
 | 05-5 | A | yes | "the 80 patients who had both sides operated on" is never counted | [catalog-04-05.md](catalog-04-05.md) | done |
-| 05-6 | B | no | "p < 0.001" is never tied to the e-notation the output prints | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-7 | B | no | "Read the output" uses R's labels only; Python names the same values differently, or omits them | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-8 | B | no | R prints a 95% CI for the rank-biserial r (0.21 to 0.46) that the page never mentions | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-9 | B | yes | Exercise 3: the percentages 53.5%, 38.3% and 8.2% are not computed in the Solution | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-10 | B | yes | Exercise 1: the R Solution does not print the difference of −0.5 | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-11 | B | no | "about 20 minutes" is 4 × 5.5 = 22, and the page does not show the sum | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-12 | C | no | The rank-biserial r is defined by its end points only; the printed rank sums give it in one line | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-13 | C | no | The chi-square statistic is described, not calculated, although the table above gives every term | [catalog-04-05.md](catalog-04-05.md) | open |
-| 05-14 | C | no | pingouin's `CLES  NaN` and `alternative` columns are shown and never explained | [catalog-04-05.md](catalog-04-05.md) | open |
+| 05-6 | B | no | "p < 0.001" is never tied to the e-notation the output prints | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-7 | B | no | "Read the output" uses R's labels only; Python names the same values differently, or omits them | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-8 | B | no | R prints a 95% CI for the rank-biserial r (0.21 to 0.46) that the page never mentions | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-9 | B | yes | Exercise 3: the percentages 53.5%, 38.3% and 8.2% are not computed in the Solution | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-10 | B | yes | Exercise 1: the R Solution does not print the difference of −0.5 | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-11 | B | no | "about 20 minutes" is 4 × 5.5 = 22, and the page does not show the sum | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-12 | C | no | The rank-biserial r is defined by its end points only; the printed rank sums give it in one line | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-13 | C | no | The chi-square statistic is described, not calculated, although the table above gives every term | [catalog-04-05.md](catalog-04-05.md) | done |
+| 05-14 | C | no | pingouin's `CLES  NaN` and `alternative` columns are shown and never explained | [catalog-04-05.md](catalog-04-05.md) | done |
 | 06-1 | A | yes | Chi-square p without Yates' correction (0.754) is computed only in the Prose guard | [catalog-06-07.md](catalog-06-07.md) | done |
 | 06-2 | A | yes | Exercise 2: "13% with a boot and 17% with a cast scored 24" is not printed anywhere | [catalog-06-07.md](catalog-06-07.md) | done |
 | 06-3 | A | yes | Exercise 3: the two percentages and the risk difference are not printed | [catalog-06-07.md](catalog-06-07.md) | done |

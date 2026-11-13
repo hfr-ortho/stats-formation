@@ -42,6 +42,17 @@ Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen
 - Jede Person wird einmal gezählt, und die Personen sind voneinander unabhängig.
 - Sind die Daten schief, begrenzt oder ordinal → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
 
+### Was der Test wirklich macht
+
+Der Einstichproben-t-Test fragt, ob der Mittelwert der Stichprobe weit vom hypothetischen Wert entfernt ist, verglichen damit, wie stark ein solcher Mittelwert von Stichprobe zu Stichprobe schwanken würde.
+
+1. Die **Differenz** zwischen dem [Mittelwert](../glossary.qmd#mean){.term} der Stichprobe und dem hypothetischen Wert bilden.
+2. Das Rauschen im Mittelwert schätzen, seinen [Standardfehler](../glossary.qmd#standard-error){.term}: die [Standardabweichung](../glossary.qmd#standard-deviation){.term} geteilt durch √n.
+3. Teilen: **t = Differenz ÷ Standardfehler**. Ein t von 0 bedeutet, dass der Mittelwert genau dem hypothetischen Wert entspricht. Ein t jenseits von etwa ±2 bedeutet, dass die Differenz im Vergleich zum Rauschen gross ist.
+4. t in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen: die Wahrscheinlichkeit für ein t, das mindestens so weit von 0 entfernt ist, wenn der wahre Mittelwert tatsächlich der hypothetische Wert wäre.
+
+Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» t von Hand nach.
+
 ### Zuerst die Daten ansehen
 
 ::: {.panel-tabset group="language"}
@@ -88,6 +99,7 @@ Ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der gestrichelten L
 ```{r}
 op_test <- t.test(cohort$op_time_min, mu = 90)   # mu = der hypothetische Mittelwert
 op_test
+sd(cohort$op_time_min)                           # die SD, für den Results-Satz
 ```
 
 ## Python
@@ -96,6 +108,7 @@ op_test
 op_test = stats.ttest_1samp(cohort["op_time_min"], popmean=90)   # popmean = der hypothetische Mittelwert
 print(op_test)
 print(cohort["op_time_min"].mean(), op_test.confidence_interval())
+print(cohort["op_time_min"].std())                               # die SD, für den Results-Satz
 ```
 :::
 
@@ -114,11 +127,48 @@ check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), 
 
 ### Ausgabe lesen
 
-- **t = −8.23:** der beobachtete Mittelwert liegt 8.2 Standardfehler unter 90. Das Vorzeichen sagt, auf welcher Seite.
+- **t = −8.23** (in Python `statistic`): der beobachtete Mittelwert liegt 8.2 Standardfehler unter 90. Das Vorzeichen sagt, auf welcher Seite.
 - **df = 599:** Freiheitsgrade, n − 1.
-- **p < 0.001:** Ein Mittelwert, der so weit von 90 entfernt ist, wäre sehr unwahrscheinlich, wenn der wahre Mittelwert 90 Minuten betrüge.
-- **mean of x = 84.48:** unsere mittlere Operationsdauer.
+- **p < 0.001:** Ein Mittelwert, der so weit von 90 entfernt ist, wäre sehr unwahrscheinlich, wenn der wahre Mittelwert 90 Minuten betrüge. Die Ausgabe zeigt `1.204e-15`; das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: `e-15` bedeutet «den Dezimalpunkt um 15 Stellen nach links verschieben».
+- **mean of x = 84.48** (die erste Zahl in der zweiten Zeile von Python): unsere mittlere Operationsdauer.
 - **95%-KI 83.2 bis 85.8:** das Konfidenzintervall (KI) für unseren **Mittelwert**, nicht für die Differenz zu 90.
+- **SD = 16.4 Minuten** (die letzte Zeile der Ausgabe): nicht Teil des Tests, aber der Results-Satz braucht sie.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: die t-Statistik von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+time_difference <- mean(cohort$op_time_min) - 90      # Schritt 1: der Mittelwert minus der hypothetische Wert
+time_se <- sd(cohort$op_time_min) / sqrt(600)         # Schritt 2: der Standardfehler, SD ÷ √n (600 Eingriffe)
+c(difference = time_difference, standard_error = time_se)
+time_difference / time_se                             # Schritt 3: teilen
+```
+
+## Python
+
+```{python}
+time_difference = cohort["op_time_min"].mean() - 90        # Schritt 1: der Mittelwert minus der hypothetische Wert
+time_se = cohort["op_time_min"].std() / 600 ** 0.5         # Schritt 2: der Standardfehler, SD ÷ √n (600 Eingriffe)
+print(time_difference, time_se)
+print(time_difference / time_se)                           # Schritt 3: teilen
+```
+:::
+
+Der Mittelwert liegt 5.52 Minuten unter 90, und sein Standardfehler beträgt 0.671 Minuten: −5.52 ÷ 0.671 = −8.23, das t, das der Test ausgegeben hat.
+:::
+
+```{python}
+#| include: false
+chk = {"difference": float(time_difference), "se": float(time_se), "t": float(time_difference / time_se)}
+```
+
+```{r}
+#| include: false
+check_agree(list(difference = time_difference, se = time_se, t = time_difference / time_se), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -152,7 +202,7 @@ check_agree(list(diff = unname(op_test$estimate - 90), diff_low = op_test$conf.i
                  diff_high = op_test$conf.int[2] - 90), reticulate::py$chk)
 ```
 
-Die Operationen dauerten im Durchschnitt 5.5 Minuten weniger als die eingeplanten 90 (95%-KI 4.2 bis 6.8 Minuten weniger). Ob das etwas ausmacht, ist eine Planungsfrage und keine statistische: Über einen Tag mit vier Gelenkersätzen summiert es sich auf etwa 20 Minuten.
+Die Operationen dauerten im Durchschnitt 5.5 Minuten weniger als die eingeplanten 90 (95%-KI 4.2 bis 6.8 Minuten weniger). Ob das etwas ausmacht, ist eine Planungsfrage und keine statistische: Über einen Tag mit vier Gelenkersätzen summiert es sich auf 4 × 5.5 = 22 Minuten.
 
 ### Resultate formulieren
 
@@ -182,6 +232,18 @@ Sowohl `t.test(x, mu = 90)` in R als auch `ttest_1samp(x, popmean=90)` in scipy 
 - Genau genommen prüft der Test den **Pseudomedian** (den Hodges-Lehmann-Schätzer unten), der nur bei einer symmetrischen Verteilung dem Median entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
 - Sind die Daten ungefähr normalverteilt → ist der [t-Test für eine Stichprobe](#one-sample-t) vertrauter und etwas teststärker.
 
+### Was der Test wirklich macht
+
+Der Wilcoxon-Vorzeichen-Rang-Test vergleicht die Scores über Ränge mit dem hypothetischen Wert; einige extreme Scores können das Ergebnis daher nicht dominieren.
+
+1. Für jede Person den Abstand zwischen ihrem Score und dem hypothetischen Wert bilden und festhalten, ob der Score darüber oder darunter liegt.
+2. Personen beiseitelassen, deren Score genau dem hypothetischen Wert entspricht.
+3. Die Abstände der Grösse nach ordnen, ohne auf die Richtung zu achten, und jedem seine Position geben: seinen [Rang](../glossary.qmd#rank){.term}. Der kleinste Abstand erhält Rang 1; gebundene Abstände teilen sich den Mittelwert ihrer Ränge.
+4. Die Ränge der Personen über dem Wert addieren und getrennt davon die Ränge der Personen darunter. Jede der beiden Summen kann als [Teststatistik](../glossary.qmd#test-statistic){.term} dienen.
+5. Hätte die typische Person genau den hypothetischen Wert, wären die beiden Summen etwa gleich. Je einseitiger sie sind, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
+
+Nach dem Test addiert ein Kasten unter «Ausgabe lesen» die Ränge von Hand.
+
 ### Zuerst die Daten ansehen
 
 ::: {.panel-tabset group="language"}
@@ -196,6 +258,10 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 koos_1yr <- proms |>
   filter(instrument == "KOOS JR", visit == "1yr", !is.na(prom_score)) |>
   pull(prom_score)
+
+length(koos_1yr)       # wie viele Personen
+sum(koos_1yr > 80)     # wie viele über dem Zielwert liegen
+sum(koos_1yr < 80)     # wie viele darunter liegen
 
 ggplot(tibble(score = koos_1yr), aes(score)) +
   geom_histogram(binwidth = 2.5) +
@@ -216,6 +282,10 @@ proms = pd.read_csv("data/proms_long.csv")
 koos_1yr = proms.loc[(proms["instrument"] == "KOOS JR") & (proms["visit"] == "1yr"),
                      "prom_score"].dropna()
 
+print(len(koos_1yr))              # wie viele Personen
+print((koos_1yr > 80).sum())      # wie viele über dem Zielwert liegen
+print((koos_1yr < 80).sum())      # wie viele darunter liegen
+
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.hist(koos_1yr, bins=np.arange(35, 102.5, 2.5))
 ax.axvline(80, linestyle="--")                         # der Zielwert
@@ -225,7 +295,7 @@ plt.show()
 ```
 :::
 
-Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der rangbasierte Test ist die sicherere Wahl.
+260 Personen: 170 liegen über 80 und 90 darunter. 170 + 90 = 260, also hat niemand genau 80 und niemand fällt aus dem Test heraus. Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der rangbasierte Test ist die sicherere Wahl.
 
 ### Analyse durchführen
 
@@ -262,21 +332,60 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 ### Ausgabe lesen
 
 - **V = 22698** (R) oder **W_val = 11231.5** (Python): die Teststatistik, eine Summe von Rängen. Die beiden Programme melden verschiedene Summen (siehe den Kasten «R oder Python»); die p-Werte sind gleich.
-- **p < 0.001:** Scores, die so weit von 80 entfernt liegen, wären sehr unwahrscheinlich, wenn die typische Person tatsächlich 80 erzielte.
+- **p < 0.001:** Scores, die so weit von 80 entfernt liegen, wären sehr unwahrscheinlich, wenn die typische Person tatsächlich 80 erzielte. R gibt `2.293e-06` aus, das ist 0.000002293; pingouin gibt `0.000002` aus.
 - **(pseudo)median 84.35, 95%-KI 82.7 bis 86.1** (nur R): der Hodges-Lehmann-Schätzer für die Mitte der Scores, mit seinem KI.
 - **RBC = 0.34** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: die Rangsummen von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+distance <- koos_1yr - 80                    # Schritt 1: der Abstand jedes Scores vom Zielwert 80 (+ darüber, − darunter)
+distance_rank <- rank(abs(distance))         # Schritt 3: die Abstände der Grösse nach in Ränge umwandeln, ohne die Richtung
+sum(distance_rank[distance > 0])             # Schritt 4: die Rangsumme der Scores über 80 (V in R)
+sum(distance_rank[distance < 0])             # ... und der Scores unter 80 (W_val in Python)
+260 * 261 / 2                                # die beiden Summen ergeben zusammen immer n × (n + 1) ÷ 2
+```
+
+## Python
+
+```{python}
+distance = koos_1yr - 80                        # Schritt 1: der Abstand jedes Scores vom Zielwert 80 (+ darüber, − darunter)
+distance_rank = distance.abs().rank()           # Schritt 3: die Abstände der Grösse nach in Ränge umwandeln, ohne die Richtung
+print(distance_rank[distance > 0].sum())        # Schritt 4: die Rangsumme der Scores über 80 (V in R)
+print(distance_rank[distance < 0].sum())        # ... und der Scores unter 80 (W_val in Python)
+print(260 * 261 / 2)                            # die beiden Summen ergeben zusammen immer n × (n + 1) ÷ 2
+```
+:::
+
+Die Ränge der 170 Scores über 80 ergeben zusammen 22698.5, das V von R (ausgegeben als 22698), und jene der 90 Scores darunter 11231.5, das W_val von Python. Zusammen sind es 33930, also 260 × 261 ÷ 2. Niemand hat genau 80, Schritt 2 lässt also niemanden beiseite.
+:::
+
+```{python}
+#| include: false
+chk = {"above": float(distance_rank[distance > 0].sum()), "below": float(distance_rank[distance < 0].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(above = sum(distance_rank[distance > 0]), below = sum(distance_rank[distance < 0])), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
 Zwei Effektstärken sind hier nützlich:
 
 - Der **Hodges-Lehmann-Schätzer** (der Pseudomedian): eine Mitte der Scores, in Punkten. Er ist der Median aller Mittelwerte von Paaren von Scores und wird daher vom Deckeneffekt weniger beeinflusst als ein Mittelwert.
-- Die **biseriale Rangkorrelation (r)**: von −1 (alle Personen unter 80) über 0 (ausgeglichen) bis +1 (alle Personen über 80). Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross.
+- Die **biseriale Rangkorrelation (r)**: von −1 (alle Personen unter 80) über 0 (ausgeglichen) bis +1 (alle Personen über 80). Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross. Sie ist die Rangsumme über 80 minus die Rangsumme darunter, als Anteil an ihrer Summe: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+quantile(koos_1yr, probs = c(0.25, 0.50, 0.75))      # erstes Quartil, Median, drittes Quartil
 koos_test$estimate                                   # Hodges-Lehmann-Schätzer
 koos_test$conf.int                                   # sein 95%-KI
 
@@ -286,6 +395,7 @@ effectsize::rank_biserial(koos_1yr, mu = 80)         # biseriale Rangkorrelation
 ## Python
 
 ```{python}
+print(np.quantile(koos_1yr, [0.25, 0.50, 0.75]))      # erstes Quartil, Median, drittes Quartil
 # Hodges-Lehmann-Schätzer: der Median der Mittelwerte aller Paare von Scores
 def hodges_lehmann(x):
     x = np.asarray(x)
@@ -315,7 +425,7 @@ check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
 ```
 
-Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehmann-Schätzer 84.4), und die biseriale Rangkorrelation r von 0.34 ist ein mittlerer Effekt: Deutlich mehr Personen erzielten über 80 Punkte als darunter.
+Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehmann-Schätzer 84.4), und die biseriale Rangkorrelation r von 0.34 ist ein mittlerer Effekt: 170 Personen liegen über 80 und 90 darunter, und jene darüber sind tendenziell weiter davon entfernt. Der Median beträgt 85.75 (IQR 74.7 bis 93.9, die erste Zeile der Ausgabe), etwas über dem Hodges-Lehmann-Schätzer, wie bei einem Deckeneffekt zu erwarten. effectsize in R gibt für r ausserdem ein 95%-KI aus, 0.21 bis 0.46 (die Fussnote wiederholt nur den Zielwert 80); pingouin liefert r ohne KI.
 
 ### Resultate formulieren
 
@@ -346,6 +456,16 @@ Ausserdem: Personen, die **genau** 80 erzielen, tragen keine Information über d
 - Die Zielgrösse ist **kategorial** mit zwei oder mehr Kategorien, und Sie haben für jede Kategorie hypothetische Anteile.
 - Jede Person fällt in genau eine Kategorie und wird einmal gezählt.
 - Die **erwartete Häufigkeit** in jeder Kategorie (Gesamtzahl × hypothetischer Anteil) sollte mindestens 5 betragen. Fassen Sie sonst kleine Kategorien zusammen, oder verwenden Sie bei nur zwei Kategorien den [Binomialtest](#binomial-test).
+
+### Was der Test wirklich macht
+
+Der Anpassungstest vergleicht die beobachteten Häufigkeiten mit den Häufigkeiten, die die hypothetischen Anteile vorhersagen würden.
+
+1. Für jede Kategorie die [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} berechnen: die Gesamtzahl der Personen × der hypothetische Anteil dieser Kategorie.
+2. Für jede Kategorie (beobachtet − erwartet)² ÷ erwartet berechnen und die Ergebnisse addieren. Die Summe ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **χ²**: 0, wenn die beobachteten Häufigkeiten genau den erwarteten entsprechen, und umso grösser, je weiter sie auseinanderliegen.
+3. χ² mit der Chi-Quadrat-Verteilung in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen. Dieser Schritt ist eine Näherung, und eine schlechte, wenn erwartete Häufigkeiten klein sind. Daher kommt die Regel «mindestens 5».
+
+Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» χ² von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -411,9 +531,44 @@ check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reti
 
 ### Ausgabe lesen
 
-- **X-squared = 26.96:** die Chi-Quadrat-Statistik, die aufsummiert, wie weit jede beobachtete Häufigkeit von ihrer erwarteten Häufigkeit entfernt ist.
-- **df = 3:** Freiheitsgrade, die Anzahl Kategorien minus 1.
-- **p < 0.001:** Eine Verteilung, die sich so stark von jener des Registers unterscheidet, wäre sehr unwahrscheinlich, wenn unsere Patientinnen und Patienten aus derselben Verteilung stammten.
+- **X-squared = 26.96** (in Python `statistic`): die Chi-Quadrat-Statistik, die aufsummiert, wie weit jede beobachtete Häufigkeit von ihrer erwarteten Häufigkeit entfernt ist.
+- **df = 3:** Freiheitsgrade, die Anzahl Kategorien minus 1. Hier 4 − 1. scipy gibt sie nicht aus.
+- **p < 0.001:** Eine Verteilung, die sich so stark von jener des Registers unterscheidet, wäre sehr unwahrscheinlich, wenn unsere Patientinnen und Patienten aus derselben Verteilung stammten. R gibt `5.992e-06` aus, das ist 0.000005992.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: Chi-Quadrat von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+asa_expected <- sum(asa_counts) * registry                    # Schritt 1: Gesamtzahl × hypothetischer Anteil
+asa_parts <- (asa_counts - asa_expected)^2 / asa_expected     # Schritt 2: (beobachtet − erwartet)² ÷ erwartet, für jede Klasse ...
+asa_parts
+sum(asa_parts)                                                # ... und addiert
+```
+
+## Python
+
+```{python}
+asa_parts = (asa_counts - expected) ** 2 / expected           # Schritte 1 und 2: expected enthält die erwarteten Häufigkeiten; (beobachtet − erwartet)² ÷ erwartet, für jede Klasse ...
+print(asa_parts)
+print(asa_parts.sum())                                        # ... und addiert
+```
+:::
+
+Die vier Teile sind 9.60, 2.73, 11.64 und 3.00; zusammen ergeben sie 26.96, das χ², das der Test ausgegeben hat. ASA 3 trägt am meisten bei: 246 Personen, wo 198 zu erwarten waren.
+:::
+
+```{python}
+#| include: false
+chk = {"by_hand": float(asa_parts.sum()), "asa3": float(asa_parts.iloc[2])}
+```
+
+```{r}
+#| include: false
+check_agree(list(by_hand = sum(asa_parts), asa3 = unname(asa_parts[3])), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -486,6 +641,16 @@ Der Test braucht die **Anzahl** der Personen in jeder Kategorie. Wenn Sie ihm Pr
 - Jede Person wird einmal gezählt.
 - Der Binomialtest ist **exakt**: Er funktioniert bei jeder Stichprobengrösse, auch bei wenigen Ereignissen. (Der Chi-Quadrat-Anpassungstest mit zwei Kategorien ist seine Näherung für grosse Stichproben.)
 
+### Was der Test wirklich macht
+
+Der Binomialtest berechnet exakte Wahrscheinlichkeiten, ohne Näherung.
+
+1. Angenommen, der hypothetische Anteil wäre wahr. Die Binomialverteilung gibt dann die exakte Wahrscheinlichkeit jedes möglichen Ergebnisses an: 0 Personen mit dem Ereignis, 1 Person, 2 Personen und so weiter bis zu allen.
+2. Die Wahrscheinlichkeit des beobachteten Ergebnisses bestimmen.
+3. Die Wahrscheinlichkeiten aller Ergebnisse addieren, die nicht wahrscheinlicher sind als das beobachtete, auf beiden Seiten der erwarteten Anzahl. Diese Summe ist der [p-Wert](../glossary.qmd#p-value){.term}.
+
+Weil er exakte Wahrscheinlichkeiten verwendet, funktioniert der Test bei jeder Stichprobengrösse. Nach dem Test addiert ein Kasten unter «Ausgabe lesen» die Wahrscheinlichkeiten von Hand.
+
 ### Zuerst die Daten ansehen
 
 ::: {.panel-tabset group="language"}
@@ -525,6 +690,7 @@ patients   <- nrow(hip_fracture)
 
 surgery_test <- binom.test(within_48h, patients, p = 0.90)   # p = der hypothetische Anteil
 surgery_test
+prop.test(within_48h, patients, correct = FALSE)$conf.int   # das Wilson-Intervall zum Vergleich
 ```
 
 ## Python
@@ -536,6 +702,7 @@ patients = len(hip_fracture)
 surgery_test = stats.binomtest(within_48h, patients, p=0.90)   # p = der hypothetische Anteil
 print(surgery_test)
 print(surgery_test.proportion_ci(method="exact"))
+print(surgery_test.proportion_ci(method="wilson"))          # das Wilson-Intervall zum Vergleich
 ```
 :::
 
@@ -554,10 +721,46 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 
 ### Ausgabe lesen
 
-- **number of successes = 1034, number of trials = 1200:** 1,034 Patientinnen und Patienten, die innerhalb von 48 Stunden operiert wurden («successes» ist einfach das Wort der Software für das, was Sie gezählt haben).
-- **p < 0.001:** Ein Anteil, der so weit von 90 % entfernt ist, wäre sehr unwahrscheinlich, wenn unser wahrer Anteil 90 % betrüge.
-- **probability of success = 0.862:** unser Anteil, 86.2 %.
+- **number of successes = 1034, number of trials = 1200** (in Python `k=1034, n=1200`): 1,034 Patientinnen und Patienten, die innerhalb von 48 Stunden operiert wurden («successes» ist einfach das Wort der Software für das, was Sie gezählt haben).
+- **p < 0.001:** Ein Anteil, der so weit von 90 % entfernt ist, wäre sehr unwahrscheinlich, wenn unser wahrer Anteil 90 % betrüge. R gibt `2.682e-05` aus, das ist 0.00002682.
+- **probability of success = 0.862** (in Python `statistic`): unser Anteil, 86.2 %.
 - **95%-KI 0.841 bis 0.881:** unser wahrer Anteil liegt plausibel irgendwo zwischen 84.1 % und 88.1 %. Das ist das exakte Intervall (nach Clopper-Pearson).
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: der exakte p-Wert von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+probabilities <- dbinom(0:1200, size = 1200, prob = 0.90)        # Schritt 1: die Wahrscheinlichkeit jedes möglichen Ergebnisses, von 0 bis 1200, wenn das Ziel von 90 % wahr wäre
+observed_probability <- dbinom(1034, size = 1200, prob = 0.90)   # Schritt 2: die Wahrscheinlichkeit des beobachteten Ergebnisses, 1034
+sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])   # Schritt 3: alle Ergebnisse addieren, die nicht wahrscheinlicher sind (der kleine Faktor schützt vor Rundungsfehlern)
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+probabilities = stats.binom.pmf(np.arange(1201), 1200, 0.90)     # Schritt 1: die Wahrscheinlichkeit jedes möglichen Ergebnisses, von 0 bis 1200, wenn das Ziel von 90 % wahr wäre
+observed_probability = stats.binom.pmf(1034, 1200, 0.90)         # Schritt 2: die Wahrscheinlichkeit des beobachteten Ergebnisses, 1034
+print(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())   # Schritt 3: alle Ergebnisse addieren, die nicht wahrscheinlicher sind (der kleine Faktor schützt vor Rundungsfehlern)
+```
+:::
+
+Wäre 90 % der wahre Anteil, wären 1,080 der 1,200 Personen zu erwarten. Genau 1,034 zu beobachten wäre sehr unwahrscheinlich, und ebenso jedes Ergebnis, das auf einer der beiden Seiten weiter von 1,080 entfernt ist. Ihre Wahrscheinlichkeiten ergeben zusammen 0.0000268, den p-Wert, den beide Programme ausgegeben haben (`2.682e-05`).
+:::
+
+```{python}
+#| include: false
+chk = {"p_by_hand": float(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -576,7 +779,7 @@ Ein Zielwert legt eine einseitige Frage nahe: Liegen wir *unter* 90 %? Ein eins
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: exakte KI
-`binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das Wilson-Intervall, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht. Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
+`binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das Wilson-Intervall, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht (die letzte Zeile der Ausgabe unter «Analyse durchführen»). Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
 :::
 
 ```{r}
@@ -612,6 +815,20 @@ stopifnot(
   round(100 * (surgery_test$conf.int - 0.90), 1) == c(-5.9, -1.9),
   0.90 * patients == 1080, 0.90 * patients - within_48h == 46,
   round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
+  # the by-hand boxes, and the numbers added with them
+  isTRUE(all.equal(time_difference / time_se, unname(op_test$statistic))), round(time_se, 3) == 0.671,
+  round(time_difference, 2) == -5.52, round(-5.52 / 0.671, 2) == -8.23, 4 * 5.5 == 22, signif(op_test$p.value, 4) == 1.204e-15,
+  sum(koos_1yr > 80) == 170, sum(koos_1yr < 80) == 90, 170 + 90 == 260,
+  sum(distance_rank[distance > 0]) == 22698.5, sum(distance_rank[distance < 0]) == 11231.5, 260 * 261 / 2 == 33930,
+  round((22698.5 - 11231.5) / 33930, 2) == 0.34,
+  mean(distance_rank[distance > 0]) > mean(distance_rank[distance < 0]),
+  round(unname(quantile(koos_1yr, 0.5)), 2) == 85.75, round(koos_rb$CI_low, 2) == 0.21, round(koos_rb$CI_high, 2) == 0.46,
+  signif(koos_test$p.value, 4) == 2.293e-06,
+  round(as.vector(asa_parts), 2) == c(9.60, 2.73, 11.64, 3.00), isTRUE(all.equal(sum(asa_parts), unname(asa_test$statistic))),
+  round(as.vector(asa_expected)) == c(60, 330, 198, 12), signif(asa_test$p.value, 4) == 5.992e-06,
+  isTRUE(all.equal(sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)]), surgery_test$p.value)),
+  signif(surgery_test$p.value, 4) == 2.682e-05, round(surgery_test$p.value, 7) == 0.0000268,
+  round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
   # exercise solutions
   round(mean(cohort$age), 1) == 65.5, round(mean(cohort$age) - 66, 1) == -0.5,
   round(t.test(cohort$age, mu = 66)$conf.int - 66, 1) == c(-1.2, 0.3),
@@ -640,6 +857,7 @@ Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten ge
 ```{r}
 age_test <- t.test(cohort$age, mu = 66)
 age_test
+age_test$estimate - 66
 age_test$conf.int - 66
 ```
 
@@ -695,6 +913,7 @@ Das KI schliesst 7 % ein, es gibt also keinen klaren Hinweis, dass sich unsere 
 ```{r}
 smoking <- table(factor(cohort$smoker, levels = c("never", "former", "current")))
 smoking
+100 * prop.table(smoking)
 chisq.test(smoking, p = c(0.50, 0.40, 0.10))
 ```
 
@@ -703,9 +922,12 @@ chisq.test(smoking, p = c(0.50, 0.40, 0.10))
 ```{python}
 smoking = cohort["smoker"].value_counts()[["never", "former", "current"]]
 print(smoking)
+print(100 * smoking / smoking.sum())
 print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10], index=smoking.index)))
 ```
 :::
 
 > **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
+
+Die zweite Zeile der Ausgabe zeigt die Prozentwerte. Der Test hat 3 Kategorien − 1 = 2 Freiheitsgrade; scipy gibt sie nicht aus.
 :::

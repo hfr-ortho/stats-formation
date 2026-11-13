@@ -42,6 +42,17 @@ Choose the hypothetical value **before** you look at your data, and say where it
 - Each patient is counted once and patients are independent of each other.
 - If the data are skewed, bounded or ordinal → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
 
+### What the test really does
+
+The one-sample t test asks whether the sample mean is far from the hypothetical value, compared with how much a mean like this would wobble from one sample to the next.
+
+1. Take the **difference** between the sample [mean](../glossary.qmd#mean){.term} and the hypothetical value.
+2. Estimate the noise in the mean, its [standard error](../glossary.qmd#standard-error){.term}: the [standard deviation](../glossary.qmd#standard-deviation){.term} divided by √n.
+3. Divide: **t = difference ÷ standard error**. A t of 0 means the mean is exactly the hypothetical value. A t beyond about ±2 means the difference is large compared with the noise.
+4. Turn t into a [p-value](../glossary.qmd#p-value){.term}: the chance of a t at least this far from 0 if the true mean really were the hypothetical value.
+
+Once the test has run, a box under "Read the output" rebuilds t by hand.
+
 ### Look at the data first
 
 ::: {.panel-tabset group="language"}
@@ -88,6 +99,7 @@ A roughly symmetric hump, centered a little to the left of the dashed line at 90
 ```{r}
 op_test <- t.test(cohort$op_time_min, mu = 90)   # mu = the hypothetical mean
 op_test
+sd(cohort$op_time_min)                           # the SD, for the Results sentence
 ```
 
 ## Python
@@ -96,6 +108,7 @@ op_test
 op_test = stats.ttest_1samp(cohort["op_time_min"], popmean=90)   # popmean = the hypothetical mean
 print(op_test)
 print(cohort["op_time_min"].mean(), op_test.confidence_interval())
+print(cohort["op_time_min"].std())                               # the SD, for the Results sentence
 ```
 :::
 
@@ -114,11 +127,48 @@ check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), 
 
 ### Read the output
 
-- **t = −8.23:** the observed mean is 8.2 standard errors below 90. The sign says which side.
+- **t = −8.23** (`statistic` in Python): the observed mean is 8.2 standard errors below 90. The sign says which side.
 - **df = 599:** degrees of freedom, n − 1.
-- **p < 0.001:** a mean this far from 90 would be very unlikely if the true average were 90 minutes.
-- **mean of x = 84.48:** our average operative time.
+- **p < 0.001:** a mean this far from 90 would be very unlikely if the true average were 90 minutes. The output prints `1.204e-15`, which is [scientific notation](../glossary.qmd#scientific-notation){.term}: `e-15` means "move the decimal point 15 places to the left".
+- **mean of x = 84.48** (the first number on Python's second line): our average operative time.
 - **95% CI 83.2 to 85.8:** the CI for our **mean**, not for the difference from 90.
+- **SD = 16.4 minutes** (the last line of output): not part of the test, but the Results sentence needs it.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the t statistic by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+time_difference <- mean(cohort$op_time_min) - 90      # step 1: the mean minus the hypothetical value
+time_se <- sd(cohort$op_time_min) / sqrt(600)         # step 2: the standard error, SD ÷ √n (600 procedures)
+c(difference = time_difference, standard_error = time_se)
+time_difference / time_se                             # step 3: divide
+```
+
+## Python
+
+```{python}
+time_difference = cohort["op_time_min"].mean() - 90        # step 1: the mean minus the hypothetical value
+time_se = cohort["op_time_min"].std() / 600 ** 0.5         # step 2: the standard error, SD ÷ √n (600 procedures)
+print(time_difference, time_se)
+print(time_difference / time_se)                           # step 3: divide
+```
+:::
+
+The mean is 5.52 minutes below 90, and its standard error is 0.671 minutes: −5.52 ÷ 0.671 = −8.23, the t the test printed.
+:::
+
+```{python}
+#| include: false
+chk = {"difference": float(time_difference), "se": float(time_se), "t": float(time_difference / time_se)}
+```
+
+```{r}
+#| include: false
+check_agree(list(difference = time_difference, se = time_se, t = time_difference / time_se), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -152,7 +202,7 @@ check_agree(list(diff = unname(op_test$estimate - 90), diff_low = op_test$conf.i
                  diff_high = op_test$conf.int[2] - 90), reticulate::py$chk)
 ```
 
-Operations took 5.5 minutes less than the booked 90 on average (95% CI 4.2 to 6.8 minutes less). Whether that matters is a scheduling question, not a statistical one: over a day of four joints, it adds up to about 20 minutes.
+Operations took 5.5 minutes less than the booked 90 on average (95% CI 4.2 to 6.8 minutes less). Whether that matters is a scheduling question, not a statistical one: over a day of four joints, it adds up to 4 × 5.5 = 22 minutes.
 
 ### How to report it
 
@@ -182,6 +232,18 @@ Both R's `t.test(x, mu = 90)` and scipy's `ttest_1samp(x, popmean=90)` report th
 - Strictly, it tests the **pseudomedian** (the Hodges-Lehmann estimate below), which equals the median only for a symmetric distribution. With a ceiling the two differ a little; report both.
 - If the data are roughly normal → the [one-sample t test](#one-sample-t) is more familiar and slightly more powerful.
 
+### What the test really does
+
+The Wilcoxon signed-rank test compares the scores with the hypothetical value by rank, so a few extreme scores can't dominate.
+
+1. For each patient, take the distance between their score and the hypothetical value, and note whether the score is above or below it.
+2. Set aside any patient who scores exactly the hypothetical value.
+3. Line the distances up by size, ignoring the direction, and give each its position: its [rank](../glossary.qmd#rank){.term}. The smallest distance gets rank 1; tied distances share the average of their ranks.
+4. Add up the ranks of the patients above the value, and separately the ranks of those below. Either sum can serve as the [test statistic](../glossary.qmd#test-statistic){.term}.
+5. If the typical patient scored exactly the hypothetical value, the two sums would be about equal. The more one-sided they are, the smaller the [p-value](../glossary.qmd#p-value){.term}.
+
+Once the test has run, a box under "Read the output" adds up the ranks by hand.
+
 ### Look at the data first
 
 ::: {.panel-tabset group="language"}
@@ -196,6 +258,10 @@ proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
 koos_1yr <- proms |>
   filter(instrument == "KOOS JR", visit == "1yr", !is.na(prom_score)) |>
   pull(prom_score)
+
+length(koos_1yr)       # how many patients
+sum(koos_1yr > 80)     # how many scored above the target
+sum(koos_1yr < 80)     # how many scored below it
 
 ggplot(tibble(score = koos_1yr), aes(score)) +
   geom_histogram(binwidth = 2.5) +
@@ -216,6 +282,10 @@ proms = pd.read_csv("data/proms_long.csv")
 koos_1yr = proms.loc[(proms["instrument"] == "KOOS JR") & (proms["visit"] == "1yr"),
                      "prom_score"].dropna()
 
+print(len(koos_1yr))              # how many patients
+print((koos_1yr > 80).sum())      # how many scored above the target
+print((koos_1yr < 80).sum())      # how many scored below it
+
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.hist(koos_1yr, bins=np.arange(35, 102.5, 2.5))
 ax.axvline(80, linestyle="--")                         # the target
@@ -225,7 +295,7 @@ plt.show()
 ```
 :::
 
-A ceiling at 100 and a long tail to the left: the rank-based test is the safer choice.
+260 patients: 170 scored above 80 and 90 below. 170 + 90 = 260, so nobody scored exactly 80 and nobody is dropped from the test. A ceiling at 100 and a long tail to the left: the rank-based test is the safer choice.
 
 ### Run it
 
@@ -262,21 +332,60 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 ### Read the output
 
 - **V = 22698** (R) or **W_val = 11231.5** (Python): the test statistic, a sum of ranks. The two programs report different sums (see the R vs Python box); the p-values are the same.
-- **p < 0.001:** scores this far from 80 would be very unlikely if the typical patient really scored 80.
+- **p < 0.001:** scores this far from 80 would be very unlikely if the typical patient really scored 80. R prints `2.293e-06`, that is 0.000002293; pingouin prints `0.000002`.
 - **(pseudo)median 84.35, 95% CI 82.7 to 86.1** (R only): the Hodges-Lehmann estimate of the center of the scores, with its CI.
 - **RBC = 0.34** (Python): the rank-biserial effect size, below.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the rank sums by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+distance <- koos_1yr - 80                    # step 1: each score's distance from the target of 80 (+ above, − below)
+distance_rank <- rank(abs(distance))         # step 3: rank the distances by size, ignoring the direction
+sum(distance_rank[distance > 0])             # step 4: the rank sum of the scores above 80 (R's V)
+sum(distance_rank[distance < 0])             # ... and of the scores below 80 (Python's W_val)
+260 * 261 / 2                                # the two sums always add up to n × (n + 1) ÷ 2
+```
+
+## Python
+
+```{python}
+distance = koos_1yr - 80                        # step 1: each score's distance from the target of 80 (+ above, − below)
+distance_rank = distance.abs().rank()           # step 3: rank the distances by size, ignoring the direction
+print(distance_rank[distance > 0].sum())        # step 4: the rank sum of the scores above 80 (R's V)
+print(distance_rank[distance < 0].sum())        # ... and of the scores below 80 (Python's W_val)
+print(260 * 261 / 2)                            # the two sums always add up to n × (n + 1) ÷ 2
+```
+:::
+
+The ranks of the 170 scores above 80 add up to 22698.5, R's V (printed as 22698), and those of the 90 scores below to 11231.5, Python's W_val. Together they make 33930, which is 260 × 261 ÷ 2. Nobody scored exactly 80, so step 2 sets nobody aside.
+:::
+
+```{python}
+#| include: false
+chk = {"above": float(distance_rank[distance > 0].sum()), "below": float(distance_rank[distance < 0].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(above = sum(distance_rank[distance > 0]), below = sum(distance_rank[distance < 0])), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
 Two effect sizes are useful here:
 
 - The **Hodges-Lehmann estimate** (the pseudomedian): a center of the scores, in points. It's the median of all the averages of pairs of scores, so it's less affected by the ceiling than a mean.
-- The **rank-biserial correlation (r)**: from −1 (every patient below 80) through 0 (balanced) to +1 (every patient above 80). As a rough guide, 0.1 is small, 0.3 moderate and 0.5 large.
+- The **rank-biserial correlation (r)**: from −1 (every patient below 80) through 0 (balanced) to +1 (every patient above 80). As a rough guide, 0.1 is small, 0.3 moderate and 0.5 large. It is the rank sum above 80 minus the rank sum below, as a share of their total: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+quantile(koos_1yr, probs = c(0.25, 0.50, 0.75))      # first quartile, median, third quartile
 koos_test$estimate                                   # Hodges-Lehmann estimate
 koos_test$conf.int                                   # its 95% CI
 
@@ -286,6 +395,7 @@ effectsize::rank_biserial(koos_1yr, mu = 80)         # rank-biserial r and 95% C
 ## Python
 
 ```{python}
+print(np.quantile(koos_1yr, [0.25, 0.50, 0.75]))      # first quartile, median, third quartile
 # Hodges-Lehmann estimate: the median of the averages of every pair of scores
 def hodges_lehmann(x):
     x = np.asarray(x)
@@ -315,7 +425,7 @@ check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
 ```
 
-The typical 1-year score was about 4 points above the target (Hodges-Lehmann estimate 84.4), and the rank-biserial r of 0.34 is a moderate effect: noticeably more patients scored above 80 than below.
+The typical 1-year score was about 4 points above the target (Hodges-Lehmann estimate 84.4), and the rank-biserial r of 0.34 is a moderate effect: 170 patients scored above 80 and 90 below, and those above tended to be further from it. The median is 85.75 (IQR 74.7 to 93.9, the first line of output), a little above the Hodges-Lehmann estimate, as expected with a ceiling. R's effectsize also prints a 95% CI for r, 0.21 to 0.46 (its footnote only restates the target of 80); pingouin gives r without a CI.
 
 ### How to report it
 
@@ -346,6 +456,16 @@ Also: patients who score **exactly** 80 carry no information about the direction
 - The outcome is **categorical** with two or more categories, and you have hypothetical proportions for every category.
 - Each patient falls in exactly one category, and is counted once.
 - The **expected count** in every category (total × hypothetical proportion) should be at least 5. Otherwise combine small categories, or with only two categories use the [binomial test](#binomial-test).
+
+### What the test really does
+
+The goodness-of-fit test compares the counts you observed with the counts the hypothetical proportions would predict.
+
+1. Work out the [expected count](../glossary.qmd#expected-count){.term} for each category: the total number of patients × that category's hypothetical proportion.
+2. For each category, take (observed − expected)² ÷ expected, then add up the results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **χ²**: 0 when the observed counts match the expected ones exactly, and larger the further apart they are.
+3. Turn χ² into a [p-value](../glossary.qmd#p-value){.term} with the chi-square distribution. This step is an approximation, and a poor one when expected counts are small. That is where the "at least 5" rule comes from.
+
+Once the test has run, a box under "Read the output" rebuilds χ² by hand.
 
 ### Look at the data first
 
@@ -411,9 +531,44 @@ check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reti
 
 ### Read the output
 
-- **X-squared = 26.96:** the chi-square statistic, adding up how far each observed count is from its expected count.
-- **df = 3:** degrees of freedom, the number of categories minus 1.
-- **p < 0.001:** a mix this different from the registry's would be very unlikely if our patients came from the same mix.
+- **X-squared = 26.96** (`statistic` in Python): the chi-square statistic, adding up how far each observed count is from its expected count.
+- **df = 3:** degrees of freedom, the number of categories minus 1. Here 4 − 1. scipy doesn't print it.
+- **p < 0.001:** a mix this different from the registry's would be very unlikely if our patients came from the same mix. R prints `5.992e-06`, that is 0.000005992.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: chi-square by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+asa_expected <- sum(asa_counts) * registry                    # step 1: total × hypothetical proportion
+asa_parts <- (asa_counts - asa_expected)^2 / asa_expected     # step 2: (observed − expected)² ÷ expected, for each class ...
+asa_parts
+sum(asa_parts)                                                # ... and added up
+```
+
+## Python
+
+```{python}
+asa_parts = (asa_counts - expected) ** 2 / expected           # steps 1 and 2: expected holds the expected counts; (observed − expected)² ÷ expected, for each class ...
+print(asa_parts)
+print(asa_parts.sum())                                        # ... and added up
+```
+:::
+
+The four parts are 9.60, 2.73, 11.64 and 3.00, and they add up to 26.96, the χ² the test printed. ASA 3 contributes most: 246 patients where 198 were expected.
+:::
+
+```{python}
+#| include: false
+chk = {"by_hand": float(asa_parts.sum()), "asa3": float(asa_parts.iloc[2])}
+```
+
+```{r}
+#| include: false
+check_agree(list(by_hand = sum(asa_parts), asa3 = unname(asa_parts[3])), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -486,6 +641,16 @@ R's `chisq.test(counts, p = ...)` takes the hypothetical **proportions** (they m
 - Each patient is counted once.
 - The binomial test is **exact**: it works for any sample size, including small numbers of events. (The chi-square goodness-of-fit test with two categories is its large-sample approximation.)
 
+### What the test really does
+
+The binomial test works out exact probabilities, with no approximation.
+
+1. Suppose the hypothetical proportion were true. The binomial distribution then gives the exact probability of every possible result: 0 patients with the outcome, 1 patient, 2 patients, and so on up to all of them.
+2. Find the probability of the result you observed.
+3. Add up the probabilities of all the results that are no more likely than yours, on either side of the expected number. That sum is the [p-value](../glossary.qmd#p-value){.term}.
+
+Because it uses exact probabilities, the test works for any sample size. Once the test has run, a box under "Read the output" adds up the probabilities by hand.
+
 ### Look at the data first
 
 ::: {.panel-tabset group="language"}
@@ -525,6 +690,7 @@ patients   <- nrow(hip_fracture)
 
 surgery_test <- binom.test(within_48h, patients, p = 0.90)   # p = the hypothetical proportion
 surgery_test
+prop.test(within_48h, patients, correct = FALSE)$conf.int   # the Wilson interval, for comparison
 ```
 
 ## Python
@@ -536,6 +702,7 @@ patients = len(hip_fracture)
 surgery_test = stats.binomtest(within_48h, patients, p=0.90)   # p = the hypothetical proportion
 print(surgery_test)
 print(surgery_test.proportion_ci(method="exact"))
+print(surgery_test.proportion_ci(method="wilson"))          # the Wilson interval, for comparison
 ```
 :::
 
@@ -554,10 +721,46 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 
 ### Read the output
 
-- **number of successes = 1034, number of trials = 1200:** 1,034 patients operated on within 48 hours ("successes" is just the software's word for the outcome you counted).
-- **p < 0.001:** a proportion this far from 90% would be very unlikely if our true proportion were 90%.
-- **probability of success = 0.862:** our proportion, 86.2%.
+- **number of successes = 1034, number of trials = 1200** (`k=1034, n=1200` in Python): 1,034 patients operated on within 48 hours ("successes" is just the software's word for the outcome you counted).
+- **p < 0.001:** a proportion this far from 90% would be very unlikely if our true proportion were 90%. R prints `2.682e-05`, that is 0.00002682.
+- **probability of success = 0.862** (`statistic` in Python): our proportion, 86.2%.
 - **95% CI 0.841 to 0.881:** our true proportion is plausibly anywhere from 84.1% to 88.1%. This is the exact (Clopper-Pearson) interval.
+
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: the exact p-value by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+probabilities <- dbinom(0:1200, size = 1200, prob = 0.90)        # step 1: the probability of each possible result, from 0 to 1200, if the target of 90% were true
+observed_probability <- dbinom(1034, size = 1200, prob = 0.90)   # step 2: the probability of the result we saw, 1034
+sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])   # step 3: add up every result that is no more likely (the small factor guards against rounding)
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+probabilities = stats.binom.pmf(np.arange(1201), 1200, 0.90)     # step 1: the probability of each possible result, from 0 to 1200, if the target of 90% were true
+observed_probability = stats.binom.pmf(1034, 1200, 0.90)         # step 2: the probability of the result we saw, 1034
+print(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())   # step 3: add up every result that is no more likely (the small factor guards against rounding)
+```
+:::
+
+If 90% were the true proportion, 1,080 of the 1,200 patients would be expected. Seeing exactly 1,034 would be very unlikely, and so would every result further from 1,080 on either side. Their probabilities add up to 0.0000268, the p-value both programs printed (`2.682e-05`).
+:::
+
+```{python}
+#| include: false
+chk = {"p_by_hand": float(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])), reticulate::py$chk)
+```
 
 ### Effect size and 95% CI
 
@@ -576,7 +779,7 @@ A target invites a one-sided question: are we *below* 90%? A one-sided test roug
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: exact CIs
-R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the Wilson interval that [page 4](04-describe-one-group.qmd#proportion) uses, which for these 1,034 of 1,200 patients runs from 84.1% to 88.0%. Either is fine; say which you used.
+R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the Wilson interval that [page 4](04-describe-one-group.qmd#proportion) uses, which for these 1,034 of 1,200 patients runs from 84.1% to 88.0% (the last line of output under "Run it"). Either is fine; say which you used.
 :::
 
 ```{r}
@@ -612,6 +815,20 @@ stopifnot(
   round(100 * (surgery_test$conf.int - 0.90), 1) == c(-5.9, -1.9),
   0.90 * patients == 1080, 0.90 * patients - within_48h == 46,
   round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
+  # the by-hand boxes, and the numbers added with them
+  isTRUE(all.equal(time_difference / time_se, unname(op_test$statistic))), round(time_se, 3) == 0.671,
+  round(time_difference, 2) == -5.52, round(-5.52 / 0.671, 2) == -8.23, 4 * 5.5 == 22, signif(op_test$p.value, 4) == 1.204e-15,
+  sum(koos_1yr > 80) == 170, sum(koos_1yr < 80) == 90, 170 + 90 == 260,
+  sum(distance_rank[distance > 0]) == 22698.5, sum(distance_rank[distance < 0]) == 11231.5, 260 * 261 / 2 == 33930,
+  round((22698.5 - 11231.5) / 33930, 2) == 0.34,
+  mean(distance_rank[distance > 0]) > mean(distance_rank[distance < 0]),
+  round(unname(quantile(koos_1yr, 0.5)), 2) == 85.75, round(koos_rb$CI_low, 2) == 0.21, round(koos_rb$CI_high, 2) == 0.46,
+  signif(koos_test$p.value, 4) == 2.293e-06,
+  round(as.vector(asa_parts), 2) == c(9.60, 2.73, 11.64, 3.00), isTRUE(all.equal(sum(asa_parts), unname(asa_test$statistic))),
+  round(as.vector(asa_expected)) == c(60, 330, 198, 12), signif(asa_test$p.value, 4) == 5.992e-06,
+  isTRUE(all.equal(sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)]), surgery_test$p.value)),
+  signif(surgery_test$p.value, 4) == 2.682e-05, round(surgery_test$p.value, 7) == 0.0000268,
+  round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
   # exercise solutions
   round(mean(cohort$age), 1) == 65.5, round(mean(cohort$age) - 66, 1) == -0.5,
   round(t.test(cohort$age, mu = 66)$conf.int - 66, 1) == c(-1.2, 0.3),
@@ -640,6 +857,7 @@ The solutions use the packages and data loaded in the sections above, so run the
 ```{r}
 age_test <- t.test(cohort$age, mu = 66)
 age_test
+age_test$estimate - 66
 age_test$conf.int - 66
 ```
 
@@ -695,6 +913,7 @@ The CI includes 7%, so there's no clear evidence that our mortality differs from
 ```{r}
 smoking <- table(factor(cohort$smoker, levels = c("never", "former", "current")))
 smoking
+100 * prop.table(smoking)
 chisq.test(smoking, p = c(0.50, 0.40, 0.10))
 ```
 
@@ -703,9 +922,12 @@ chisq.test(smoking, p = c(0.50, 0.40, 0.10))
 ```{python}
 smoking = cohort["smoker"].value_counts()[["never", "former", "current"]]
 print(smoking)
+print(100 * smoking / smoking.sum())
 print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10], index=smoking.index)))
 ```
 :::
 
 > **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
+
+The second line of output gives the percentages. The test has 3 categories − 1 = 2 degrees of freedom; scipy doesn't print them.
 :::
