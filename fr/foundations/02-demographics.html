@@ -360,6 +360,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Tests de A à Z</span></a>
   </div>
 </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../fr/glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Glossaire</span></a>
+  </div>
+</li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
@@ -4263,6 +4269,54 @@ if (typeof document !== "undefined") {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
     else add();
   }
+}
+</script>
+<script id="glossary-terms">
+// Glossary terms. A term in the text is a link with the class "term" to an entry on the glossary page of the
+// same language: [standard error](../glossary.qmd#standard-error){.term}. This script shows the entry's definition
+// when the reader hovers over the term or tabs to it. The definitions live only on the glossary page, which is
+// fetched once per page view, so a tooltip can never disagree with the glossary. Without this script, or if the
+// fetch fails, the term is still an ordinary link to its entry.
+
+// The entry a term link points to: "glossary.html#standard-error" -> "standard-error".
+function termId(href) {
+  const i = String(href || "").indexOf("#");
+  return i === -1 ? "" : decodeURIComponent(String(href).slice(i + 1));
+}
+
+// The text of an entry's definition, from the glossary page's document: the <dd> after the <dt> that holds the id.
+function termDefinition(glossary, id) {
+  const entry = id ? glossary.getElementById(id) : null;
+  const term = entry && entry.closest ? entry.closest("dt") : null;
+  const definition = term ? term.nextElementSibling : null;
+  return definition && definition.tagName === "DD" ? definition.textContent.replace(/\s+/g, " ").trim() : "";
+}
+
+if (typeof document !== "undefined") {
+  const start = () => {
+    const links = Array.from(document.querySelectorAll("a.term[href*='#']"));
+    if (!links.length || typeof window.fetch !== "function") return;
+    const page = links[0].href.split("#")[0];   // every term on a page links to the same glossary page
+    window.fetch(page)
+      .then((response) => (response.ok ? response.text() : ""))
+      .then((html) => {
+        if (!html) return;
+        const glossary = new DOMParser().parseFromString(html, "text/html");
+        links.forEach((a) => {
+          const text = termDefinition(glossary, termId(a.getAttribute("href")));
+          if (!text) return;
+          // Quarto loads tippy on every page for its own pop-ups; without it, the browser's own tooltip does the job.
+          if (typeof window.tippy === "function") {
+            window.tippy(a, { content: text, theme: "quarto", placement: "bottom-start", maxWidth: 420, delay: 100, arrow: false });
+          } else {
+            a.title = text;
+          }
+        });
+      })
+      .catch(() => { /* the terms stay ordinary links */ });
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+  else start();
 }
 </script>
 <script id="quarto-html-after-body" type="application/javascript">
