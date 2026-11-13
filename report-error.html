@@ -1,0 +1,58 @@
+<script id="report-error">
+// The "Report an error" link (spec: docs/superpowers/specs/2026-11-13-report-error-design.md). It opens an email
+// in the reader's own mail app that already names the page, the section and any text they highlighted. Nothing is
+// sent from here: the reader presses Send. This file uses no name from lang-switch.html.
+const REPORT_TO = "josephmichael.schwab@h-fr.ch";
+const REPORT_PREFIX = "HFR Ortho Stats: ";   // the same in every language, so one mail rule catches every report
+const REPORT_MAX = 300;                      // characters of highlighted text quoted in the email
+const REPORT_LANGS = ["en", "de", "fr"];
+
+// `link` is the entry under "On this page"; `question` and `action` make the line at the end of the page;
+// `page`, `highlighted` and `prompt` go in the email. French takes a non-breaking space (\u00a0) before ? and :.
+// getting-started/using-this-site.qmd quotes `link` in each language: change both together.
+const REPORT_TEXT = {
+  en: { link: "Report an error", question: "Found a mistake on this page?", action: "Report it by email.",
+        page: "Page", highlighted: "Highlighted text", prompt: "What is wrong or confusing:" },
+  de: { link: "Fehler melden", question: "Einen Fehler auf dieser Seite gefunden?", action: "Melden Sie ihn per E-Mail.",
+        page: "Seite", highlighted: "Markierter Text", prompt: "Was ist falsch oder unklar:" },
+  fr: { link: "Signaler une erreur", question: "Vous avez trouvé une erreur sur cette page\u00a0?",
+        action: "Signalez-la par e-mail.",
+        page: "Page", highlighted: "Texte surligné", prompt: "Ce qui est faux ou confus\u00a0:" },
+};
+// What joins a label and its value in the email.
+const REPORT_SEPARATOR = { en: ": ", de: ": ", fr: "\u00a0: " };
+
+// Which page an address names: { lang: "en", page: "en/catalog/06-two-unpaired-groups" }. null outside the
+// language folders (the site root), where there is nothing to report.
+function reportPage(pathname) {
+  const parts = pathname.split("/");
+  const i = parts.findIndex((part) => REPORT_LANGS.includes(part));
+  if (i === -1) return null;
+  const rest = parts.slice(i + 1).join("/").replace(/\.html$/, "");
+  return { lang: parts[i], page: parts[i] + "/" + (rest || "index") };
+}
+
+// Highlighted text as one line, cut to REPORT_MAX characters.
+function trimSelection(text) {
+  const line = String(text || "").replace(/\s+/g, " ").trim();
+  return line.length > REPORT_MAX ? line.slice(0, REPORT_MAX) + "…" : line;
+}
+
+// The page's address with its section: the section that holds the highlight, else the one in the address bar.
+function reportUrl(base, sectionId, hash) {
+  return sectionId ? base + "#" + sectionId : base + (hash || "");
+}
+
+// The mailto: address. Line breaks are \r\n, and everything is percent-encoded, as mail apps expect.
+function reportHref(lang, page, url, selection) {
+  const known = REPORT_LANGS.includes(lang) ? lang : "en";
+  const text = REPORT_TEXT[known];
+  const sep = REPORT_SEPARATOR[known];
+  const quoted = trimSelection(selection);
+  const lines = [text.page + sep + url];
+  if (quoted) lines.push(text.highlighted + sep + '"' + quoted + '"');
+  lines.push("", text.prompt, "");
+  return "mailto:" + REPORT_TO + "?subject=" + encodeURIComponent(REPORT_PREFIX + page) +
+         "&body=" + encodeURIComponent(lines.join("\r\n"));
+}
+</script>
