@@ -241,19 +241,19 @@ All four were rechecked against the page text and the data after the audit.
 | 11-18 | B | no | "With 31 failures, this model can take about three terms": the rule is not stated here | [catalog-10-12.md](catalog-10-12.md) | done |
 | 11-19 | C | no | Regression summaries: most of the printed output is never explained, and p is quoted in a form neither tab prints | [catalog-10-12.md](catalog-10-12.md) | done |
 | 11-20 | C | no | Logistic: "Null and residual deviance (R) or LLR p-value (Python)" leaves the R reader without the link | [catalog-10-12.md](catalog-10-12.md) | done |
-| 12-1 | A | yes | Logistic ⚠️ box: "15 of 350" and "all 6 patients whose graft failed in the first year" are never shown | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-2 | A | no | lifelines' default result "0.82915" is computed only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
+| 12-1 | A | yes | Logistic ⚠️ box: "15 of 350" and "all 6 patients whose graft failed in the first year" are never shown | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-2 | A | no | lifelines' default result "0.82915" is computed only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | done |
 | 12-3 | A | no | "the 80 patients who had both sides operated on" | [catalog-10-12.md](catalog-10-12.md) | done |
-| 12-4 | B | no | Python prints p = 0.001 for both grafts; the text says p < 0.001 | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-5 | B | yes | Python prints proportions where the text quotes percentages | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-6 | B | yes | "a difference of 19 days (95% CI 11 to 28)": 19 is not printed, and the CI is in R only | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-7 | B | yes | The "before adjustment" numbers (1.37 and 3.07) live on other pages | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-8 | B | no | "173 of 350 reconstructions (49.4%)": total and percentage not printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-9 | B | no | Exercise 3: "only 8 of the 74 deaths" and "already predicts the rate after 72 hours" rest on page 11 | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-10 | B | no | Three of five odds-ratio CIs differ in Python; the 🔀 box gives only one | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-11 | B | no | Model-comparison tables: the reported df and χ² are never tied to their columns | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-12 | B | yes | Cox overall test: df and p are in R's output only | [catalog-10-12.md](catalog-10-12.md) | open |
-| 12-13 | C | no | The spline is run before it is explained, inside a section about something else | [catalog-10-12.md](catalog-10-12.md) | open |
+| 12-4 | B | no | Python prints p = 0.001 for both grafts; the text says p < 0.001 | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-5 | B | yes | Python prints proportions where the text quotes percentages | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-6 | B | yes | "a difference of 19 days (95% CI 11 to 28)": 19 is not printed, and the CI is in R only | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-7 | B | yes | The "before adjustment" numbers (1.37 and 3.07) live on other pages | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-8 | B | no | "173 of 350 reconstructions (49.4%)": total and percentage not printed | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-9 | B | no | Exercise 3: "only 8 of the 74 deaths" and "already predicts the rate after 72 hours" rest on page 11 | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-10 | B | no | Three of five odds-ratio CIs differ in Python; the 🔀 box gives only one | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-11 | B | no | Model-comparison tables: the reported df and χ² are never tied to their columns | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-12 | B | yes | Cox overall test: df and p are in R's output only | [catalog-10-12.md](catalog-10-12.md) | done |
+| 12-13 | C | no | The spline is run before it is explained, inside a section about something else | [catalog-10-12.md](catalog-10-12.md) | done |
 | 13-1 | A | no | "the 80 patients who had both sides operated on" is never counted | [survival.md](survival.md) | done |
 | 13-2 | B | yes | Log-rank p-values and χ² quoted to more digits than R prints | [survival.md](survival.md) | open |
 | 13-3 | B | no | Observed and Expected revisions appear in R's output only | [survival.md](survival.md) | open |

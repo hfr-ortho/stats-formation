@@ -37,6 +37,17 @@ To keep the code short, the joint replacement examples use every case, including
 - Choose the predictors **before** looking at the results, from what you know clinically. As a rule of thumb, allow at least 10 to 20 patients per predictor.
 - If an effect may bend → [splines](#multiple-nonlinear-regression). If the outcome is yes/no → [multiple logistic regression](#multiple-logistic-regression).
 
+### What the test really does
+
+Multiple linear regression works like [simple linear regression](11-predict-from-one.qmd#linear-regression), with one coefficient for each predictor.
+
+1. The model predicts each patient's outcome by adding up the predictors, each multiplied by its own coefficient, plus an intercept.
+2. As before, it measures each patient's distance from that prediction (the residual) and finds the set of coefficients for which the sum of the squared residuals is as small as possible.
+3. Each coefficient ends up describing only what its predictor adds once the others have explained what they can. BMI's coefficient compares patients who differ in BMI but are alike in age, sex and procedure. That is what "adjusted" means.
+4. Each coefficient gets its own [standard error](../glossary.qmd#standard-error){.term}, [confidence interval](../glossary.qmd#confidence-interval){.term} and [p-value](../glossary.qmd#p-value){.term}, read as in simple regression.
+
+Once the model has run, a box under "Read the output" rebuilds BMI's adjusted coefficient by hand.
+
 ### Look at the data first
 
 ::: {.panel-tabset group="language"}
@@ -129,9 +140,47 @@ Each coefficient is the change in operative time for one unit of that predictor,
 - **Multiple R-squared = 0.27, adjusted R-squared = 0.26:** the four predictors together explain about a quarter of the variation. The adjusted value is penalized for the number of predictors.
 - **F-statistic, p < 0.001:** the test that all four predictors together explain nothing.
 
+::: {.callout-note collapse="true"}
+## 🔍 Under the hood: an adjusted coefficient by hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+time_left <- resid(lm(op_time_min ~ age + sex + procedure, data = cohort))   # operative time, with what age, sex and procedure explain taken out
+bmi_left <- resid(lm(bmi ~ age + sex + procedure, data = cohort))            # BMI, with what age, sex and procedure explain taken out
+coef(lm(time_left ~ bmi_left))[["bmi_left"]]                                 # the slope between the two leftovers: BMI's adjusted coefficient
+coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]]                          # BMI on its own, for comparison
+```
+
+## Python
+
+```{python}
+time_left = smf.ols("op_time_min ~ age + sex + procedure", data=cohort).fit().resid   # operative time, with what age, sex and procedure explain taken out
+bmi_left = smf.ols("bmi ~ age + sex + procedure", data=cohort).fit().resid            # BMI, with what age, sex and procedure explain taken out
+print((time_left * bmi_left).sum() / (bmi_left ** 2).sum())                           # the slope between the two leftovers: BMI's adjusted coefficient
+print(smf.ols("op_time_min ~ bmi", data=cohort).fit().params["bmi"])                  # BMI on its own, for comparison
+```
+:::
+
+Take out of both operative time and BMI everything that age, sex and procedure can explain, then fit a simple regression between what is left: its slope is 1.27, exactly the `bmi` coefficient of the full model. On its own, without adjustment, BMI's slope is 1.37 (the last line).
+:::
+
+```{python}
+#| include: false
+chk = {"by_hand": float((time_left * bmi_left).sum() / (bmi_left ** 2).sum()),
+       "alone": float(smf.ols("op_time_min ~ bmi", data=cohort).fit().params["bmi"])}
+```
+
+```{r}
+#| include: false
+check_agree(list(by_hand = coef(lm(time_left ~ bmi_left))[["bmi_left"]],
+                 alone = coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]]), reticulate::py$chk)
+```
+
 ### Effect size and 95% CI
 
-The **adjusted coefficients** with their 95% CIs are the effect sizes, with **R²** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own ([page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
+The **adjusted coefficients** with their 95% CIs are the effect sizes, with **R²** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own (the last line of the box above; [page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
 
 ### How to report it
 
@@ -158,6 +207,15 @@ Both programs use the first category alphabetically as the reference (Female, TH
 - **The curve's shape is known, but its numbers may depend on other variables.** Extend the [recovery curve](11-predict-from-one.qmd#nonlinear-regression) so that each of its numbers can differ between hips and knees, and fit one model with nonlinear least squares.
 - **The shape isn't known.** Let a measured predictor's effect bend with a **spline**: a flexible curve made of short cubic pieces joined smoothly at points called knots. A **natural** (or **restricted**) cubic spline is a straight line beyond the outer knots, which keeps it from flailing at the ends. Splines fit inside an ordinary linear, logistic or Cox model, and they're the usual way to check whether a straight line is good enough.
 - If every effect is a straight line → [multiple linear regression](#multiple-linear-regression).
+
+### What the test really does
+
+Both tools in this section are least-squares fits, like the ones on [page 11](11-predict-from-one.qmd#nonlinear-regression).
+
+1. **A curve that differs between groups.** Give each of the curve's numbers two parts: its value for hips, and the difference for knees. The program then finds all six numbers at once, by making the squared distances between the scores and the two curves as small as possible.
+2. Each difference comes with its own standard error and [confidence interval](../glossary.qmd#confidence-interval){.term}, so the model shows directly how hips and knees differ.
+3. **A spline.** Replace the single BMI column of a linear regression with a few columns built from BMI, which together can draw a smooth bend. The regression itself stays linear.
+4. Compare the fit with and without the bend: an F test asks whether the squared residuals shrink by more than the extra coefficients would achieve by chance.
 
 ### Look at the data first
 
@@ -274,7 +332,7 @@ check_agree(list(tau_hip = joint_coef["tau_hip", "Estimate"], tau_diff = joint_c
             reticulate::py$chk, tol = 1e-4)   # both approximate the curve's derivatives numerically, so they agree to ~5 digits
 ```
 
-When you don't know the shape, use a spline instead. Here a natural cubic spline lets BMI's effect on operative time bend, and an F test asks whether the bend improves on the straight line of the [multiple linear regression](#multiple-linear-regression).
+**A second question, for the second case (shape unknown):** is BMI's effect on operative time a straight line? Here a natural cubic spline lets the effect bend, and an F test asks whether the bend improves on the straight line of the [multiple linear regression](#multiple-linear-regression). `df = 3` gives BMI three coefficients where the straight line has one, so the test has 2 extra degrees of freedom.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -320,7 +378,7 @@ The recovery curve:
 
 The spline:
 
-- **F = 0.58, p = 0.562:** no clear evidence that letting BMI's effect bend improves the fit, so keep the straight line.
+- **F = 0.58, p = 0.562** (the second row of the table; `Pr(>F)`): no clear evidence that letting BMI's effect bend improves the fit, so keep the straight line. The spline uses 2 more degrees of freedom than the straight line (`Df` in R, `df_diff` in Python) and leaves 593 (`Res.Df`, `df_resid`): the "df = 2 and 593" of the Results.
 
 ### Effect size and 95% CI
 
@@ -333,6 +391,7 @@ The **differences between hips and knees**, with their 95% CIs, are the effect s
 confint(joint_recovery)                                          # profile CIs
 log(2) * c(hip = coef(joint_recovery)[["tau_hip"]],
            knee = coef(joint_recovery)[["tau_hip"]] + coef(joint_recovery)[["tau_diff"]])   # days to half the gain
+log(2) * coef(joint_recovery)[["tau_diff"]]                      # the difference between knees and hips, in days to half the gain
 log(2) * confint(joint_recovery)["tau_diff", ]                   # difference in days to half the gain
 ```
 
@@ -342,10 +401,11 @@ log(2) * confint(joint_recovery)["tau_diff", ]                   # difference in
 t_crit = stats.t.ppf(0.975, df=len(recovery_data) - 6)   # 6 parameters
 print(pd.DataFrame({"low": estimates - t_crit * standard_errors, "high": estimates + t_crit * standard_errors}, index=names))
 print(np.log(2) * estimates[4], np.log(2) * (estimates[4] + estimates[5]))   # days to half the gain: hips, knees
+print(np.log(2) * estimates[5], np.log(2) * (estimates[5] - t_crit * standard_errors[5]), np.log(2) * (estimates[5] + t_crit * standard_errors[5]))   # the difference between knees and hips, with its 95% CI
 ```
 :::
 
-The time constant was 27.5 days longer for knees (95% CI 15.9 to 40.1). Half of the eventual gain took about 37 days after a hip replacement and 56 days after a knee replacement, a difference of 19 days (95% CI 11 to 28).
+The time constant was 27.5 days longer for knees (95% CI 15.9 to 40.1). Half of the eventual gain took about 37 days after a hip replacement and 56 days after a knee replacement, a difference of 19 days (95% CI 11 to 28). R prints the difference as 19.05 and its CI as 11.03 to 27.83; Python's CI, computed from the standard error, is 10.6 to 27.5, which also rounds to 11 to 28.
 
 ### How to report it
 
@@ -360,7 +420,7 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: splines and CIs
-- R's `ns()` and Python's `cr()` (from patsy, the formula library statsmodels uses) build the same natural cubic spline only when the knots match. `ns(df = 3)` puts knots at the 1/3 and 2/3 quantiles and at the minimum and maximum, so the Python code sets those explicitly. Other tools, like `rms::rcs()`, place the knots elsewhere and give slightly different curves.
+- R's `ns()` and Python's `cr()` (from patsy, the formula library statsmodels uses) build the same natural cubic spline only when the knots match. `ns(df = 3)` puts knots at the 1/3 and 2/3 quantiles and at the minimum and maximum, so the Python code sets those explicitly. Other tools, like `rms::rcs()`, place the knots elsewhere and give slightly different curves. `constraints='center'` removes one column from patsy's spline so that it doesn't repeat the model's intercept, as `ns()` does by default; both splines then use 3 degrees of freedom.
 - As on [page 11](11-predict-from-one.qmd#nonlinear-regression), R's `confint()` profiles the nonlinear fit, while the Python code uses estimate ± t × standard error, so the CIs differ slightly (τ difference: 15.3 to 39.7 days in Python).
 :::
 
@@ -374,6 +434,17 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 - The assumptions of [simple logistic regression](11-predict-from-one.qmd#logistic-regression) still apply, for every measured predictor.
 - **Events limit predictors.** A common rule of thumb is at least 10 patients in the smaller outcome group per predictor. Here 173 returned and 177 didn't, so this model can afford about 17.
 - If the outcome is time until an event → [Cox regression](#cox).
+
+### What the test really does
+
+Multiple logistic regression works like [simple logistic regression](11-predict-from-one.qmd#logistic-regression), with one coefficient for each predictor.
+
+1. The model adds up the predictors, each multiplied by its own coefficient, to get each patient's log odds of the outcome.
+2. It tries out values for all the coefficients together and keeps the set under which the outcomes that really happened, taken together, were most likely.
+3. Each coefficient describes what its predictor adds once the others are accounted for: e raised to the coefficient is the **adjusted** [odds ratio](../glossary.qmd#odds-ratio){.term}.
+4. A predictor with more than two categories gets one coefficient for each category except the first, which serves as the reference.
+
+The more coefficients a model has to estimate, the more outcomes it needs in the smaller group: that is where the rule of thumb under "When to use it" comes from.
 
 ### Look at the data first
 
@@ -402,14 +473,14 @@ import statsmodels.formula.api as smf
 
 acl = pd.read_csv("data/acl_cohort.csv")
 acl["age_10"] = acl["age"] / 10   # per 10 years
-acl["bptb"] = (acl["graft"] == "BPTB").astype(int)
+acl["bptb_percent"] = 100 * (acl["graft"] == "BPTB")   # 100 for BPTB, 0 otherwise: the mean is the percentage
 
-print(acl.groupby("rts_12mo")[["age", "tegner_preinjury", "bptb"]].mean())
+print(acl.groupby("rts_12mo")[["age", "tegner_preinjury", "bptb_percent"]].mean())
 print(acl["rts_12mo"].value_counts())
 ```
 :::
 
-The 173 who returned were younger on average (27.1 against 30.7 years), with a higher Tegner level before the injury (7.0 against 6.0), and more had a BPTB graft (48.6% against 25.4%).
+The 173 who returned (of 177 + 173 = 350, so 49.4%) were younger on average (27.1 against 30.7 years), with a higher Tegner level before the injury (7.0 against 6.0), and more had a BPTB graft (48.6% against 25.4%).
 
 ### Run it
 
@@ -453,7 +524,7 @@ check_agree(list(age = rts_coef["age_10", "Estimate"], tegner = rts_coef["tegner
 ### Read the output
 
 - Each **coefficient** is the change in the log odds of returning to sport per unit of that predictor, adjusted for the others; the next step turns them into odds ratios.
-- **age_10: p = 0.031**, **tegner_preinjury** and **both grafts: p < 0.001:** each predicts return to sport, even allowing for the others.
+- **age_10: p = 0.031**, **tegner_preinjury** and **both grafts: p < 0.001** (R prints 0.000746 and 0.000965 for the grafts; Python's table rounds them to 0.001): each predicts return to sport, even allowing for the others.
 - **sexMale (p = 0.195):** no clear evidence for sex, once the others are in the model.
 - graft has three levels, so it takes two odds ratios, each against the first level (BPTB). Four predictors, five coefficients.
 
@@ -485,12 +556,42 @@ The **adjusted odds ratios** are the effect sizes: 0.71 per 10 years of age (95%
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the smaller group sets the limit, and predictors must come first
-The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let p-values choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome.
+The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2, and the first line of output below). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let p-values choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome. The table below shows it: the `TRUE` row (`True` in Python) holds 6 and 0.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+sum(acl$failure_2y)                                                 # grafts that failed within 2 years
+early_failure <- acl$graft_failure == 1 & acl$followup_years <= 1   # failed in the first year
+table(early_failure, returned = acl$rts_12mo)                       # did they return to sport? (1 = yes)
+```
+
+## Python
+
+```{python}
+print(acl["failure_2y"].sum())                                               # grafts that failed within 2 years
+early_failure = (acl["graft_failure"] == 1) & (acl["followup_years"] <= 1)   # failed in the first year
+print(pd.crosstab(early_failure, acl["rts_12mo"]))                           # did they return to sport? (1 = yes)
+```
 :::
+:::
+
+```{python}
+#| include: false
+chk = {"failed_2y": float(acl["failure_2y"].sum()), "early": float(early_failure.sum()),
+       "early_returned": float(acl.loc[early_failure, "rts_12mo"].sum())}
+```
+
+```{r}
+#| include: false
+check_agree(list(failed_2y = sum(acl$failure_2y), early = sum(early_failure),
+                 early_returned = sum(acl$rts_12mo[early_failure])), reticulate::py$chk)
+```
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: profile and Wald CIs, again
-As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` profiles the likelihood and statsmodels uses Wald CIs. With few events the two can differ in the second decimal: for the quadriceps graft, 0.17 to 0.63 in R and 0.17 to 0.64 in Python. Say which you used.
+As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` profiles the likelihood and statsmodels uses Wald CIs. With few events the two can differ in the second decimal: Python gives 0.52 to 0.97 for age, 1.22 to 1.66 for Tegner level and 0.17 to 0.64 for the quadriceps graft; the text above quotes R's. Say which you used.
 :::
 
 ## Cox regression {#cox}
@@ -502,6 +603,15 @@ As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` pr
 - The outcome is **time until an event** (revision), and you want each predictor's **hazard ratio**, adjusted for the others.
 - **Events limit predictors**, as in logistic regression: about 10 events per predictor. 81 revisions allow about eight; implant (which uses two, B and C against A), age, sex and BMI use five.
 - Proportional hazards must hold for every predictor. [Page 14](../survival/14-cox-regression.qmd#proportional-hazards) shows how to check it and covers Cox regression in full.
+
+### What the test really does
+
+This is the Cox model of [page 8](08-three-plus-unmatched.qmd#cox) with more than one predictor.
+
+1. Start at surgery and move forward in time. Each time a revision happens, look at who was still being followed just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
+2. Each predictor has its own [hazard ratio](../glossary.qmd#hazard-ratio){.term}. A patient's hazard, compared with a reference patient, is the product of the hazard ratios that apply to them.
+3. The model tries out values for all the hazard ratios together and keeps the set under which the revisions that really happened, taken together, were most likely.
+4. Each hazard ratio then describes what its predictor adds once the others are accounted for: implant C against implant A, for patients of the same age, sex and BMI.
 
 ### Look at the data first
 
@@ -532,10 +642,10 @@ from lifelines import CoxPHFitter
 cohort = pd.read_csv("data/cohort.csv")
 cohort["age_10"] = cohort["age"] / 10   # per 10 years
 cohort["bmi_5"] = cohort["bmi"] / 5     # per 5 kg/m²
-cohort["male"] = (cohort["sex"] == "Male").astype(int)
+cohort["male_percent"] = 100 * (cohort["sex"] == "Male")   # 100 for men, 0 for women: the mean is the percentage
 
 print(cohort.groupby("implant").agg(n=("case_id", "count"), revised=("revised", "sum"), age=("age", "mean"),
-                                    male=("male", "mean"), bmi=("bmi", "mean")))
+                                    male_percent=("male_percent", "mean"), bmi=("bmi", "mean")))
 ```
 :::
 
@@ -560,7 +670,8 @@ adjusted_cox = CoxPHFitter().fit(
     fit_options={"precision": 1e-9},   # stop only when fully converged; see the R vs Python box
 )
 print(adjusted_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
-print(adjusted_cox.log_likelihood_ratio_test().test_statistic)   # overall likelihood ratio test
+overall = adjusted_cox.log_likelihood_ratio_test()                        # overall likelihood ratio test
+print(overall.test_statistic, overall.degrees_freedom, overall.p_value)   # its statistic, degrees of freedom and p-value
 ```
 :::
 
@@ -586,14 +697,41 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 ### Read the output
 
 - **implantC = 3.19 (95% CI 1.92 to 5.29):** adjusted for age, sex and BMI, implant C carried about three times the hazard of revision of implant A, almost the same as without adjustment (3.07, [page 8](08-three-plus-unmatched.qmd#cox)).
-- **implantB = 0.83 (95% CI 0.45 to 1.52):** imprecise, as before.
+- **implantB = 0.83 (95% CI 0.45 to 1.52):** imprecise: the CI runs from about half to one and a half times the hazard of implant A.
 - **sexMale = 0.51 (95% CI 0.32 to 0.81, p = 0.005):** men had about half the hazard of revision of women.
 - **age_10 = 1.22 (95% CI 0.96 to 1.57)** and **bmi_5 = 1.03 (95% CI 0.84 to 1.27):** imprecise.
-- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** the five terms together predict revision.
+- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** the five terms together predict revision. R prints `p=2e-07`; Python prints the statistic, its degrees of freedom and the p-value on the line under its table.
 
 ### Effect size and 95% CI
 
-The **adjusted hazard ratios** with their 95% CIs are the effect sizes. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29).
+The **adjusted hazard ratios** with their 95% CIs are the effect sizes. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29). Without adjustment the hazard ratios are 0.82 for B and 3.07 for C (the code below), so adjusting for age, sex and BMI changes little.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))   # implant on its own, for comparison
+```
+
+## Python
+
+```{python}
+alone_cox = CoxPHFitter().fit(cohort[["followup_years", "revised", "implant"]], duration_col="followup_years",
+                              event_col="revised", formula="implant", fit_options={"precision": 1e-9})
+print(alone_cox.hazard_ratios_)   # implant on its own, for comparison
+```
+:::
+
+```{python}
+#| include: false
+chk = {"hr_b": float(alone_cox.hazard_ratios_.iloc[0]), "hr_c": float(alone_cox.hazard_ratios_.iloc[1])}
+```
+
+```{r}
+#| include: false
+unadjusted_alone <- exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))
+check_agree(list(hr_b = unadjusted_alone[["implantB"]], hr_c = unadjusted_alone[["implantC"]]), reticulate::py$chk)
+```
 
 ### How to report it
 
@@ -608,7 +746,7 @@ The sex difference wasn't the question; the model was built to adjust for sex, n
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and names
-As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default convergence rule stops a little early (a hazard ratio of 0.82915 for implant B instead of 0.82912), so the Python code tightens it with `fit_options={"precision": 1e-9}`. lifelines names the terms `implant[T.C]` and `sex[T.Male]`; R names them `implantC` and `sexMale`.
+As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default convergence rule stops a little early (without `fit_options`, the hazard ratio for implant B comes out as 0.82915 instead of the 0.82912 in the output above), so the Python code tightens it with `fit_options={"precision": 1e-9}`. lifelines names the terms `implant[T.C]` and `sex[T.Male]`; R names them `implantC` and `sexMale`.
 :::
 
 ```{r}
@@ -676,6 +814,20 @@ stopifnot(
   round(unadjusted_hr[["implantC"]], 2) == 3.07,
   round(reticulate::py_eval("float(CoxPHFitter().fit(cohort[['followup_years', 'revised', 'implant', 'age_10', 'sex', 'bmi_5']], duration_col='followup_years', event_col='revised', formula='implant + age_10 + sex + bmi_5').summary.loc['implant[T.B]', 'exp(coef)'])"), 5) == 0.82915,
   round(adjusted_hr["implantB", "exp(coef)"], 5) == 0.82912,
+  # the by-hand box, and the numbers added with it
+  isTRUE(all.equal(coef(lm(time_left ~ bmi_left))[["bmi_left"]], coef(time_model)[["bmi"]])),
+  round(coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]], 2) == 1.37,
+  bend_test$Df[2] == 2, bend_test$Res.Df[2] == 593,
+  round(log(2) * coef(joint_recovery)[["tau_diff"]], 2) == 19.05, round(log(2) * joint_ci["tau_diff", ], 2) == c(11.03, 27.83),
+  round(log(2) * joint_wald["tau_diff", ], 1) == c(10.6, 27.5),
+  by_rts$n == c(177, 173), 177 + 173 == 350, round(100 * 173 / 350, 1) == 49.4,
+  signif(rts_coef[c("grafthamstring", "graftquadriceps"), "Pr(>|z|)"], 3) == c(0.000746, 0.000965),
+  round(rts_wald["age_10", ], 2) == c(0.52, 0.97), round(rts_wald["tegner_preinjury", ], 2) == c(1.22, 1.66),
+  round(rts_wald["graftquadriceps", ], 2) == c(0.17, 0.64),
+  sum(acl$failure_2y) == 15, sum(early_failure) == 6, sum(acl$rts_12mo[early_failure]) == 0,
+  signif(unname(summary(adjusted_cox)$logtest["pvalue"]), 1) == 2e-07, unname(summary(adjusted_cox)$logtest["df"]) == 5,
+  round(unadjusted_alone, 2) == c(0.82, 3.07), round(by_implant$male, 1) == c(42.7, 42.4, 43.8),
+  round(adjusted_hr["implantB", "exp(coef)"], 5) == 0.82912,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(ex_surgeon_test$F[2], 2) == 0.09, round(ex_surgeon_test$`Pr(>F)`[2], 3) == 0.911,
   round(coef(ex_surgeon)[["bmi"]], 2) == 1.27, round(confint(ex_surgeon)["bmi", ], 2) == c(1.06, 1.49),
@@ -737,6 +889,7 @@ The outcome is yes/no: **multiple logistic regression**. With 15 events, the rul
 ## R
 
 ```{r}
+sum(acl$failure_2y)
 fail_model <- glm(failure_2y ~ tibial_slope_deg + age_10, family = binomial, data = acl)
 exp(cbind(odds_ratio = coef(fail_model), confint(fail_model)))
 ```
@@ -744,6 +897,7 @@ exp(cbind(odds_ratio = coef(fail_model), confint(fail_model)))
 ## Python
 
 ```{python}
+print(acl["failure_2y"].sum())
 fail_model = smf.logit("failure_2y ~ tibial_slope_deg + age_10", data=acl).fit(disp=False)
 fail_ors = np.exp(pd.concat([fail_model.params, fail_model.conf_int()], axis=1))
 fail_ors.columns = ["odds_ratio", "low", "high"]
@@ -791,5 +945,5 @@ print(np.exp(24 * line_model.conf_int().loc["hours_to_surgery"]))   # its 95% CI
 
 > **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-The CI is R's profile CI. The spline adds nothing clear, because the straight line already predicts the rate after 72 hours. And only 8 of the 74 deaths came that late, too few to pin down a curve.
+The CI is R's profile CI. The spline adds nothing clear, because the straight line already predicts the rate after 72 hours (17.2% predicted, 18.2% observed; [page 11](11-predict-from-one.qmd#logistic-regression)). And only 8 of the 74 deaths came that late (the band table on page 11), too few to pin down a curve. In R's table, the likelihood ratio χ² is the `Deviance` column.
 :::

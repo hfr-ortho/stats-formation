@@ -30,7 +30,8 @@ DESCRIBE = [step for step in ANATOMY if step != "Effect size and 95% CI"]
 EXPLAINED = "What the test really does"
 WITH_EXPLANATION = {"catalog/06-two-unpaired-groups.html", "catalog/07-two-paired-groups.html",
                     "catalog/08-three-plus-unmatched.html", "catalog/09-three-plus-matched.html",
-                    "catalog/10-association.html", "catalog/11-predict-from-one.html"}
+                    "catalog/10-association.html", "catalog/11-predict-from-one.html",
+                    "catalog/12-predict-from-several.html"}
 
 
 def anatomy(page):
