@@ -55,4 +55,69 @@ function reportHref(lang, page, url, selection) {
   return "mailto:" + REPORT_TO + "?subject=" + encodeURIComponent(REPORT_PREFIX + page) +
          "&body=" + encodeURIComponent(lines.join("\r\n"));
 }
+
+if (typeof document !== "undefined") {
+  const here = reportPage(window.location.pathname);
+  if (here) {   // not the site root, which only sends visitors to a language
+    const main = document.querySelector("main#quarto-document-content");
+    const text = REPORT_TEXT[here.lang];
+
+    // What the reader has highlighted right now, and the section it is in. Only text in the page itself counts:
+    // a highlighted sidebar entry is not what they are reporting.
+    const highlight = () => {
+      const none = { text: "", section: "" };
+      const selection = window.getSelection ? window.getSelection() : null;
+      if (!main || !selection || selection.isCollapsed || !selection.anchorNode) return none;
+      const node = selection.anchorNode.nodeType === 1 ? selection.anchorNode : selection.anchorNode.parentElement;
+      if (!node || !main.contains(node)) return none;
+      const section = node.closest("section[id]");
+      return { text: selection.toString(), section: section ? section.id : "" };
+    };
+
+    const fill = (a) => {
+      const found = highlight();
+      const url = reportUrl(window.location.origin + window.location.pathname, found.section, window.location.hash);
+      a.href = reportHref(here.lang, here.page, url, found.text);
+    };
+
+    // A link is filled in once now, so that copying its address or opening it in a new tab works, and again when
+    // it is pressed. "pointerdown" comes before the browser clears the highlight; "keydown" covers the keyboard.
+    // The highlight is read at that moment and never remembered, so one the reader has cleared is not sent.
+    const reportLink = (label) => {
+      const a = document.createElement("a");
+      a.className = "report-error-link";
+      a.textContent = label;
+      fill(a);
+      a.addEventListener("pointerdown", () => fill(a));
+      a.addEventListener("keydown", () => fill(a));
+      return a;
+    };
+
+    const add = () => {
+      // Above Quarto's own "Report an issue", in the same shape as that entry. Quarto writes that list twice:
+      // under "On this page", and in the footer (the only copy on a phone or on a page with no table of contents).
+      document.querySelectorAll(".toc-actions ul").forEach((actions) => {
+        const a = reportLink("");
+        a.classList.add("toc-action");
+        const icon = document.createElement("i");
+        icon.className = "bi bi-envelope";
+        a.append(icon, text.link);
+        const item = document.createElement("li");
+        item.append(a);
+        actions.prepend(item);
+      });
+
+      // At the end of the page text, above the previous and next links.
+      if (main) {
+        const line = document.createElement("p");
+        line.className = "report-error";
+        line.append(text.question + " ", reportLink(text.action));
+        main.append(line);
+      }
+    };
+    // The footer comes after this script in the page, so wait until the whole page is there.
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", add);
+    else add();
+  }
+}
 </script>

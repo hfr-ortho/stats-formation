@@ -117,3 +117,46 @@ def test_special_characters_survive_the_address():
 
 def test_long_highlight_is_cut_in_the_email():
     assert 'Highlighted text: "' + "a" * 300 + '…"' in mail(href("en", "a" * 400))[2]
+
+
+ROOT_PAGE = """
+globalThis.window = { location: { pathname: "/stats-formation/index.html", origin: "https://x", hash: "" } };
+globalThis.document = new Proxy({}, { get(_, name) { throw new Error("touched document." + String(name)); } });
+"""
+BARE_PAGE = """
+globalThis.window = { location: { pathname: "/stats-formation/en/index.html", origin: "https://x", hash: "" },
+                      getSelection: () => null };
+globalThis.document = { querySelector: () => null, querySelectorAll: () => [], addEventListener() {},
+                        createElement: () => { throw new Error("built a link with nowhere to put it"); } };
+"""
+
+
+def test_script_is_idle_on_the_root_page():
+    assert run(["1"], setup=ROOT_PAGE) == [1]
+
+
+def test_script_survives_a_page_without_its_containers():
+    assert run(["1"], setup=BARE_PAGE) == [1]
+
+
+# Quarto writes its "Report an issue" list twice: beside the text, and in the footer, which comes after this
+# script in the page (the only copy on a phone, or on a page with no table of contents).
+LATE_PAGE = """
+const element = () => { const e = { children: [], classList: { add() {} }, addEventListener() {},
+                                    append(...c) { e.children.push(...c); }, prepend(...c) { e.children.unshift(...c); } };
+                        return e; };
+const lists = [element(), element()];
+const main = element();
+let ready = null;
+globalThis.window = { location: { pathname: "/stats-formation/en/index.html", origin: "https://x", hash: "" },
+                      getSelection: () => null };
+globalThis.document = { readyState: "loading", createElement: element,
+                        addEventListener(name, f) { if (name === "DOMContentLoaded") ready = f; },
+                        querySelector: (q) => (q.startsWith("main") ? main : null),
+                        querySelectorAll: (q) => (q === ".toc-actions ul" ? lists : []) };
+"""
+
+
+def test_link_joins_every_action_list_once_the_whole_page_is_there():
+    counts = "[lists[0].children.length, lists[1].children.length, main.children.length]"
+    assert run([counts, f"(ready(), {counts})"], setup=LATE_PAGE) == [[0, 0, 0], [1, 1, 1]]

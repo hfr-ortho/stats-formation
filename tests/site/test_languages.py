@@ -114,3 +114,10 @@ def test_every_page_includes_the_switcher(site):
     assert pages
     missing = [str(p.relative_to(SITE_ROOT)) for p in pages if 'id="lang-switch"' not in p.read_text(encoding="utf-8")]
     assert missing == []
+
+
+def test_every_page_includes_the_report_link_script(site):
+    pages = sorted(p for p in SITE_ROOT.rglob("*.html") if "site_libs" not in p.parts)
+    assert pages
+    missing = [str(p.relative_to(SITE_ROOT)) for p in pages if 'id="report-error"' not in p.read_text(encoding="utf-8")]
+    assert missing == []
