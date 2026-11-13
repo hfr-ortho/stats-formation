@@ -211,16 +211,16 @@ All four were rechecked against the page text and the data after the audit.
 | 09-11 | C | no | One-sided CIs, Huynh-Feldt columns and "type III" vs "Type I" are printed but never explained | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-12 | C | comments | The Wilson interval line has no comment | [catalog-08-09.md](catalog-08-09.md) | done |
 | 09-13 | B | no | "the 80 patients who had both sides operated on" is stated, never shown | [catalog-08-09.md](catalog-08-09.md) | done |
-| 10-1 | A | yes | Budin vs CT disagreement figures come only from the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-2 | A | yes | Bias-corrected V = 0.18 is never printed | [catalog-10-12.md](catalog-10-12.md) | open |
+| 10-1 | A | yes | Budin vs CT disagreement figures come only from the Prose guard | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-2 | A | yes | Bias-corrected V = 0.18 is never printed | [catalog-10-12.md](catalog-10-12.md) | done |
 | 10-3 | A | no | "the 80 patients who had both sides operated on" is asserted, never counted | [catalog-10-12.md](catalog-10-12.md) | done |
-| 10-4 | B | yes | Exercise 3: the percentages and denominators are not in the Solution's output | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-5 | B | yes | "404 procedures" has to be added up from the table | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-6 | B | yes | Which cell has the smallest expected count is not shown | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-7 | B | no | Pearson's C ceiling of 0.71 has no derivation | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-8 | B | yes | Exercise 1: "3.7° higher on average" is not on this page | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-9 | B | no | Row totals 36 and 18 are not printed | [catalog-10-12.md](catalog-10-12.md) | open |
-| 10-10 | C | no | p-values: what the two languages print is only half tied to the text | [catalog-10-12.md](catalog-10-12.md) | open |
+| 10-4 | B | yes | Exercise 3: the percentages and denominators are not in the Solution's output | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-5 | B | yes | "404 procedures" has to be added up from the table | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-6 | B | yes | Which cell has the smallest expected count is not shown | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-7 | B | no | Pearson's C ceiling of 0.71 has no derivation | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-8 | B | yes | Exercise 1: "3.7° higher on average" is not on this page | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-9 | B | no | Row totals 36 and 18 are not printed | [catalog-10-12.md](catalog-10-12.md) | done |
+| 10-10 | C | no | p-values: what the two languages print is only half tied to the text | [catalog-10-12.md](catalog-10-12.md) | done |
 | 11-1 | A | yes | Logistic ⚠️ box: "97 hours on average" and "17.2% from the model" exist only in the Prose guard | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-2 | A | yes | "An ordinary least-squares line gives 0.43" is never fitted on the page | [catalog-10-12.md](catalog-10-12.md) | open |
 | 11-3 | A | yes | LOWESS "from about 70 to about 99" must be read off the plot | [catalog-10-12.md](catalog-10-12.md) | open |

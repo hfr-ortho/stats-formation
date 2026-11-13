@@ -34,8 +34,19 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 - Zwei **Messungen** an denselben Patientinnen und Patienten, und Sie möchten in einer Zahl ausdrücken, wie eng sich die beiden entlang einer **Geraden** gemeinsam bewegen.
 - Beide sind ungefähr normalverteilt, ohne extreme Ausreisser, und das Streudiagramm sieht aus wie eine Punktwolke, die entlang einer Geraden gestreckt ist.
-- Wenn eine der beiden schief oder ordinal ist, Ausreisser hat oder die Punkte einer Kurve folgen → [Spearman-Korrelation](#spearman).
+- Wenn eine der beiden [schief](../glossary.qmd#skewed){.term} oder ordinal ist, Ausreisser hat oder die Punkte einer Kurve folgen → [Spearman-Korrelation](#spearman).
 - Wenn Sie die eine Grösse aus der anderen vorhersagen oder für weitere Variablen adjustieren möchten → [lineare Regression](11-predict-from-one.qmd#linear-regression).
+
+### Was der Test wirklich macht
+
+Pearsons r misst, wie eng die Punkte einer Geraden folgen.
+
+1. Für jede Person bestimmen, wie weit jeder der beiden Messwerte von seinem eigenen [Mittelwert](../glossary.qmd#mean){.term} entfernt ist, gezählt in [Standardabweichungen](../glossary.qmd#standard-deviation){.term}. Eine Hüfte, die im CT 1 Standardabweichung über dem Mittelwert liegt, hat im CT den Wert +1.
+2. Die beiden Ergebnisse jeder Person miteinander multiplizieren. Das Produkt ist positiv, wenn beide Messwerte auf derselben Seite ihres Mittelwerts liegen (beide darüber oder beide darunter), und negativ, wenn sie auf verschiedenen Seiten liegen.
+3. Den Durchschnitt der Produkte über alle Personen bilden (geteilt durch n − 1). Dieser Durchschnitt ist **r**. Geht hoch mit hoch und tief mit tief einher, sind die meisten Produkte positiv und r liegt nahe bei +1. Gibt es keinen geradlinigen Zusammenhang, heben sich positive und negative Produkte auf und r liegt nahe bei 0.
+4. Der Test fragt, ob r weiter von 0 entfernt ist, als der Zufall erklären würde. Er rechnet r in eine [Teststatistik](../glossary.qmd#test-statistic){.term} um, t = r × √(n − 2) ÷ √(1 − r²), und t in einen [p-Wert](../glossary.qmd#p-value){.term}.
+
+Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» r und t von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -110,8 +121,48 @@ check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
 
 - **cor** (R) oder **statistic** (Python): Pearsons **r = 0.86**. Er reicht von −1 (eine perfekt fallende Gerade) über 0 (kein linearer Zusammenhang) bis +1 (eine perfekt steigende Gerade).
 - **t = 14.7, df = 78:** die Teststatistik und ihre Freiheitsgrade: 80 Hüften minus 2. Python gibt sie nicht aus.
-- **p < 0.001** (R gibt `< 2.2e-16` aus): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn die Torsion im CT und auf der Budin-Aufnahme nicht zusammenhingen.
+- **p < 0.001** (R gibt `p-value < 2.2e-16` aus, den kleinsten Wert, den es anzeigt; Python gibt `3.0576926692219362e-24` aus. Beides ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} für Zahlen weit unter 0.001): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn die Torsion im CT und auf der Budin-Aufnahme nicht zusammenhingen.
 - **95% CI 0.79 to 0.91.**
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: r und t von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+ct_sd_units <- (imaging$torsion_ct_deg - mean(imaging$torsion_ct_deg)) / sd(imaging$torsion_ct_deg)               # Schritt 1: jeder CT-Wert, in Standardabweichungen von seinem Mittelwert
+budin_sd_units <- (imaging$torsion_budin_deg - mean(imaging$torsion_budin_deg)) / sd(imaging$torsion_budin_deg)   # ... und jeder Budin-Wert
+r_by_hand <- sum(ct_sd_units * budin_sd_units) / (80 - 1)    # Schritte 2 und 3: multiplizieren, addieren, durch n − 1 teilen (80 Hüften)
+r_by_hand
+r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_hand^2)             # Schritt 4: t
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+ct_sd_units = (imaging["torsion_ct_deg"] - imaging["torsion_ct_deg"].mean()) / imaging["torsion_ct_deg"].std()               # Schritt 1: jeder CT-Wert, in Standardabweichungen von seinem Mittelwert
+budin_sd_units = (imaging["torsion_budin_deg"] - imaging["torsion_budin_deg"].mean()) / imaging["torsion_budin_deg"].std()   # ... und jeder Budin-Wert
+r_by_hand = (ct_sd_units * budin_sd_units).sum() / (80 - 1)   # Schritte 2 und 3: multiplizieren, addieren, durch n − 1 teilen (80 Hüften)
+print(r_by_hand)
+print(r_by_hand * np.sqrt(80 - 2) / np.sqrt(1 - r_by_hand ** 2))   # Schritt 4: t
+```
+:::
+
+Das von Hand berechnete r ist 0.86 und das von Hand berechnete t ist 14.7: `cor` und `t` in der Ausgabe von R. Python gibt r als `statistic` aus und t gar nicht.
+:::
+
+```{python}
+#| include: false
+chk = {"r": float(r_by_hand), "t": float(r_by_hand * np.sqrt(80 - 2) / np.sqrt(1 - r_by_hand ** 2))}
+```
+
+```{r}
+#| include: false
+check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_hand^2)), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -127,8 +178,45 @@ check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
 ## ⚠️ Achtung: r erkennt nur Geraden, belegt keine Ursache und ist keine Übereinstimmung
 Ein Zusammenhang, der erst steigt und dann fällt, kann ein r nahe 0 haben, und ein einzelner Ausreisser kann eine Korrelation erzeugen oder verdecken: Schauen Sie sich daher immer zuerst das Streudiagramm an. Zudem sagt eine Korrelation nicht, was was verursacht, und nicht, ob etwas anderes (Alter, Geschlecht) beide antreibt. Um für weitere Variablen zu adjustieren, verwenden Sie die [multiple Regression](12-predict-from-several.qmd#multiple-linear-regression).
 
-**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten. Selbst diese Grenzen verbergen einen Trend: Bei den 8 Hüften mit 25° oder mehr im CT lag die Budin-Messung im Mittel 7.0° tiefer. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
+**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten (die mittlere Differenz ± 1.96 Standardabweichungen). Selbst diese Grenzen verbergen einen Trend: Bei den 8 Hüften mit 25° oder mehr im CT lag die Budin-Messung im Mittel 7.0° tiefer. Der Code unten berechnet diese Zahlen. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+difference <- imaging$torsion_budin_deg - imaging$torsion_ct_deg   # Budin minus CT, ein Wert pro Hüfte
+max(abs(difference))                                  # der grösste Abstand zwischen den beiden Methoden
+mean(difference) + c(-1.96, 1.96) * sd(difference)    # wo 95 % der Differenzen zu erwarten sind
+high_ct <- imaging$torsion_ct_deg >= 25               # Hüften mit 25° oder mehr im CT
+sum(high_ct)                                          # wie viele
+mean(difference[high_ct])                             # ihre mittlere Differenz
+```
+
+## Python
+
+```{python}
+difference = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]   # Budin minus CT, ein Wert pro Hüfte
+print(difference.abs().max())                         # der grösste Abstand zwischen den beiden Methoden
+print(difference.mean() - 1.96 * difference.std(), difference.mean() + 1.96 * difference.std())   # wo 95 % der Differenzen zu erwarten sind
+high_ct = imaging["torsion_ct_deg"] >= 25             # Hüften mit 25° oder mehr im CT
+print(high_ct.sum(), difference[high_ct].mean())      # wie viele, und ihre mittlere Differenz
+```
 :::
+:::
+
+```{python}
+#| include: false
+chk = {"largest": float(difference.abs().max()), "low": float(difference.mean() - 1.96 * difference.std()),
+       "high": float(difference.mean() + 1.96 * difference.std()), "n_high": float(high_ct.sum()),
+       "mean_high": float(difference[high_ct].mean())}
+```
+
+```{r}
+#| include: false
+check_agree(list(largest = max(abs(difference)), low = mean(difference) - 1.96 * sd(difference),
+                 high = mean(difference) + 1.96 * sd(difference), n_high = sum(high_ct),
+                 mean_high = mean(difference[high_ct])), reticulate::py$chk)
+```
 
 ## Spearman-Korrelation {#spearman}
 
@@ -136,9 +224,20 @@ Ein Zusammenhang, der erst steigt und dann fällt, kann ein r nahe 0 haben, und 
 
 ### Wann verwenden
 
-- Zwei Variablen an denselben Patientinnen und Patienten, von denen mindestens eine **ordinal** (Zufriedenheit von 1 bis 5), **schief** oder mit **Ausreissern** behaftet ist.
+- Zwei Variablen an denselben Patientinnen und Patienten, von denen mindestens eine **ordinal** (Zufriedenheit von 1 bis 5), **[schief](../glossary.qmd#skewed){.term}** oder mit **Ausreissern** behaftet ist.
 - Der Zusammenhang geht in eine Richtung (immer aufwärts oder immer abwärts), muss aber keine Gerade sein. Spearmans ρ (rho) ist Pearsons r, berechnet auf den **Rängen**.
 - Wenn beide ungefähr normalverteilt sind und der Zusammenhang eine Gerade ist → [Pearson-Korrelation](#pearson).
+
+### Was der Test wirklich macht
+
+Spearmans ρ ist Pearsons r mit einer Änderung: Es wird auf [Rängen](../glossary.qmd#rank){.term} statt auf den Werten selbst berechnet.
+
+1. Die Personen nach der ersten Variable in eine Rangfolge bringen, vom tiefsten zum höchsten Wert. Gebundene Werte teilen sich den Mittelwert ihrer Ränge.
+2. Dasselbe getrennt für die zweite Variable tun.
+3. [Pearsons r](#pearson) zwischen den beiden Reihen von Rängen berechnen. Das Ergebnis ist **ρ**: nahe bei +1, wenn Personen mit hohem Rang bei der einen Variable auch bei der anderen einen hohen Rang haben, nahe bei −1, wenn die beiden Rangfolgen entgegengesetzt verlaufen, und nahe bei 0, wenn sie nichts miteinander zu tun haben.
+4. Der Test fragt, ob ρ weiter von 0 entfernt ist, als der Zufall erklären würde, und liefert einen [p-Wert](../glossary.qmd#p-value){.term}.
+
+Weil nur die Reihenfolge zählt, kann ein einzelner Ausreisser das Ergebnis nicht dominieren, und ein Zusammenhang, der entlang einer Kurve ansteigt, kann trotzdem ein ρ nahe bei 1 ergeben. Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» ρ von Hand nach.
 
 ### Zuerst die Daten ansehen
 
@@ -160,6 +259,8 @@ change <- proms |>
   mutate(improvement = `1yr` - preop) |>
   inner_join(select(cohort, case_id, satisfaction_1yr), by = "case_id") |>
   filter(!is.na(improvement), !is.na(satisfaction_1yr))          # beide Antworten nötig
+
+nrow(change)   # Eingriffe mit beiden Scores und einer Antwort zur Zufriedenheit
 
 ggplot(change, aes(factor(satisfaction_1yr), improvement)) +
   geom_boxplot() +
@@ -185,6 +286,8 @@ wide = proms[proms["visit"].isin(["preop", "1yr"])].pivot(index="case_id", colum
 wide["improvement"] = wide["1yr"] - wide["preop"]   # eine Zeile pro Fall: preop und 1yr nebeneinander
 change = wide.join(cohort.set_index("case_id")["satisfaction_1yr"]).dropna(subset=["improvement", "satisfaction_1yr"])
 
+print(len(change))   # Eingriffe mit beiden Scores und einer Antwort zur Zufriedenheit
+
 levels = [1, 2, 3, 4, 5]
 fig, ax = plt.subplots(figsize=(6, 3))
 parts = ax.boxplot([change.loc[change["satisfaction_1yr"] == level, "improvement"] for level in levels], tick_labels=levels)
@@ -196,7 +299,7 @@ print(change.groupby("satisfaction_1yr")["improvement"].agg(["count", "median"])
 ```
 :::
 
-404 Eingriffe haben sowohl einen präoperativen Score als auch einen Score nach 1 Jahr und eine Antwort zur Zufriedenheit. Die mediane Verbesserung steigt mit jeder Zufriedenheitsstufe, von 25.4 Punkten bei den 14 Personen, die sehr unzufrieden waren, auf 43.8 bei den 198 Personen, die sehr zufrieden waren. Die Zufriedenheit hat nur fünf Werte, daher gibt es viele Bindungen (Ties).
+404 Eingriffe haben sowohl einen präoperativen Score als auch einen Score nach 1 Jahr und eine Antwort zur Zufriedenheit (die erste ausgegebene Zahl). Die mediane Verbesserung steigt mit jeder Zufriedenheitsstufe, von 25.4 Punkten bei den 14 Personen, die sehr unzufrieden waren, auf 43.8 bei den 198 Personen, die sehr zufrieden waren. Die Zufriedenheit hat nur fünf Werte, daher gibt es viele Bindungen (Ties).
 
 ### Analyse durchführen
 
@@ -231,7 +334,45 @@ check_agree(list(rho = unname(satisfaction_corr$estimate), p = satisfaction_corr
 
 - **rho** (R) oder **statistic** (Python): **ρ = 0.38**. Wie r reicht es von −1 bis +1; hier besagt es, dass Patientinnen und Patienten mit grösserer Verbesserung tendenziell höhere Zufriedenheitswerte angeben.
 - **S = 6764534** (nur R): die Teststatistik, aus den Differenzen zwischen den beiden Rangfolgen gebildet. Sie müssen sie nicht berichten.
-- **p < 0.001** (R gibt `1.111e-15` aus): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn Verbesserung und Zufriedenheit nicht zusammenhingen.
+- **p < 0.001** (R gibt `1.111e-15` aus, Python dieselbe Zahl mit mehr Stellen; das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: Bei `e-15` rückt der Dezimalpunkt 15 Stellen nach links): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn Verbesserung und Zufriedenheit nicht zusammenhingen.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: ρ von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+improvement_ranks <- rank(change$improvement)               # Schritt 1: die Verbesserungen in Ränge umwandeln; Bindungen teilen sich den mittleren Rang
+satisfaction_ranks <- rank(change$satisfaction_1yr)         # Schritt 2: die Zufriedenheitsantworten in Ränge umwandeln
+tapply(satisfaction_ranks, change$satisfaction_1yr, unique)   # der Rang, den jede Zufriedenheitsstufe erhält
+cor(improvement_ranks, satisfaction_ranks)                  # Schritt 3: Pearsons r zwischen den beiden Reihen von Rängen
+```
+
+## Python
+
+```{python}
+improvement_ranks = change["improvement"].rank()            # Schritt 1: die Verbesserungen in Ränge umwandeln; Bindungen teilen sich den mittleren Rang
+satisfaction_ranks = change["satisfaction_1yr"].rank()      # Schritt 2: die Zufriedenheitsantworten in Ränge umwandeln
+print(satisfaction_ranks.groupby(change["satisfaction_1yr"]).first())   # der Rang, den jede Zufriedenheitsstufe erhält
+print(stats.pearsonr(improvement_ranks, satisfaction_ranks).statistic)  # Schritt 3: Pearsons r zwischen den beiden Reihen von Rängen
+```
+:::
+
+Die Zufriedenheit hat nur fünf Werte, ihre Ränge sind also stark gebunden: Die 14 sehr Unzufriedenen teilen sich die Ränge 1 bis 14 und erhalten je deren Mittelwert, 7.5; die 198 sehr Zufriedenen erhalten je 305.5. Pearsons r zwischen den beiden Reihen von Rängen ist 0.38, das ρ, das beide Programme ausgegeben haben.
+:::
+
+```{python}
+#| include: false
+chk = {"rho": float(stats.pearsonr(improvement_ranks, satisfaction_ranks).statistic),
+       "rank_5": float(satisfaction_ranks.groupby(change["satisfaction_1yr"]).first().iloc[4])}
+```
+
+```{r}
+#| include: false
+check_agree(list(rho = cor(improvement_ranks, satisfaction_ranks),
+                 rank_5 = unname(tapply(satisfaction_ranks, change$satisfaction_1yr, unique)[5])), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -292,8 +433,19 @@ Bei der Hüfte wird der HOOS JR beantwortet, beim Knie der KOOS JR. Beide reiche
 
 - Zwei **kategoriale** Variablen an denselben Patientinnen und Patienten. Der Chi-Quadrat-Test ([Seite 8](08-three-plus-unmatched.qmd#chi-square)) fragt, ob sie überhaupt zusammenhängen; ein Kontingenzkoeffizient sagt, **wie stark**.
 - **Phi (φ)** ist für 2 × 2-Tabellen gedacht. **Cramérs V** funktioniert bei jeder Tabellengrösse und entspricht bei einer 2 × 2-Tabelle φ (ohne dessen Vorzeichen). Beide reichen von 0 (kein Zusammenhang) bis 1 (jede Kategorie der einen Variable sagt die andere genau voraus).
-- Der **Kontingenzkoeffizient nach Pearson (C)** ist älter. Sein Maximum liegt unter 1 und hängt von der Grösse der Tabelle ab (0.71 bei einer Tabelle mit zwei Spalten); das macht ihn schwer lesbar, bevorzugen Sie daher V.
-- Der p-Wert des Chi-Quadrat-Tests setzt voraus, dass jede **erwartete** Häufigkeit mindestens 5 beträgt.
+- Der **Kontingenzkoeffizient nach Pearson (C)** ist älter. Sein Maximum liegt unter 1 und hängt von der Grösse der Tabelle ab (es beträgt √((k − 1) ÷ k), wobei k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl ist: √(1 ÷ 2) = 0.71 bei einer Tabelle mit zwei Spalten); das macht ihn schwer lesbar, bevorzugen Sie daher V.
+- Der p-Wert des Chi-Quadrat-Tests setzt voraus, dass jede [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} mindestens 5 beträgt.
+
+### Was der Test wirklich macht
+
+Ein Kontingenzkoeffizient macht aus der Chi-Quadrat-Statistik eine Zahl zwischen 0 und 1, die sagt, wie stark der Zusammenhang ist.
+
+1. Den [Chi-Quadrat-Test](08-three-plus-unmatched.qmd#chi-square) durchführen. Er vergleicht die beobachtete Tabelle mit der Tabelle, die zu erwarten wäre, wenn die beiden Variablen nicht zusammenhingen, und fasst den Abstand zwischen ihnen als χ² zusammen.
+2. χ² wächst mit der Stärke des Zusammenhangs, aber auch mit der Anzahl Personen: Verdoppelt man jede Häufigkeit in der Tabelle, verdoppelt sich χ², obwohl der Zusammenhang nicht stärker ist.
+3. **Cramérs V** rechnet die Stichprobengrösse heraus: V = √(χ² ÷ (n × (k − 1))), wobei n die Anzahl Personen ist und k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl.
+4. Der **Kontingenzkoeffizient nach Pearson (C)** verwendet eine etwas andere Formel, C = √(χ² ÷ (χ² + n)), die nie 1 erreichen kann.
+
+Nach dem Test berechnet ein Kasten unter «Ausgabe lesen» V und C von Hand.
 
 ### Zuerst die Daten ansehen
 
@@ -307,7 +459,7 @@ library(tidyverse)
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 asa_hypertension <- table(asa = cohort$asa, hypertension = cohort$hypertension)   # 1 = Hypertonie
-asa_hypertension
+addmargins(asa_hypertension)   # die Tabelle, mit Zeilen- und Spaltensummen
 round(100 * prop.table(asa_hypertension, margin = 1), 1)   # Zeilenprozente
 ```
 
@@ -320,12 +472,12 @@ from scipy import stats
 cohort = pd.read_csv("data/cohort.csv")
 
 asa_hypertension = pd.crosstab(cohort["asa"], cohort["hypertension"])   # 1 = Hypertonie
-print(asa_hypertension)
+print(pd.crosstab(cohort["asa"], cohort["hypertension"], margins=True))   # die Tabelle, mit Zeilen- und Spaltensummen
 print((100 * pd.crosstab(cohort["asa"], cohort["hypertension"], normalize="index")).round(1))   # Zeilenprozente
 ```
 :::
 
-Hypertonie wird mit jeder ASA-Klasse häufiger: von 12 von 36 (33.3 %) in ASA 1 bis zu 16 von 18 (88.9 %) in ASA 4.
+Hypertonie wird mit jeder ASA-Klasse häufiger: von 12 von 36 (33.3 %) in ASA 1 bis zu 16 von 18 (88.9 %) in ASA 4. Die Summen stehen in R in der Zeile und Spalte `Sum`, in Python in `All`.
 
 ### Analyse durchführen
 
@@ -335,7 +487,7 @@ Hypertonie wird mit jeder ASA-Klasse häufiger: von 12 von 36 (33.3 %) in ASA 1
 ```{r}
 asa_test <- chisq.test(asa_hypertension)
 asa_test
-min(asa_test$expected)   # kleinste erwartete Häufigkeit
+round(asa_test$expected, 2)   # erwartete Häufigkeiten, wenn ASA-Klasse und Hypertonie nicht zusammenhingen
 ```
 
 ## Python
@@ -343,7 +495,7 @@ min(asa_test$expected)   # kleinste erwartete Häufigkeit
 ```{python}
 asa_test = stats.chi2_contingency(asa_hypertension)
 print(asa_test.statistic, asa_test.dof, asa_test.pvalue)
-print(asa_test.expected_freq.min())   # kleinste erwartete Häufigkeit
+print(asa_test.expected_freq.round(2))   # erwartete Häufigkeiten, wenn ASA-Klasse und Hypertonie nicht zusammenhingen
 ```
 :::
 
@@ -360,8 +512,52 @@ check_agree(list(chi2 = unname(asa_test$statistic), df = unname(asa_test$paramet
 ### Ausgabe lesen
 
 - **X-squared = 23.18:** die Chi-Quadrat-Statistik. **df = 3:** (4 ASA-Klassen − 1) × (2 Spalten − 1).
-- **p < 0.001** (R gibt `3.702e-05` aus): Ein so starker Zusammenhang wäre sehr unwahrscheinlich, wenn Hypertonie in jeder ASA-Klasse gleich häufig wäre.
-- **Kleinste erwartete Häufigkeit 7.83** (ASA 4 ohne Hypertonie): Jede erwartete Häufigkeit beträgt mindestens 5, der p-Wert ist also verlässlich.
+- **p < 0.001** (R gibt `3.702e-05` aus, die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} für 0.000037; in der ersten Zeile von Python ist es die dritte Zahl): Ein so starker Zusammenhang wäre sehr unwahrscheinlich, wenn Hypertonie in jeder ASA-Klasse gleich häufig wäre.
+- **Erwartete Häufigkeiten:** was jede Zelle enthielte, wenn ASA-Klasse und Hypertonie nicht zusammenhingen. Die kleinste ist 7.83, in der letzten Zeile, ersten Spalte (ASA 4 ohne Hypertonie): 18 Eingriffe in ASA 4 × 261 ohne Hypertonie ÷ 600. Jede erwartete Häufigkeit beträgt mindestens 5, der p-Wert ist also verlässlich.
+
+::: {.callout-note collapse="true"}
+## 🔍 Unter der Haube: V und C von Hand
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+chi_square <- unname(asa_test$statistic)
+n_procedures <- sum(asa_hypertension)                # alle 600 Eingriffe
+sqrt(chi_square / (n_procedures * (2 - 1)))          # Cramérs V: die kleinere Zahl von 4 Zeilen und 2 Spalten ist 2
+sqrt(chi_square / (chi_square + n_procedures))       # Kontingenzkoeffizient nach Pearson (C)
+doubled <- unname(chisq.test(2 * asa_hypertension)$statistic)
+c(doubled, sqrt(doubled / (2 * n_procedures)))       # Schritt 2: Mit doppelten Häufigkeiten verdoppelt sich Chi-Quadrat, und V bleibt gleich
+```
+
+## Python
+
+```{python}
+import numpy as np
+
+chi_square = asa_test.statistic
+n_procedures = asa_hypertension.to_numpy().sum()                # alle 600 Eingriffe
+print(np.sqrt(chi_square / (n_procedures * (2 - 1))))           # Cramérs V: die kleinere Zahl von 4 Zeilen und 2 Spalten ist 2
+print(np.sqrt(chi_square / (chi_square + n_procedures)))        # Kontingenzkoeffizient nach Pearson (C)
+doubled = stats.chi2_contingency(2 * asa_hypertension).statistic
+print(doubled, np.sqrt(doubled / (2 * n_procedures)))           # Schritt 2: Mit doppelten Häufigkeiten verdoppelt sich Chi-Quadrat, und V bleibt gleich
+```
+:::
+
+V = √(23.18 ÷ 600) = 0.20 und C = √(23.18 ÷ (23.18 + 600)) = 0.19, die Zahlen, die die Funktionen im nächsten Schritt ausgeben. Verdoppelt man jede Häufigkeit, verdoppelt sich χ² auf 46.36, V bleibt aber bei 0.20: V misst die Stärke des Zusammenhangs, nicht die Grösse der Studie.
+:::
+
+```{python}
+#| include: false
+chk = {"v": float(np.sqrt(chi_square / (n_procedures * (2 - 1)))), "c": float(np.sqrt(chi_square / (chi_square + n_procedures))),
+       "doubled": float(doubled), "v_doubled": float(np.sqrt(doubled / (2 * n_procedures)))}
+```
+
+```{r}
+#| include: false
+check_agree(list(v = sqrt(chi_square / (n_procedures * (2 - 1))), c = sqrt(chi_square / (chi_square + n_procedures)),
+                 doubled = doubled, v_doubled = sqrt(doubled / (2 * n_procedures))), reticulate::py$chk)
+```
 
 ### Effektstärke und 95%-KI
 
@@ -370,6 +566,7 @@ check_agree(list(chi2 = unname(asa_test$statistic), df = unname(asa_test$paramet
 
 ```{r}
 effectsize::cramers_v(asa_hypertension, adjust = FALSE)   # siehe den Kasten «R oder Python»
+effectsize::cramers_v(asa_hypertension)                    # die Standardeinstellung, mit der Korrektur für kleine Stichproben: etwas kleiner
 effectsize::pearsons_c(asa_hypertension)
 ```
 
@@ -394,7 +591,7 @@ asa_c <- effectsize::pearsons_c(asa_hypertension)
 check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 ```
 
-**Cramérs V = 0.20**, ein kleiner bis mittlerer Zusammenhang (als grobe Richtschnur für Tabellen mit zwei Zeilen oder Spalten gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross). R gibt ausserdem ein einseitiges 95%-KI aus (0.12 bis 1.00): V kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy berechnet dieses KI nicht. Pearsons C beträgt hier 0.19, doch seine Obergrenze liegt für diese Tabelle bei 0.71 und nicht bei 1, sodass dieselbe Zahl mehr bedeutet, als es scheint: ein weiterer Grund, V zu berichten.
+**Cramérs V = 0.20**, ein kleiner bis mittlerer Zusammenhang (als grobe Richtschnur für Tabellen mit zwei Zeilen oder Spalten gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross). R gibt ausserdem ein einseitiges 95%-KI aus (0.12 bis 1.00): V kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy berechnet dieses KI nicht. Das zweite Resultat von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python». Pearsons C beträgt hier 0.19, doch seine Obergrenze liegt für diese Tabelle bei 0.71 und nicht bei 1, sodass dieselbe Zahl mehr bedeutet, als es scheint: ein weiterer Grund, V zu berichten.
 
 ### Resultate formulieren
 
@@ -409,7 +606,7 @@ Wenn Sie die Zeilen der Tabelle vertauschen, ändert sich V nicht; V kann daher 
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Cramérs V gibt es in zwei Versionen
-`cramers_v()` und `phi()` von effectsize wenden standardmässig eine Korrektur der systematischen Abweichung bei kleinen Stichproben an (hier V = 0.18), `association()` von scipy dagegen nicht. `adjust = FALSE` schaltet sie aus, damit beide übereinstimmen; geben Sie in jedem Fall im Methodenteil an, welche Version Sie verwendet haben. Bei einer 2 × 2-Tabelle ergibt `association(method="cramer")` φ ohne dessen Vorzeichen.
+`cramers_v()` und `phi()` von effectsize wenden standardmässig eine Korrektur der systematischen Abweichung bei kleinen Stichproben an (hier V = 0.18, das Resultat mit dem Titel `Cramer's V (adj.)` im R-Tab), `association()` von scipy dagegen nicht. `adjust = FALSE` schaltet sie aus, damit beide übereinstimmen; geben Sie in jedem Fall im Methodenteil an, welche Version Sie verwendet haben. Bei einer 2 × 2-Tabelle ergibt `association(method="cramer")` φ ohne dessen Vorzeichen.
 :::
 
 ```{r}
@@ -447,6 +644,23 @@ stopifnot(
   round(asa_v$Cramers_v, 2) == 0.20, round(asa_v$CI_low, 2) == 0.12, round(asa_c$Pearsons_c, 2) == 0.19,
   round(sqrt(1 / 2), 2) == 0.71,
   round(effectsize::cramers_v(asa_hypertension)$Cramers_v, 2) == 0.18,
+  # the by-hand boxes, and the numbers added with them
+  isTRUE(all.equal(r_by_hand, unname(torsion_corr$estimate))),
+  isTRUE(all.equal(r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_hand^2), unname(torsion_corr$statistic))),
+  abs(reticulate::py_eval("float(torsion_corr.pvalue)") / 3.0576926692219362e-24 - 1) < 1e-9,
+  isTRUE(all.equal(difference, budin_minus_ct)), sum(high_ct) == 8,
+  round(mean(difference) + c(-1.96, 1.96) * sd(difference), 2) == c(-10.19, 7.81),
+  isTRUE(all.equal(cor(improvement_ranks, satisfaction_ranks), unname(satisfaction_corr$estimate))),
+  as.vector(tapply(satisfaction_ranks, change$satisfaction_1yr, unique)) == c(7.5, 23.5, 54, 141, 305.5),
+  mean(1:14) == 7.5, mean(207:404) == 305.5, change_medians$n == c(14, 18, 43, 131, 198), 14 + 18 + 43 + 131 == 206,
+  colSums(asa_hypertension) == c(261, 339), sum(asa_hypertension) == 600, round(18 * 261 / 600, 2) == 7.83,
+  asa_hypertension[c(1, 4), "0"] == c(24, 2), n_procedures == 600,
+  round(sqrt(23.18 / 600), 2) == 0.20, round(sqrt(23.18 / (23.18 + 600)), 2) == 0.19,
+  isTRUE(all.equal(sqrt(chi_square / (n_procedures * (2 - 1))), asa_v$Cramers_v)),
+  isTRUE(all.equal(sqrt(chi_square / (chi_square + n_procedures)), asa_c$Pearsons_c)),
+  round(doubled, 2) == 46.36, round(sqrt(doubled / (2 * n_procedures)), 2) == 0.20,
+  signif(asa_test$p.value, 2) == 0.000037,
+  300 + 43 == 343, 188 + 69 == 257, apnea_table[, "0"] == c(300, 188),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(unname(alpha_corr$estimate), 2) == 0.93, round(alpha_corr$conf.int, 2) == c(0.89, 0.95),
   alpha_corr$p.value < 0.001, round(unname(alpha_corr$estimate)^2, 2) == 0.86,
@@ -475,6 +689,7 @@ Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten ge
 
 ```{r}
 cor.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)
+mean(imaging$alpha_dunn45_deg - imaging$alpha_frogleg_deg)
 ```
 
 ## Python
@@ -482,12 +697,13 @@ cor.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)
 ```{python}
 alpha_corr = stats.pearsonr(imaging["alpha_dunn45_deg"], imaging["alpha_frogleg_deg"])
 print(alpha_corr, alpha_corr.confidence_interval(confidence_level=0.95))
+print((imaging["alpha_dunn45_deg"] - imaging["alpha_frogleg_deg"]).mean())
 ```
 :::
 
 > **Results:** The correlation between the alpha angle on the Dunn 45° and frog-leg views was r = 0.93 (Pearson; 95% CI 0.89 to 0.95; p < 0.001; n = 80 hips).
 
-Eine starke Korrelation, und doch ergab die Dunn-Aufnahme im Mittel 3.7° höhere Werte ([Seite 7](07-two-paired-groups.qmd#paired-t)): r kann einen konstanten Versatz nicht erkennen.
+Eine starke Korrelation, und doch ergab die Dunn-Aufnahme im Mittel 3.7° höhere Werte (die letzte ausgegebene Zahl; siehe auch [Seite 7](07-two-paired-groups.qmd#paired-t)): r kann einen konstanten Versatz nicht erkennen.
 :::
 
 **2.** Kolleginnen und Kollegen fragen, ob ältere Patientinnen und Patienten länger im Spital bleiben. Welche Korrelation würden Sie verwenden, und was finden Sie?
@@ -529,6 +745,7 @@ print(los_corr, np.tanh(z - half_width), np.tanh(z + half_width))
 ```{r}
 apnea <- table(sex = cohort$sex, sleep_apnea = cohort$sleep_apnea)
 apnea
+round(100 * prop.table(apnea, margin = 1), 1)
 chisq.test(apnea, correct = FALSE)   # ohne Stetigkeitskorrektur, passend zu phi
 effectsize::phi(apnea, adjust = FALSE)
 ```
@@ -538,6 +755,7 @@ effectsize::phi(apnea, adjust = FALSE)
 ```{python}
 apnea = pd.crosstab(cohort["sex"], cohort["sleep_apnea"])
 print(apnea)
+print((100 * pd.crosstab(cohort["sex"], cohort["sleep_apnea"], normalize="index")).round(1))
 apnea_test = stats.chi2_contingency(apnea, correction=False)
 print(apnea_test.statistic, apnea_test.dof, apnea_test.pvalue)
 print(stats.contingency.association(apnea, method="cramer"))   # φ ohne dessen Vorzeichen, bei einer 2 × 2-Tabelle
@@ -545,4 +763,6 @@ print(stats.contingency.association(apnea, method="cramer"))   # φ ohne dessen 
 :::
 
 > **Results:** Sleep apnea was present in 69 of 257 men (26.8%) and 43 of 343 women (12.5%) (χ² = 19.8, df = 1, p < 0.001; φ = 0.18, one-sided 95% CI 0.11 to 1.00).
+
+Jede Zeile der ersten Tabelle ergibt ihre Gruppe: 300 + 43 = 343 Frauen und 188 + 69 = 257 Männer. Die zweite Tabelle gibt die Prozentwerte an.
 :::
