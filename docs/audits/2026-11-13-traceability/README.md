@@ -255,18 +255,18 @@ All four were rechecked against the page text and the data after the audit.
 | 12-12 | B | yes | Cox overall test: df and p are in R's output only | [catalog-10-12.md](catalog-10-12.md) | done |
 | 12-13 | C | no | The spline is run before it is explained, inside a section about something else | [catalog-10-12.md](catalog-10-12.md) | done |
 | 13-1 | A | no | "the 80 patients who had both sides operated on" is never counted | [survival.md](survival.md) | done |
-| 13-2 | B | yes | Log-rank p-values and χ² quoted to more digits than R prints | [survival.md](survival.md) | open |
-| 13-3 | B | no | Observed and Expected revisions appear in R's output only | [survival.md](survival.md) | open |
-| 13-4 | B | yes | Cumulative incidence of death (24.0%, CI 19.3% to 29.0%) is printed in R only | [survival.md](survival.md) | open |
-| 13-5 | B | no | Numbers at risk in the prose (332, 84) match R's risk table only | [survival.md](survival.md) | open |
-| 13-6 | B | no | Gray's test "df = 2" is not in the printed table | [survival.md](survival.md) | open |
-| 13-7 | B | no | Exercise 3 quotes a Gray's test its Solution never runs | [survival.md](survival.md) | open |
-| 13-8 | B | no | "99 days" is not in any output | [survival.md](survival.md) | open |
-| 13-9 | B | no | "2.7 percentage points" needs a subtraction the page does not show | [survival.md](survival.md) | open |
-| 13-10 | B | no | Exercise 2: "100 procedures" and "about a fifth" are left to the reader | [survival.md](survival.md) | open |
-| 13-11 | B | no | "5.9% at 2 years" against R's printed 0.0595 | [survival.md](survival.md) | open |
-| 13-12 | C | no | Python prints rows of unlabeled numbers; the bullets use R's column names | [survival.md](survival.md) | open |
-| 13-13 | C | no | Toy example: the "Year 2" bullet has no row in R's output | [survival.md](survival.md) | open |
+| 13-2 | B | yes | Log-rank p-values and χ² quoted to more digits than R prints | [survival.md](survival.md) | done |
+| 13-3 | B | no | Observed and Expected revisions appear in R's output only | [survival.md](survival.md) | done |
+| 13-4 | B | yes | Cumulative incidence of death (24.0%, CI 19.3% to 29.0%) is printed in R only | [survival.md](survival.md) | done |
+| 13-5 | B | no | Numbers at risk in the prose (332, 84) match R's risk table only | [survival.md](survival.md) | done |
+| 13-6 | B | no | Gray's test "df = 2" is not in the printed table | [survival.md](survival.md) | done |
+| 13-7 | B | no | Exercise 3 quotes a Gray's test its Solution never runs | [survival.md](survival.md) | done |
+| 13-8 | B | no | "99 days" is not in any output | [survival.md](survival.md) | done |
+| 13-9 | B | no | "2.7 percentage points" needs a subtraction the page does not show | [survival.md](survival.md) | done |
+| 13-10 | B | no | Exercise 2: "100 procedures" and "about a fifth" are left to the reader | [survival.md](survival.md) | done |
+| 13-11 | B | no | "5.9% at 2 years" against R's printed 0.0595 | [survival.md](survival.md) | done |
+| 13-12 | C | no | Python prints rows of unlabeled numbers; the bullets use R's column names | [survival.md](survival.md) | done |
+| 13-13 | C | no | Toy example: the "Year 2" bullet has no row in R's output | [survival.md](survival.md) | done |
 | 14-1 | A | yes | The single hazard ratio for approach (1.37, CI 0.72 to 2.61, log 0.31) is never printed | [survival.md](survival.md) | open |
 | 14-2 | A | yes | "80 bilateral patients", "only 20 of the 80 had a revision" | [survival.md](survival.md) | done |
 | 14-3 | A | yes | "it rests on 16 early revisions" is not shown | [survival.md](survival.md) | open |
