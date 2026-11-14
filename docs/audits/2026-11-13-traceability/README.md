@@ -23,15 +23,17 @@ A fix marked "code: yes" changes R or Python code. It must be copied identically
 
 The proposed fixes are proposals. The agents ran most proposed code lines against `data/`, but none was rendered inside a page, so the hidden agreement checks and the Prose guard have not been run against them.
 
-## Still open: three findings that need Doc's answer
+## Status
 
-Status on 13.11.2026: every other finding is done.
+On 14.11.2026 all 254 findings are done. The last three needed Doc's answers, given on 14.11.2026:
 
-| ID | What is needed |
+| ID | Doc's answer, and what the page now says |
 |---|---|
-| gs-real-1 | Where an export from REDCap may be stored for analysis (which computer or drive), so the page can say it. |
-| gs-real-2 | What "the secure environment" is (REDCap only, HFR-managed computers and drives, ...). |
-| gs-setup-1 | The page no longer promises a check after every step, and step 1's check now points to step 6. The proposed new checks for steps 5 to 7 are not added: their wording should be confirmed on a fresh install. |
+| gs-real-1 | An export may be stored on an HFR-managed machine, or in a Swiss-based secure storage service such as Tresorit. The page says so, and that the git-ignored data folders fall under the same rule. |
+| gs-real-2 | "The secure environment" covers REDCap and HFR-managed computers and drives. The page defines it at the top of `#where` and counts the secure storage service from gs-real-1 as part of it, so the two rules agree. |
+| gs-setup-1 | Steps 5 to 7 now end with a check. The wording was confirmed on a fresh clone on 14.11.2026: `git clone`, `renv::restore()`, `renv::status()` and `uv sync` were run and the page quotes what they printed. |
+
+The option in 03-2 (a rule of thumb for the skewness) is added too. The cut-offs (0.5 and 1) are a widely quoted convention; secondary sources credit M. G. Bulmer, *Principles of Statistics* (1979), but the book itself was not read, so the page names no source.
 
 ## Counts
 
@@ -89,10 +91,10 @@ All four were rechecked against the page text and the data after the audit.
 | Printed output that no bullet explains | 03-9, 04-16, 05-14, 06-11, 07-16, 08-15, 09-11, 11-19, 14-9, 15-14 | A bullet for each column that matters, and one line saying which columns to ignore. |
 | Terms used without an explanation (glossary candidates) | 06-20 (Wald), 14-7 (SHR), 18-17 (reverse Kaplan-Meier, Aalen-Johansen), 18-19 (small, medium, large), gs-use-2 (Hodges-Lehmann), gs-use-3 (IQR), gs-real-4 (BASEC, REDCap), choose-1 (paired, matched) | A glossary entry and a link at first use. |
 
-## Findings that need facts only Doc has
+## Findings that needed facts only Doc has
 
-- gs-real-1 and gs-real-2: where an export of real data may be stored, and what "the secure environment" is.
-- gs-setup-1: the wording of the new checks, against a fresh install.
+- gs-real-1 and gs-real-2: where an export of real data may be stored, and what "the secure environment" is. Answered on 14.11.2026 (see Status).
+- gs-setup-1: the wording of the new checks, against a fresh install. Confirmed on a fresh clone on 14.11.2026.
 
 ## Index of all findings
 
@@ -344,11 +346,11 @@ All four were rechecked against the page text and the data after the audit.
 | gs-use-1 | B | yes | The "Try it" answer is a typed comment, not output | [report-and-front.md](report-and-front.md) | done |
 | gs-use-2 | C | no | The illustration's medians differ by 2, its "Hodges-Lehmann difference" is 1, and the term is not explained | [report-and-front.md](report-and-front.md) | done |
 | gs-use-3 | C | no | "IQR" is used before it is explained | [report-and-front.md](report-and-front.md) | done |
-| gs-setup-1 | C | no | "Each step ends with a quick check", but steps 4 to 7 have none, and step 1's check points to a step that doesn't mention R | [report-and-front.md](report-and-front.md) | open |
+| gs-setup-1 | C | no | "Each step ends with a quick check", but steps 4 to 7 have none, and step 1's check points to a step that doesn't mention R | [report-and-front.md](report-and-front.md) | done |
 | gs-setup-2 | C | no | The page never says how to open Terminal or PowerShell | [report-and-front.md](report-and-front.md) | done |
 | gs-setup-3 | C | no | "Reading the data without cloning": which steps are still needed, and "any example" needs more than two packages | [report-and-front.md](report-and-front.md) | done |
-| gs-real-1 | C | no | "Don't copy them anywhere else", then a repository that reads data from local folders | [report-and-front.md](report-and-front.md) | open |
-| gs-real-2 | C | no | "The secure environment" is never defined | [report-and-front.md](report-and-front.md) | open |
+| gs-real-1 | C | no | "Don't copy them anywhere else", then a repository that reads data from local folders | [report-and-front.md](report-and-front.md) | done |
+| gs-real-2 | C | no | "The secure environment" is never defined | [report-and-front.md](report-and-front.md) | done |
 | gs-real-3 | C | no | "Before every commit": a data file that `git status` lists as untracked can't be "unstaged" | [report-and-front.md](report-and-front.md) | done |
 | gs-real-4 | C | no | BASEC and REDCap are named without saying what they are | [report-and-front.md](report-and-front.md) | done |
 | choose-1 | C | no | The rows turn on "paired", "unpaired", "matched" and "unmatched", which the page neither explains nor links; the dashes are unexplained | [report-and-front.md](report-and-front.md) | done |
