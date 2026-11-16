@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Manchmal gibt es nur eine Patientengruppe, und verglichen wird mit einer Zahl, die von **ausserhalb** Ihrer Daten stammt: einem Zielwert des Spitals, einem von einem Register veröffentlichten Wert, einem Richtwert aus einem Qualitätsbericht. Unterscheidet sich unsere Gruppe von dieser Zahl?
+Manchmal gibt es nur eine Patientengruppe, und verglichen wird mit einer Zahl, die von **ausserhalb** Ihrer Daten stammt: einem Zielwert des Spitals, einem von einem [Register](../glossary.qmd#registry){.term} veröffentlichten Wert, einem Richtwert aus einem Qualitätsbericht. Unterscheidet sich unsere Gruppe von dieser Zahl?
 
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
-Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur Gelenkersatz-Kohorte, zu ihren PROMs (patientenberichtete Messinstrumente) oder (beim Binomialtest) zu den Daten zur proximalen Femurfraktur. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus. Die «hypothetischen» Werte unten sind für den Unterricht erfunden; es sind keine echten Registerzahlen oder Zielwerte.
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term}, zu ihren [PROMs](../glossary.qmd#prom){.term} (patientenberichtete Messinstrumente) oder (beim [Binomialtest](../glossary.qmd#binomial-test){.term}) zu den Daten zur proximalen Femurfraktur. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus. Die «hypothetischen» Werte unten sind für den Unterricht erfunden; es sind keine echten Registerzahlen oder Zielwerte.
 
 Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Der Wert muss von ausserhalb Ihrer Daten stammen
-Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen Sie, woher er stammt. Ein Wert, der gewählt wird, nachdem man die Resultate gesehen hat («unser Mittelwert ist 84; testen wir gegen 90»), macht den p-Wert bedeutungslos. Stammt der Vergleichswert von einer anderen Patientengruppe, deren Daten Sie haben, vergleichen Sie stattdessen die beiden Gruppen ([Seite 6](06-two-unpaired-groups.qmd)).
+Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen Sie, woher er stammt. Ein Wert, der gewählt wird, nachdem man die Resultate gesehen hat («unser [Mittelwert](../glossary.qmd#mean){.term} ist 84; testen wir gegen 90»), macht den [p-Wert](../glossary.qmd#p-value){.term} bedeutungslos. Stammt der Vergleichswert von einer anderen Patientengruppe, deren Daten Sie haben, vergleichen Sie stattdessen die beiden Gruppen ([Seite 6](06-two-unpaired-groups.qmd)).
 :::
 
 ## t-Test für eine Stichprobe {#one-sample-t}
@@ -37,19 +37,19 @@ Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen
 
 ### Wann verwenden
 
-- Die Zielgrösse ist ein **Messwert** (Minuten, kg/m², Punkte).
-- Sie ist **ungefähr normalverteilt**, oder die Stichprobe ist gross (etwa 30 oder mehr) und nicht stark schief ([Seite 3](../foundations/03-distributions.qmd#robustness)).
-- Jede Person wird einmal gezählt, und die Personen sind voneinander unabhängig.
-- Sind die Daten schief, begrenzt oder ordinal → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist ein **[Messwert](../glossary.qmd#continuous-variable){.term}** (Minuten, kg/m², Punkte).
+- Sie ist **[ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term}**, oder die [Stichprobe](../glossary.qmd#sample){.term} ist gross (etwa 30 oder mehr) und nicht stark [schief](../glossary.qmd#skewed){.term} ([Seite 3](../foundations/03-distributions.qmd#robustness)).
+- Jede Person wird einmal gezählt, und die Personen sind voneinander [unabhängig](../glossary.qmd#independence){.term}.
+- Sind die Daten schief, [begrenzt](../glossary.qmd#bounded-scale){.term} oder [ordinal](../glossary.qmd#ordinal){.term} → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
 
 ### Was der Test wirklich macht
 
-Der Einstichproben-t-Test fragt, ob der Mittelwert der Stichprobe weit vom hypothetischen Wert entfernt ist, verglichen damit, wie stark ein solcher Mittelwert von Stichprobe zu Stichprobe schwanken würde.
+Der Einstichproben-t-Test fragt, ob der Mittelwert der Stichprobe weit vom [hypothetischen Wert](../glossary.qmd#hypothetical-value){.term} entfernt ist, verglichen damit, wie stark ein solcher Mittelwert von Stichprobe zu Stichprobe schwanken würde.
 
 1. Die **Differenz** zwischen dem [Mittelwert](../glossary.qmd#mean){.term} der Stichprobe und dem hypothetischen Wert bilden.
 2. Das Rauschen im Mittelwert schätzen, seinen [Standardfehler](../glossary.qmd#standard-error){.term}: die [Standardabweichung](../glossary.qmd#standard-deviation){.term} geteilt durch √n.
 3. Teilen: **t = Differenz ÷ Standardfehler**. Ein t von 0 bedeutet, dass der Mittelwert genau dem hypothetischen Wert entspricht. Ein t jenseits von etwa ±2 bedeutet, dass die Differenz im Vergleich zum Rauschen gross ist.
-4. t in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen: die Wahrscheinlichkeit für ein t, das mindestens so weit von 0 entfernt ist, wenn der wahre Mittelwert tatsächlich der hypothetische Wert wäre.
+4. t in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen: die [Wahrscheinlichkeit](../glossary.qmd#probability){.term} für ein t, das mindestens so weit von 0 entfernt ist, wenn der [wahre Mittelwert](../glossary.qmd#population){.term} tatsächlich der hypothetische Wert wäre.
 
 Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» t von Hand nach.
 
@@ -89,7 +89,7 @@ plt.show()
 ```
 :::
 
-Ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der gestrichelten Linie bei 90 Minuten liegt.
+Ein ungefähr [symmetrischer](../glossary.qmd#symmetric){.term} Hügel, dessen Mitte etwas links der gestrichelten Linie bei 90 Minuten liegt.
 
 ### Analyse durchführen
 
@@ -128,10 +128,10 @@ check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), 
 ### Ausgabe lesen
 
 - **t = −8.23** (in Python `statistic`): der beobachtete Mittelwert liegt 8.2 Standardfehler unter 90. Das Vorzeichen sagt, auf welcher Seite.
-- **df = 599:** Freiheitsgrade, n − 1.
+- **df = 599:** [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}, n − 1.
 - **p < 0.001:** Ein Mittelwert, der so weit von 90 entfernt ist, wäre sehr unwahrscheinlich, wenn der wahre Mittelwert 90 Minuten betrüge. Die Ausgabe zeigt `1.204e-15`; das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: `e-15` bedeutet «den Dezimalpunkt um 15 Stellen nach links verschieben».
 - **mean of x = 84.48** (die erste Zahl in der zweiten Zeile von Python): unsere mittlere Operationsdauer.
-- **95%-KI 83.2 bis 85.8:** das Konfidenzintervall (KI) für unseren **Mittelwert**, nicht für die Differenz zu 90.
+- **95%-KI 83.2 bis 85.8:** das [Konfidenzintervall](../glossary.qmd#confidence-interval){.term} (KI) für unseren **Mittelwert**, nicht für die Differenz zu 90.
 - **SD = 16.4 Minuten** (die letzte Zeile der Ausgabe): nicht Teil des Tests, aber der Results-Satz braucht sie.
 
 ::: {.callout-note collapse="true"}
@@ -172,7 +172,7 @@ check_agree(list(difference = time_difference, se = time_se, t = time_difference
 
 ### Effektstärke und 95%-KI
 
-Die Effektstärke ist einfach die Differenz zum hypothetischen Wert: Ziehen Sie 90 vom Mittelwert und von beiden Enden seines KI ab.
+Die [Effektstärke](../glossary.qmd#effect-size){.term} ist einfach die Differenz zum hypothetischen Wert: Ziehen Sie 90 vom Mittelwert und von beiden Enden seines KI ab.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -212,7 +212,7 @@ Die Operationen dauerten im Durchschnitt 5.5 Minuten weniger als die eingeplante
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Ein veröffentlichter Mittelwert hat seine eigene Unsicherheit
-Ein Test für eine Stichprobe behandelt den hypothetischen Wert als exakt. Ein Registermittelwert ist selbst ein Schätzwert mit einem KI. Wenn Sie Ihre Patientinnen und Patienten mit einer veröffentlichten Serie vergleichen und deren KI breit ist, sagen Sie das und deuten Sie einen kleinen Unterschied nicht zu stark.
+Ein Test für eine Stichprobe behandelt den hypothetischen Wert als exakt. Ein [Registermittelwert](../glossary.qmd#registry){.term} ist selbst ein [Schätzwert](../glossary.qmd#estimate){.term} mit einem KI. Wenn Sie Ihre Patientinnen und Patienten mit einer veröffentlichten Serie vergleichen und deren KI breit ist, sagen Sie das und deuten Sie einen kleinen Unterschied nicht zu stark.
 :::
 
 ::: {.callout-tip}
@@ -226,11 +226,11 @@ Sowohl `t.test(x, mu = 90)` in R als auch `ttest_1samp(x, popmean=90)` in scipy 
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **schief** oder hat einen **Decken- oder Bodeneffekt**, sodass ein Mittelwert die Daten nicht gut zusammenfasst ([Seite 3](../foundations/03-distributions.qmd#transform)).
-- Der Test bringt die Abstände aller Personen zum hypothetischen Wert in eine Rangfolge. Er setzt keine Normalverteilung voraus, braucht aber Abstände, die sich vergleichen lassen; die Zielgrösse muss also ein Messwert sein.
-- Zählen Sie bei einer **ordinalen** Skala (Zufriedenheit von 1 bis 5) die Personen über und unter dem Wert und vergleichen Sie die beiden Anzahlen mit einem [Binomialtest](#binomial-test). Das heisst **Vorzeichentest**.
-- Genau genommen prüft der Test den **Pseudomedian** (den Hodges-Lehmann-Schätzer unten), der nur bei einer symmetrischen Verteilung dem Median entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
-- Sind die Daten ungefähr normalverteilt → ist der [t-Test für eine Stichprobe](#one-sample-t) vertrauter und etwas teststärker.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[schief](../glossary.qmd#skewed){.term}** oder hat einen **[Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}**, sodass ein [Mittelwert](../glossary.qmd#mean){.term} die Daten nicht gut zusammenfasst ([Seite 3](../foundations/03-distributions.qmd#transform)).
+- Der Test bringt die Abstände aller Personen zum [hypothetischen Wert](../glossary.qmd#hypothetical-value){.term} in eine Rangfolge. Er setzt keine [Normalverteilung](../glossary.qmd#normal-distribution){.term} voraus, braucht aber Abstände, die sich vergleichen lassen; die Zielgrösse muss also ein [Messwert](../glossary.qmd#continuous-variable){.term} sein.
+- Zählen Sie bei einer **[ordinalen](../glossary.qmd#ordinal){.term}** Skala (Zufriedenheit von 1 bis 5) die Personen über und unter dem Wert und vergleichen Sie die beiden Anzahlen mit einem [Binomialtest](#binomial-test). Das heisst **[Vorzeichentest](../glossary.qmd#sign-test){.term}**.
+- Genau genommen prüft der Test den **[Pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (den Hodges-Lehmann-Schätzer unten), der nur bei einer [symmetrischen](../glossary.qmd#symmetric){.term} [Verteilung](../glossary.qmd#distribution){.term} dem [Median](../glossary.qmd#median){.term} entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
+- Sind die Daten ungefähr normalverteilt → ist der [t-Test für eine Stichprobe](#one-sample-t) vertrauter und etwas [teststärker](../glossary.qmd#power){.term}.
 
 ### Was der Test wirklich macht
 
@@ -238,7 +238,7 @@ Der Wilcoxon-Vorzeichen-Rang-Test vergleicht die Scores über Ränge mit dem hyp
 
 1. Für jede Person den Abstand zwischen ihrem Score und dem hypothetischen Wert bilden und festhalten, ob der Score darüber oder darunter liegt.
 2. Personen beiseitelassen, deren Score genau dem hypothetischen Wert entspricht.
-3. Die Abstände der Grösse nach ordnen, ohne auf die Richtung zu achten, und jedem seine Position geben: seinen [Rang](../glossary.qmd#rank){.term}. Der kleinste Abstand erhält Rang 1; gebundene Abstände teilen sich den Mittelwert ihrer Ränge.
+3. Die Abstände der Grösse nach ordnen, ohne auf die Richtung zu achten, und jedem seine Position geben: seinen [Rang](../glossary.qmd#rank){.term}. Der kleinste Abstand erhält Rang 1; [gebundene](../glossary.qmd#ties){.term} Abstände teilen sich den Mittelwert ihrer Ränge.
 4. Die Ränge der Personen über dem Wert addieren und getrennt davon die Ränge der Personen darunter. Jede der beiden Summen kann als [Teststatistik](../glossary.qmd#test-statistic){.term} dienen.
 5. Hätte die typische Person genau den hypothetischen Wert, wären die beiden Summen etwa gleich. Je einseitiger sie sind, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
 
@@ -295,7 +295,7 @@ plt.show()
 ```
 :::
 
-260 Personen: 170 liegen über 80 und 90 darunter. 170 + 90 = 260, also hat niemand genau 80 und niemand fällt aus dem Test heraus. Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der rangbasierte Test ist die sicherere Wahl.
+260 Personen: 170 liegen über 80 und 90 darunter. 170 + 90 = 260, also hat niemand genau 80 und niemand fällt aus dem Test heraus. Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der [rangbasierte Test](../glossary.qmd#nonparametric){.term} ist die sicherere Wahl.
 
 ### Analyse durchführen
 
@@ -333,8 +333,8 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 
 - **V = 22698** (R) oder **W_val = 11231.5** (Python): die Teststatistik, eine Summe von Rängen. Die beiden Programme melden verschiedene Summen (siehe den Kasten «R oder Python»); die p-Werte sind gleich.
 - **p < 0.001:** Scores, die so weit von 80 entfernt liegen, wären sehr unwahrscheinlich, wenn die typische Person tatsächlich 80 erzielte. R gibt `2.293e-06` aus, das ist 0.000002293; pingouin gibt `0.000002` aus.
-- **(pseudo)median 84.35, 95%-KI 82.7 bis 86.1** (nur R): der Hodges-Lehmann-Schätzer für die Mitte der Scores, mit seinem KI.
-- **RBC = 0.34** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
+- **(pseudo)median 84.35, 95%-KI 82.7 bis 86.1** (nur R): der Hodges-Lehmann-Schätzer für die Mitte der Scores, mit seinem [KI](../glossary.qmd#confidence-interval){.term}.
+- **RBC = 0.34** (Python): die [biseriale Rangkorrelation](../glossary.qmd#rank-biserial){.term} als Effektstärke, siehe unten.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: die Rangsummen von Hand
@@ -376,10 +376,10 @@ check_agree(list(above = sum(distance_rank[distance > 0]), below = sum(distance_
 
 ### Effektstärke und 95%-KI
 
-Zwei Effektstärken sind hier nützlich:
+Zwei [Effektstärken](../glossary.qmd#effect-size){.term} sind hier nützlich:
 
 - Der **Hodges-Lehmann-Schätzer** (der Pseudomedian): eine Mitte der Scores, in Punkten. Er ist der Median aller Mittelwerte von Paaren von Scores und wird daher vom Deckeneffekt weniger beeinflusst als ein Mittelwert.
-- Die **biseriale Rangkorrelation (r)**: von −1 (alle Personen unter 80) über 0 (ausgeglichen) bis +1 (alle Personen über 80). Als grobe Richtschnur: 0.1 ist klein, 0.3 mittel und 0.5 gross. Sie ist die Rangsumme über 80 minus die Rangsumme darunter, als Anteil an ihrer Summe: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
+- Die **biseriale Rangkorrelation (r)**: von −1 (alle Personen unter 80) über 0 (ausgeglichen) bis +1 (alle Personen über 80). Als [grobe Richtschnur](../glossary.qmd#cohen-benchmarks){.term}: 0.1 ist klein, 0.3 mittel und 0.5 gross. Sie ist die Rangsumme über 80 minus die Rangsumme darunter, als Anteil an ihrer Summe: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -425,7 +425,7 @@ check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
 ```
 
-Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehmann-Schätzer 84.4), und die biseriale Rangkorrelation r von 0.34 ist ein mittlerer Effekt: 170 Personen liegen über 80 und 90 darunter, und jene darüber sind tendenziell weiter davon entfernt. Der Median beträgt 85.75 (IQR 74.7 bis 93.9, die erste Zeile der Ausgabe), etwas über dem Hodges-Lehmann-Schätzer, wie bei einem Deckeneffekt zu erwarten. effectsize in R gibt für r ausserdem ein 95%-KI aus, 0.21 bis 0.46 (die Fussnote wiederholt nur den Zielwert 80); pingouin liefert r ohne KI.
+Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehmann-Schätzer 84.4), und die biseriale Rangkorrelation r von 0.34 ist ein mittlerer Effekt: 170 Personen liegen über 80 und 90 darunter, und jene darüber sind tendenziell weiter davon entfernt. Der Median beträgt 85.75 ([IQR](../glossary.qmd#iqr){.term} 74.7 bis 93.9, die erste Zeile der Ausgabe), etwas über dem Hodges-Lehmann-Schätzer, wie bei einem Deckeneffekt zu erwarten. effectsize in R gibt für r ausserdem ein 95%-KI aus, 0.21 bis 0.46 (die Fussnote wiederholt nur den Zielwert 80); pingouin liefert r ohne KI.
 
 ### Resultate formulieren
 
@@ -435,7 +435,7 @@ Der typische Score nach 1 Jahr lag etwa 4 Punkte über dem Zielwert (Hodges-Lehm
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: zwei verschiedene «Wilcoxon»-Tests
-Der **Wilcoxon-Vorzeichen-Rang-Test** (dieser hier) vergleicht eine Gruppe mit einem Wert oder zwei **gepaarte** Messungen ([Seite 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). Der **Wilcoxon-Rangsummentest** vergleicht zwei **unabhängige** Gruppen; er ist dasselbe wie der [Mann-Whitney-Test](06-two-unpaired-groups.qmd#mann-whitney). Schreiben Sie immer den vollen Namen.
+Der **Wilcoxon-Vorzeichen-Rang-Test** (dieser hier) vergleicht eine Gruppe mit einem Wert oder zwei **[gepaarte](../glossary.qmd#paired){.term}** Messungen ([Seite 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). Der **[Wilcoxon-Rangsummentest](../glossary.qmd#mann-whitney-test){.term}** vergleicht zwei **[unabhängige](../glossary.qmd#independence){.term}** Gruppen; er ist dasselbe wie der [Mann-Whitney-Test](06-two-unpaired-groups.qmd#mann-whitney). Schreiben Sie immer den vollen Namen.
 
 Ausserdem: Personen, die **genau** 80 erzielen, tragen keine Information über die Richtung und fallen aus dem Test heraus.
 :::
@@ -443,27 +443,27 @@ Ausserdem: Personen, die **genau** 80 erzielen, tragen keine Information über d
 ::: {.callout-tip}
 ## 🔀 R oder Python: Standardwerte beim Wilcoxon-Test
 - **Die Teststatistik.** R meldet V, die Summe der Ränge der Personen **über** 80 (22698.5, ausgegeben als 22698). scipy (und pingouin) melden die **kleinere** der beiden Summen (11231.5). Die beiden Summen ergeben zusammen immer n(n + 1)/2, hier 260 × 261 / 2 = 33,930; sie tragen also dieselbe Information und liefern denselben p-Wert.
-- **Exakt oder näherungsweise.** Bei kleinen Stichproben ohne Bindungen berechnen beide Programme einen exakten p-Wert; sonst verwenden sie eine Normalapproximation. R wendet auf die Näherung standardmässig eine **Stetigkeitskorrektur** an; scipy nicht. Wir setzen `exact = FALSE, correct = FALSE` in R und `method="approx", correction=False` in Python, damit beide übereinstimmen.
-- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests. scipy hat dafür keine Funktion, darum verwendet der Python-Code einen Bootstrap, also eine andere Methode, und die beiden KI weichen leicht voneinander ab (82.75 bis 86.10 in R, 82.70 bis 86.05 mit dem Bootstrap).
+- **Exakt oder näherungsweise.** Bei kleinen [Stichproben](../glossary.qmd#sample){.term} ohne Bindungen berechnen beide Programme einen [exakten p-Wert](../glossary.qmd#exact-test){.term}; sonst verwenden sie eine Normalapproximation. R wendet auf die Näherung standardmässig eine **[Stetigkeitskorrektur](../glossary.qmd#continuity-correction){.term}** an; scipy nicht. Wir setzen `exact = FALSE, correct = FALSE` in R und `method="approx", correction=False` in Python, damit beide übereinstimmen.
+- **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests. scipy hat dafür keine Funktion, darum verwendet der Python-Code einen [Bootstrap](../glossary.qmd#bootstrap){.term}, also eine andere Methode, und die beiden KI weichen leicht voneinander ab (82.75 bis 86.10 in R, 82.70 bis 86.05 mit dem Bootstrap).
 :::
 
 ## Chi-Quadrat-Anpassungstest {#chi-square-gof}
 
-**Die Frage:** Angenommen, ein nationales Register meldet für seine Patientinnen und Patienten folgende Verteilung: 10 % ASA-Klasse 1, 55 % Klasse 2, 33 % Klasse 3 und 2 % Klasse 4. Ist unsere Verteilung der ASA-Klassen gleich?
+**Die Frage:** Angenommen, ein nationales [Register](../glossary.qmd#registry){.term} meldet für seine Patientinnen und Patienten folgende Verteilung: 10 % ASA-Klasse 1, 55 % Klasse 2, 33 % Klasse 3 und 2 % Klasse 4. Ist unsere Verteilung der ASA-Klassen gleich?
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **kategorial** mit zwei oder mehr Kategorien, und Sie haben für jede Kategorie hypothetische Anteile.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[kategorial](../glossary.qmd#categorical-variable){.term}** mit zwei oder mehr Kategorien, und Sie haben für jede Kategorie hypothetische [Anteile](../glossary.qmd#proportion){.term}.
 - Jede Person fällt in genau eine Kategorie und wird einmal gezählt.
-- Die **erwartete Häufigkeit** in jeder Kategorie (Gesamtzahl × hypothetischer Anteil) sollte mindestens 5 betragen. Fassen Sie sonst kleine Kategorien zusammen, oder verwenden Sie bei nur zwei Kategorien den [Binomialtest](#binomial-test).
+- Die **erwartete Häufigkeit** in jeder Kategorie (Gesamtzahl × [hypothetischer Anteil](../glossary.qmd#hypothetical-value){.term}) sollte mindestens 5 betragen. Fassen Sie sonst kleine Kategorien zusammen, oder verwenden Sie bei nur zwei Kategorien den [Binomialtest](#binomial-test).
 
 ### Was der Test wirklich macht
 
 Der Anpassungstest vergleicht die beobachteten Häufigkeiten mit den Häufigkeiten, die die hypothetischen Anteile vorhersagen würden.
 
 1. Für jede Kategorie die [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} berechnen: die Gesamtzahl der Personen × der hypothetische Anteil dieser Kategorie.
-2. Für jede Kategorie (beobachtet − erwartet)² ÷ erwartet berechnen und die Ergebnisse addieren. Die Summe ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **χ²**: 0, wenn die beobachteten Häufigkeiten genau den erwarteten entsprechen, und umso grösser, je weiter sie auseinanderliegen.
-3. χ² mit der Chi-Quadrat-Verteilung in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen. Dieser Schritt ist eine Näherung, und eine schlechte, wenn erwartete Häufigkeiten klein sind. Daher kommt die Regel «mindestens 5».
+2. Für jede Kategorie (beobachtet − erwartet)² ÷ erwartet berechnen und die Ergebnisse addieren. Die Summe ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}**: 0, wenn die beobachteten Häufigkeiten genau den erwarteten entsprechen, und umso grösser, je weiter sie auseinanderliegen.
+3. χ² mit der Chi-Quadrat-Verteilung in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen. Dieser Schritt ist eine [Näherung](../glossary.qmd#exact-test){.term}, und eine schlechte, wenn erwartete Häufigkeiten klein sind. Daher kommt die Regel «mindestens 5».
 
 Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» χ² von Hand nach.
 
@@ -532,7 +532,7 @@ check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reti
 ### Ausgabe lesen
 
 - **X-squared = 26.96** (in Python `statistic`): die Chi-Quadrat-Statistik, die aufsummiert, wie weit jede beobachtete Häufigkeit von ihrer erwarteten Häufigkeit entfernt ist.
-- **df = 3:** Freiheitsgrade, die Anzahl Kategorien minus 1. Hier 4 − 1. scipy gibt sie nicht aus.
+- **df = 3:** [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}, die Anzahl Kategorien minus 1. Hier 4 − 1. scipy gibt sie nicht aus.
 - **p < 0.001:** Eine Verteilung, die sich so stark von jener des Registers unterscheidet, wäre sehr unwahrscheinlich, wenn unsere Patientinnen und Patienten aus derselben Verteilung stammten. R gibt `5.992e-06` aus, das ist 0.000005992.
 
 ::: {.callout-note collapse="true"}
@@ -572,7 +572,7 @@ check_agree(list(by_hand = sum(asa_parts), asa3 = unname(asa_parts[3])), reticul
 
 ### Effektstärke und 95%-KI
 
-Der Test sagt, dass sich die Verteilung unterscheidet, nicht wo. Sehen Sie sich den beobachteten Prozentsatz jeder Kategorie mit einem 95%-KI neben dem des Registers an.
+Der Test sagt, dass sich die Verteilung unterscheidet, nicht wo. Sehen Sie sich den beobachteten Prozentsatz jeder Kategorie mit einem 95%-[KI](../glossary.qmd#confidence-interval){.term} neben dem des Registers an.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -623,7 +623,7 @@ Bei ASA 3 ist die Abweichung am grössten: 41.0 % unserer Patientinnen und Pati
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Häufigkeiten, nicht Prozentsätze
-Der Test braucht die **Anzahl** der Personen in jeder Kategorie. Wenn Sie ihm Prozentsätze («6, 50, 41, 3») geben, erhalten Sie einen falschen p-Wert, denn die Genauigkeit des Tests hängt davon ab, wie viele Personen es sind.
+Der Test braucht die **Anzahl** der Personen in jeder Kategorie. Wenn Sie ihm Prozentsätze («6, 50, 41, 3») geben, erhalten Sie einen falschen p-Wert, denn die [Genauigkeit](../glossary.qmd#precision){.term} des Tests hängt davon ab, wie viele Personen es sind.
 :::
 
 ::: {.callout-tip}
@@ -633,17 +633,17 @@ Der Test braucht die **Anzahl** der Personen in jeder Kategorie. Wenn Sie ihm Pr
 
 ## Binomialtest {#binomial-test}
 
-**Die Frage:** Angenommen, das Ziel lautet, dass 90 % der Patientinnen und Patienten mit proximaler Femurfraktur innerhalb von 48 Stunden nach dem Eintritt operiert werden. Unterscheidet sich unser Anteil davon?
+**Die Frage:** Angenommen, das Ziel lautet, dass 90 % der Patientinnen und Patienten mit proximaler Femurfraktur innerhalb von 48 Stunden nach dem Eintritt operiert werden. Unterscheidet sich unser [Anteil](../glossary.qmd#proportion){.term} davon?
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **Ja/Nein**, und Sie vergleichen den Anteil einer Gruppe mit einem hypothetischen Anteil.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}**, und Sie vergleichen den Anteil einer Gruppe mit einem [hypothetischen Anteil](../glossary.qmd#hypothetical-value){.term}.
 - Jede Person wird einmal gezählt.
-- Der Binomialtest ist **exakt**: Er funktioniert bei jeder Stichprobengrösse, auch bei wenigen Ereignissen. (Der Chi-Quadrat-Anpassungstest mit zwei Kategorien ist seine Näherung für grosse Stichproben.)
+- Der Binomialtest ist **[exakt](../glossary.qmd#exact-test){.term}**: Er funktioniert bei jeder [Stichprobengrösse](../glossary.qmd#sample-size){.term}, auch bei wenigen Ereignissen. (Der [Chi-Quadrat-Anpassungstest](../glossary.qmd#chi-square-test){.term} mit zwei [Kategorien](../glossary.qmd#categorical-variable){.term} ist seine Näherung für grosse Stichproben.)
 
 ### Was der Test wirklich macht
 
-Der Binomialtest berechnet exakte Wahrscheinlichkeiten, ohne Näherung.
+Der Binomialtest berechnet exakte [Wahrscheinlichkeiten](../glossary.qmd#probability){.term}, ohne Näherung.
 
 1. Angenommen, der hypothetische Anteil wäre wahr. Die Binomialverteilung gibt dann die exakte Wahrscheinlichkeit jedes möglichen Ergebnisses an: 0 Personen mit dem Ereignis, 1 Person, 2 Personen und so weiter bis zu allen.
 2. Die Wahrscheinlichkeit des beobachteten Ergebnisses bestimmen.
@@ -677,7 +677,7 @@ print(hip_fracture["surgery_within_48h"].value_counts(dropna=False))   # 1 = inn
 ```
 :::
 
-1,034 Patientinnen und Patienten wurden innerhalb von 48 Stunden operiert, und es fehlt kein Wert. (Die Spalte wird aus `hours_to_surgery` berechnet.)
+1,034 Patientinnen und Patienten wurden innerhalb von 48 Stunden operiert, und es [fehlt](../glossary.qmd#missing-data){.term} kein Wert. (Die Spalte wird aus `hours_to_surgery` berechnet.)
 
 ### Analyse durchführen
 
@@ -722,9 +722,9 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 ### Ausgabe lesen
 
 - **number of successes = 1034, number of trials = 1200** (in Python `k=1034, n=1200`): 1,034 Patientinnen und Patienten, die innerhalb von 48 Stunden operiert wurden («successes» ist einfach das Wort der Software für das, was Sie gezählt haben).
-- **p < 0.001:** Ein Anteil, der so weit von 90 % entfernt ist, wäre sehr unwahrscheinlich, wenn unser wahrer Anteil 90 % betrüge. R gibt `2.682e-05` aus, das ist 0.00002682.
+- **p < 0.001:** Ein Anteil, der so weit von 90 % entfernt ist, wäre sehr unwahrscheinlich, wenn unser [wahrer Anteil](../glossary.qmd#population){.term} 90 % betrüge. R gibt `2.682e-05` aus, das ist 0.00002682.
 - **probability of success = 0.862** (in Python `statistic`): unser Anteil, 86.2 %.
-- **95%-KI 0.841 bis 0.881:** unser wahrer Anteil liegt plausibel irgendwo zwischen 84.1 % und 88.1 %. Das ist das exakte Intervall (nach Clopper-Pearson).
+- **95%-KI 0.841 bis 0.881:** unser wahrer Anteil liegt plausibel irgendwo zwischen 84.1 % und 88.1 %. Das ist das exakte Intervall (nach [Clopper-Pearson](../glossary.qmd#clopper-pearson){.term}).
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: der exakte p-Wert von Hand
@@ -764,7 +764,7 @@ check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probabi
 
 ### Effektstärke und 95%-KI
 
-Die Effektstärke ist die Differenz zum Zielwert: 86.2 % − 90 % = −3.8 Prozentpunkte. Ihr 95%-KI ist das KI für unseren Anteil minus 90 %: −5.9 bis −1.9 Prozentpunkte. Es schliesst 0 aus, was zum p-Wert unter 0.05 passt. In Personen: Bei 90 % wären 1,080 der 1,200 innerhalb von 48 Stunden operiert worden, 46 mehr, als es tatsächlich waren.
+Die [Effektstärke](../glossary.qmd#effect-size){.term} ist die Differenz zum Zielwert: 86.2 % − 90 % = −3.8 [Prozentpunkte](../glossary.qmd#percentage-point){.term}. Ihr 95%-[KI](../glossary.qmd#confidence-interval){.term} ist das KI für unseren Anteil minus 90 %: −5.9 bis −1.9 Prozentpunkte. Es schliesst 0 aus, was zum p-Wert [unter 0.05](../glossary.qmd#statistical-significance){.term} passt. In Personen: Bei 90 % wären 1,080 der 1,200 innerhalb von 48 Stunden operiert worden, 46 mehr, als es tatsächlich waren.
 
 ### Resultate formulieren
 
@@ -774,12 +774,12 @@ Die Effektstärke ist die Differenz zum Zielwert: 86.2 % − 90 % = −3.8 Pro
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Legen Sie vor dem Ansehen fest, ob einseitig oder zweiseitig
-Ein Zielwert legt eine einseitige Frage nahe: Liegen wir *unter* 90 %? Ein einseitiger Test halbiert den p-Wert ungefähr; wählt man ihn erst, nachdem man gesehen hat, auf welcher Seite des Zielwerts man gelandet ist, wird der p-Wert zu klein. Verwenden Sie einen einseitigen Test nur, wenn das Protokoll ihn vor Eingang der Daten festgelegt hat und ein Resultat auf der anderen Seite tatsächlich nichts ändern würde. Berichten Sie sonst den zweiseitigen Test, wie hier.
+Ein Zielwert legt eine [einseitige](../glossary.qmd#two-sided){.term} Frage nahe: Liegen wir *unter* 90 %? Ein einseitiger Test halbiert den p-Wert ungefähr; wählt man ihn erst, nachdem man gesehen hat, auf welcher Seite des Zielwerts man gelandet ist, wird der p-Wert zu klein. Verwenden Sie einen einseitigen Test nur, wenn das Protokoll ihn vor Eingang der Daten festgelegt hat und ein Resultat auf der anderen Seite tatsächlich nichts ändern würde. Berichten Sie sonst den zweiseitigen Test, wie hier.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: exakte KI
-`binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das Wilson-Intervall, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht (die letzte Zeile der Ausgabe unter «Analyse durchführen»). Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
+`binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das [Wilson-Intervall](../glossary.qmd#wilson-interval){.term}, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht (die letzte Zeile der Ausgabe unter «Analyse durchführen»). Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
 :::
 
 ```{r}
@@ -846,7 +846,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Angenommen, ein Register meldet ein mittleres Alter von 66 Jahren bei primärem Gelenkersatz. Unterscheidet sich das mittlere Alter unserer Patientinnen und Patienten? Führen Sie den Test durch und berichten Sie die Mittelwertsdifferenz mit ihrem 95%-KI.
+**1.** Angenommen, ein [Register](../glossary.qmd#registry){.term} meldet ein [mittleres](../glossary.qmd#mean){.term} Alter von 66 Jahren bei primärem Gelenkersatz. Unterscheidet sich das mittlere Alter unserer Patientinnen und Patienten? Führen Sie den Test durch und berichten Sie die [Mittelwertsdifferenz](../glossary.qmd#mean-difference){.term} mit ihrem 95%-[KI](../glossary.qmd#confidence-interval){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -880,7 +880,7 @@ Das KI schliesst 0 ein und schliesst eine Differenz von mehr als etwa einem Jahr
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Eine Ja/Nein-Zielgrösse, verglichen mit einem hypothetischen Anteil: der **Binomialtest**.
+Eine [Ja/Nein-Zielgrösse](../glossary.qmd#binary){.term}, verglichen mit einem hypothetischen [Anteil](../glossary.qmd#proportion){.term}: der **[Binomialtest](../glossary.qmd#binomial-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -899,7 +899,7 @@ print(mortality.pvalue, mortality.proportion_ci(method="exact"))
 
 > **Results:** Within 30 days, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%); the audit reports 7% (binomial test p = 0.282).
 
-Das KI schliesst 7 % ein, es gibt also keinen klaren Hinweis, dass sich unsere Mortalität von jener des Audits unterscheidet. Das ist nicht dasselbe, wie zu zeigen, dass sie gleich ist: Unsere wahre Rate könnte irgendwo zwischen 4.9 % und 7.7 % liegen. Schreiben Sie nicht «unsere Mortalität entsprach jener des Audits»; berichten Sie das KI und lassen Sie es für sich sprechen.
+Das KI schliesst 7 % ein, es gibt also keinen klaren Hinweis, dass sich unsere Mortalität von jener des Audits unterscheidet. Das ist nicht dasselbe, wie zu zeigen, dass sie gleich ist: Unsere [wahre Rate](../glossary.qmd#population){.term} könnte irgendwo zwischen 4.9 % und 7.7 % liegen. Schreiben Sie nicht «unsere Mortalität entsprach jener des Audits»; berichten Sie das KI und lassen Sie es für sich sprechen.
 :::
 
 **3.** Angenommen, eine Befragung von Patientinnen und Patienten mit Gelenkersatz ergab 50 % Personen, die nie geraucht haben, 40 % ehemals Rauchende und 10 % aktuell Rauchende. Prüfen Sie, ob sich unsere Verteilung des Rauchstatus unterscheidet, und schreiben Sie den Results-Satz.
@@ -929,5 +929,5 @@ print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10
 
 > **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
 
-Die zweite Zeile der Ausgabe zeigt die Prozentwerte. Der Test hat 3 Kategorien − 1 = 2 Freiheitsgrade; scipy gibt sie nicht aus.
+Die zweite Zeile der Ausgabe zeigt die Prozentwerte. Der Test hat 3 [Kategorien](../glossary.qmd#categorical-variable){.term} − 1 = 2 [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}; scipy gibt sie nicht aus.
 :::

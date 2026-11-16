@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Zielgrössen hängen selten von nur einem Faktor ab. Bei schwereren Patientinnen und Patienten dauert die Operation womöglich länger, bei älteren aber auch, und Knieoperationen dauern länger als Hüftoperationen. Die **multiple Regression** nimmt mehrere Prädiktoren in ein Modell auf, sodass jeder Koeffizient der Effekt dieses Prädiktors ist, **während die anderen konstant gehalten werden**: adjustiert für sie. Es sind dieselben vier Regressionen wie auf [Seite 11](11-predict-from-one.qmd), nur mit mehr als einem Prädiktor.
+[Zielgrössen](../glossary.qmd#outcome){.term} hängen selten von nur einem Faktor ab. Bei schwereren Patientinnen und Patienten dauert die Operation womöglich länger, bei älteren aber auch, und Knieoperationen dauern länger als Hüftoperationen. Die **[multiple Regression](../glossary.qmd#multivariable){.term}** nimmt mehrere [Prädiktoren](../glossary.qmd#predictor){.term} in ein [Modell](../glossary.qmd#model){.term} auf, sodass jeder [Koeffizient](../glossary.qmd#coefficient){.term} der Effekt dieses Prädiktors ist, **während die anderen konstant gehalten werden**: [adjustiert für](../glossary.qmd#adjustment){.term} sie. Es sind dieselben vier Regressionen wie auf [Seite 11](11-predict-from-one.qmd), nur mit mehr als einem Prädiktor.
 
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
-Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: der Gelenkersatz-Kohorte und den PROMs (patientenberichtete Messinstrumente), bei der logistischen Regression den VKB-Rekonstruktionen. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: der [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term} und den [PROMs](../glossary.qmd#prom){.term} (patientenberichtete Messinstrumente), bei der [logistischen Regression](../glossary.qmd#logistic-regression){.term} den VKB-Rekonstruktionen. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
 
 Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
 :::
@@ -32,16 +32,16 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 ### Wann verwenden
 
-- Die Zielgrösse ist eine **Messgrösse**, und Sie möchten den Effekt jedes von **mehreren Prädiktoren**, adjustiert für die anderen.
-- Die Voraussetzungen der [einfachen linearen Regression](11-predict-from-one.qmd#linear-regression) gelten weiterhin: geradlinige Effekte, voneinander unabhängige Patientinnen und Patienten sowie Residuen, die ungefähr normalverteilt sind und gleichmässig streuen.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine **[Messgrösse](../glossary.qmd#continuous-variable){.term}**, und Sie möchten den Effekt jedes von **mehreren [Prädiktoren](../glossary.qmd#predictor){.term}**, adjustiert für die anderen.
+- Die [Voraussetzungen](../glossary.qmd#assumption){.term} der [einfachen linearen Regression](11-predict-from-one.qmd#linear-regression) gelten weiterhin: geradlinige Effekte, voneinander [unabhängige](../glossary.qmd#independence){.term} Patientinnen und Patienten sowie [Residuen](../glossary.qmd#residual){.term}, die ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term} sind und gleichmässig [streuen](../glossary.qmd#spread){.term}.
 - Wählen Sie die Prädiktoren **bevor** Sie die Resultate ansehen, aus klinischem Wissen. Als Faustregel gelten mindestens 10 bis 20 Patientinnen und Patienten pro Prädiktor.
-- Wenn sich ein Effekt krümmen könnte → [Splines](#multiple-nonlinear-regression). Wenn die Zielgrösse Ja/Nein ist → [multiple logistische Regression](#multiple-logistic-regression).
+- Wenn sich ein Effekt krümmen könnte → [Splines](#multiple-nonlinear-regression). Wenn die Zielgrösse [Ja/Nein](../glossary.qmd#binary){.term} ist → [multiple logistische Regression](#multiple-logistic-regression).
 
 ### Was der Test wirklich macht
 
-Die multiple lineare Regression funktioniert wie die [einfache lineare Regression](11-predict-from-one.qmd#linear-regression), mit einem Koeffizienten für jeden Prädiktor.
+Die multiple lineare Regression funktioniert wie die [einfache lineare Regression](11-predict-from-one.qmd#linear-regression), mit einem [Koeffizienten](../glossary.qmd#coefficient){.term} für jeden Prädiktor.
 
-1. Das Modell sagt die Zielgrösse jeder Person vorher, indem es die Prädiktoren addiert, jeden mit seinem eigenen Koeffizienten multipliziert, plus einen Achsenabschnitt.
+1. Das [Modell](../glossary.qmd#model){.term} sagt die Zielgrösse jeder Person vorher, indem es die Prädiktoren addiert, jeden mit seinem eigenen Koeffizienten multipliziert, plus einen [Achsenabschnitt](../glossary.qmd#intercept){.term}.
 2. Wie zuvor misst es den Abstand jeder Person von dieser Vorhersage (das Residuum) und findet die Koeffizienten, bei denen die Summe der quadrierten Residuen so klein wie möglich ist.
 3. Jeder Koeffizient beschreibt am Ende nur, was sein Prädiktor hinzufügt, nachdem die anderen erklärt haben, was sie erklären können. Der Koeffizient des BMI vergleicht Personen, die sich im BMI unterscheiden, sich aber in Alter, Geschlecht und Eingriff gleichen. Das bedeutet «adjustiert».
 4. Jeder Koeffizient erhält seinen eigenen [Standardfehler](../glossary.qmd#standard-error){.term}, sein [Konfidenzintervall](../glossary.qmd#confidence-interval){.term} und seinen [p-Wert](../glossary.qmd#p-value){.term}, zu lesen wie bei der einfachen Regression.
@@ -90,7 +90,7 @@ print(cohort.groupby("procedure")["op_time_min"].agg(["count", "mean", "std"]))
 ```
 :::
 
-Die Operationsdauer steigt bei beiden Eingriffen mit dem BMI an, und Knie-TP dauern im Mittel länger als Hüft-TP (im Code und in den Daten THA und TKA): 88.3 Minuten (Standardabweichung, SD: 16.2) gegenüber 79.8 (SD 15.5).
+Die Operationsdauer steigt bei beiden Eingriffen mit dem BMI an, und Knie-TP dauern im Mittel länger als Hüft-TP (im Code und in den Daten THA und TKA): 88.3 Minuten ([Standardabweichung](../glossary.qmd#standard-deviation){.term}, SD: 16.2) gegenüber 79.8 (SD 15.5).
 
 ### Analyse durchführen
 
@@ -135,7 +135,7 @@ Jeder Koeffizient ist die Veränderung der Operationsdauer pro Einheit dieses Pr
 
 - **bmi = 1.27:** 1.27 Minuten mehr pro kg/m² (95%-KI, Konfidenzintervall: 1.06 bis 1.49), bei Patientinnen und Patienten gleichen Alters, gleichen Geschlechts und mit gleichem Eingriff.
 - **age = 0.27:** 0.27 Minuten mehr pro Lebensjahr (95%-KI 0.15 bis 0.39).
-- **sexMale** (R) oder **sex[T.Male]** (Python) **= −1.48:** Bei Männern dauerte die Operation 1.48 Minuten weniger als bei Frauen, aber das KI (−3.81 bis 0.84) schliesst 0 ein. Frauen sind die Referenzgruppe, weil «Female» alphabetisch zuerst kommt.
+- **sexMale** (R) oder **sex[T.Male]** (Python) **= −1.48:** Bei Männern dauerte die Operation 1.48 Minuten weniger als bei Frauen, aber das KI (−3.81 bis 0.84) schliesst 0 ein. Frauen sind die [Referenzgruppe](../glossary.qmd#reference-group){.term}, weil «Female» alphabetisch zuerst kommt.
 - **procedureTKA = 6.74:** Knie-TP dauerten 6.74 Minuten länger als Hüft-TP (95%-KI 4.40 bis 9.08).
 - **Multiple R-squared = 0.27, adjusted R-squared = 0.26:** Die vier Prädiktoren zusammen erklären etwa ein Viertel der Variation. Der adjustierte Wert wird nach der Anzahl der Prädiktoren abgewertet.
 - **F-statistic, p < 0.001:** der Test der Nullhypothese, dass alle vier Prädiktoren zusammen nichts erklären.
@@ -163,7 +163,7 @@ print(smf.ols("op_time_min ~ bmi", data=cohort).fit().params["bmi"])            
 ```
 :::
 
-Nimmt man aus der Operationsdauer und aus dem BMI alles heraus, was Alter, Geschlecht und Eingriff erklären können, und passt dann eine einfache Regression zwischen den Resten an, so ist deren Steigung 1.27: genau der Koeffizient `bmi` des vollen Modells. Allein, ohne Adjustierung, beträgt die Steigung des BMI 1.37 (die letzte Zeile).
+Nimmt man aus der Operationsdauer und aus dem BMI alles heraus, was Alter, Geschlecht und Eingriff erklären können, und passt dann eine einfache Regression zwischen den Resten an, so ist deren [Steigung](../glossary.qmd#slope){.term} 1.27: genau der Koeffizient `bmi` des vollen Modells. Allein, ohne Adjustierung, beträgt die Steigung des BMI 1.37 (die letzte Zeile).
 :::
 
 ```{python}
@@ -180,7 +180,7 @@ check_agree(list(by_hand = coef(lm(time_left ~ bmi_left))[["bmi_left"]],
 
 ### Effektstärke und 95%-KI
 
-Die **adjustierten Koeffizienten** mit ihren 95%-KI sind die Effektstärken, dazu das **R²** für das Modell als Ganzes. Der Koeffizient des BMI sank durch die Adjustierung nur wenig, von 1.37 Minuten pro kg/m² allein (die letzte Zeile im Kasten oben; [Seite 11](11-predict-from-one.qmd#linear-regression)) auf 1.27: Alter, Geschlecht und Eingriff erklären nur einen kleinen Teil des Zusammenhangs zwischen BMI und Operationsdauer.
+Die **adjustierten Koeffizienten** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}, dazu das **[R²](../glossary.qmd#r-squared){.term}** für das Modell als Ganzes. Der Koeffizient des BMI sank durch die Adjustierung nur wenig, von 1.37 Minuten pro kg/m² allein (die letzte Zeile im Kasten oben; [Seite 11](11-predict-from-one.qmd#linear-regression)) auf 1.27: Alter, Geschlecht und Eingriff erklären nur einen kleinen Teil des Zusammenhangs zwischen BMI und Operationsdauer.
 
 ### Resultate formulieren
 
@@ -190,12 +190,12 @@ Die **adjustierten Koeffizienten** mit ihren 95%-KI sind die Effektstärken, daz
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: «Adjustiert» heisst nicht «verursacht», und mehr Prädiktoren sind nicht besser
-Die Adjustierung entfernt den Teil eines Effekts, der durch die Variablen **im** Modell erklärt wird, nicht aber den Teil, der auf Variablen beruht, die Sie weggelassen oder nie gemessen haben. Ein adjustierter Koeffizient ist deshalb noch kein Beweis für eine Ursache. Wählen Sie die Prädiktoren im Voraus und lassen Sie es dabei bewenden: Wer Variablen hinzufügt, bis etwas signifikant wird, oder jene weglässt, die es nicht sind (schrittweise Selektion, englisch stepwise selection), erhält Resultate, die sich nicht replizieren lassen.
+Die Adjustierung entfernt den Teil eines Effekts, der durch die [Variablen](../glossary.qmd#variable){.term} **im** Modell erklärt wird, nicht aber den Teil, der auf Variablen beruht, die Sie weggelassen oder nie gemessen haben. Ein adjustierter Koeffizient ist deshalb noch kein Beweis für eine Ursache. Wählen Sie die Prädiktoren im Voraus und lassen Sie es dabei bewenden: Wer Variablen hinzufügt, bis etwas [signifikant](../glossary.qmd#statistical-significance){.term} wird, oder jene weglässt, die es nicht sind ([schrittweise Selektion](../glossary.qmd#stepwise-selection){.term}, englisch stepwise selection), erhält Resultate, die sich nicht replizieren lassen.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Namen für dieselben Koeffizienten
-Beide Programme verwenden die alphabetisch erste Kategorie als Referenz (Female, THA). R nennt die Koeffizienten `sexMale` und `procedureTKA`; statsmodels nennt sie `sex[T.Male]` und `procedure[T.TKA]` (T steht für die «Treatment»-Codierung). Die Zahlen sind dieselben.
+Beide Programme verwenden die alphabetisch erste [Kategorie](../glossary.qmd#categorical-variable){.term} als Referenz (Female, THA). R nennt die Koeffizienten `sexMale` und `procedureTKA`; statsmodels nennt sie `sex[T.Male]` und `procedure[T.TKA]` (T steht für die «Treatment»-Codierung). Die Zahlen sind dieselben.
 :::
 
 ## Multiple nichtlineare Regression {#multiple-nonlinear-regression}
@@ -204,8 +204,8 @@ Beide Programme verwenden die alphabetisch erste Kategorie als Referenz (Female,
 
 ### Wann verwenden
 
-- **Die Form der Kurve ist bekannt, ihre Zahlen können aber von anderen Variablen abhängen.** Erweitern Sie die [Erholungskurve](11-predict-from-one.qmd#nonlinear-regression) so, dass sich jede ihrer Zahlen zwischen Hüften und Knien unterscheiden kann, und passen Sie ein einziges Modell mit der nichtlinearen Methode der kleinsten Quadrate an.
-- **Die Form ist nicht bekannt.** Lassen Sie den Effekt eines gemessenen Prädiktors sich mit einem **Spline** krümmen: einer flexiblen Kurve aus kurzen kubischen Stücken, die an Punkten, den sogenannten Knoten (englisch knots), glatt verbunden sind. Ein **natürlicher** (oder **restringierter**) kubischer Spline verläuft ausserhalb der äusseren Knoten als Gerade, wodurch er an den Rändern nicht ausschlägt. Splines lassen sich in ein gewöhnliches lineares, logistisches oder Cox-Modell einbauen, und mit ihnen prüft man üblicherweise, ob eine Gerade ausreicht.
+- **Die Form der Kurve ist bekannt, ihre Zahlen können aber von anderen Variablen abhängen.** Erweitern Sie die [Erholungskurve](11-predict-from-one.qmd#nonlinear-regression) so, dass sich jede ihrer Zahlen zwischen Hüften und Knien unterscheiden kann, und passen Sie ein einziges [Modell](../glossary.qmd#model){.term} mit der [nichtlinearen Methode der kleinsten Quadrate](../glossary.qmd#least-squares){.term} an.
+- **Die Form ist nicht bekannt.** Lassen Sie den Effekt eines gemessenen [Prädiktors](../glossary.qmd#predictor){.term} sich mit einem **Spline** krümmen: einer flexiblen Kurve aus kurzen kubischen Stücken, die an Punkten, den sogenannten Knoten (englisch knots), glatt verbunden sind. Ein **natürlicher** (oder **restringierter**) kubischer Spline verläuft ausserhalb der äusseren Knoten als Gerade, wodurch er an den Rändern nicht ausschlägt. Splines lassen sich in ein gewöhnliches lineares, logistisches oder Cox-Modell einbauen, und mit ihnen prüft man üblicherweise, ob eine Gerade ausreicht.
 - Wenn jeder Effekt eine Gerade ist → [multiple lineare Regression](#multiple-linear-regression).
 
 ### Was der Test wirklich macht
@@ -213,9 +213,9 @@ Beide Programme verwenden die alphabetisch erste Kategorie als Referenz (Female,
 Beide Werkzeuge dieses Abschnitts sind Anpassungen nach der Methode der kleinsten Quadrate, wie auf [Seite 11](11-predict-from-one.qmd#nonlinear-regression).
 
 1. **Eine Kurve, die sich zwischen Gruppen unterscheidet.** Jede Zahl der Kurve erhält zwei Teile: ihren Wert für Hüften und die Differenz für Knie. Das Programm findet dann alle sechs Zahlen auf einmal, indem es die quadrierten Abstände zwischen den Scores und den beiden Kurven so klein wie möglich macht.
-2. Jede Differenz hat ihren eigenen Standardfehler und ihr eigenes [Konfidenzintervall](../glossary.qmd#confidence-interval){.term}; das Modell zeigt also direkt, wie sich Hüften und Knie unterscheiden.
-3. **Ein Spline.** Die einzelne BMI-Spalte einer linearen Regression wird durch einige aus dem BMI gebildete Spalten ersetzt, die zusammen eine glatte Krümmung zeichnen können. Die Regression selbst bleibt linear.
-4. Die Anpassung mit und ohne Krümmung vergleichen: Ein F-Test fragt, ob die quadrierten Residuen stärker schrumpfen, als es die zusätzlichen Koeffizienten durch Zufall erreichen würden.
+2. Jede Differenz hat ihren eigenen [Standardfehler](../glossary.qmd#standard-error){.term} und ihr eigenes [Konfidenzintervall](../glossary.qmd#confidence-interval){.term}; das Modell zeigt also direkt, wie sich Hüften und Knie unterscheiden.
+3. **Ein Spline.** Die einzelne BMI-Spalte einer [linearen Regression](../glossary.qmd#linear-regression){.term} wird durch einige aus dem BMI gebildete Spalten ersetzt, die zusammen eine glatte Krümmung zeichnen können. Die Regression selbst bleibt linear.
+4. Die Anpassung mit und ohne Krümmung vergleichen: Ein [F-Test](../glossary.qmd#f-statistic){.term} fragt, ob die quadrierten [Residuen](../glossary.qmd#residual){.term} stärker schrumpfen, als es die zusätzlichen [Koeffizienten](../glossary.qmd#coefficient){.term} durch Zufall erreichen würden.
 
 ### Zuerst die Daten ansehen
 
@@ -332,7 +332,7 @@ check_agree(list(tau_hip = joint_coef["tau_hip", "Estimate"], tau_diff = joint_c
             reticulate::py$chk, tol = 1e-4)   # both approximate the curve's derivatives numerically, so they agree to ~5 digits
 ```
 
-**Eine zweite Frage, für den zweiten Fall (Form unbekannt):** Ist der Effekt des BMI auf die Operationsdauer eine Gerade? Hier lässt ein natürlicher kubischer Spline den Effekt sich krümmen, und ein F-Test fragt, ob die Krümmung die Gerade der [multiplen linearen Regression](#multiple-linear-regression) verbessert. `df = 3` gibt dem BMI drei Koeffizienten, wo die Gerade einen hat; der Test hat also 2 zusätzliche Freiheitsgrade.
+**Eine zweite Frage, für den zweiten Fall (Form unbekannt):** Ist der Effekt des BMI auf die Operationsdauer eine Gerade? Hier lässt ein natürlicher kubischer Spline den Effekt sich krümmen, und ein F-Test fragt, ob die Krümmung die Gerade der [multiplen linearen Regression](#multiple-linear-regression) verbessert. `df = 3` gibt dem BMI drei Koeffizienten, wo die Gerade einen hat; der Test hat also 2 zusätzliche [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -382,7 +382,7 @@ Der Spline:
 
 ### Effektstärke und 95%-KI
 
-Die **Differenzen zwischen Hüften und Knien** mit ihren 95%-KI sind die Effektstärken.
+Die **Differenzen zwischen Hüften und Knien** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -415,13 +415,13 @@ Die Zeitkonstante war bei Knien um 27.5 Tage länger (95%-KI 15.9 bis 40.1). Bis
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: zwei Fragebogen und wiederholte Scores
-Bei Hüften wird der HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) beantwortet, bei Knien der KOOS JR (Score für Knie-Gelenkersatz, Kurzform). Ein Punkt auf dem einen Fragebogen entspricht nicht zwingend einem Punkt auf dem anderen, sodass die Differenzen bei Start und Plateau die Gelenke mit den Fragebogen vermischen. Die Zeitkonstante wird in Tagen gemessen, nicht in Punkten, und lässt sich daher fairer vergleichen, solange beide Fragebogen die Erholung ähnlich abbilden. Wie auf [Seite 11](11-predict-from-one.qmd#nonlinear-regression) trägt jedes Gelenk bis zu vier zusammengehörige Scores bei, sodass man diesen KI nicht trauen kann: Manche sind womöglich zu schmal und andere zu breit. Ein gemischtes Modell ([Seite 16](../beyond/16-mixed-models.qmd#random-intercept)) berücksichtigt das.
+Bei Hüften wird der HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) beantwortet, bei Knien der KOOS JR (Score für Knie-Gelenkersatz, Kurzform). Ein Punkt auf dem einen Fragebogen entspricht nicht zwingend einem Punkt auf dem anderen, sodass die Differenzen bei Start und Plateau die Gelenke mit den Fragebogen vermischen. Die Zeitkonstante wird in Tagen gemessen, nicht in Punkten, und lässt sich daher fairer vergleichen, solange beide Fragebogen die Erholung ähnlich abbilden. Wie auf [Seite 11](11-predict-from-one.qmd#nonlinear-regression) trägt jedes Gelenk bis zu vier zusammengehörige Scores bei, sodass man diesen KI nicht trauen kann: Manche sind womöglich zu schmal und andere zu breit. Ein [gemischtes Modell](../glossary.qmd#mixed-model){.term} ([Seite 16](../beyond/16-mixed-models.qmd#random-intercept)) berücksichtigt das.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Splines und KI
-- `ns()` in R und `cr()` in Python (aus patsy, der Formelbibliothek, die statsmodels verwendet) bilden nur dann denselben natürlichen kubischen Spline, wenn die Knoten übereinstimmen. `ns(df = 3)` setzt Knoten an das 1/3- und das 2/3-Quantil sowie an das Minimum und das Maximum, daher legt der Python-Code diese ausdrücklich fest. Andere Werkzeuge, etwa `rms::rcs()`, setzen die Knoten anderswo und ergeben leicht abweichende Kurven. `constraints='center'` entfernt eine Spalte aus dem Spline von patsy, damit er den Achsenabschnitt des Modells nicht wiederholt, wie es `ns()` standardmässig tut; beide Splines verwenden dann 3 Freiheitsgrade.
-- Wie auf [Seite 11](11-predict-from-one.qmd#nonlinear-regression) profiliert `confint()` in R die nichtlineare Anpassung, während der Python-Code Schätzwert ± t × Standardfehler verwendet, sodass sich die KI leicht unterscheiden (Differenz von τ: 15.3 bis 39.7 Tage in Python).
+- `ns()` in R und `cr()` in Python (aus patsy, der Formelbibliothek, die statsmodels verwendet) bilden nur dann denselben natürlichen kubischen Spline, wenn die Knoten übereinstimmen. `ns(df = 3)` setzt Knoten an das 1/3- und das 2/3-Quantil sowie an das Minimum und das Maximum, daher legt der Python-Code diese ausdrücklich fest. Andere Werkzeuge, etwa `rms::rcs()`, setzen die Knoten anderswo und ergeben leicht abweichende Kurven. `constraints='center'` entfernt eine Spalte aus dem Spline von patsy, damit er den [Achsenabschnitt](../glossary.qmd#intercept){.term} des Modells nicht wiederholt, wie es `ns()` standardmässig tut; beide Splines verwenden dann 3 Freiheitsgrade.
+- Wie auf [Seite 11](11-predict-from-one.qmd#nonlinear-regression) [profiliert](../glossary.qmd#profile-interval){.term} `confint()` in R die nichtlineare Anpassung, während der Python-Code [Schätzwert](../glossary.qmd#estimate){.term} ± t × Standardfehler verwendet, sodass sich die KI leicht unterscheiden (Differenz von τ: 15.3 bis 39.7 Tage in Python).
 :::
 
 ## Multiple logistische Regression {#multiple-logistic-regression}
@@ -430,19 +430,19 @@ Bei Hüften wird der HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) beantwort
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **Ja/Nein**, und Sie möchten das **Odds Ratio** jedes von mehreren Prädiktoren, adjustiert für die anderen.
-- Die Voraussetzungen der [einfachen logistischen Regression](11-predict-from-one.qmd#logistic-regression) gelten weiterhin, für jeden gemessenen Prädiktor.
-- **Die Anzahl der Ereignisse begrenzt die Prädiktoren.** Als Faustregel gelten mindestens 10 Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse pro Prädiktor. Hier sind 173 zurückgekehrt und 177 nicht, sodass dieses Modell etwa 17 Prädiktoren verkraftet.
-- Wenn die Zielgrösse die Zeit bis zu einem Ereignis ist → [Cox-Regression](#cox).
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}**, und Sie möchten das **Odds Ratio** jedes von mehreren [Prädiktoren](../glossary.qmd#predictor){.term}, [adjustiert für](../glossary.qmd#adjustment){.term} die anderen.
+- Die [Voraussetzungen](../glossary.qmd#assumption){.term} der [einfachen logistischen Regression](11-predict-from-one.qmd#logistic-regression) gelten weiterhin, für jeden gemessenen Prädiktor.
+- **Die Anzahl der Ereignisse begrenzt die Prädiktoren.** Als Faustregel gelten mindestens 10 Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse pro Prädiktor. Hier sind 173 zurückgekehrt und 177 nicht, sodass dieses [Modell](../glossary.qmd#model){.term} etwa 17 Prädiktoren verkraftet.
+- Wenn die Zielgrösse die Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term} ist → [Cox-Regression](#cox).
 
 ### Was der Test wirklich macht
 
-Die multiple logistische Regression funktioniert wie die [einfache logistische Regression](11-predict-from-one.qmd#logistic-regression), mit einem Koeffizienten für jeden Prädiktor.
+Die multiple logistische Regression funktioniert wie die [einfache logistische Regression](11-predict-from-one.qmd#logistic-regression), mit einem [Koeffizienten](../glossary.qmd#coefficient){.term} für jeden Prädiktor.
 
-1. Das Modell addiert die Prädiktoren, jeden mit seinem eigenen Koeffizienten multipliziert, und erhält so die Log-Odds der Zielgrösse für jede Person.
+1. Das Modell addiert die Prädiktoren, jeden mit seinem eigenen Koeffizienten multipliziert, und erhält so die [Log-Odds](../glossary.qmd#odds){.term} der Zielgrösse für jede Person.
 2. Es probiert Werte für alle Koeffizienten zusammen aus und behält diejenigen, unter denen die tatsächlich eingetretenen Ausgänge zusammengenommen am wahrscheinlichsten waren.
 3. Jeder Koeffizient beschreibt, was sein Prädiktor hinzufügt, wenn die anderen berücksichtigt sind: e hoch Koeffizient ist das **adjustierte** [Odds Ratio](../glossary.qmd#odds-ratio){.term}.
-4. Ein Prädiktor mit mehr als zwei Kategorien erhält einen Koeffizienten für jede Kategorie ausser der ersten, die als Referenz dient.
+4. Ein Prädiktor mit mehr als zwei [Kategorien](../glossary.qmd#categorical-variable){.term} erhält einen Koeffizienten für jede Kategorie ausser der ersten, die als [Referenz](../glossary.qmd#reference-group){.term} dient.
 
 Je mehr Koeffizienten ein Modell schätzen muss, desto mehr Ereignisse braucht es in der kleineren Gruppe: Daher kommt die Faustregel unter «Wann verwenden».
 
@@ -546,7 +546,7 @@ print(odds_ratios)
 ```
 :::
 
-Die **adjustierten Odds Ratios** sind die Effektstärken: 0.71 pro 10 Lebensjahre (95%-KI 0.51 bis 0.96) und 1.42 pro Tegner-Stufe (95%-KI 1.22 bis 1.67). Für ein Hamstring-Transplantat beträgt das Odds Ratio 0.41 (0.25 bis 0.69) und für ein Quadrizeps-Transplantat 0.33 (0.17 bis 0.63), jeweils gegenüber BPTB. Das KI für das männliche Geschlecht (0.73, 0.46 bis 1.17) ist breit.
+Die **adjustierten Odds Ratios** sind die [Effektstärken](../glossary.qmd#effect-size){.term}: 0.71 pro 10 Lebensjahre (95%-[KI](../glossary.qmd#confidence-interval){.term} 0.51 bis 0.96) und 1.42 pro Tegner-Stufe (95%-KI 1.22 bis 1.67). Für ein Hamstring-Transplantat beträgt das Odds Ratio 0.41 (0.25 bis 0.69) und für ein Quadrizeps-Transplantat 0.33 (0.17 bis 0.63), jeweils gegenüber BPTB. Das KI für das männliche Geschlecht (0.73, 0.46 bis 1.17) ist breit.
 
 ### Resultate formulieren
 
@@ -556,7 +556,7 @@ Die **adjustierten Odds Ratios** sind die Effektstärken: 0.71 pro 10 Lebensjahr
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die kleinere Gruppe setzt die Grenze, und die Prädiktoren müssen zuerst feststehen
-Die Faustregel zählt die kleinere Gruppe der Zielgrösse. Sie erlaubt hier etwa 17 Prädiktoren, bei einem Transplantatversagen innerhalb von 2 Jahren aber nur einen oder zwei (15 von 350; Übung 2 und die erste Zeile der Ausgabe unten). Darüber hinaus werden die Odds Ratios instabil. Wählen Sie die Prädiktoren daher klinisch und im Voraus; lassen Sie nicht die p-Werte für sich wählen. Und verwenden Sie nur, was vor der Zielgrösse bekannt ist: Alle 6 Patientinnen und Patienten, bei denen das Transplantat im ersten Jahr versagte, waren nach 12 Monaten nicht zum Sport zurückgekehrt. Ein Versagen kann die Rückkehr zum Sport hier also nicht vorhersagen, denn es ist Teil der Zielgrösse. Die Tabelle unten zeigt es: In der Zeile `TRUE` (in Python `True`) stehen 6 und 0.
+Die Faustregel zählt die kleinere Gruppe der Zielgrösse. Sie erlaubt hier etwa 17 Prädiktoren, bei einem Transplantatversagen innerhalb von 2 Jahren aber nur einen oder zwei (15 von 350; Übung 2 und die erste Zeile der Ausgabe unten). Darüber hinaus werden die Odds Ratios instabil. Wählen Sie die Prädiktoren daher klinisch und im Voraus; lassen Sie nicht die [p-Werte](../glossary.qmd#p-value){.term} für sich wählen. Und verwenden Sie nur, was vor der Zielgrösse bekannt ist: Alle 6 Patientinnen und Patienten, bei denen das Transplantat im ersten Jahr versagte, waren nach 12 Monaten nicht zum Sport zurückgekehrt. Ein Versagen kann die Rückkehr zum Sport hier also nicht vorhersagen, denn es ist Teil der Zielgrösse. Die Tabelle unten zeigt es: In der Zeile `TRUE` (in Python `True`) stehen 6 und 0.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -591,26 +591,26 @@ check_agree(list(failed_2y = sum(acl$failure_2y), early = sum(early_failure),
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Profil-Likelihood-KI und Wald-KI, nochmals
-Wie auf [Seite 11](11-predict-from-one.qmd#logistic-regression) profiliert `confint()` in R die Likelihood, und statsmodels verwendet Wald-KI. Bei wenigen Ereignissen können sich die beiden in der zweiten Dezimalstelle unterscheiden: Python liefert 0.52 bis 0.97 für das Alter, 1.22 bis 1.66 für die Tegner-Stufe und 0.17 bis 0.64 für das Quadrizeps-Transplantat; der Text oben nennt die Werte von R. Geben Sie an, welche Sie verwendet haben.
+Wie auf [Seite 11](11-predict-from-one.qmd#logistic-regression) [profiliert](../glossary.qmd#profile-interval){.term} `confint()` in R die Likelihood, und statsmodels verwendet [Wald-KI](../glossary.qmd#wald-interval){.term}. Bei wenigen Ereignissen können sich die beiden in der zweiten Dezimalstelle unterscheiden: Python liefert 0.52 bis 0.97 für das Alter, 1.22 bis 1.66 für die Tegner-Stufe und 0.17 bis 0.64 für das Quadrizeps-Transplantat; der Text oben nennt die Werte von R. Geben Sie an, welche Sie verwendet haben.
 :::
 
 ## Cox-Regression {#cox}
 
-**Die Frage:** Hat Implantat C auch dann noch einen höheren Hazard (momentane Ereignisrate) einer Revision, wenn für Alter, Geschlecht und BMI adjustiert wird?
+**Die Frage:** Hat Implantat C auch dann noch einen höheren [Hazard](../glossary.qmd#hazard){.term} (momentane Ereignisrate) einer Revision, wenn für Alter, Geschlecht und BMI [adjustiert](../glossary.qmd#adjustment){.term} wird?
 
 ### Wann verwenden
 
-- Die Zielgrösse ist die **Zeit bis zu einem Ereignis** (Revision), und Sie möchten das **Hazard Ratio** jedes Prädiktors, adjustiert für die anderen.
-- **Die Anzahl der Ereignisse begrenzt die Prädiktoren**, wie bei der logistischen Regression: etwa 10 Ereignisse pro Prädiktor. 81 Revisionen erlauben etwa acht; das Implantat (das zwei braucht, B und C gegenüber A), Alter, Geschlecht und BMI benötigen fünf.
-- Die proportionalen Hazards müssen für jeden Prädiktor gelten. [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards) zeigt, wie man das prüft, und behandelt die Cox-Regression ausführlich.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist die **Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term}** (Revision), und Sie möchten das **Hazard Ratio** jedes [Prädiktors](../glossary.qmd#predictor){.term}, adjustiert für die anderen.
+- **Die Anzahl der Ereignisse begrenzt die Prädiktoren**, wie bei der [logistischen Regression](../glossary.qmd#logistic-regression){.term}: etwa 10 Ereignisse pro Prädiktor. 81 Revisionen erlauben etwa acht; das Implantat (das zwei braucht, B und C gegenüber A), Alter, Geschlecht und BMI benötigen fünf.
+- Die [proportionalen Hazards](../glossary.qmd#proportional-hazards){.term} müssen für jeden Prädiktor gelten. [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards) zeigt, wie man das prüft, und behandelt die Cox-Regression ausführlich.
 
 ### Was der Test wirklich macht
 
 Das ist das Cox-Modell von [Seite 8](08-three-plus-unmatched.qmd#cox) mit mehr als einem Prädiktor.
 
-1. Bei der Operation beginnen und in der Zeit vorwärtsgehen. Bei jeder Revision schauen, wer unmittelbar davor noch nachbeobachtet wurde: die Personen [unter Risiko](../glossary.qmd#at-risk){.term}.
-2. Jeder Prädiktor hat sein eigenes [Hazard Ratio](../glossary.qmd#hazard-ratio){.term}. Der Hazard einer Person im Vergleich zu einer Referenzperson ist das Produkt der Hazard Ratios, die für sie gelten.
-3. Das Modell probiert Werte für alle Hazard Ratios zusammen aus und behält diejenigen, unter denen die tatsächlich eingetretenen Revisionen zusammengenommen am wahrscheinlichsten waren.
+1. Bei der Operation beginnen und in der Zeit vorwärtsgehen. Bei jeder Revision schauen, wer unmittelbar davor noch [nachbeobachtet](../glossary.qmd#follow-up){.term} wurde: die Personen [unter Risiko](../glossary.qmd#at-risk){.term}.
+2. Jeder Prädiktor hat sein eigenes [Hazard Ratio](../glossary.qmd#hazard-ratio){.term}. Der Hazard einer Person im Vergleich zu einer [Referenzperson](../glossary.qmd#reference-group){.term} ist das Produkt der Hazard Ratios, die für sie gelten.
+3. Das [Modell](../glossary.qmd#model){.term} probiert Werte für alle Hazard Ratios zusammen aus und behält diejenigen, unter denen die tatsächlich eingetretenen Revisionen zusammengenommen am wahrscheinlichsten waren.
 4. Jedes Hazard Ratio beschreibt dann, was sein Prädiktor hinzufügt, wenn die anderen berücksichtigt sind: Implantat C gegenüber Implantat A bei Personen gleichen Alters, Geschlechts und BMI.
 
 ### Zuerst die Daten ansehen
@@ -697,14 +697,14 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 ### Ausgabe lesen
 
 - **implantC = 3.19 (95% CI 1.92 to 5.29):** Adjustiert für Alter, Geschlecht und BMI hatte Implantat C etwa den dreifachen Hazard einer Revision wie Implantat A, fast derselbe Wert wie ohne Adjustierung (3.07, [Seite 8](08-three-plus-unmatched.qmd#cox)).
-- **implantB = 0.83 (95% CI 0.45 to 1.52):** wenig präzise: Das KI reicht von etwa der Hälfte bis zum Anderthalbfachen des Hazards von Implantat A.
+- **implantB = 0.83 (95% CI 0.45 to 1.52):** [wenig präzise](../glossary.qmd#precision){.term}: Das [KI](../glossary.qmd#confidence-interval){.term} reicht von etwa der Hälfte bis zum Anderthalbfachen des Hazards von Implantat A.
 - **sexMale = 0.51 (95% CI 0.32 to 0.81, p = 0.005):** Männer hatten etwa den halben Hazard einer Revision wie Frauen.
 - **age_10 = 1.22 (95% CI 0.96 to 1.57)** und **bmi_5 = 1.03 (95% CI 0.84 to 1.27):** wenig präzise.
-- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** Die fünf Terme zusammen sagen die Revision voraus. R gibt `p=2e-07` aus; Python gibt die Statistik, ihre Freiheitsgrade und den p-Wert in der Zeile unter seiner Tabelle aus.
+- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** Die fünf Terme zusammen sagen die Revision voraus. R gibt `p=2e-07` aus; Python gibt die [Statistik](../glossary.qmd#test-statistic){.term}, ihre [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} und den [p-Wert](../glossary.qmd#p-value){.term} in der Zeile unter seiner Tabelle aus.
 
 ### Effektstärke und 95%-KI
 
-Die **adjustierten Hazard Ratios** mit ihren 95%-KI sind die Effektstärken. Für die Frage massgebend ist das Hazard Ratio von Implantat C gegenüber A: 3.19 (95%-KI 1.92 bis 5.29). Ohne Adjustierung betragen die Hazard Ratios 0.82 für B und 3.07 für C (der Code unten); die Adjustierung für Alter, Geschlecht und BMI ändert also wenig.
+Die **adjustierten Hazard Ratios** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}. Für die Frage massgebend ist das Hazard Ratio von Implantat C gegenüber A: 3.19 (95%-KI 1.92 bis 5.29). Ohne Adjustierung betragen die Hazard Ratios 0.82 für B und 3.07 für C (der Code unten); die Adjustierung für Alter, Geschlecht und BMI ändert also wenig.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -741,12 +741,12 @@ check_agree(list(hr_b = unadjusted_alone[["implantB"]], hr_c = unadjusted_alone[
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: der unerwartete Befund
-Der Unterschied zwischen den Geschlechtern war nicht die Frage; das Modell wurde gebaut, um für das Geschlecht zu adjustieren, nicht um es zu testen. Ein ungeplanter Befund wie dieser ist ein Grund für eine neue Studie, keine Schlussfolgerung: Berichten Sie ihn als explorativ. Und prüfen Sie die proportionalen Hazards für jeden Prädiktor, bevor Sie einem davon vertrauen ([Seite 14](../survival/14-cox-regression.qmd#proportional-hazards)).
+Der Unterschied zwischen den Geschlechtern war nicht die Frage; das Modell wurde gebaut, um für das Geschlecht zu adjustieren, nicht um es zu testen. Ein ungeplanter Befund wie dieser ist ein Grund für eine neue Studie, keine Schlussfolgerung: Berichten Sie ihn als [explorativ](../glossary.qmd#prespecified){.term}. Und prüfen Sie die proportionalen Hazards für jeden Prädiktor, bevor Sie einem davon vertrauen ([Seite 14](../survival/14-cox-regression.qmd#proportional-hazards)).
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Konvergenz und Namen
-Wie auf [Seite 8](08-three-plus-unmatched.qmd#cox) hört die Standard-Konvergenzregel von lifelines etwas zu früh auf (ohne `fit_options` ergibt sich für Implantat B ein Hazard Ratio von 0.82915 statt der 0.82912 in der Ausgabe oben), daher verschärft der Python-Code sie mit `fit_options={"precision": 1e-9}`. lifelines nennt die Terme `implant[T.C]` und `sex[T.Male]`; R nennt sie `implantC` und `sexMale`.
+Wie auf [Seite 8](08-three-plus-unmatched.qmd#cox) hört die [Standard-Konvergenzregel](../glossary.qmd#convergence){.term} von lifelines etwas zu früh auf (ohne `fit_options` ergibt sich für Implantat B ein Hazard Ratio von 0.82915 statt der 0.82912 in der Ausgabe oben), daher verschärft der Python-Code sie mit `fit_options={"precision": 1e-9}`. lifelines nennt die Terme `implant[T.C]` und `sex[T.Male]`; R nennt sie `implantC` und `sexMale`.
 :::
 
 ```{r}
@@ -846,7 +846,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Fügen Sie der multiplen linearen Regression für die Operationsdauer die **Chirurgin oder den Chirurgen** hinzu (Variable surgeon). Verbessert das das Modell, und ändert sich der Koeffizient des BMI?
+**1.** Fügen Sie der [multiplen linearen Regression](../glossary.qmd#linear-regression){.term} für die Operationsdauer die **Chirurgin oder den Chirurgen** hinzu (Variable surgeon). Verbessert das das [Modell](../glossary.qmd#model){.term}, und ändert sich der [Koeffizient](../glossary.qmd#coefficient){.term} des BMI?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -879,11 +879,11 @@ print(surgeon_table.loc[["bmi", "surgeon[T.S2]", "surgeon[T.S3]"]])
 Es gibt keinen klaren Hinweis, dass das Modell durch die Chirurgin oder den Chirurgen besser wird, und der Koeffizient des BMI ändert sich nicht.
 :::
 
-**2.** Kolleginnen und Kollegen möchten wissen, welche Faktoren ein Transplantatversagen innerhalb von 2 Jahren vorhersagen. Nur bei 15 Transplantaten kam es zum Versagen. Welches Modell würden Sie verwenden, wie viele Prädiktoren verträgt es, und was ergibt sich für den tibialen Slope und das Alter?
+**2.** Kolleginnen und Kollegen möchten wissen, welche Faktoren ein Transplantatversagen innerhalb von 2 Jahren vorhersagen. Nur bei 15 Transplantaten kam es zum Versagen. Welches Modell würden Sie verwenden, wie viele [Prädiktoren](../glossary.qmd#predictor){.term} verträgt es, und was ergibt sich für den tibialen Slope und das Alter?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Die Zielgrösse ist Ja/Nein: **multiple logistische Regression**. Bei 15 Ereignissen erlaubt die Faustregel einen Prädiktor, mit Mühe zwei, und an den KI sieht man, dass das Modell an seine Grenze stösst.
+Die [Zielgrösse](../glossary.qmd#outcome){.term} ist [Ja/Nein](../glossary.qmd#binary){.term}: **[multiple logistische Regression](../glossary.qmd#logistic-regression){.term}**. Bei 15 [Ereignissen](../glossary.qmd#event){.term} erlaubt die Faustregel einen Prädiktor, mit Mühe zwei, und an den [KI](../glossary.qmd#confidence-interval){.term} sieht man, dass das Modell an seine Grenze stösst.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -907,10 +907,10 @@ print(fail_ors)
 
 > **Results:** The odds ratios for graft failure within 2 years were 1.26 per degree of posterior tibial slope (95% CI 1.01 to 1.59) and 0.49 per 10 years of age (95% CI 0.19 to 1.04).
 
-Die KI sind die Profil-KI von R. Bei Daten zur Zeit bis zum Ereignis nutzt die Cox-Regression alle 31 Versagensfälle ([Seite 11](11-predict-from-one.qmd#cox)).
+Die KI sind die [Profil-KI](../glossary.qmd#profile-interval){.term} von R. Bei Daten zur [Zeit bis zum Ereignis](../glossary.qmd#time-to-event){.term} nutzt die [Cox-Regression](../glossary.qmd#cox-regression){.term} alle 31 Versagensfälle ([Seite 11](11-predict-from-one.qmd#cox)).
 :::
 
-**3.** Auf [Seite 11](11-predict-from-one.qmd#logistic-regression) war die Sterberate bei Patientinnen und Patienten am höchsten, die mehr als 72 Stunden gewartet hatten. Passen Sie die Zeit bis zur Operation in der logistischen Regression als natürlichen kubischen Spline (3 Freiheitsgrade) an, vergleichen Sie ihn mit der Geraden und schreiben Sie den Results-Satz.
+**3.** Auf [Seite 11](11-predict-from-one.qmd#logistic-regression) war die Sterberate bei Patientinnen und Patienten am höchsten, die mehr als 72 Stunden gewartet hatten. Passen Sie die Zeit bis zur Operation in der logistischen Regression als [natürlichen kubischen Spline](../glossary.qmd#spline){.term} (3 [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}) an, vergleichen Sie ihn mit der Geraden und schreiben Sie den Results-Satz.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -945,5 +945,5 @@ print(np.exp(24 * line_model.conf_int().loc["hours_to_surgery"]))   # sein 95%-K
 
 > **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-Das KI ist das Profil-KI von R. Der Spline bringt nichts Erkennbares, weil die Gerade die Rate nach 72 Stunden bereits vorhersagt (17.2 % vorhergesagt, 18.2 % beobachtet; [Seite 11](11-predict-from-one.qmd#logistic-regression)). Und nur 8 der 74 Todesfälle ereigneten sich so spät (die Tabelle der Bereiche auf Seite 11), zu wenige, um eine Kurve festzulegen. In der Tabelle von R steht das Likelihood-Quotienten-χ² in der Spalte `Deviance`.
+Das KI ist das Profil-KI von R. Der Spline bringt nichts Erkennbares, weil die Gerade die Rate nach 72 Stunden bereits vorhersagt (17.2 % vorhergesagt, 18.2 % beobachtet; [Seite 11](11-predict-from-one.qmd#logistic-regression)). Und nur 8 der 74 Todesfälle ereigneten sich so spät (die Tabelle der Bereiche auf Seite 11), zu wenige, um eine Kurve festzulegen. In der Tabelle von R steht das [Likelihood-Quotienten-χ²](../glossary.qmd#likelihood-ratio-test){.term} in der Spalte `Deviance`.
 :::

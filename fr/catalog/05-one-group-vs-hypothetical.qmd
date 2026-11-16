@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Parfois, il n'y a qu'un seul groupe de patients, et la comparaison se fait avec un nombre qui vient de **l'extérieur** de vos données : un objectif fixé par l'hôpital, une valeur publiée par un registre, une valeur de référence d'un rapport de qualité. Notre groupe diffère-t-il de ce nombre ?
+Parfois, il n'y a qu'un seul groupe de patients, et la comparaison se fait avec un nombre qui vient de **l'extérieur** de vos données : un objectif fixé par l'hôpital, une valeur publiée par un [registre](../glossary.qmd#registry){.term}, une valeur de référence d'un rapport de qualité. Notre groupe diffère-t-il de ce nombre ?
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données d'exercice : la cohorte de prothèses articulaires, ses mesures des résultats rapportés par le patient ou, pour le test binomial, les données sur les fractures du fémur proximal. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas. Les valeurs « hypothétiques » ci-dessous sont inventées pour l'enseignement : ce ne sont ni de vrais chiffres de registre, ni de vrais objectifs.
+Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires, ses [mesures des résultats rapportés par le patient](../glossary.qmd#prom){.term} ou, pour le [test binomial](../glossary.qmd#binomial-test){.term}, les données sur les fractures du fémur proximal. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas. Les valeurs « hypothétiques » ci-dessous sont inventées pour l'enseignement : ce ne sont ni de vrais chiffres de registre, ni de vrais objectifs.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait. Dans le code, ces prothèses s'appellent THA et TKA ; dans le texte, nous disons PTH et PTG.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Attention : la valeur doit venir de l'extérieur de vos données
-Choisissez la valeur hypothétique **avant** de regarder vos données, et dites d'où elle vient. Une valeur choisie après avoir vu les résultats (« notre moyenne est de 84 ; comparons à 90 ») rend la valeur p dénuée de sens. Si la valeur de comparaison vient d'un autre groupe de patients dont vous avez les données, comparez plutôt les deux groupes ([page 6](06-two-unpaired-groups.qmd)).
+Choisissez la valeur hypothétique **avant** de regarder vos données, et dites d'où elle vient. Une valeur choisie après avoir vu les résultats (« notre [moyenne](../glossary.qmd#mean){.term} est de 84 ; comparons à 90 ») rend la [valeur p](../glossary.qmd#p-value){.term} dénuée de sens. Si la valeur de comparaison vient d'un autre groupe de patients dont vous avez les données, comparez plutôt les deux groupes ([page 6](06-two-unpaired-groups.qmd)).
 :::
 
 ## Test t pour un échantillon {#one-sample-t}
@@ -37,19 +37,19 @@ Choisissez la valeur hypothétique **avant** de regarder vos données, et dites 
 
 ### Quand l'utiliser
 
-- Le critère est une **mesure** (minutes, kg/m², points).
-- Il est **à peu près normal**, ou l'échantillon est grand (environ 30 ou plus) et pas très asymétrique ([page 3](../foundations/03-distributions.qmd#robustness)).
-- Chaque patient est compté une seule fois et les patients sont indépendants les uns des autres.
-- Si les données sont asymétriques, bornées ou ordinales → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
+- Le [critère](../glossary.qmd#outcome){.term} est une **[mesure](../glossary.qmd#continuous-variable){.term}** (minutes, kg/m², points).
+- Il est **[à peu près normal](../glossary.qmd#normal-distribution){.term}**, ou l'[échantillon](../glossary.qmd#sample){.term} est grand (environ 30 ou plus) et pas très [asymétrique](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#robustness)).
+- Chaque patient est compté une seule fois et les patients sont [indépendants](../glossary.qmd#independence){.term} les uns des autres.
+- Si les données sont asymétriques, [bornées](../glossary.qmd#bounded-scale){.term} ou [ordinales](../glossary.qmd#ordinal){.term} → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
 
 ### Ce que fait vraiment le test
 
-Le test t à un échantillon demande si la moyenne de l'échantillon est loin de la valeur hypothétique, par rapport à ce dont une telle moyenne varierait d'un échantillon à l'autre.
+Le test t à un échantillon demande si la moyenne de l'échantillon est loin de la [valeur hypothétique](../glossary.qmd#hypothetical-value){.term}, par rapport à ce dont une telle moyenne varierait d'un échantillon à l'autre.
 
 1. Calculer la **différence** entre la [moyenne](../glossary.qmd#mean){.term} de l'échantillon et la valeur hypothétique.
 2. Estimer le bruit de la moyenne, son [erreur standard](../glossary.qmd#standard-error){.term} : l'[écart-type](../glossary.qmd#standard-deviation){.term} divisé par √n.
 3. Diviser : **t = différence ÷ erreur standard**. Un t de 0 signifie que la moyenne est exactement la valeur hypothétique. Un t au-delà d'environ ±2 signifie que la différence est grande par rapport au bruit.
-4. Convertir t en [valeur p](../glossary.qmd#p-value){.term} : la probabilité d'un t au moins aussi éloigné de 0 si la vraie moyenne était bien la valeur hypothétique.
+4. Convertir t en [valeur p](../glossary.qmd#p-value){.term} : la [probabilité](../glossary.qmd#probability){.term} d'un t au moins aussi éloigné de 0 si la [vraie moyenne](../glossary.qmd#population){.term} était bien la valeur hypothétique.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule t à la main.
 
@@ -89,7 +89,7 @@ plt.show()
 ```
 :::
 
-Une bosse à peu près symétrique, centrée un peu à gauche de la ligne en pointillés à 90 minutes.
+Une bosse à peu près [symétrique](../glossary.qmd#symmetric){.term}, centrée un peu à gauche de la ligne en pointillés à 90 minutes.
 
 ### Exécuter l'analyse
 
@@ -128,10 +128,10 @@ check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), 
 ### Lire le résultat
 
 - **t = −8.23** (`statistic` en Python) : la moyenne observée est à 8.2 erreurs standard sous 90. Le signe dit de quel côté.
-- **df = 599 :** les degrés de liberté (ddl), n − 1.
+- **df = 599 :** les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} (ddl), n − 1.
 - **p < 0.001 :** une moyenne aussi éloignée de 90 serait très improbable si la vraie moyenne était de 90 minutes. La sortie affiche `1.204e-15`, en [notation scientifique](../glossary.qmd#scientific-notation){.term} : `e-15` signifie « déplacer le point décimal de 15 rangs vers la gauche ».
 - **mean of x = 84.48** (le premier nombre de la deuxième ligne de Python) : notre durée opératoire moyenne.
-- **IC à 95 % de 83.2 à 85.8 :** l'intervalle de confiance (IC) de notre **moyenne**, pas de la différence avec 90.
+- **IC à 95 % de 83.2 à 85.8 :** l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) de notre **moyenne**, pas de la différence avec 90.
 - **Écart-type = 16.4 minutes** (la dernière ligne de la sortie) : il ne fait pas partie du test, mais la phrase de Résultats en a besoin.
 
 ::: {.callout-note collapse="true"}
@@ -172,7 +172,7 @@ check_agree(list(difference = time_difference, se = time_se, t = time_difference
 
 ### Taille d'effet et IC à 95 %
 
-La taille d'effet est simplement la différence avec la valeur hypothétique : soustrayez 90 de la moyenne et des deux bornes de son IC.
+La [taille d'effet](../glossary.qmd#effect-size){.term} est simplement la différence avec la valeur hypothétique : soustrayez 90 de la moyenne et des deux bornes de son IC.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -212,7 +212,7 @@ En moyenne, les opérations ont duré 5.5 minutes de moins que les 90 réservée
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une moyenne publiée a sa propre incertitude
-Un test pour un échantillon traite la valeur hypothétique comme exacte. Or la moyenne d'un registre est elle-même une estimation, avec son IC. Si vous comparez vos patients à une série publiée dont l'IC est large, dites-le, et n'interprétez pas trop une petite différence.
+Un test pour un échantillon traite la valeur hypothétique comme exacte. Or la moyenne d'un [registre](../glossary.qmd#registry){.term} est elle-même une [estimation](../glossary.qmd#estimate){.term}, avec son IC. Si vous comparez vos patients à une série publiée dont l'IC est large, dites-le, et n'interprétez pas trop une petite différence.
 :::
 
 ::: {.callout-tip}
@@ -226,11 +226,11 @@ Un test pour un échantillon traite la valeur hypothétique comme exacte. Or la 
 
 ### Quand l'utiliser
 
-- Le critère est **asymétrique** ou a un **effet plafond ou plancher** : la moyenne n'est donc pas un bon résumé ([page 3](../foundations/03-distributions.qmd#transform)).
-- Le test classe les patients selon leur distance au-dessus ou en dessous de la valeur hypothétique. Il ne suppose pas de distribution normale, mais il a besoin de distances comparables : le critère doit donc être une mesure.
-- Pour une échelle **ordinale** (satisfaction de 1 à 5), comptez les patients au-dessus et en dessous de la valeur, et comparez les deux effectifs avec un [test binomial](#binomial-test). C'est le **test des signes**.
-- À strictement parler, il teste la **pseudo-médiane** (l'estimateur de Hodges-Lehmann ci-dessous), qui ne coïncide avec la médiane que pour une distribution symétrique. Avec un plafond, les deux diffèrent un peu ; donnez les deux.
-- Si les données sont à peu près normales → le [test t pour un échantillon](#one-sample-t) est plus familier et un peu plus puissant.
+- Le [critère](../glossary.qmd#outcome){.term} est **[asymétrique](../glossary.qmd#skewed){.term}** ou a un **[effet plafond ou plancher](../glossary.qmd#ceiling-effect){.term}** : la [moyenne](../glossary.qmd#mean){.term} n'est donc pas un bon résumé ([page 3](../foundations/03-distributions.qmd#transform)).
+- Le test classe les patients selon leur distance au-dessus ou en dessous de la [valeur hypothétique](../glossary.qmd#hypothetical-value){.term}. Il ne suppose pas de [distribution normale](../glossary.qmd#normal-distribution){.term}, mais il a besoin de distances comparables : le critère doit donc être une [mesure](../glossary.qmd#continuous-variable){.term}.
+- Pour une échelle **[ordinale](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), comptez les patients au-dessus et en dessous de la valeur, et comparez les deux effectifs avec un [test binomial](#binomial-test). C'est le **[test des signes](../glossary.qmd#sign-test){.term}**.
+- À strictement parler, il teste la **[pseudo-médiane](../glossary.qmd#hodges-lehmann){.term}** (l'estimateur de Hodges-Lehmann ci-dessous), qui ne coïncide avec la [médiane](../glossary.qmd#median){.term} que pour une [distribution](../glossary.qmd#distribution){.term} [symétrique](../glossary.qmd#symmetric){.term}. Avec un plafond, les deux diffèrent un peu ; donnez les deux.
+- Si les données sont à peu près normales → le [test t pour un échantillon](#one-sample-t) est plus familier et un peu plus [puissant](../glossary.qmd#power){.term}.
 
 ### Ce que fait vraiment le test
 
@@ -238,7 +238,7 @@ Le test des rangs signés de Wilcoxon compare les scores à la valeur hypothéti
 
 1. Pour chaque patient, calculer la distance entre son score et la valeur hypothétique, et noter si le score est au-dessus ou en dessous.
 2. Mettre de côté tout patient dont le score est exactement la valeur hypothétique.
-3. Ranger les distances par taille, sans tenir compte du sens, et donner à chacune sa position : son [rang](../glossary.qmd#rank){.term}. La plus petite distance reçoit le rang 1 ; les distances ex æquo partagent la moyenne de leurs rangs.
+3. Ranger les distances par taille, sans tenir compte du sens, et donner à chacune sa position : son [rang](../glossary.qmd#rank){.term}. La plus petite distance reçoit le rang 1 ; les distances [ex æquo](../glossary.qmd#ties){.term} partagent la moyenne de leurs rangs.
 4. Additionner les rangs des patients au-dessus de la valeur et, séparément, ceux des patients en dessous. L'une ou l'autre somme peut servir de [statistique de test](../glossary.qmd#test-statistic){.term}.
 5. Si le patient typique avait exactement la valeur hypothétique, les deux sommes seraient à peu près égales. Plus elles sont déséquilibrées, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
 
@@ -295,7 +295,7 @@ plt.show()
 ```
 :::
 
-260 patients : 170 ont un score au-dessus de 80 et 90 en dessous. 170 + 90 = 260 : personne n'a donc exactement 80, et personne n'est écarté du test. Un plafond à 100 et une longue queue à gauche : le test basé sur les rangs est le choix le plus sûr.
+260 patients : 170 ont un score au-dessus de 80 et 90 en dessous. 170 + 90 = 260 : personne n'a donc exactement 80, et personne n'est écarté du test. Un plafond à 100 et une longue queue à gauche : le [test basé sur les rangs](../glossary.qmd#nonparametric){.term} est le choix le plus sûr.
 
 ### Exécuter l'analyse
 
@@ -333,8 +333,8 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 
 - **V = 22698** (R) ou **W_val = 11231.5** (Python) : la statistique de test, une somme de rangs. Les deux programmes donnent des sommes différentes (voir l'encadré R ou Python) ; les valeurs p sont les mêmes.
 - **p < 0.001 :** des scores aussi éloignés de 80 seraient très improbables si le patient typique avait vraiment un score de 80. R affiche `2.293e-06`, soit 0.000002293 ; pingouin affiche `0.000002`.
-- **(pseudo)median 84.35, IC à 95 % de 82.7 à 86.1** (R seulement) : l'estimateur de Hodges-Lehmann de la position centrale des scores, avec son IC.
-- **RBC = 0.34** (Python) : la taille d'effet bisériale par rangs, expliquée ci-dessous.
+- **(pseudo)median 84.35, IC à 95 % de 82.7 à 86.1** (R seulement) : l'estimateur de Hodges-Lehmann de la position centrale des scores, avec son [IC](../glossary.qmd#confidence-interval){.term}.
+- **RBC = 0.34** (Python) : la [taille d'effet bisériale par rangs](../glossary.qmd#rank-biserial){.term}, expliquée ci-dessous.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : les sommes des rangs à la main
@@ -376,10 +376,10 @@ check_agree(list(above = sum(distance_rank[distance > 0]), below = sum(distance_
 
 ### Taille d'effet et IC à 95 %
 
-Deux tailles d'effet sont utiles ici :
+Deux [tailles d'effet](../glossary.qmd#effect-size){.term} sont utiles ici :
 
 - L'**estimateur de Hodges-Lehmann** (la pseudo-médiane) : une position centrale des scores, en points. C'est la médiane de toutes les moyennes de paires de scores ; l'effet plafond le perturbe donc moins qu'une moyenne.
-- La **corrélation bisériale par rangs (r)** : de −1 (tous les patients en dessous de 80), en passant par 0 (équilibre), à +1 (tous les patients au-dessus de 80). À titre indicatif, 0.1 est petit, 0.3 modéré et 0.5 grand. C'est la somme des rangs au-dessus de 80 moins la somme des rangs en dessous, rapportée à leur total : (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
+- La **corrélation bisériale par rangs (r)** : de −1 (tous les patients en dessous de 80), en passant par 0 (équilibre), à +1 (tous les patients au-dessus de 80). [À titre indicatif](../glossary.qmd#cohen-benchmarks){.term}, 0.1 est petit, 0.3 modéré et 0.5 grand. C'est la somme des rangs au-dessus de 80 moins la somme des rangs en dessous, rapportée à leur total : (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -425,7 +425,7 @@ check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
 ```
 
-Le score typique à 1 an était environ 4 points au-dessus de l'objectif (estimateur de Hodges-Lehmann de 84.4), et le r bisérial par rangs de 0.34 est un effet modéré : 170 patients ont un score au-dessus de 80 et 90 en dessous, et ceux qui sont au-dessus en sont en général plus éloignés. La médiane est de 85.75 (IIQ de 74.7 à 93.9, la première ligne de la sortie), un peu au-dessus de l'estimateur de Hodges-Lehmann, comme attendu avec un effet plafond. effectsize, dans R, affiche aussi un IC à 95 % pour r, de 0.21 à 0.46 (sa note ne fait que rappeler l'objectif de 80) ; pingouin donne r sans IC.
+Le score typique à 1 an était environ 4 points au-dessus de l'objectif (estimateur de Hodges-Lehmann de 84.4), et le r bisérial par rangs de 0.34 est un effet modéré : 170 patients ont un score au-dessus de 80 et 90 en dessous, et ceux qui sont au-dessus en sont en général plus éloignés. La médiane est de 85.75 ([IIQ](../glossary.qmd#iqr){.term} de 74.7 à 93.9, la première ligne de la sortie), un peu au-dessus de l'estimateur de Hodges-Lehmann, comme attendu avec un effet plafond. effectsize, dans R, affiche aussi un IC à 95 % pour r, de 0.21 à 0.46 (sa note ne fait que rappeler l'objectif de 80) ; pingouin donne r sans IC.
 
 ### Rédiger les résultats
 
@@ -435,7 +435,7 @@ Le score typique à 1 an était environ 4 points au-dessus de l'objectif (estima
 
 ::: {.callout-warning}
 ## ⚠️ Attention : deux tests « de Wilcoxon » différents
-Le **test des rangs signés de Wilcoxon** (celui-ci) compare un groupe à une valeur, ou deux mesures **appariées** ([page 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). Le **test de la somme des rangs de Wilcoxon** compare deux groupes **indépendants** ; c'est le même que le [test de Mann-Whitney](06-two-unpaired-groups.qmd#mann-whitney). Écrivez toujours le nom complet.
+Le **test des rangs signés de Wilcoxon** (celui-ci) compare un groupe à une valeur, ou deux mesures **[appariées](../glossary.qmd#paired){.term}** ([page 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). Le **[test de la somme des rangs de Wilcoxon](../glossary.qmd#mann-whitney-test){.term}** compare deux groupes **[indépendants](../glossary.qmd#independence){.term}** ; c'est le même que le [test de Mann-Whitney](06-two-unpaired-groups.qmd#mann-whitney). Écrivez toujours le nom complet.
 
 Autre point : les patients dont le score vaut **exactement** 80 n'apportent aucune information sur la direction et sont écartés du test.
 :::
@@ -443,27 +443,27 @@ Autre point : les patients dont le score vaut **exactement** 80 n'apportent auc
 ::: {.callout-tip}
 ## 🔀 R ou Python : les valeurs par défaut de Wilcoxon
 - **La statistique.** R donne V, la somme des rangs des patients **au-dessus** de 80 (22698.5, affiché 22698). scipy (et pingouin) donnent la **plus petite** des deux sommes (11231.5). Les deux sommes totalisent toujours n(n + 1)/2, ici 260 × 261 / 2 = 33,930 : elles portent donc la même information et donnent la même valeur p.
-- **Exact ou approché.** Pour de petits échantillons sans valeurs ex æquo, les deux programmes calculent une valeur p exacte ; sinon, ils utilisent une approximation normale. R ajoute par défaut une **correction de continuité** à l'approximation ; scipy non. Nous écrivons `exact = FALSE, correct = FALSE` dans R et `method="approx", correction=False` dans Python pour qu'ils concordent.
-- **L'IC de Hodges-Lehmann.** R le calcule en inversant le test. scipy n'a pas de fonction pour cela : le code Python utilise donc un bootstrap, une méthode différente, et les deux IC diffèrent légèrement (82.75 à 86.10 dans R, 82.70 à 86.05 avec le bootstrap).
+- **Exact ou approché.** Pour de petits [échantillons](../glossary.qmd#sample){.term} sans valeurs ex æquo, les deux programmes calculent une [valeur p exacte](../glossary.qmd#exact-test){.term} ; sinon, ils utilisent une approximation normale. R ajoute par défaut une **[correction de continuité](../glossary.qmd#continuity-correction){.term}** à l'approximation ; scipy non. Nous écrivons `exact = FALSE, correct = FALSE` dans R et `method="approx", correction=False` dans Python pour qu'ils concordent.
+- **L'IC de Hodges-Lehmann.** R le calcule en inversant le test. scipy n'a pas de fonction pour cela : le code Python utilise donc un [bootstrap](../glossary.qmd#bootstrap){.term}, une méthode différente, et les deux IC diffèrent légèrement (82.75 à 86.10 dans R, 82.70 à 86.05 avec le bootstrap).
 :::
 
 ## Test d'adéquation du khi-deux {#chi-square-gof}
 
-**La question :** supposons qu'un registre national indique que ses patients se répartissent en 10 % de classe ASA 1, 55 % de classe 2, 33 % de classe 3 et 2 % de classe 4. Notre répartition des classes ASA est-elle la même ?
+**La question :** supposons qu'un [registre](../glossary.qmd#registry){.term} national indique que ses patients se répartissent en 10 % de classe ASA 1, 55 % de classe 2, 33 % de classe 3 et 2 % de classe 4. Notre répartition des classes ASA est-elle la même ?
 
 ### Quand l'utiliser
 
-- Le critère est **catégoriel**, avec deux catégories ou plus, et vous avez une proportion hypothétique pour chaque catégorie.
+- Le [critère](../glossary.qmd#outcome){.term} est **[catégoriel](../glossary.qmd#categorical-variable){.term}**, avec deux catégories ou plus, et vous avez une [proportion](../glossary.qmd#proportion){.term} hypothétique pour chaque catégorie.
 - Chaque patient appartient à exactement une catégorie et est compté une seule fois.
-- L'**effectif attendu** de chaque catégorie (total × proportion hypothétique) devrait être d'au moins 5. Sinon, regroupez les petites catégories, ou, avec seulement deux catégories, utilisez le [test binomial](#binomial-test).
+- L'**effectif attendu** de chaque catégorie (total × [proportion hypothétique](../glossary.qmd#hypothetical-value){.term}) devrait être d'au moins 5. Sinon, regroupez les petites catégories, ou, avec seulement deux catégories, utilisez le [test binomial](#binomial-test).
 
 ### Ce que fait vraiment le test
 
 Le test d'ajustement compare les effectifs observés aux effectifs que prédiraient les proportions hypothétiques.
 
 1. Calculer l'[effectif attendu](../glossary.qmd#expected-count){.term} de chaque catégorie : le nombre total de patients × la proportion hypothétique de cette catégorie.
-2. Pour chaque catégorie, calculer (observé − attendu)² ÷ attendu, puis additionner les résultats. La somme est la [statistique de test](../glossary.qmd#test-statistic){.term}, **χ²** : 0 quand les effectifs observés correspondent exactement aux effectifs attendus, et d'autant plus grande qu'ils s'en éloignent.
-3. Convertir χ² en [valeur p](../glossary.qmd#p-value){.term} avec la loi du khi-deux. Cette étape est une approximation, mauvaise quand des effectifs attendus sont petits. C'est de là que vient la règle « au moins 5 ».
+2. Pour chaque catégorie, calculer (observé − attendu)² ÷ attendu, puis additionner les résultats. La somme est la [statistique de test](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}** : 0 quand les effectifs observés correspondent exactement aux effectifs attendus, et d'autant plus grande qu'ils s'en éloignent.
+3. Convertir χ² en [valeur p](../glossary.qmd#p-value){.term} avec la loi du khi-deux. Cette étape est une [approximation](../glossary.qmd#exact-test){.term}, mauvaise quand des effectifs attendus sont petits. C'est de là que vient la règle « au moins 5 ».
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule χ² à la main.
 
@@ -532,7 +532,7 @@ check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reti
 ### Lire le résultat
 
 - **X-squared = 26.96** (`statistic` en Python) : la statistique du khi-deux, qui additionne l'écart entre chaque effectif observé et son effectif attendu.
-- **df = 3 :** les degrés de liberté (ddl), le nombre de catégories moins 1. Ici 4 − 1. scipy ne les affiche pas.
+- **df = 3 :** les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} (ddl), le nombre de catégories moins 1. Ici 4 − 1. scipy ne les affiche pas.
 - **p < 0.001 :** une répartition aussi différente de celle du registre serait très improbable si nos patients venaient de la même répartition. R affiche `5.992e-06`, soit 0.000005992.
 
 ::: {.callout-note collapse="true"}
@@ -572,7 +572,7 @@ check_agree(list(by_hand = sum(asa_parts), asa3 = unname(asa_parts[3])), reticul
 
 ### Taille d'effet et IC à 95 %
 
-Le test dit que la répartition diffère, pas où. Regardez le pourcentage observé de chaque catégorie, avec un IC à 95 %, à côté de celui du registre.
+Le test dit que la répartition diffère, pas où. Regardez le pourcentage observé de chaque catégorie, avec un [IC](../glossary.qmd#confidence-interval){.term} à 95 %, à côté de celui du registre.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -623,7 +623,7 @@ L'ASA 3 est la catégorie qui diffère le plus : 41.0 % de nos patients (IC à
 
 ::: {.callout-warning}
 ## ⚠️ Attention : des effectifs, pas des pourcentages
-Le test a besoin des **effectifs** de patients de chaque catégorie. Lui donner des pourcentages (« 6, 50, 41, 3 ») produit une valeur p fausse, car la précision du test dépend du nombre de patients.
+Le test a besoin des **effectifs** de patients de chaque catégorie. Lui donner des pourcentages (« 6, 50, 41, 3 ») produit une valeur p fausse, car la [précision](../glossary.qmd#precision){.term} du test dépend du nombre de patients.
 :::
 
 ::: {.callout-tip}
@@ -633,17 +633,17 @@ Le test a besoin des **effectifs** de patients de chaque catégorie. Lui donner 
 
 ## Test binomial {#binomial-test}
 
-**La question :** supposons que l'objectif soit d'opérer 90 % des patients avec une fracture du fémur proximal dans les 48 heures suivant l'admission. Notre proportion est-elle différente ?
+**La question :** supposons que l'objectif soit d'opérer 90 % des patients avec une fracture du fémur proximal dans les 48 heures suivant l'admission. Notre [proportion](../glossary.qmd#proportion){.term} est-elle différente ?
 
 ### Quand l'utiliser
 
-- Le critère est **oui/non**, et vous comparez la proportion d'un groupe à une proportion hypothétique.
+- Le [critère](../glossary.qmd#outcome){.term} est **[oui/non](../glossary.qmd#binary){.term}**, et vous comparez la proportion d'un groupe à une [proportion hypothétique](../glossary.qmd#hypothetical-value){.term}.
 - Chaque patient est compté une seule fois.
-- Le test binomial est **exact** : il fonctionne quelle que soit la taille de l'échantillon, y compris pour un petit nombre d'événements. (Le test d'adéquation du khi-deux à deux catégories en est l'approximation pour les grands échantillons.)
+- Le test binomial est **[exact](../glossary.qmd#exact-test){.term}** : il fonctionne quelle que soit la [taille de l'échantillon](../glossary.qmd#sample-size){.term}, y compris pour un petit nombre d'événements. (Le [test d'adéquation du khi-deux](../glossary.qmd#chi-square-test){.term} à deux [catégories](../glossary.qmd#categorical-variable){.term} en est l'approximation pour les grands échantillons.)
 
 ### Ce que fait vraiment le test
 
-Le test binomial calcule des probabilités exactes, sans approximation.
+Le test binomial calcule des [probabilités](../glossary.qmd#probability){.term} exactes, sans approximation.
 
 1. Supposons que la proportion hypothétique soit vraie. La loi binomiale donne alors la probabilité exacte de chaque résultat possible : 0 patient avec l'événement, 1 patient, 2 patients, et ainsi de suite jusqu'à tous.
 2. Trouver la probabilité du résultat observé.
@@ -677,7 +677,7 @@ print(hip_fracture["surgery_within_48h"].value_counts(dropna=False))   # 1 = op�
 ```
 :::
 
-1,034 patients ont été opérés dans les 48 heures, et aucune valeur ne manque. (La colonne est calculée à partir de `hours_to_surgery`.)
+1,034 patients ont été opérés dans les 48 heures, et aucune valeur ne [manque](../glossary.qmd#missing-data){.term}. (La colonne est calculée à partir de `hours_to_surgery`.)
 
 ### Exécuter l'analyse
 
@@ -722,9 +722,9 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 ### Lire le résultat
 
 - **number of successes = 1034, number of trials = 1200** (`k=1034, n=1200` en Python) : 1,034 patients opérés dans les 48 heures (« successes » (succès) est simplement le mot du logiciel pour le critère que vous avez compté).
-- **p < 0.001 :** une proportion aussi éloignée de 90 % serait très improbable si notre vraie proportion était de 90 %. R affiche `2.682e-05`, soit 0.00002682.
+- **p < 0.001 :** une proportion aussi éloignée de 90 % serait très improbable si notre [vraie proportion](../glossary.qmd#population){.term} était de 90 %. R affiche `2.682e-05`, soit 0.00002682.
 - **probability of success = 0.862** (`statistic` en Python) : notre proportion, 86.2 %.
-- **IC à 95 % de 0.841 à 0.881 :** notre vraie proportion se situe plausiblement entre 84.1 % et 88.1 %. C'est l'intervalle exact (de Clopper-Pearson).
+- **IC à 95 % de 0.841 à 0.881 :** notre vraie proportion se situe plausiblement entre 84.1 % et 88.1 %. C'est l'intervalle exact (de [Clopper-Pearson](../glossary.qmd#clopper-pearson){.term}).
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : la valeur p exacte à la main
@@ -764,7 +764,7 @@ check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probabi
 
 ### Taille d'effet et IC à 95 %
 
-La taille d'effet est la différence avec l'objectif : 86.2 % − 90 % = −3.8 points de pourcentage. Son IC à 95 % est l'IC de notre proportion moins 90 % : de −5.9 à −1.9 points de pourcentage. Il exclut 0, ce qui concorde avec la valeur p inférieure à 0.05. En nombre de patients : à 90 %, 1,080 des 1,200 auraient été opérés dans les 48 heures, soit 46 de plus qu'en réalité.
+La [taille d'effet](../glossary.qmd#effect-size){.term} est la différence avec l'objectif : 86.2 % − 90 % = −3.8 [points de pourcentage](../glossary.qmd#percentage-point){.term}. Son [IC](../glossary.qmd#confidence-interval){.term} à 95 % est l'IC de notre proportion moins 90 % : de −5.9 à −1.9 points de pourcentage. Il exclut 0, ce qui concorde avec la valeur p [inférieure à 0.05](../glossary.qmd#statistical-significance){.term}. En nombre de patients : à 90 %, 1,080 des 1,200 auraient été opérés dans les 48 heures, soit 46 de plus qu'en réalité.
 
 ### Rédiger les résultats
 
@@ -774,12 +774,12 @@ La taille d'effet est la différence avec l'objectif : 86.2 % − 90 % = −3
 
 ::: {.callout-warning}
 ## ⚠️ Attention : décidez unilatéral ou bilatéral avant de regarder
-Un objectif invite à une question unilatérale : sommes-nous *en dessous* de 90 % ? Un test unilatéral divise à peu près la valeur p par deux ; en choisir un après avoir vu de quel côté de l'objectif vous êtes tombé rend donc la valeur p trop petite. N'utilisez un test unilatéral que si le protocole l'a prévu avant l'arrivée des données, et si un résultat de l'autre côté ne changerait vraiment rien. Sinon, donnez le test bilatéral, comme ici.
+Un objectif invite à une question [unilatérale](../glossary.qmd#two-sided){.term} : sommes-nous *en dessous* de 90 % ? Un test unilatéral divise à peu près la valeur p par deux ; en choisir un après avoir vu de quel côté de l'objectif vous êtes tombé rend donc la valeur p trop petite. N'utilisez un test unilatéral que si le protocole l'a prévu avant l'arrivée des données, et si un résultat de l'autre côté ne changerait vraiment rien. Sinon, donnez le test bilatéral, comme ici.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les IC exacts
-`binom.test()` de R et `binomtest()` de scipy concordent sur la valeur p. R affiche automatiquement l'IC exact (de Clopper-Pearson) ; dans scipy, demandez-le avec `proportion_ci(method="exact")`. Il est un peu plus large que l'intervalle de Wilson utilisé à la [page 4](04-describe-one-group.qmd#proportion), qui, pour ces 1,034 patients sur 1,200, va de 84.1 % à 88.0 % (la dernière ligne de la sortie sous « Exécuter l'analyse »). Les deux conviennent ; dites lequel vous avez utilisé.
+`binom.test()` de R et `binomtest()` de scipy concordent sur la valeur p. R affiche automatiquement l'IC exact (de Clopper-Pearson) ; dans scipy, demandez-le avec `proportion_ci(method="exact")`. Il est un peu plus large que l'[intervalle de Wilson](../glossary.qmd#wilson-interval){.term} utilisé à la [page 4](04-describe-one-group.qmd#proportion), qui, pour ces 1,034 patients sur 1,200, va de 84.1 % à 88.0 % (la dernière ligne de la sortie sous « Exécuter l'analyse »). Les deux conviennent ; dites lequel vous avez utilisé.
 :::
 
 ```{r}
@@ -846,7 +846,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Supposons qu'un registre indique un âge moyen de 66 ans lors d'une prothèse articulaire primaire. L'âge moyen de nos patients est-il différent ? Faites le test et donnez la différence de moyennes avec son IC à 95 %.
+**1.** Supposons qu'un [registre](../glossary.qmd#registry){.term} indique un âge [moyen](../glossary.qmd#mean){.term} de 66 ans lors d'une prothèse articulaire primaire. L'âge moyen de nos patients est-il différent ? Faites le test et donnez la [différence de moyennes](../glossary.qmd#mean-difference){.term} avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 %.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -880,7 +880,7 @@ L'IC inclut 0 et exclut une différence de plus d'environ un an dans un sens com
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Un critère oui/non comparé à une proportion hypothétique : le **test binomial**.
+Un [critère oui/non](../glossary.qmd#binary){.term} comparé à une [proportion](../glossary.qmd#proportion){.term} hypothétique : le **[test binomial](../glossary.qmd#binomial-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -899,7 +899,7 @@ print(mortality.pvalue, mortality.proportion_ci(method="exact"))
 
 > **Results:** Within 30 days, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%); the audit reports 7% (binomial test p = 0.282).
 
-L'IC inclut 7 % : il n'y a donc pas de preuve claire que notre mortalité diffère de celle de l'audit. Ce n'est pas la même chose que montrer qu'elle est égale : notre vrai taux pourrait se situer n'importe où entre 4.9 % et 7.7 %. N'écrivez pas « notre mortalité était la même que celle de l'audit » ; donnez l'IC et laissez-le parler.
+L'IC inclut 7 % : il n'y a donc pas de preuve claire que notre mortalité diffère de celle de l'audit. Ce n'est pas la même chose que montrer qu'elle est égale : notre [vrai taux](../glossary.qmd#population){.term} pourrait se situer n'importe où entre 4.9 % et 7.7 %. N'écrivez pas « notre mortalité était la même que celle de l'audit » ; donnez l'IC et laissez-le parler.
 :::
 
 **3.** Supposons qu'une enquête auprès de patients avec une prothèse articulaire ait trouvé 50 % de personnes n'ayant jamais fumé, 40 % d'anciens fumeurs et 10 % de fumeurs actuels. Testez si notre répartition du tabagisme diffère, et rédigez la phrase de Résultats.
@@ -929,5 +929,5 @@ print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10
 
 > **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
 
-La deuxième ligne de la sortie donne les pourcentages. Le test a 3 catégories − 1 = 2 degrés de liberté ; scipy ne les affiche pas.
+La deuxième ligne de la sortie donne les pourcentages. Le test a 3 [catégories](../glossary.qmd#categorical-variable){.term} − 1 = 2 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; scipy ne les affiche pas.
 :::

@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Before a measurement goes into a study, someone should ask: if it were measured again, would you get the same answer? Alignment angles on long-leg radiographs are a good example. Before an osteotomy around the knee, the surgeon works out the correction from the hip-knee-ankle angle (HKA), the medial proximal tibial angle (MPTA) and the lateral distal femoral angle (LDFA), so an error in the reading becomes an error in the correction. Two surgeons can place the same landmarks a little differently, and one surgeon can place them differently on another day. This page shows how to measure that, using the practice data's reliability study: 60 knees, each measured by two raters (R1 and R2), twice, at least two weeks apart.
+Before a measurement goes into a study, someone should ask: if it were measured again, would you get the same answer? Alignment angles on long-leg radiographs are a good example. Before an osteotomy around the knee, the surgeon works out the correction from the hip-knee-ankle angle (HKA), the medial proximal tibial angle (MPTA) and the lateral distal femoral angle (LDFA), so an error in the reading becomes an error in the correction. Two surgeons can place the same landmarks a little differently, and one surgeon can place them differently on another day. This page shows how to measure that, using the practice data's [reliability](../glossary.qmd#reliability){.term} study: 60 knees, each measured by two raters (R1 and R2), twice, at least two weeks apart.
 
 ::: {.callout-note}
 ## 💡 How this page works
@@ -26,10 +26,10 @@ Run the code blocks in order, from the top: later blocks use the packages and da
 ## Reliability or agreement? {#reliability-vs-agreement}
 
 The two words are often used as if they meant the same thing. They don't:
-- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), a number from 0 to 1. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a cohort with a wider range of deformities.
-- **Agreement** asks how close two readings are, in the measurement's own units. If rater 2 reads every knee 3° higher than rater 1, that's poor agreement, even though the two raters put the knees in exactly the same order. It's measured with the **Bland-Altman limits of agreement**, in degrees.
+- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), a number from 0 to 1. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a [cohort](../glossary.qmd#cohort){.term} with a wider range of deformities.
+- **Agreement** asks how close two readings are, in the measurement's own units. If rater 2 reads every knee 3° higher than rater 1, that's poor agreement, even though the two raters put the knees in exactly the same order. It's measured with the **[Bland-Altman limits of agreement](../glossary.qmd#bland-altman){.term}**, in degrees.
 
-Report both. A surgeon planning an osteotomy needs to know the agreement in degrees, not only that the ICC was 0.9.
+Report both. A surgeon planning an osteotomy needs to know the agreement in degrees, not only that the [ICC](../glossary.qmd#icc){.term} was 0.9.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -69,7 +69,7 @@ chk = {"knees": float(readings["knee_id"].nunique()), "rows": float(len(readings
 check_agree(list(knees = n_distinct(readings$knee_id), rows = nrow(readings)), reticulate::py$chk)
 ```
 
-The data are long: one row per knee, rater and session, with the hip-knee-ankle angle (HKA, 180° is neutral, below 180° is varus), the medial proximal tibial angle (MPTA), the lateral distal femoral angle (LDFA) and the CPAK class those angles give.
+The data are [long](../glossary.qmd#long-format){.term}: one row per knee, rater and session, with the hip-knee-ankle angle (HKA, 180° is neutral, below 180° is varus), the medial proximal tibial angle (MPTA), the lateral distal femoral angle (LDFA) and the CPAK class those angles give.
 
 ## The intraclass correlation coefficient {#icc}
 
@@ -78,9 +78,9 @@ There are several ICCs, and the right one depends on the design. Three choices d
 - **Type:** should a rater who always reads higher count against the measurement (**absolute agreement**) or not (**consistency**)? For angles that feed clinical decisions, it should: choose absolute agreement.
 - **Unit:** will the study use one rater's reading (**single**) or the average of several (**average**)? Usually single.
 
-In plain words, the ICC splits the spread of all the readings into three parts: real differences between knees, a systematic difference between the raters, and whatever is left, the measurement error. Each part is a [variance](../glossary.qmd#variance){.term}. The absolute-agreement ICC is the knees' share of the three together; the consistency ICC leaves the rater difference out. A box under the output below works both out by hand.
+In plain words, the ICC splits the [spread](../glossary.qmd#spread){.term} of all the readings into three parts: real differences between knees, a systematic difference between the raters, and whatever is left, the [measurement error](../glossary.qmd#measurement-error){.term}. Each part is a [variance](../glossary.qmd#variance){.term}. The absolute-agreement ICC is the knees' share of the three together; the consistency ICC leaves the rater difference out. A box under the output below works both out by hand.
 
-For inter-rater reliability of HKA, that gives a two-way random, absolute-agreement, single-rater ICC, written ICC(A,1) (or ICC(2,1) in Shrout and Fleiss's older naming). Using each rater's first-session readings:
+For [inter-rater reliability](../glossary.qmd#reliability){.term} of HKA, that gives a two-way random, absolute-agreement, single-rater ICC, written ICC(A,1) (or ICC(2,1) in Shrout and Fleiss's older naming). Using each rater's first-session readings:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -118,7 +118,7 @@ check_agree(list(icc = inter_icc$value, low = round(inter_icc$lbound, 2), high =
 ```
 
 - **ICC(A,1) = 0.889** (Python's `ICC(A,1)` row; R prints 0.889).
-- **95% CI 0.82 to 0.93.** Koo and Li's guide: below 0.5 poor, 0.5 to 0.75 moderate, 0.75 to 0.9 good, above 0.9 excellent. Judge by the [CI](../glossary.qmd#confidence-interval){.term}, not the point estimate: this one runs from good to excellent.
+- **95% CI 0.82 to 0.93.** Koo and Li's guide: below 0.5 poor, 0.5 to 0.75 moderate, 0.75 to 0.9 good, above 0.9 excellent. Judge by the [CI](../glossary.qmd#confidence-interval){.term}, not the [point estimate](../glossary.qmd#estimate){.term}: this one runs from good to excellent.
 - **The F test** (R) tests whether the ICC is above 0. It nearly always is, so it's rarely worth reporting.
 
 ::: {.callout-note collapse="true"}
@@ -162,7 +162,7 @@ print(parts["knees"] / (parts["knees"] + parts["error"]))                       
 ```
 :::
 
-The spread of the 120 readings splits into three variances: 11.83 from real differences between knees, 0.10 from rater 2 reading a little higher than rater 1, and 1.37 of measurement error. The knees' share is 11.83 / (11.83 + 0.10 + 1.37) = 0.889, the ICC(A,1) the software gave. Leave the rater difference out and the share is 11.83 / (11.83 + 1.37) = 0.896, the consistency ICC. The first three lines of the code are the mean squares of an ANOVA with knees and raters; [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) builds such sums step by step.
+The spread of the 120 readings splits into three variances: 11.83 from real differences between knees, 0.10 from rater 2 reading a little higher than rater 1, and 1.37 of measurement error. The knees' share is 11.83 / (11.83 + 0.10 + 1.37) = 0.889, the ICC(A,1) the software gave. Leave the rater difference out and the share is 11.83 / (11.83 + 1.37) = 0.896, the consistency ICC. The first three lines of the code are the [mean squares](../glossary.qmd#sum-of-squares){.term} of an [ANOVA](../glossary.qmd#anova){.term} with knees and raters; [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) builds such sums step by step.
 :::
 
 ```{python}
@@ -195,7 +195,7 @@ R's `irr::icc()` computes the one ICC you ask for. pingouin's `intraclass_corr()
 
 ## Inter-rater and intra-rater reliability {#inter-intra-rater}
 
-The ICC above is **inter-rater** reliability: two raters, same films. **Intra-rater** (test-retest) reliability uses one rater reading the same films twice, far enough apart that they don't remember their first answers. The same ICC form applies, with the two sessions in place of the two raters:
+The [ICC](../glossary.qmd#icc){.term} above is **inter-rater** reliability: two raters, same films. **Intra-rater** (test-retest) reliability uses one rater reading the same films twice, far enough apart that they don't remember their first answers. The same ICC form applies, with the two sessions in place of the two raters:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -232,13 +232,13 @@ check_agree(list(icc = intra_icc$value, low = round(intra_icc$lbound, 2), high =
             reticulate::py$chk)
 ```
 
-Rater 1 agreed with themselves a little better than with rater 2: intra-rater ICC(A,1) = 0.915 (95% CI 0.86 to 0.95), excellent at its point estimate and good to excellent across its CI. R prints the ICC already rounded to three decimals. Before rounding it is 0.9148 (Python's output), so to two decimals it is 0.91, not 0.92.
+Rater 1 agreed with themselves a little better than with rater 2: intra-rater ICC(A,1) = 0.915 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.86 to 0.95), excellent at its [point estimate](../glossary.qmd#estimate){.term} and good to excellent across its CI. R prints the ICC already rounded to three decimals. Before rounding it is 0.9148 (Python's output), so to two decimals it is 0.91, not 0.92.
 
 ## Bland-Altman: how far apart are the readings? {#bland-altman}
 
-The ICC is a ratio and has no units. To see how far apart two readings can be, in degrees, plot the **difference** between them against their **mean**, one point per knee. Then add three lines:
-- **The bias:** the mean difference, showing whether one rater reads systematically higher.
-- **The 95% limits of agreement:** bias ± 1.96 × SD of the differences. For 95% of knees, rater 2's reading will fall between these limits relative to rater 1's.
+The [ICC](../glossary.qmd#icc){.term} is a ratio and has no units. To see how far apart two readings can be, in degrees, plot the **difference** between them against their **mean**, one point per knee. Then add three lines:
+- **The bias:** the [mean](../glossary.qmd#mean){.term} difference, showing whether one rater reads systematically higher.
+- **The 95% limits of agreement:** bias ± 1.96 × [SD](../glossary.qmd#standard-deviation){.term} of the differences. For 95% of knees, rater 2's reading will fall between these limits relative to rater 1's.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -309,16 +309,16 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
             reticulate::py$chk)
 ```
 
-- **Bias = 0.50°** (95% CI 0.08° to 0.93°): rater 2 reads half a degree higher than rater 1 on average, the same difference [page 7's exercise 2](../catalog/07-two-paired-groups.qmd#exercises) found with a paired t test.
+- **Bias = 0.50°** (95% [CI](../glossary.qmd#confidence-interval){.term} 0.08° to 0.93°): rater 2 reads half a degree higher than rater 1 on average, the same difference [page 7's exercise 2](../catalog/07-two-paired-groups.qmd#exercises) found with a [paired t test](../glossary.qmd#t-test){.term}.
 - **Limits of agreement, −2.74° to 3.74°:** for 95% of knees, rater 2's reading will be between 2.7° below and 3.7° above rater 1's.
-- **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; R's last table, and Python's last two lines, where each limit is followed by its CI) show how precisely 60 knees pin the limits down.
+- **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; R's last table, and Python's last two lines, where each limit is followed by its CI) show how [precisely](../glossary.qmd#precision){.term} 60 knees pin the limits down.
 - **The plot:** the points scatter evenly around the bias line, with no trend up or down as the mean angle changes. A trend would mean the raters disagree more for some knees (more varus, say) than others, and a single pair of limits wouldn't describe them.
 
-Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the reliability study, and compare the limits (and their CIs) with them.
+Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the [reliability](../glossary.qmd#reliability){.term} study, and compare the limits (and their CIs) with them.
 
 ## Kappa for categories {#kappa}
 
-For a category, like CPAK class, use **Cohen's kappa**: the agreement between two raters beyond what chance alone would produce. Kappa is 1 for perfect agreement and 0 for agreement no better than chance.
+For a [category](../glossary.qmd#categorical-variable){.term}, like CPAK class, use **Cohen's kappa**: the [agreement](../glossary.qmd#agreement){.term} between two raters beyond what chance alone would produce. Kappa is 1 for perfect agreement and 0 for agreement no better than chance.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -363,7 +363,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-The raters gave the same CPAK class to 40 of the 60 knees (66.7%; the output prints 0.667, and 0.667 × 60 = 40). But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% CI 0.44 to 0.73): moderate agreement at its point estimate on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the ICC, judge it by the CI: moderate to substantial.
+The raters gave the same CPAK class to 40 of the 60 knees (66.7%; the output prints 0.667, and 0.667 × 60 = 40). But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.44 to 0.73): moderate agreement at its [point estimate](../glossary.qmd#estimate){.term} on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the [ICC](../glossary.qmd#icc){.term}, judge it by the CI: moderate to substantial.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: kappa by hand
@@ -534,7 +534,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** Calculate the inter-rater ICC for the MPTA, using each rater's first-session readings, and describe it with Koo and Li's guide.
+**1.** Calculate the [inter-rater](../glossary.qmd#reliability){.term} [ICC](../glossary.qmd#icc){.term} for the MPTA, using each rater's first-session readings, and describe it with Koo and Li's guide.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -560,10 +560,10 @@ print(mpta_icc.set_index("Type").loc["ICC(A,1)", ["ICC", "CI95"]])
 
 > **Results:** The inter-rater ICC(A,1) for the MPTA was 0.93 (95% CI 0.89 to 0.96).
 
-On Koo and Li's guide, that's excellent at the point estimate, and the CI runs from good to excellent. R prints the ICC as 0.935. Before rounding it is 0.9348 (Python's output), so to two decimals it is 0.93.
+On Koo and Li's guide, that's excellent at the [point estimate](../glossary.qmd#estimate){.term}, and the [CI](../glossary.qmd#confidence-interval){.term} runs from good to excellent. R prints the ICC as 0.935. Before rounding it is 0.9348 (Python's output), so to two decimals it is 0.93.
 :::
 
-**2.** Using rater 1's two sessions, calculate the Bland-Altman bias and 95% limits of agreement for HKA, and write the Results sentence.
+**2.** Using rater 1's two sessions, calculate the [Bland-Altman bias](../glossary.qmd#bland-altman){.term} and 95% limits of agreement for HKA, and write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -591,11 +591,11 @@ print(retest.mean(), retest_ci.low, retest_ci.high, retest.mean() + np.array([-1
 R prints the bias as −0.2650000 and Python as −0.2649999999999987. To two decimals both programs round it to −0.26, the value in the Results sentence.
 :::
 
-**3.** A colleague reports that the two raters' HKA readings correlate well (Pearson's r = 0.90, 95% CI 0.83 to 0.94) as evidence that they agree. What's wrong with that? Show it by adding 5° to every one of rater 2's readings and recalculating r and the ICC.
+**3.** A colleague reports that the two raters' HKA readings correlate well ([Pearson's r](../glossary.qmd#pearson-correlation){.term} = 0.90, 95% CI 0.83 to 0.94) as evidence that they agree. What's wrong with that? Show it by adding 5° to every one of rater 2's readings and recalculating r and the ICC.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Correlation measures whether two readings rise and fall together, not whether they're equal. A rater who reads every knee 5° too high correlates perfectly well with an accurate one.
+[Correlation](../glossary.qmd#correlation){.term} measures whether two readings rise and fall together, not whether they're equal. A rater who reads every knee 5° too high correlates perfectly well with an accurate one.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -624,5 +624,5 @@ print(shifted_icc.set_index("Type").loc["ICC(A,1)", ["ICC", "CI95"]])
 ```
 :::
 
-Pearson's r is 0.90 (95% CI 0.83 to 0.94) before and after the shift: it can't see a systematic difference. The absolute-agreement ICC drops from 0.89 to 0.42 (95% CI −0.04 to 0.78), because a 5° disagreement on every knee is poor agreement. Report the ICC and the Bland-Altman limits, not r.
+Pearson's r is 0.90 (95% CI 0.83 to 0.94) before and after the shift: it can't see a systematic difference. The absolute-agreement ICC drops from 0.89 to 0.42 (95% CI −0.04 to 0.78), because a 5° disagreement on every knee is poor [agreement](../glossary.qmd#agreement){.term}. Report the ICC and the Bland-Altman limits, not r.
 :::

@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Zwei Grössen, an denselben Patientinnen und Patienten gemessen: die Femurtorsion im CT und auf der modifizierten Budin-Aufnahme, die Verbesserung eines PROM (patientenberichtetes Messinstrument) und die Zufriedenheit, die ASA-Klasse und die Hypertonie. Die Tests auf dieser Seite vergleichen keine Gruppen. Sie geben **in einer einzigen Zahl an, wie stark die beiden zusammenhängen**, mit einem 95%-KI (Konfidenzintervall). Wenn Sie die eine Grösse aus der anderen **vorhersagen** möchten, verwenden Sie die Regression ([Seite 11](11-predict-from-one.qmd)).
+Zwei Grössen, an denselben Patientinnen und Patienten gemessen: die Femurtorsion im CT und auf der modifizierten Budin-Aufnahme, die Verbesserung eines [PROM](../glossary.qmd#prom){.term} (patientenberichtetes Messinstrument) und die Zufriedenheit, die ASA-Klasse und die Hypertonie. Die Tests auf dieser Seite vergleichen keine Gruppen. Sie geben **in einer einzigen Zahl an, wie stark die beiden zusammenhängen**, mit einem 95%-[KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall). Wenn Sie die eine Grösse aus der anderen **vorhersagen** möchten, verwenden Sie die Regression ([Seite 11](11-predict-from-one.qmd)).
 
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
-Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze (die Bildgebungsdaten zur Hüfterhaltung für Pearson, sonst die Kohorte zum Gelenkersatz). Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze (die Bildgebungsdaten zur Hüfterhaltung für Pearson, sonst die [Kohorte](../glossary.qmd#cohort){.term} zum Gelenkersatz). Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
 
 Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
 :::
@@ -32,10 +32,10 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 ### Wann verwenden
 
-- Zwei **Messungen** an denselben Patientinnen und Patienten, und Sie möchten in einer Zahl ausdrücken, wie eng sich die beiden entlang einer **Geraden** gemeinsam bewegen.
-- Beide sind ungefähr normalverteilt, ohne extreme Ausreisser, und das Streudiagramm sieht aus wie eine Punktwolke, die entlang einer Geraden gestreckt ist.
-- Wenn eine der beiden [schief](../glossary.qmd#skewed){.term} oder ordinal ist, Ausreisser hat oder die Punkte einer Kurve folgen → [Spearman-Korrelation](#spearman).
-- Wenn Sie die eine Grösse aus der anderen vorhersagen oder für weitere Variablen adjustieren möchten → [lineare Regression](11-predict-from-one.qmd#linear-regression).
+- Zwei **[Messungen](../glossary.qmd#continuous-variable){.term}** an denselben Patientinnen und Patienten, und Sie möchten in einer Zahl ausdrücken, wie eng sich die beiden entlang einer **Geraden** gemeinsam bewegen.
+- Beide sind ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term}, ohne extreme [Ausreisser](../glossary.qmd#outlier){.term}, und das [Streudiagramm](../glossary.qmd#scatter-plot){.term} sieht aus wie eine Punktwolke, die entlang einer Geraden gestreckt ist.
+- Wenn eine der beiden [schief](../glossary.qmd#skewed){.term} oder [ordinal](../glossary.qmd#ordinal){.term} ist, Ausreisser hat oder die Punkte einer Kurve folgen → [Spearman-Korrelation](#spearman).
+- Wenn Sie die eine Grösse aus der anderen vorhersagen oder für weitere [Variablen](../glossary.qmd#variable){.term} [adjustieren](../glossary.qmd#adjustment){.term} möchten → [lineare Regression](11-predict-from-one.qmd#linear-regression).
 
 ### Was der Test wirklich macht
 
@@ -43,7 +43,7 @@ Pearsons r misst, wie eng die Punkte einer Geraden folgen.
 
 1. Für jede Person bestimmen, wie weit jeder der beiden Messwerte von seinem eigenen [Mittelwert](../glossary.qmd#mean){.term} entfernt ist, gezählt in [Standardabweichungen](../glossary.qmd#standard-deviation){.term}. Eine Hüfte, die im CT 1 Standardabweichung über dem Mittelwert liegt, hat im CT den Wert +1.
 2. Die beiden Ergebnisse jeder Person miteinander multiplizieren. Das Produkt ist positiv, wenn beide Messwerte auf derselben Seite ihres Mittelwerts liegen (beide darüber oder beide darunter), und negativ, wenn sie auf verschiedenen Seiten liegen.
-3. Den Durchschnitt der Produkte über alle Personen bilden (geteilt durch n − 1). Dieser Durchschnitt ist **r**. Geht hoch mit hoch und tief mit tief einher, sind die meisten Produkte positiv und r liegt nahe bei +1. Gibt es keinen geradlinigen Zusammenhang, heben sich positive und negative Produkte auf und r liegt nahe bei 0.
+3. Den Durchschnitt der Produkte über alle Personen bilden (geteilt durch n − 1). Dieser Durchschnitt ist **r**. Geht hoch mit hoch und tief mit tief einher, sind die meisten Produkte positiv und r liegt nahe bei +1. Gibt es keinen [geradlinigen Zusammenhang](../glossary.qmd#linear-relationship){.term}, heben sich positive und negative Produkte auf und r liegt nahe bei 0.
 4. Der Test fragt, ob r weiter von 0 entfernt ist, als der Zufall erklären würde. Er rechnet r in eine [Teststatistik](../glossary.qmd#test-statistic){.term} um, t = r × √(n − 2) ÷ √(1 − r²), und t in einen [p-Wert](../glossary.qmd#p-value){.term}.
 
 Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» r und t von Hand nach.
@@ -120,8 +120,8 @@ check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
 ### Ausgabe lesen
 
 - **cor** (R) oder **statistic** (Python): Pearsons **r = 0.86**. Er reicht von −1 (eine perfekt fallende Gerade) über 0 (kein linearer Zusammenhang) bis +1 (eine perfekt steigende Gerade).
-- **t = 14.7, df = 78:** die Teststatistik und ihre Freiheitsgrade: 80 Hüften minus 2. Python gibt sie nicht aus.
-- **p < 0.001** (R gibt `p-value < 2.2e-16` aus, den kleinsten Wert, den es anzeigt; Python gibt `3.0576926692219362e-24` aus. Beides ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} für Zahlen weit unter 0.001): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn die Torsion im CT und auf der Budin-Aufnahme nicht zusammenhingen.
+- **t = 14.7, df = 78:** die Teststatistik und ihre [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}: 80 Hüften minus 2. Python gibt sie nicht aus.
+- **p < 0.001** (R gibt `p-value < 2.2e-16` aus, den kleinsten Wert, den es anzeigt; Python gibt `3.0576926692219362e-24` aus. Beides ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} für Zahlen weit unter 0.001): Eine so starke [Korrelation](../glossary.qmd#correlation){.term} wäre sehr unwahrscheinlich, wenn die Torsion im CT und auf der Budin-Aufnahme nicht zusammenhingen.
 - **95% CI 0.79 to 0.91.**
 
 ::: {.callout-note collapse="true"}
@@ -166,7 +166,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 
 ### Effektstärke und 95%-KI
 
-**r ist die Effektstärke**: r = 0.86 (95%-KI 0.79 bis 0.91). Als grobe Richtschnur gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross. Quadriert ergibt er den Anteil der Variation der Budin-Torsion, der mit der CT-Torsion einhergeht: r² = 0.74, also etwa drei Viertel.
+**r ist die Effektstärke**: r = 0.86 (95%-[KI](../glossary.qmd#confidence-interval){.term} 0.79 bis 0.91). Als [grobe Richtschnur](../glossary.qmd#cohen-benchmarks){.term} gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross. Quadriert ergibt er den Anteil der [Variation](../glossary.qmd#spread){.term} der Budin-Torsion, der mit der CT-Torsion einhergeht: [r²](../glossary.qmd#r-squared){.term} = 0.74, also etwa drei Viertel.
 
 ### Resultate formulieren
 
@@ -178,7 +178,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 ## ⚠️ Achtung: r erkennt nur Geraden, belegt keine Ursache und ist keine Übereinstimmung
 Ein Zusammenhang, der erst steigt und dann fällt, kann ein r nahe 0 haben, und ein einzelner Ausreisser kann eine Korrelation erzeugen oder verdecken: Schauen Sie sich daher immer zuerst das Streudiagramm an. Zudem sagt eine Korrelation nicht, was was verursacht, und nicht, ob etwas anderes (Alter, Geschlecht) beide antreibt. Um für weitere Variablen zu adjustieren, verwenden Sie die [multiple Regression](12-predict-from-several.qmd#multiple-linear-regression).
 
-**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten (die mittlere Differenz ± 1.96 Standardabweichungen). Selbst diese Grenzen verbergen einen Trend: Bei den 8 Hüften mit 25° oder mehr im CT lag die Budin-Messung im Mittel 7.0° tiefer. Der Code unten berechnet diese Zahlen. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
+**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten (die [mittlere Differenz](../glossary.qmd#mean-difference){.term} ± 1.96 Standardabweichungen). Selbst diese Grenzen verbergen einen Trend: Bei den 8 Hüften mit 25° oder mehr im CT lag die Budin-Messung im Mittel 7.0° tiefer. Der Code unten berechnet diese Zahlen. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -224,15 +224,15 @@ check_agree(list(largest = max(abs(difference)), low = mean(difference) - 1.96 *
 
 ### Wann verwenden
 
-- Zwei Variablen an denselben Patientinnen und Patienten, von denen mindestens eine **ordinal** (Zufriedenheit von 1 bis 5), **[schief](../glossary.qmd#skewed){.term}** oder mit **Ausreissern** behaftet ist.
-- Der Zusammenhang geht in eine Richtung (immer aufwärts oder immer abwärts), muss aber keine Gerade sein. Spearmans ρ (rho) ist Pearsons r, berechnet auf den **Rängen**.
-- Wenn beide ungefähr normalverteilt sind und der Zusammenhang eine Gerade ist → [Pearson-Korrelation](#pearson).
+- Zwei [Variablen](../glossary.qmd#variable){.term} an denselben Patientinnen und Patienten, von denen mindestens eine **[ordinal](../glossary.qmd#ordinal){.term}** (Zufriedenheit von 1 bis 5), **[schief](../glossary.qmd#skewed){.term}** oder mit **[Ausreissern](../glossary.qmd#outlier){.term}** behaftet ist.
+- Der Zusammenhang geht in eine Richtung (immer aufwärts oder immer abwärts), muss aber keine Gerade sein. Spearmans ρ (rho) ist [Pearsons r](../glossary.qmd#pearson-correlation){.term}, berechnet auf den **Rängen**.
+- Wenn beide ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term} sind und der Zusammenhang eine Gerade ist → [Pearson-Korrelation](#pearson).
 
 ### Was der Test wirklich macht
 
 Spearmans ρ ist Pearsons r mit einer Änderung: Es wird auf [Rängen](../glossary.qmd#rank){.term} statt auf den Werten selbst berechnet.
 
-1. Die Personen nach der ersten Variable in eine Rangfolge bringen, vom tiefsten zum höchsten Wert. Gebundene Werte teilen sich den Mittelwert ihrer Ränge.
+1. Die Personen nach der ersten Variable in eine Rangfolge bringen, vom tiefsten zum höchsten Wert. [Gebundene Werte](../glossary.qmd#ties){.term} teilen sich den Mittelwert ihrer Ränge.
 2. Dasselbe getrennt für die zweite Variable tun.
 3. [Pearsons r](#pearson) zwischen den beiden Reihen von Rängen berechnen. Das Ergebnis ist **ρ**: nahe bei +1, wenn Personen mit hohem Rang bei der einen Variable auch bei der anderen einen hohen Rang haben, nahe bei −1, wenn die beiden Rangfolgen entgegengesetzt verlaufen, und nahe bei 0, wenn sie nichts miteinander zu tun haben.
 4. Der Test fragt, ob ρ weiter von 0 entfernt ist, als der Zufall erklären würde, und liefert einen [p-Wert](../glossary.qmd#p-value){.term}.
@@ -299,7 +299,7 @@ print(change.groupby("satisfaction_1yr")["improvement"].agg(["count", "median"])
 ```
 :::
 
-404 Eingriffe haben sowohl einen präoperativen Score als auch einen Score nach 1 Jahr und eine Antwort zur Zufriedenheit (die erste ausgegebene Zahl). Die mediane Verbesserung steigt mit jeder Zufriedenheitsstufe, von 25.4 Punkten bei den 14 Personen, die sehr unzufrieden waren, auf 43.8 bei den 198 Personen, die sehr zufrieden waren. Die Zufriedenheit hat nur fünf Werte, daher gibt es viele Bindungen (Ties).
+404 Eingriffe haben sowohl einen präoperativen Score als auch einen Score nach 1 Jahr und eine Antwort zur Zufriedenheit (die erste ausgegebene Zahl). Die [mediane](../glossary.qmd#median){.term} Verbesserung steigt mit jeder Zufriedenheitsstufe, von 25.4 Punkten bei den 14 Personen, die sehr unzufrieden waren, auf 43.8 bei den 198 Personen, die sehr zufrieden waren. Die Zufriedenheit hat nur fünf Werte, daher gibt es viele Bindungen (Ties).
 
 ### Analyse durchführen
 
@@ -333,8 +333,8 @@ check_agree(list(rho = unname(satisfaction_corr$estimate), p = satisfaction_corr
 ### Ausgabe lesen
 
 - **rho** (R) oder **statistic** (Python): **ρ = 0.38**. Wie r reicht es von −1 bis +1; hier besagt es, dass Patientinnen und Patienten mit grösserer Verbesserung tendenziell höhere Zufriedenheitswerte angeben.
-- **S = 6764534** (nur R): die Teststatistik, aus den Differenzen zwischen den beiden Rangfolgen gebildet. Sie müssen sie nicht berichten.
-- **p < 0.001** (R gibt `1.111e-15` aus, Python dieselbe Zahl mit mehr Stellen; das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: Bei `e-15` rückt der Dezimalpunkt 15 Stellen nach links): Eine so starke Korrelation wäre sehr unwahrscheinlich, wenn Verbesserung und Zufriedenheit nicht zusammenhingen.
+- **S = 6764534** (nur R): die [Teststatistik](../glossary.qmd#test-statistic){.term}, aus den Differenzen zwischen den beiden Rangfolgen gebildet. Sie müssen sie nicht berichten.
+- **p < 0.001** (R gibt `1.111e-15` aus, Python dieselbe Zahl mit mehr Stellen; das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: Bei `e-15` rückt der Dezimalpunkt 15 Stellen nach links): Eine so starke [Korrelation](../glossary.qmd#correlation){.term} wäre sehr unwahrscheinlich, wenn Verbesserung und Zufriedenheit nicht zusammenhingen.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: ρ von Hand
@@ -376,7 +376,7 @@ check_agree(list(rho = cor(improvement_ranks, satisfaction_ranks),
 
 ### Effektstärke und 95%-KI
 
-**ρ ist die Effektstärke.** Weder `cor.test()` noch scipy geben sein 95%-KI an, daher verwendet R DescTools und Python die Formel dahinter (Fisher-z-Transformation).
+**ρ ist die Effektstärke.** Weder `cor.test()` noch scipy geben sein 95%-[KI](../glossary.qmd#confidence-interval){.term} an, daher verwendet R DescTools und Python die Formel dahinter (Fisher-z-Transformation).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -406,7 +406,7 @@ satisfaction_rho <- DescTools::SpearmanRho(change$improvement, change$satisfacti
 check_agree(list(low = satisfaction_rho[["lwr.ci"]], high = satisfaction_rho[["upr.ci"]]), reticulate::py$chk)
 ```
 
-ρ = 0.38 (95%-KI 0.30 bis 0.46): ein mittlerer Zusammenhang, nach derselben groben Richtschnur wie bei r.
+ρ = 0.38 (95%-KI 0.30 bis 0.46): ein mittlerer [Zusammenhang](../glossary.qmd#association){.term}, nach derselben [groben Richtschnur](../glossary.qmd#cohen-benchmarks){.term} wie bei r.
 
 ### Resultate formulieren
 
@@ -421,8 +421,8 @@ Bei der Hüfte wird der HOOS JR beantwortet, beim Knie der KOOS JR. Beide reiche
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Bindungen und das KI
-- Bei weniger als 1290 Patientinnen und Patienten versucht `cor.test()` in R, einen **exakten** p-Wert zu berechnen. Bei Bindungen gelingt das nicht: R gibt eine Warnung aus und greift auf die übliche Näherung zurück, die auch scipy immer verwendet. `exact = FALSE` verlangt die Näherung direkt, ohne die Warnung.
-- Keines von beiden gibt ein KI für ρ an. `SpearmanRho()` von DescTools und die Python-Formel verwenden dieselbe Methode: Fisher-z mit einem Standardfehler von 1/√(n − 3).
+- Bei weniger als 1290 Patientinnen und Patienten versucht `cor.test()` in R, einen **[exakten](../glossary.qmd#exact-test){.term}** p-Wert zu berechnen. Bei Bindungen gelingt das nicht: R gibt eine Warnung aus und greift auf die übliche Näherung zurück, die auch scipy immer verwendet. `exact = FALSE` verlangt die Näherung direkt, ohne die Warnung.
+- Keines von beiden gibt ein KI für ρ an. `SpearmanRho()` von DescTools und die Python-Formel verwenden dieselbe Methode: Fisher-z mit einem [Standardfehler](../glossary.qmd#standard-error){.term} von 1/√(n − 3).
 :::
 
 ## Kontingenzkoeffizienten {#contingency-coefficients}
@@ -431,18 +431,18 @@ Bei der Hüfte wird der HOOS JR beantwortet, beim Knie der KOOS JR. Beide reiche
 
 ### Wann verwenden
 
-- Zwei **kategoriale** Variablen an denselben Patientinnen und Patienten. Der Chi-Quadrat-Test ([Seite 8](08-three-plus-unmatched.qmd#chi-square)) fragt, ob sie überhaupt zusammenhängen; ein Kontingenzkoeffizient sagt, **wie stark**.
-- **Phi (φ)** ist für 2 × 2-Tabellen gedacht. **Cramérs V** funktioniert bei jeder Tabellengrösse und entspricht bei einer 2 × 2-Tabelle φ (ohne dessen Vorzeichen). Beide reichen von 0 (kein Zusammenhang) bis 1 (jede Kategorie der einen Variable sagt die andere genau voraus).
+- Zwei **[kategoriale](../glossary.qmd#categorical-variable){.term}** [Variablen](../glossary.qmd#variable){.term} an denselben Patientinnen und Patienten. Der [Chi-Quadrat-Test](../glossary.qmd#chi-square-test){.term} ([Seite 8](08-three-plus-unmatched.qmd#chi-square)) fragt, ob sie überhaupt zusammenhängen; ein Kontingenzkoeffizient sagt, **wie stark**.
+- **Phi (φ)** ist für [2 × 2-Tabellen](../glossary.qmd#contingency-table){.term} gedacht. **Cramérs V** funktioniert bei jeder Tabellengrösse und entspricht bei einer 2 × 2-Tabelle φ (ohne dessen Vorzeichen). Beide reichen von 0 (kein Zusammenhang) bis 1 (jede Kategorie der einen Variable sagt die andere genau voraus).
 - Der **Kontingenzkoeffizient nach Pearson (C)** ist älter. Sein Maximum liegt unter 1 und hängt von der Grösse der Tabelle ab (es beträgt √((k − 1) ÷ k), wobei k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl ist: √(1 ÷ 2) = 0.71 bei einer Tabelle mit zwei Spalten); das macht ihn schwer lesbar, bevorzugen Sie daher V.
-- Der p-Wert des Chi-Quadrat-Tests setzt voraus, dass jede [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} mindestens 5 beträgt.
+- Der [p-Wert](../glossary.qmd#p-value){.term} des Chi-Quadrat-Tests setzt voraus, dass jede [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} mindestens 5 beträgt.
 
 ### Was der Test wirklich macht
 
-Ein Kontingenzkoeffizient macht aus der Chi-Quadrat-Statistik eine Zahl zwischen 0 und 1, die sagt, wie stark der Zusammenhang ist.
+Ein Kontingenzkoeffizient macht aus der [Chi-Quadrat-Statistik](../glossary.qmd#chi-square-statistic){.term} eine Zahl zwischen 0 und 1, die sagt, wie stark der Zusammenhang ist.
 
 1. Den [Chi-Quadrat-Test](08-three-plus-unmatched.qmd#chi-square) durchführen. Er vergleicht die beobachtete Tabelle mit der Tabelle, die zu erwarten wäre, wenn die beiden Variablen nicht zusammenhingen, und fasst den Abstand zwischen ihnen als χ² zusammen.
 2. χ² wächst mit der Stärke des Zusammenhangs, aber auch mit der Anzahl Personen: Verdoppelt man jede Häufigkeit in der Tabelle, verdoppelt sich χ², obwohl der Zusammenhang nicht stärker ist.
-3. **Cramérs V** rechnet die Stichprobengrösse heraus: V = √(χ² ÷ (n × (k − 1))), wobei n die Anzahl Personen ist und k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl.
+3. **Cramérs V** rechnet die [Stichprobengrösse](../glossary.qmd#sample-size){.term} heraus: V = √(χ² ÷ (n × (k − 1))), wobei n die Anzahl Personen ist und k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl.
 4. Der **Kontingenzkoeffizient nach Pearson (C)** verwendet eine etwas andere Formel, C = √(χ² ÷ (χ² + n)), die nie 1 erreichen kann.
 
 Nach dem Test berechnet ein Kasten unter «Ausgabe lesen» V und C von Hand.
@@ -591,7 +591,7 @@ asa_c <- effectsize::pearsons_c(asa_hypertension)
 check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 ```
 
-**Cramérs V = 0.20**, ein kleiner bis mittlerer Zusammenhang (als grobe Richtschnur für Tabellen mit zwei Zeilen oder Spalten gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross). R gibt ausserdem ein einseitiges 95%-KI aus (0.12 bis 1.00): V kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy berechnet dieses KI nicht. Das zweite Resultat von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python». Pearsons C beträgt hier 0.19, doch seine Obergrenze liegt für diese Tabelle bei 0.71 und nicht bei 1, sodass dieselbe Zahl mehr bedeutet, als es scheint: ein weiterer Grund, V zu berichten.
+**Cramérs V = 0.20**, ein kleiner bis mittlerer [Zusammenhang](../glossary.qmd#association){.term} (als [grobe Richtschnur](../glossary.qmd#cohen-benchmarks){.term} für Tabellen mit zwei Zeilen oder Spalten gilt 0.1 als klein, 0.3 als mittel und 0.5 als gross). R gibt ausserdem ein [einseitiges](../glossary.qmd#two-sided){.term} 95%-[KI](../glossary.qmd#confidence-interval){.term} aus (0.12 bis 1.00): V kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy berechnet dieses KI nicht. Das zweite Resultat von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python». Pearsons C beträgt hier 0.19, doch seine Obergrenze liegt für diese Tabelle bei 0.71 und nicht bei 1, sodass dieselbe Zahl mehr bedeutet, als es scheint: ein weiterer Grund, V zu berichten.
 
 ### Resultate formulieren
 
@@ -601,12 +601,12 @@ check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: V gibt die Stärke an, nicht das Muster
-Wenn Sie die Zeilen der Tabelle vertauschen, ändert sich V nicht; V kann daher nicht aussagen, dass Hypertonie mit der ASA-Klasse **stetig** zunimmt. Das Muster zeigen die Zeilenprozente; nehmen Sie sie in Ihre Resultate auf. Wenn die Kategorien geordnet sind und Sie einen Trend erwarten, kann ein Trendtest mehr Teststärke haben als der gewöhnliche Chi-Quadrat-Test.
+Wenn Sie die Zeilen der Tabelle vertauschen, ändert sich V nicht; V kann daher nicht aussagen, dass Hypertonie mit der ASA-Klasse **stetig** zunimmt. Das Muster zeigen die Zeilenprozente; nehmen Sie sie in Ihre Resultate auf. Wenn die Kategorien geordnet sind und Sie einen Trend erwarten, kann ein Trendtest mehr [Teststärke](../glossary.qmd#power){.term} haben als der gewöhnliche Chi-Quadrat-Test.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Cramérs V gibt es in zwei Versionen
-`cramers_v()` und `phi()` von effectsize wenden standardmässig eine Korrektur der systematischen Abweichung bei kleinen Stichproben an (hier V = 0.18, das Resultat mit dem Titel `Cramer's V (adj.)` im R-Tab), `association()` von scipy dagegen nicht. `adjust = FALSE` schaltet sie aus, damit beide übereinstimmen; geben Sie in jedem Fall im Methodenteil an, welche Version Sie verwendet haben. Bei einer 2 × 2-Tabelle ergibt `association(method="cramer")` φ ohne dessen Vorzeichen.
+`cramers_v()` und `phi()` von effectsize wenden standardmässig eine Korrektur der [systematischen Abweichung](../glossary.qmd#bias){.term} bei kleinen [Stichproben](../glossary.qmd#sample){.term} an (hier V = 0.18, das Resultat mit dem Titel `Cramer's V (adj.)` im R-Tab), `association()` von scipy dagegen nicht. `adjust = FALSE` schaltet sie aus, damit beide übereinstimmen; geben Sie in jedem Fall im Methodenteil an, welche Version Sie verwendet haben. Bei einer 2 × 2-Tabelle ergibt `association(method="cramer")` φ ohne dessen Vorzeichen.
 :::
 
 ```{r}
@@ -679,7 +679,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Wie stark hängen die **Alpha-Winkel** auf der Dunn-45°-Aufnahme und der Lauenstein-Aufnahme (Frog-Leg) zusammen? Berichten Sie Pearsons r mit seinem 95%-KI.
+**1.** Wie stark hängen die **Alpha-Winkel** auf der Dunn-45°-Aufnahme und der Lauenstein-Aufnahme (Frog-Leg) zusammen? Berichten Sie [Pearsons r](../glossary.qmd#pearson-correlation){.term} mit seinem 95%-[KI](../glossary.qmd#confidence-interval){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -703,14 +703,14 @@ print((imaging["alpha_dunn45_deg"] - imaging["alpha_frogleg_deg"]).mean())
 
 > **Results:** The correlation between the alpha angle on the Dunn 45° and frog-leg views was r = 0.93 (Pearson; 95% CI 0.89 to 0.95; p < 0.001; n = 80 hips).
 
-Eine starke Korrelation, und doch ergab die Dunn-Aufnahme im Mittel 3.7° höhere Werte (die letzte ausgegebene Zahl; siehe auch [Seite 7](07-two-paired-groups.qmd#paired-t)): r kann einen konstanten Versatz nicht erkennen.
+Eine starke [Korrelation](../glossary.qmd#correlation){.term}, und doch ergab die Dunn-Aufnahme im Mittel 3.7° höhere Werte (die letzte ausgegebene Zahl; siehe auch [Seite 7](07-two-paired-groups.qmd#paired-t)): r kann einen konstanten Versatz nicht erkennen.
 :::
 
 **2.** Kolleginnen und Kollegen fragen, ob ältere Patientinnen und Patienten länger im Spital bleiben. Welche Korrelation würden Sie verwenden, und was finden Sie?
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Die Aufenthaltsdauer ist stark rechtsschief und hat viele Bindungen ([Seite 3](../foundations/03-distributions.qmd#transform)): **Spearman-Korrelation**.
+Die Aufenthaltsdauer ist stark [rechtsschief](../glossary.qmd#skewed){.term} und hat viele [Bindungen](../glossary.qmd#ties){.term} ([Seite 3](../foundations/03-distributions.qmd#transform)): **[Spearman-Korrelation](../glossary.qmd#spearman-correlation){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -731,10 +731,10 @@ print(los_corr, np.tanh(z - half_width), np.tanh(z + half_width))
 
 > **Results:** The correlation between age and length of stay was ρ = 0.15 (Spearman; 95% CI 0.07 to 0.22; p < 0.001).
 
-Ältere Patientinnen und Patienten blieben tendenziell etwas länger, aber der Zusammenhang ist schwach.
+Ältere Patientinnen und Patienten blieben tendenziell etwas länger, aber der [Zusammenhang](../glossary.qmd#association){.term} ist schwach.
 :::
 
-**3.** Kommt Schlafapnoe bei Männern häufiger vor als bei Frauen, und wie stark hängt sie mit dem Geschlecht zusammen? Schreiben Sie den Results-Satz mit φ.
+**3.** Kommt Schlafapnoe bei Männern häufiger vor als bei Frauen, und wie stark hängt sie mit dem Geschlecht zusammen? Schreiben Sie den Results-Satz mit [φ](../glossary.qmd#cramers-v){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung

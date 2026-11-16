@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Sometimes there is only one group of patients, and the comparison is with a number that comes from **outside** your data: a target set by the hospital, a value published by a registry, a benchmark in a quality report. Is our group different from that number?
+Sometimes there is only one group of patients, and the comparison is with a number that comes from **outside** your data: a target set by the hospital, a value published by a [registry](../glossary.qmd#registry){.term}, a benchmark in a quality report. Is our group different from that number?
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about one of the practice's datasets: the joint replacement cohort, its patient-reported outcomes, or (for the binomial test) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom. The "hypothetical" values below are made up for teaching; they aren't real registry figures or targets.
+Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term}, its [patient-reported outcomes](../glossary.qmd#prom){.term}, or (for the [binomial test](../glossary.qmd#binomial-test){.term}) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom. The "hypothetical" values below are made up for teaching; they aren't real registry figures or targets.
 
 To keep the code short, the joint replacement examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them). In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the value must come from outside your data
-Choose the hypothetical value **before** you look at your data, and say where it came from. A value picked after seeing the results ("our mean is 84; let's test against 90") makes the p-value meaningless. If the comparison value comes from another group of patients whose data you have, compare the two groups instead ([page 6](06-two-unpaired-groups.qmd)).
+Choose the hypothetical value **before** you look at your data, and say where it came from. A value picked after seeing the results ("our [mean](../glossary.qmd#mean){.term} is 84; let's test against 90") makes the [p-value](../glossary.qmd#p-value){.term} meaningless. If the comparison value comes from another group of patients whose data you have, compare the two groups instead ([page 6](06-two-unpaired-groups.qmd)).
 :::
 
 ## One-sample t test {#one-sample-t}
@@ -37,19 +37,19 @@ Choose the hypothetical value **before** you look at your data, and say where it
 
 ### When to use it
 
-- The outcome is a **measurement** (minutes, kg/m², points).
-- It's **roughly normal**, or the sample is large (about 30 or more) and not badly skewed ([page 3](../foundations/03-distributions.qmd#robustness)).
-- Each patient is counted once and patients are independent of each other.
-- If the data are skewed, bounded or ordinal → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
+- The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}** (minutes, kg/m², points).
+- It's **[roughly normal](../glossary.qmd#normal-distribution){.term}**, or the [sample](../glossary.qmd#sample){.term} is large (about 30 or more) and not badly [skewed](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#robustness)).
+- Each patient is counted once and patients are [independent](../glossary.qmd#independence){.term} of each other.
+- If the data are skewed, [bounded](../glossary.qmd#bounded-scale){.term} or [ordinal](../glossary.qmd#ordinal){.term} → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
 
 ### What the test really does
 
-The one-sample t test asks whether the sample mean is far from the hypothetical value, compared with how much a mean like this would wobble from one sample to the next.
+The one-sample t test asks whether the sample mean is far from the [hypothetical value](../glossary.qmd#hypothetical-value){.term}, compared with how much a mean like this would wobble from one sample to the next.
 
 1. Take the **difference** between the sample [mean](../glossary.qmd#mean){.term} and the hypothetical value.
 2. Estimate the noise in the mean, its [standard error](../glossary.qmd#standard-error){.term}: the [standard deviation](../glossary.qmd#standard-deviation){.term} divided by √n.
 3. Divide: **t = difference ÷ standard error**. A t of 0 means the mean is exactly the hypothetical value. A t beyond about ±2 means the difference is large compared with the noise.
-4. Turn t into a [p-value](../glossary.qmd#p-value){.term}: the chance of a t at least this far from 0 if the true mean really were the hypothetical value.
+4. Turn t into a [p-value](../glossary.qmd#p-value){.term}: the [chance](../glossary.qmd#probability){.term} of a t at least this far from 0 if the [true mean](../glossary.qmd#population){.term} really were the hypothetical value.
 
 Once the test has run, a box under "Read the output" rebuilds t by hand.
 
@@ -89,7 +89,7 @@ plt.show()
 ```
 :::
 
-A roughly symmetric hump, centered a little to the left of the dashed line at 90 minutes.
+A roughly [symmetric](../glossary.qmd#symmetric){.term} hump, centered a little to the left of the dashed line at 90 minutes.
 
 ### Run it
 
@@ -128,10 +128,10 @@ check_agree(list(t = unname(op_test$statistic), df = unname(op_test$parameter), 
 ### Read the output
 
 - **t = −8.23** (`statistic` in Python): the observed mean is 8.2 standard errors below 90. The sign says which side.
-- **df = 599:** degrees of freedom, n − 1.
+- **df = 599:** [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}, n − 1.
 - **p < 0.001:** a mean this far from 90 would be very unlikely if the true average were 90 minutes. The output prints `1.204e-15`, which is [scientific notation](../glossary.qmd#scientific-notation){.term}: `e-15` means "move the decimal point 15 places to the left".
 - **mean of x = 84.48** (the first number on Python's second line): our average operative time.
-- **95% CI 83.2 to 85.8:** the CI for our **mean**, not for the difference from 90.
+- **95% CI 83.2 to 85.8:** the [CI](../glossary.qmd#confidence-interval){.term} for our **mean**, not for the difference from 90.
 - **SD = 16.4 minutes** (the last line of output): not part of the test, but the Results sentence needs it.
 
 ::: {.callout-note collapse="true"}
@@ -172,7 +172,7 @@ check_agree(list(difference = time_difference, se = time_se, t = time_difference
 
 ### Effect size and 95% CI
 
-The effect size is simply the difference from the hypothetical value: subtract 90 from the mean and from both ends of its CI.
+The [effect size](../glossary.qmd#effect-size){.term} is simply the difference from the hypothetical value: subtract 90 from the mean and from both ends of its CI.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -212,7 +212,7 @@ Operations took 5.5 minutes less than the booked 90 on average (95% CI 4.2 to 6.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a published mean has its own uncertainty
-A one-sample test treats the hypothetical value as exact. A registry mean is itself an estimate with a CI. If you're comparing your patients with a published series and its CI is wide, say so, and don't over-read a small difference.
+A one-sample test treats the hypothetical value as exact. A [registry](../glossary.qmd#registry){.term} mean is itself an [estimate](../glossary.qmd#estimate){.term} with a CI. If you're comparing your patients with a published series and its CI is wide, say so, and don't over-read a small difference.
 :::
 
 ::: {.callout-tip}
@@ -226,11 +226,11 @@ Both R's `t.test(x, mu = 90)` and scipy's `ttest_1samp(x, popmean=90)` report th
 
 ### When to use it
 
-- The outcome is **skewed** or has a **ceiling or floor**, so a mean isn't a fair summary ([page 3](../foundations/03-distributions.qmd#transform)).
-- It ranks how far each patient is above or below the hypothetical value. It doesn't assume a normal distribution, but it does need distances that can be compared, so the outcome must be a measurement.
-- For an **ordinal** scale (satisfaction from 1 to 5), count the patients above and below the value and compare the two counts with a [binomial test](#binomial-test). This is called the **sign test**.
-- Strictly, it tests the **pseudomedian** (the Hodges-Lehmann estimate below), which equals the median only for a symmetric distribution. With a ceiling the two differ a little; report both.
-- If the data are roughly normal → the [one-sample t test](#one-sample-t) is more familiar and slightly more powerful.
+- The [outcome](../glossary.qmd#outcome){.term} is **[skewed](../glossary.qmd#skewed){.term}** or has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, so a [mean](../glossary.qmd#mean){.term} isn't a fair summary ([page 3](../foundations/03-distributions.qmd#transform)).
+- It ranks how far each patient is above or below the [hypothetical value](../glossary.qmd#hypothetical-value){.term}. It doesn't assume a [normal distribution](../glossary.qmd#normal-distribution){.term}, but it does need distances that can be compared, so the outcome must be a [measurement](../glossary.qmd#continuous-variable){.term}.
+- For an **[ordinal](../glossary.qmd#ordinal){.term}** scale (satisfaction from 1 to 5), count the patients above and below the value and compare the two counts with a [binomial test](#binomial-test). This is called the **[sign test](../glossary.qmd#sign-test){.term}**.
+- Strictly, it tests the **[pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (the Hodges-Lehmann estimate below), which equals the [median](../glossary.qmd#median){.term} only for a [symmetric](../glossary.qmd#symmetric){.term} [distribution](../glossary.qmd#distribution){.term}. With a ceiling the two differ a little; report both.
+- If the data are roughly normal → the [one-sample t test](#one-sample-t) is more familiar and slightly more [powerful](../glossary.qmd#power){.term}.
 
 ### What the test really does
 
@@ -238,7 +238,7 @@ The Wilcoxon signed-rank test compares the scores with the hypothetical value by
 
 1. For each patient, take the distance between their score and the hypothetical value, and note whether the score is above or below it.
 2. Set aside any patient who scores exactly the hypothetical value.
-3. Line the distances up by size, ignoring the direction, and give each its position: its [rank](../glossary.qmd#rank){.term}. The smallest distance gets rank 1; tied distances share the average of their ranks.
+3. Line the distances up by size, ignoring the direction, and give each its position: its [rank](../glossary.qmd#rank){.term}. The smallest distance gets rank 1; [tied](../glossary.qmd#ties){.term} distances share the average of their ranks.
 4. Add up the ranks of the patients above the value, and separately the ranks of those below. Either sum can serve as the [test statistic](../glossary.qmd#test-statistic){.term}.
 5. If the typical patient scored exactly the hypothetical value, the two sums would be about equal. The more one-sided they are, the smaller the [p-value](../glossary.qmd#p-value){.term}.
 
@@ -295,7 +295,7 @@ plt.show()
 ```
 :::
 
-260 patients: 170 scored above 80 and 90 below. 170 + 90 = 260, so nobody scored exactly 80 and nobody is dropped from the test. A ceiling at 100 and a long tail to the left: the rank-based test is the safer choice.
+260 patients: 170 scored above 80 and 90 below. 170 + 90 = 260, so nobody scored exactly 80 and nobody is dropped from the test. A ceiling at 100 and a long tail to the left: the [rank-based test](../glossary.qmd#nonparametric){.term} is the safer choice.
 
 ### Run it
 
@@ -333,8 +333,8 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 
 - **V = 22698** (R) or **W_val = 11231.5** (Python): the test statistic, a sum of ranks. The two programs report different sums (see the R vs Python box); the p-values are the same.
 - **p < 0.001:** scores this far from 80 would be very unlikely if the typical patient really scored 80. R prints `2.293e-06`, that is 0.000002293; pingouin prints `0.000002`.
-- **(pseudo)median 84.35, 95% CI 82.7 to 86.1** (R only): the Hodges-Lehmann estimate of the center of the scores, with its CI.
-- **RBC = 0.34** (Python): the rank-biserial effect size, below.
+- **(pseudo)median 84.35, 95% CI 82.7 to 86.1** (R only): the Hodges-Lehmann estimate of the center of the scores, with its [CI](../glossary.qmd#confidence-interval){.term}.
+- **RBC = 0.34** (Python): the [rank-biserial effect size](../glossary.qmd#rank-biserial){.term}, below.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the rank sums by hand
@@ -376,10 +376,10 @@ check_agree(list(above = sum(distance_rank[distance > 0]), below = sum(distance_
 
 ### Effect size and 95% CI
 
-Two effect sizes are useful here:
+Two [effect sizes](../glossary.qmd#effect-size){.term} are useful here:
 
 - The **Hodges-Lehmann estimate** (the pseudomedian): a center of the scores, in points. It's the median of all the averages of pairs of scores, so it's less affected by the ceiling than a mean.
-- The **rank-biserial correlation (r)**: from −1 (every patient below 80) through 0 (balanced) to +1 (every patient above 80). As a rough guide, 0.1 is small, 0.3 moderate and 0.5 large. It is the rank sum above 80 minus the rank sum below, as a share of their total: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
+- The **rank-biserial correlation (r)**: from −1 (every patient below 80) through 0 (balanced) to +1 (every patient above 80). As a [rough guide](../glossary.qmd#cohen-benchmarks){.term}, 0.1 is small, 0.3 moderate and 0.5 large. It is the rank sum above 80 minus the rank sum below, as a share of their total: (22,698.5 − 11,231.5) ÷ 33,930 = 0.34.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -425,7 +425,7 @@ check_agree(list(hl = unname(koos_test$estimate), rbc = koos_rb$r_rank_biserial)
             tol = 1e-4)   # R finds the Hodges-Lehmann estimate by root-finding, accurate to about 1e-5
 ```
 
-The typical 1-year score was about 4 points above the target (Hodges-Lehmann estimate 84.4), and the rank-biserial r of 0.34 is a moderate effect: 170 patients scored above 80 and 90 below, and those above tended to be further from it. The median is 85.75 (IQR 74.7 to 93.9, the first line of output), a little above the Hodges-Lehmann estimate, as expected with a ceiling. R's effectsize also prints a 95% CI for r, 0.21 to 0.46 (its footnote only restates the target of 80); pingouin gives r without a CI.
+The typical 1-year score was about 4 points above the target (Hodges-Lehmann estimate 84.4), and the rank-biserial r of 0.34 is a moderate effect: 170 patients scored above 80 and 90 below, and those above tended to be further from it. The median is 85.75 ([IQR](../glossary.qmd#iqr){.term} 74.7 to 93.9, the first line of output), a little above the Hodges-Lehmann estimate, as expected with a ceiling. R's effectsize also prints a 95% CI for r, 0.21 to 0.46 (its footnote only restates the target of 80); pingouin gives r without a CI.
 
 ### How to report it
 
@@ -435,7 +435,7 @@ The typical 1-year score was about 4 points above the target (Hodges-Lehmann est
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: two different "Wilcoxon" tests
-The **Wilcoxon signed-rank test** (this one) compares one group with a value, or two **paired** measurements ([page 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). The **Wilcoxon rank-sum test** compares two **independent** groups; it's the same as the [Mann-Whitney test](06-two-unpaired-groups.qmd#mann-whitney). Always write the full name.
+The **Wilcoxon signed-rank test** (this one) compares one group with a value, or two **[paired](../glossary.qmd#paired){.term}** measurements ([page 7](07-two-paired-groups.qmd#wilcoxon-signed-rank)). The **[Wilcoxon rank-sum test](../glossary.qmd#mann-whitney-test){.term}** compares two **[independent](../glossary.qmd#independence){.term}** groups; it's the same as the [Mann-Whitney test](06-two-unpaired-groups.qmd#mann-whitney). Always write the full name.
 
 Also: patients who score **exactly** 80 carry no information about the direction and are dropped from the test.
 :::
@@ -443,27 +443,27 @@ Also: patients who score **exactly** 80 carry no information about the direction
 ::: {.callout-tip}
 ## 🔀 R vs Python: Wilcoxon defaults
 - **The statistic.** R reports V, the sum of the ranks of patients **above** 80 (22698.5, printed as 22698). scipy (and pingouin) report the **smaller** of the two sums (11231.5). The two sums always add up to n(n + 1)/2, here 260 × 261 / 2 = 33,930, so they carry the same information and give the same p-value.
-- **Exact or approximate.** For small samples without ties, both programs compute an exact p-value; otherwise they use a normal approximation. R adds a **continuity correction** to the approximation by default; scipy doesn't. We set `exact = FALSE, correct = FALSE` in R and `method="approx", correction=False` in Python so they match.
-- **The Hodges-Lehmann CI.** R computes it by inverting the test. scipy has no function for it, so the Python code uses a bootstrap, a different method, so the two CIs differ slightly (82.75 to 86.10 in R, 82.70 to 86.05 from the bootstrap).
+- **Exact or approximate.** For small [samples](../glossary.qmd#sample){.term} without ties, both programs compute an [exact p-value](../glossary.qmd#exact-test){.term}; otherwise they use a normal approximation. R adds a **[continuity correction](../glossary.qmd#continuity-correction){.term}** to the approximation by default; scipy doesn't. We set `exact = FALSE, correct = FALSE` in R and `method="approx", correction=False` in Python so they match.
+- **The Hodges-Lehmann CI.** R computes it by inverting the test. scipy has no function for it, so the Python code uses a [bootstrap](../glossary.qmd#bootstrap){.term}, a different method, so the two CIs differ slightly (82.75 to 86.10 in R, 82.70 to 86.05 from the bootstrap).
 :::
 
 ## Chi-square goodness-of-fit test {#chi-square-gof}
 
-**The question:** Suppose a national registry reports that its patients are 10% ASA class 1, 55% class 2, 33% class 3 and 2% class 4. Is our mix of ASA classes the same?
+**The question:** Suppose a national [registry](../glossary.qmd#registry){.term} reports that its patients are 10% ASA class 1, 55% class 2, 33% class 3 and 2% class 4. Is our mix of ASA classes the same?
 
 ### When to use it
 
-- The outcome is **categorical** with two or more categories, and you have hypothetical proportions for every category.
+- The [outcome](../glossary.qmd#outcome){.term} is **[categorical](../glossary.qmd#categorical-variable){.term}** with two or more categories, and you have hypothetical [proportions](../glossary.qmd#proportion){.term} for every category.
 - Each patient falls in exactly one category, and is counted once.
-- The **expected count** in every category (total × hypothetical proportion) should be at least 5. Otherwise combine small categories, or with only two categories use the [binomial test](#binomial-test).
+- The **expected count** in every category (total × [hypothetical proportion](../glossary.qmd#hypothetical-value){.term}) should be at least 5. Otherwise combine small categories, or with only two categories use the [binomial test](#binomial-test).
 
 ### What the test really does
 
 The goodness-of-fit test compares the counts you observed with the counts the hypothetical proportions would predict.
 
 1. Work out the [expected count](../glossary.qmd#expected-count){.term} for each category: the total number of patients × that category's hypothetical proportion.
-2. For each category, take (observed − expected)² ÷ expected, then add up the results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **χ²**: 0 when the observed counts match the expected ones exactly, and larger the further apart they are.
-3. Turn χ² into a [p-value](../glossary.qmd#p-value){.term} with the chi-square distribution. This step is an approximation, and a poor one when expected counts are small. That is where the "at least 5" rule comes from.
+2. For each category, take (observed − expected)² ÷ expected, then add up the results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}**: 0 when the observed counts match the expected ones exactly, and larger the further apart they are.
+3. Turn χ² into a [p-value](../glossary.qmd#p-value){.term} with the chi-square distribution. This step is an [approximation](../glossary.qmd#exact-test){.term}, and a poor one when expected counts are small. That is where the "at least 5" rule comes from.
 
 Once the test has run, a box under "Read the output" rebuilds χ² by hand.
 
@@ -532,7 +532,7 @@ check_agree(list(chisq = unname(asa_test$statistic), p = asa_test$p.value), reti
 ### Read the output
 
 - **X-squared = 26.96** (`statistic` in Python): the chi-square statistic, adding up how far each observed count is from its expected count.
-- **df = 3:** degrees of freedom, the number of categories minus 1. Here 4 − 1. scipy doesn't print it.
+- **df = 3:** [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}, the number of categories minus 1. Here 4 − 1. scipy doesn't print it.
 - **p < 0.001:** a mix this different from the registry's would be very unlikely if our patients came from the same mix. R prints `5.992e-06`, that is 0.000005992.
 
 ::: {.callout-note collapse="true"}
@@ -572,7 +572,7 @@ check_agree(list(by_hand = sum(asa_parts), asa3 = unname(asa_parts[3])), reticul
 
 ### Effect size and 95% CI
 
-The test says the mix differs, not where. Look at each category's observed percentage, with a 95% CI, next to the registry's.
+The test says the mix differs, not where. Look at each category's observed percentage, with a 95% [CI](../glossary.qmd#confidence-interval){.term}, next to the registry's.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -623,7 +623,7 @@ ASA 3 makes the biggest difference: 41.0% of our patients (95% CI 37.1% to 45.0%
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: counts, not percentages
-The test needs the **counts** of patients in each category. Feeding it percentages ("6, 50, 41, 3") gives a wrong p-value, because the test's precision depends on how many patients there are.
+The test needs the **counts** of patients in each category. Feeding it percentages ("6, 50, 41, 3") gives a wrong p-value, because the test's [precision](../glossary.qmd#precision){.term} depends on how many patients there are.
 :::
 
 ::: {.callout-tip}
@@ -633,17 +633,17 @@ R's `chisq.test(counts, p = ...)` takes the hypothetical **proportions** (they m
 
 ## Binomial test {#binomial-test}
 
-**The question:** Suppose the target is that 90% of hip fracture patients are operated on within 48 hours of admission. Is our proportion different?
+**The question:** Suppose the target is that 90% of hip fracture patients are operated on within 48 hours of admission. Is our [proportion](../glossary.qmd#proportion){.term} different?
 
 ### When to use it
 
-- The outcome is **yes/no**, and you're comparing one group's proportion with a hypothetical proportion.
+- The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}**, and you're comparing one group's proportion with a [hypothetical proportion](../glossary.qmd#hypothetical-value){.term}.
 - Each patient is counted once.
-- The binomial test is **exact**: it works for any sample size, including small numbers of events. (The chi-square goodness-of-fit test with two categories is its large-sample approximation.)
+- The binomial test is **[exact](../glossary.qmd#exact-test){.term}**: it works for any [sample size](../glossary.qmd#sample-size){.term}, including small numbers of events. (The [chi-square goodness-of-fit test](../glossary.qmd#chi-square-test){.term} with two [categories](../glossary.qmd#categorical-variable){.term} is its large-sample approximation.)
 
 ### What the test really does
 
-The binomial test works out exact probabilities, with no approximation.
+The binomial test works out exact [probabilities](../glossary.qmd#probability){.term}, with no approximation.
 
 1. Suppose the hypothetical proportion were true. The binomial distribution then gives the exact probability of every possible result: 0 patients with the outcome, 1 patient, 2 patients, and so on up to all of them.
 2. Find the probability of the result you observed.
@@ -677,7 +677,7 @@ print(hip_fracture["surgery_within_48h"].value_counts(dropna=False))   # 1 = ope
 ```
 :::
 
-1,034 patients were operated on within 48 hours, and none is missing. (The column is worked out from `hours_to_surgery`.)
+1,034 patients were operated on within 48 hours, and none is [missing](../glossary.qmd#missing-data){.term}. (The column is worked out from `hours_to_surgery`.)
 
 ### Run it
 
@@ -722,9 +722,9 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 ### Read the output
 
 - **number of successes = 1034, number of trials = 1200** (`k=1034, n=1200` in Python): 1,034 patients operated on within 48 hours ("successes" is just the software's word for the outcome you counted).
-- **p < 0.001:** a proportion this far from 90% would be very unlikely if our true proportion were 90%. R prints `2.682e-05`, that is 0.00002682.
+- **p < 0.001:** a proportion this far from 90% would be very unlikely if our [true proportion](../glossary.qmd#population){.term} were 90%. R prints `2.682e-05`, that is 0.00002682.
 - **probability of success = 0.862** (`statistic` in Python): our proportion, 86.2%.
-- **95% CI 0.841 to 0.881:** our true proportion is plausibly anywhere from 84.1% to 88.1%. This is the exact (Clopper-Pearson) interval.
+- **95% CI 0.841 to 0.881:** our true proportion is plausibly anywhere from 84.1% to 88.1%. This is the exact ([Clopper-Pearson](../glossary.qmd#clopper-pearson){.term}) interval.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the exact p-value by hand
@@ -764,7 +764,7 @@ check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probabi
 
 ### Effect size and 95% CI
 
-The effect size is the difference from the target: 86.2% − 90% = −3.8 percentage points. Its 95% CI is the CI for our proportion minus 90%: −5.9 to −1.9 percentage points. It excludes 0, which matches the p-value below 0.05. In patients: at 90%, 1,080 of the 1,200 would have been operated on within 48 hours, 46 more than were.
+The [effect size](../glossary.qmd#effect-size){.term} is the difference from the target: 86.2% − 90% = −3.8 [percentage points](../glossary.qmd#percentage-point){.term}. Its 95% [CI](../glossary.qmd#confidence-interval){.term} is the CI for our proportion minus 90%: −5.9 to −1.9 percentage points. It excludes 0, which matches the p-value [below 0.05](../glossary.qmd#statistical-significance){.term}. In patients: at 90%, 1,080 of the 1,200 would have been operated on within 48 hours, 46 more than were.
 
 ### How to report it
 
@@ -774,12 +774,12 @@ The effect size is the difference from the target: 86.2% − 90% = −3.8 percen
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: decide one- or two-sided before you look
-A target invites a one-sided question: are we *below* 90%? A one-sided test roughly halves the p-value, so choosing one after seeing which side of the target you landed on makes the p-value too small. Use a one-sided test only when the protocol named it before the data came in, and a result on the other side would genuinely change nothing. Otherwise report the two-sided test, as here.
+A target invites a [one-sided](../glossary.qmd#two-sided){.term} question: are we *below* 90%? A one-sided test roughly halves the p-value, so choosing one after seeing which side of the target you landed on makes the p-value too small. Use a one-sided test only when the protocol named it before the data came in, and a result on the other side would genuinely change nothing. Otherwise report the two-sided test, as here.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: exact CIs
-R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the Wilson interval that [page 4](04-describe-one-group.qmd#proportion) uses, which for these 1,034 of 1,200 patients runs from 84.1% to 88.0% (the last line of output under "Run it"). Either is fine; say which you used.
+R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the [Wilson interval](../glossary.qmd#wilson-interval){.term} that [page 4](04-describe-one-group.qmd#proportion) uses, which for these 1,034 of 1,200 patients runs from 84.1% to 88.0% (the last line of output under "Run it"). Either is fine; say which you used.
 :::
 
 ```{r}
@@ -846,7 +846,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** Suppose a registry reports a mean age of 66 years at primary joint replacement. Is our patients' mean age different? Run the test and report the mean difference with its 95% CI.
+**1.** Suppose a [registry](../glossary.qmd#registry){.term} reports a [mean](../glossary.qmd#mean){.term} age of 66 years at primary joint replacement. Is our patients' mean age different? Run the test and report the [mean difference](../glossary.qmd#mean-difference){.term} with its 95% [CI](../glossary.qmd#confidence-interval){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -880,7 +880,7 @@ The CI includes 0 and rules out a difference of more than about a year in either
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-A yes/no outcome compared with a hypothetical proportion: the **binomial test**.
+A [yes/no outcome](../glossary.qmd#binary){.term} compared with a hypothetical [proportion](../glossary.qmd#proportion){.term}: the **[binomial test](../glossary.qmd#binomial-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -899,7 +899,7 @@ print(mortality.pvalue, mortality.proportion_ci(method="exact"))
 
 > **Results:** Within 30 days, 74 of 1,200 patients died (6.2%; 95% CI 4.9% to 7.7%); the audit reports 7% (binomial test p = 0.282).
 
-The CI includes 7%, so there's no clear evidence that our mortality differs from the audit's. That isn't the same as showing it's equal: our true rate could be anywhere from 4.9% to 7.7%. Don't write "our mortality matched the audit"; report the CI and let it speak.
+The CI includes 7%, so there's no clear evidence that our mortality differs from the audit's. That isn't the same as showing it's equal: our [true rate](../glossary.qmd#population){.term} could be anywhere from 4.9% to 7.7%. Don't write "our mortality matched the audit"; report the CI and let it speak.
 :::
 
 **3.** Suppose a survey of joint replacement patients found 50% never smokers, 40% former smokers and 10% current smokers. Test whether our smoking mix differs, and write the Results sentence.
@@ -929,5 +929,5 @@ print(stats.chisquare(smoking, f_exp=smoking.sum() * pd.Series([0.50, 0.40, 0.10
 
 > **Results:** Of our patients, 53.5% had never smoked, 38.3% were former and 8.2% current smokers; the survey's figures were 50%, 40% and 10% (χ² = 3.9, df = 2, p = 0.142).
 
-The second line of output gives the percentages. The test has 3 categories − 1 = 2 degrees of freedom; scipy doesn't print them.
+The second line of output gives the percentages. The test has 3 [categories](../glossary.qmd#categorical-variable){.term} − 1 = 2 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; scipy doesn't print them.
 :::

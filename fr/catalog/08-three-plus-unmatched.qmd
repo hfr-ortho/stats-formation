@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Trois groupes ou plus de patients **différents** : les quatre classes ASA, les trois chirurgiens, trois types de greffon du LCA, les implants A, B et C. Vous pourriez comparer chaque paire de groupes avec les tests de la [page 6](06-two-unpaired-groups.qmd), mais chaque test de plus est une nouvelle occasion d'obtenir un faux positif. Les tests de cette page posent d'abord une seule question : **existe-t-il une différence quelconque entre les groupes ?** Si la réponse est oui, [Quels groupes diffèrent ?](#which-groups-differ) explique la suite.
+Trois groupes ou plus de patients **différents** : les quatre classes ASA, les trois chirurgiens, trois types de greffon du LCA, les implants A, B et C. Vous pourriez comparer chaque paire de groupes avec les tests de la [page 6](06-two-unpaired-groups.qmd), mais chaque test de plus est une nouvelle occasion d'obtenir un [faux positif](../glossary.qmd#false-positive){.term}. Les tests de cette page posent d'abord une seule question : **existe-t-il une différence quelconque entre les groupes ?** Si la réponse est oui, [Quels groupes diffèrent ?](#which-groups-differ) explique la suite.
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données d'exercice : la cohorte de prothèses articulaires ou (pour le test du khi-deux) les reconstructions du LCA. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires ou (pour le [test du khi-deux](../glossary.qmd#chi-square-test){.term}) les reconstructions du LCA. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
@@ -32,19 +32,19 @@ Pour garder le code court, les exemples de prothèses articulaires utilisent tou
 
 ### Quand l'utiliser
 
-- Le critère est une **mesure**, comparée entre **trois groupes indépendants ou plus**.
-- Dans **chaque groupe**, il est à peu près normal, ou chaque groupe est assez grand et pas fortement [asymétrique](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#within-groups)).
-- Les groupes ont des **dispersions semblables** : en règle empirique, le plus grand écart-type (ET) ne dépasse pas environ le double du plus petit. Sinon, utilisez l'**ANOVA de Welch** (voir l'encadré R ou Python), surtout quand les groupes sont de tailles inégales.
-- Si le critère est asymétrique, borné ou ordinal → le [test de Kruskal-Wallis](#kruskal-wallis).
+- Le [critère](../glossary.qmd#outcome){.term} est une **[mesure](../glossary.qmd#continuous-variable){.term}**, comparée entre **trois groupes [indépendants](../glossary.qmd#independence){.term} ou plus**.
+- Dans **chaque groupe**, il est [à peu près normal](../glossary.qmd#normal-distribution){.term}, ou chaque groupe est assez grand et pas fortement [asymétrique](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#within-groups)).
+- Les groupes ont des **[dispersions semblables](../glossary.qmd#equal-variances){.term}** : en règle empirique, le plus grand [écart-type](../glossary.qmd#standard-deviation){.term} (ET) ne dépasse pas environ le double du plus petit. Sinon, utilisez l'**[ANOVA de Welch](../glossary.qmd#welch-test){.term}** (voir l'encadré R ou Python), surtout quand les groupes sont de tailles inégales.
+- Si le critère est asymétrique, [borné](../glossary.qmd#bounded-scale){.term} ou [ordinal](../glossary.qmd#ordinal){.term} → le [test de Kruskal-Wallis](#kruskal-wallis).
 
 ### Ce que fait vraiment le test
 
-L'ANOVA compare les [moyennes](../glossary.qmd#mean){.term} des groupes en comparant deux sortes de variation. C'est de là que vient son nom : analyse de variance.
+L'ANOVA compare les [moyennes](../glossary.qmd#mean){.term} des groupes en comparant deux sortes de [variation](../glossary.qmd#spread){.term}. C'est de là que vient son nom : analyse de variance.
 
-1. **Entre les groupes.** Prendre la distance entre la moyenne de chaque groupe et la moyenne générale (celle de tous les patients), l'élever au carré et la compter une fois pour chaque patient du groupe. Additionner le tout : c'est la **somme des carrés** entre les groupes.
+1. **Entre les groupes.** Prendre la distance entre la moyenne de chaque groupe et la moyenne générale (celle de tous les patients), l'élever au carré et la compter une fois pour chaque patient du groupe. Additionner le tout : c'est la **[somme des carrés](../glossary.qmd#sum-of-squares){.term}** entre les groupes.
 2. **À l'intérieur des groupes.** Prendre la distance entre la valeur de chaque patient et la moyenne de son propre groupe, l'élever au carré et additionner le tout : c'est la somme des carrés à l'intérieur des groupes. C'est le bruit : les patients diffèrent même quand ils appartiennent au même groupe.
 3. Diviser chaque somme des carrés par ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} : le nombre de groupes moins 1 pour la première, le nombre de patients moins le nombre de groupes pour la seconde. On obtient deux [variances](../glossary.qmd#variance){.term}, appelées **carrés moyens**.
-4. Diviser : **F = carré moyen entre les groupes ÷ carré moyen à l'intérieur des groupes**. Si tous les groupes avaient en réalité la même moyenne, les moyennes des groupes ne différeraient qu'autant que le bruit le veut, et F serait proche de 1. Convertir F en [valeur p](../glossary.qmd#p-value){.term} : la probabilité d'un F au moins aussi grand si tous les groupes avaient en réalité la même moyenne.
+4. Diviser : **F = carré moyen entre les groupes ÷ carré moyen à l'intérieur des groupes**. Si tous les groupes avaient en réalité la même moyenne, les moyennes des groupes ne différeraient qu'autant que le bruit le veut, et [F](../glossary.qmd#f-statistic){.term} serait proche de 1. Convertir F en [valeur p](../glossary.qmd#p-value){.term} : la probabilité d'un F au moins aussi grand si tous les groupes avaient en réalité la même moyenne.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule F à la main.
 
@@ -131,7 +131,7 @@ check_agree(list(f = age_table[1, "F value"], ss_between = age_table[1, "Sum Sq"
 - **Mean Sq** (`MS` en Python) : chaque Sum Sq divisée par son Df. Cela donne 1908.9 entre les groupes (5727 ÷ 3 ; R a arrondi le 5727 qu'il affiche, Python montre 5726.69) et 79.9 à l'intérieur des groupes (47599 ÷ 596).
 - **F = 23.9 :** le premier Mean Sq divisé par le second, 1908.9 ÷ 79.9. Si les groupes avaient la même moyenne, F serait proche de 1.
 - **p < 0.001 :** des âges aussi différents entre les groupes seraient très improbables si chaque classe ASA avait le même âge moyen. R affiche la valeur p sous la forme `1.28e-14` dans la colonne `Pr(>F)`, Python sous la forme `1.284107e-14` dans `p_unc`. C'est la [notation scientifique](../glossary.qmd#scientific-notation){.term} : `e-14` signifie « déplacer le point décimal de 14 rangs vers la gauche ».
-- **np2 = 0.107** (Python seulement) : l'êta carré (η²), la part de toute la variation qui se trouve entre les groupes, 5727 ÷ (5727 + 47599). Le nom choisi par pingouin veut dire « êta carré partiel », qui est le même nombre quand il n'y a qu'une seule variable de groupe. L'étape suivante le corrige légèrement.
+- **np2 = 0.107** (Python seulement) : l'[êta carré](../glossary.qmd#eta-squared){.term} (η²), la part de toute la variation qui se trouve entre les groupes, 5727 ÷ (5727 + 47599). Le nom choisi par pingouin veut dire « êta carré partiel », qui est le même nombre quand il n'y a qu'une seule [variable](../glossary.qmd#variable){.term} de groupe. L'étape suivante le corrige légèrement.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : F à la main
@@ -179,7 +179,7 @@ check_agree(list(between_ss = between_ss, within_ss = within_ss, f = between_ms 
 
 ### Taille d'effet et IC à 95 %
 
-L'**oméga carré (ω²)** est la part de la variation de l'âge qu'explique la classe ASA, corrigée du petit biais vers le haut de l'êta carré (η²), plus simple. Comme repère approximatif, 0.01 est petit, 0.06 moyen et 0.14 grand.
+L'**oméga carré (ω²)** est la part de la variation de l'âge qu'explique la classe ASA, corrigée du petit [biais](../glossary.qmd#bias){.term} vers le haut de l'êta carré (η²), plus simple. Comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term}, 0.01 est petit, 0.06 moyen et 0.14 grand.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -210,7 +210,7 @@ age_omega <- effectsize::omega_squared(age_anova, partial = FALSE)
 check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 ```
 
-ω² = 0.10 : la classe ASA explique environ un dixième de la variation de l'âge, un effet moyen. R affiche aussi un intervalle de confiance (IC) à 95 % unilatéral (de 0.06 à 1.00) : ω² ne peut pas être négatif, donc seule sa borne inférieure est informative. scipy et pingouin ne calculent pas cet IC. L'ANOVA ne dit pas *quelles* classes diffèrent : voir [Quels groupes diffèrent ?](#which-groups-differ).
+ω² = 0.10 : la classe ASA explique environ un dixième de la variation de l'âge, un effet moyen. R affiche aussi un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % [unilatéral](../glossary.qmd#two-sided){.term} (de 0.06 à 1.00) : ω² ne peut pas être négatif, donc seule sa borne inférieure est informative. scipy et pingouin ne calculent pas cet IC. L'ANOVA ne dit pas *quelles* classes diffèrent : voir [Quels groupes diffèrent ?](#which-groups-differ).
 
 ### Rédiger les résultats
 
@@ -220,7 +220,7 @@ check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 
 ::: {.callout-warning}
 ## ⚠️ Attention : l'ANOVA ne dit pas quels groupes diffèrent
-Une ANOVA significative signifie qu'au moins une moyenne diffère d'une autre, pas que chaque groupe diffère de tous les autres. Ne la faites pas suivre d'une série de tests t non ajustés : cela ramène le problème de faux positifs que l'ANOVA devait éviter. Utilisez un test post hoc ([page 15](../beyond/15-post-hoc.qmd#after-anova)).
+Une ANOVA [significative](../glossary.qmd#statistical-significance){.term} signifie qu'au moins une moyenne diffère d'une autre, pas que chaque groupe diffère de tous les autres. Ne la faites pas suivre d'une série de [tests t](../glossary.qmd#t-test){.term} non ajustés : cela ramène le problème de [faux positifs](../glossary.qmd#false-positive){.term} que l'ANOVA devait éviter. Utilisez un [test post hoc](../glossary.qmd#post-hoc-test){.term} ([page 15](../beyond/15-post-hoc.qmd#after-anova)).
 :::
 
 ::: {.callout-tip}
@@ -263,18 +263,18 @@ check_agree(list(f = unname(welch$statistic), df_denom = unname(welch$parameter[
 
 ### Quand l'utiliser
 
-- Le critère est **ordinal** (satisfaction de 1 à 5), **[asymétrique](../glossary.qmd#skewed){.term}**, ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**, et vous comparez **trois groupes indépendants ou plus**.
+- Le [critère](../glossary.qmd#outcome){.term} est **[ordinal](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), **[asymétrique](../glossary.qmd#skewed){.term}**, ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**, et vous comparez **trois groupes [indépendants](../glossary.qmd#independence){.term} ou plus**.
 - Comme le [test de Mann-Whitney](06-two-unpaired-groups.qmd#mann-whitney), il travaille sur les rangs : il demande si les valeurs de certains groupes ont tendance à être plus grandes que celles d'autres groupes.
-- Avec deux groupes, il donne pratiquement le même résultat que le test de Mann-Whitney.
-- Si le critère est une mesure à peu près normale → l'[ANOVA à un facteur](#one-way-anova).
+- Avec deux groupes, il donne pratiquement le même résultat que le [test de Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}.
+- Si le critère est une [mesure](../glossary.qmd#continuous-variable){.term} [à peu près normale](../glossary.qmd#normal-distribution){.term} → l'[ANOVA à un facteur](#one-way-anova).
 
 ### Ce que fait vraiment le test
 
 Le test de Kruskal-Wallis fait pour trois groupes ou plus ce que le [test de Mann-Whitney](06-two-unpaired-groups.qmd#mann-whitney) fait pour deux : il laisse les scores de côté et travaille avec leur ordre.
 
-1. Ranger tous les scores de tous les groupes en une seule file, du plus bas au plus élevé, et donner à chacun sa position dans la file : son [rang](../glossary.qmd#rank){.term}. Les scores ex æquo partagent la moyenne de leurs positions.
+1. Ranger tous les scores de tous les groupes en une seule file, du plus bas au plus élevé, et donner à chacun sa position dans la file : son [rang](../glossary.qmd#rank){.term}. Les [scores ex æquo](../glossary.qmd#ties){.term} partagent la moyenne de leurs positions.
 2. Calculer le **rang moyen** de chaque groupe.
-3. Si les groupes ne différaient pas, le rang moyen de chaque groupe serait proche de la moyenne de tous les rangs, soit (n + 1) ÷ 2 pour n scores.
+3. Si les groupes ne différaient pas, le rang moyen de chaque groupe serait proche de la [moyenne](../glossary.qmd#mean){.term} de tous les rangs, soit (n + 1) ÷ 2 pour n scores.
 4. La [statistique de test](../glossary.qmd#test-statistic){.term}, **H**, mesure l'écart entre les rangs moyens des groupes et cette moyenne générale des rangs : chaque écart est élevé au carré et compté une fois pour chaque patient du groupe, puis le tout est additionné et mis à l'échelle. H vaut 0 quand tous les rangs moyens sont égaux, et il est d'autant plus grand qu'ils s'écartent. Plus H est grand, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule H à la main.
@@ -320,7 +320,7 @@ print(satisfied.groupby("surgeon")["satisfaction_1yr"].describe()[["count", "25%
 ```
 :::
 
-La satisfaction a été déclarée pour 502 des 600 interventions (la première sortie) : 192 sur 232 pour le chirurgien S1, 177 sur 211 pour S2 et 133 sur 157 pour S3. Avec chaque chirurgien, la plupart des patients étaient satisfaits (4) ou très satisfaits (5), et les trois distributions se ressemblent beaucoup.
+La satisfaction a été déclarée pour 502 des 600 interventions (la première sortie) : 192 sur 232 pour le chirurgien S1, 177 sur 211 pour S2 et 133 sur 157 pour S3. Avec chaque chirurgien, la plupart des patients étaient satisfaits (4) ou très satisfaits (5), et les trois [distributions](../glossary.qmd#distribution){.term} se ressemblent beaucoup.
 
 ### Exécuter l'analyse
 
@@ -353,7 +353,7 @@ check_agree(list(h = unname(satisfaction_test$statistic), p = satisfaction_test$
 
 ### Lire le résultat
 
-- **Kruskal-Wallis chi-squared = 0.68** (R) ou **statistic** (Python) : la statistique H. Elle mesure l'écart entre les rangs moyens des groupes. Les deux programmes la corrigent pour les nombreux scores ex æquo. R l'appelle « chi-squared » parce que H est converti en valeur p avec la loi du khi-deux.
+- **Kruskal-Wallis chi-squared = 0.68** (R) ou **statistic** (Python) : la statistique H. Elle mesure l'écart entre les rangs moyens des groupes. Les deux programmes la corrigent pour les nombreux scores ex æquo. R l'appelle « chi-squared » parce que H est converti en valeur p avec la [loi du khi-deux](../glossary.qmd#chi-square-statistic){.term}.
 - **df = 2 :** trois groupes moins un.
 - **p = 0.713 :** un écart de satisfaction au moins aussi grand que celui observé entre les groupes serait très fréquent si les patients des chirurgiens étaient également satisfaits.
 
@@ -407,7 +407,7 @@ check_agree(list(h_no_ties = h_no_ties, tie_correction = tie_correction, h = h_n
 
 ### Taille d'effet et IC à 95 %
 
-L'**epsilon carré (ε²)** est l'équivalent de ω² basé sur les rangs : la part de la variation des rangs qu'expliquent les groupes, de 0 à 1. C'est H divisé par (n − 1).
+L'**epsilon carré (ε²)** est l'équivalent de ω² basé sur les rangs : la part de la [variation](../glossary.qmd#spread){.term} des rangs qu'expliquent les groupes, de 0 à 1. C'est H divisé par (n − 1).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -437,7 +437,7 @@ satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon,
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-ε² = 0.001 : H divisé par n − 1 vaut 0.677 ÷ 501 = 0.00135. R l'affiche sous la forme `1.35e-03`, la [notation scientifique](../glossary.qmd#scientific-notation){.term} du même nombre : le point décimal recule de 3 rangs vers la gauche. Le chirurgien n'explique pratiquement rien de la variation de la satisfaction. L'IC unilatéral de R va de 0.00 à 1.00 ; il vient d'un bootstrap, ce qui explique la graine dans le code. scipy n'a pas de fonction pour cela.
+[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001 : H divisé par n − 1 vaut 0.677 ÷ 501 = 0.00135. R l'affiche sous la forme `1.35e-03`, la [notation scientifique](../glossary.qmd#scientific-notation){.term} du même nombre : le point décimal recule de 3 rangs vers la gauche. Le chirurgien n'explique pratiquement rien de la variation de la satisfaction. L'[IC](../glossary.qmd#confidence-interval){.term} [unilatéral](../glossary.qmd#two-sided){.term} de R va de 0.00 à 1.00 ; il vient d'un [bootstrap](../glossary.qmd#bootstrap){.term}, ce qui explique la graine dans le code. scipy n'a pas de fonction pour cela.
 
 ### Rédiger les résultats
 
@@ -447,7 +447,7 @@ check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::
 
 ::: {.callout-warning}
 ## ⚠️ Attention : les réponses manquantes ne sont pas aléatoires
-La satisfaction manque pour 98 interventions (600 − 502). Si les patients mécontents répondaient moins souvent, chaque chirurgien paraît meilleur qu'il ne l'est, et la comparaison peut aussi être biaisée. Indiquez toujours combien de patients ont répondu dans chaque groupe, comme le fait la phrase de Résultats ci-dessus, et demandez-vous si la non-réponse diffère d'un groupe à l'autre. Ici, elle ne diffère presque pas : 192 ÷ 232 = 83 %, 177 ÷ 211 = 84 % et 133 ÷ 157 = 85 % des interventions de chaque chirurgien ont un score.
+La satisfaction [manque](../glossary.qmd#missing-data){.term} pour 98 interventions (600 − 502). Si les patients mécontents répondaient moins souvent, chaque chirurgien paraît meilleur qu'il ne l'est, et la comparaison peut aussi être [biaisée](../glossary.qmd#bias){.term}. Indiquez toujours combien de patients ont répondu dans chaque groupe, comme le fait la phrase de Résultats ci-dessus, et demandez-vous si la non-réponse diffère d'un groupe à l'autre. Ici, elle ne diffère presque pas : 192 ÷ 232 = 83 %, 177 ÷ 211 = 84 % et 133 ÷ 157 = 85 % des interventions de chaque chirurgien ont un score.
 :::
 
 ::: {.callout-tip}
@@ -461,8 +461,8 @@ La satisfaction manque pour 98 interventions (600 − 502). Si les patients méc
 
 ### Quand l'utiliser
 
-- Le critère est **catégoriel** (ici oui/non), comparé entre **trois groupes indépendants ou plus** : un tableau r × c.
-- Chaque effectif **attendu** doit être d'au moins 5. Sinon, regroupez des catégories qui vont ensemble, ou utilisez le test exact de Fisher, que `fisher.test()` de R exécute de façon exacte aussi sur de plus grands tableaux. `stats.fisher_exact()` de scipy accepte de plus grands tableaux mais estime leur valeur p par rééchantillonnage aléatoire : elle change un peu d'une exécution à l'autre, sauf si vous donnez une graine.
+- Le [critère](../glossary.qmd#outcome){.term} est **[catégoriel](../glossary.qmd#categorical-variable){.term}** (ici [oui/non](../glossary.qmd#binary){.term}), comparé entre **trois groupes [indépendants](../glossary.qmd#independence){.term} ou plus** : un [tableau r × c](../glossary.qmd#contingency-table){.term}.
+- Chaque effectif **attendu** doit être d'au moins 5. Sinon, regroupez des catégories qui vont ensemble, ou utilisez le [test exact de Fisher](../glossary.qmd#fisher-exact-test){.term}, que `fisher.test()` de R exécute de façon exacte aussi sur de plus grands tableaux. `stats.fisher_exact()` de scipy accepte de plus grands tableaux mais estime leur valeur p par rééchantillonnage aléatoire : elle change un peu d'une exécution à l'autre, sauf si vous donnez une graine.
 - Avec deux groupes et un critère oui/non → le [test exact de Fisher](06-two-unpaired-groups.qmd#fisher-chi-square).
 
 ### Ce que fait vraiment le test
@@ -470,8 +470,8 @@ La satisfaction manque pour 98 interventions (600 − 502). Si les patients méc
 Le test du khi-deux compare le tableau observé au tableau attendu si le retour au sport n'avait rien à voir avec le greffon. Il fonctionne comme pour un tableau 2 × 2 ([page 6](06-two-unpaired-groups.qmd#fisher-chi-square)), avec plus de cellules.
 
 1. Calculer l'[effectif attendu](../glossary.qmd#expected-count){.term} de chacune des six cellules : total de la ligne × total de la colonne ÷ total général. C'est l'effectif que l'on verrait si le taux de retour au sport était le même avec chaque greffon.
-2. Pour chaque cellule, calculer (observé − attendu)² ÷ attendu, puis additionner les six résultats. La somme est la [statistique de test](../glossary.qmd#test-statistic){.term}, **χ²** : 0 quand le tableau correspond exactement aux effectifs attendus, et d'autant plus grande qu'il s'en éloigne.
-3. Convertir χ² en [valeur p](../glossary.qmd#p-value){.term} avec la loi du khi-deux. Cette étape est une approximation, mauvaise quand des effectifs attendus sont petits. C'est de là que vient la règle « au moins 5 ».
+2. Pour chaque cellule, calculer (observé − attendu)² ÷ attendu, puis additionner les six résultats. La somme est la [statistique de test](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}** : 0 quand le tableau correspond exactement aux effectifs attendus, et d'autant plus grande qu'il s'en éloigne.
+3. Convertir χ² en [valeur p](../glossary.qmd#p-value){.term} avec la loi du khi-deux. Cette étape est une [approximation](../glossary.qmd#exact-test){.term}, mauvaise quand des effectifs attendus sont petits. C'est de là que vient la règle « au moins 5 ».
 
 Le test donne une seule réponse pour tout le tableau : il ne dit pas quels greffons diffèrent. Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule χ² à la main.
 
@@ -547,7 +547,7 @@ check_agree(list(chisq = unname(rts_test$statistic), df = unname(rts_test$parame
 ### Lire le résultat
 
 - **Effectifs attendus :** ce que contiendrait chaque cellule si le retour au sport était le même avec chaque greffon. Le plus petit est 33.1 : le test est donc valide.
-- **X-squared = 22.24, df = 2** (les deux premiers nombres de la dernière ligne de Python) : la statistique du khi-deux, avec (3 greffons − 1) × (2 réponses possibles − 1) = 2 degrés de liberté.
+- **X-squared = 22.24, df = 2** (les deux premiers nombres de la dernière ligne de Python) : la statistique du khi-deux, avec (3 greffons − 1) × (2 réponses possibles − 1) = 2 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}.
 - **p < 0.001 :** des différences aussi grandes seraient très improbables si les trois greffons avaient le même taux de retour au sport. R affiche `p-value = 1.481e-05` ; c'est le troisième nombre de la dernière ligne de Python. En [notation scientifique](../glossary.qmd#scientific-notation){.term}, `e-05` déplace le point décimal de 5 rangs vers la gauche : 0.0000148.
 
 ::: {.callout-note collapse="true"}
@@ -591,7 +591,7 @@ check_agree(list(by_hand = sum(chisq_parts), bptb_yes = unname(chisq_parts["BPTB
 
 ### Taille d'effet et IC à 95 %
 
-Le **V de Cramér** mesure la force de l'association dans un tableau, de 0 (aucune) à 1 (parfaite). C'est √(χ² ÷ (n × (k − 1))), où n est le nombre de reconstructions et k le plus petit des deux nombres, lignes ou colonnes : ici √(22.24 ÷ (350 × 1)) = 0.25. Pour un tableau à 2 colonnes, environ 0.1 est petit, 0.3 moyen et 0.5 grand.
+Le **V de Cramér** mesure la force de l'[association](../glossary.qmd#association){.term} dans un tableau, de 0 (aucune) à 1 (parfaite). C'est √(χ² ÷ (n × (k − 1))), où [n](../glossary.qmd#sample-size){.term} est le nombre de reconstructions et k le plus petit des deux nombres, lignes ou colonnes : ici √(22.24 ÷ (350 × 1)) = 0.25. Pour un tableau à 2 colonnes, environ 0.1 est petit, 0.3 moyen et 0.5 grand.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -619,7 +619,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, une association entre petite et moyenne (la seconde sortie de R, intitulée `Cramer's V (adj.)`, est expliquée dans l'encadré R ou Python). R affiche aussi un IC à 95 % unilatéral, de 0.16 à 1.00 ; scipy n'en calcule pas. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment ajuster sur d'autres facteurs.
+V = 0.25, une association entre [petite](../glossary.qmd#cohen-benchmarks){.term} et moyenne (la seconde sortie de R, intitulée `Cramer's V (adj.)`, est expliquée dans l'encadré R ou Python). R affiche aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % [unilatéral](../glossary.qmd#two-sided){.term}, de 0.16 à 1.00 ; scipy n'en calcule pas. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment [ajuster sur](../glossary.qmd#adjustment){.term} d'autres facteurs.
 
 ### Rédiger les résultats
 
@@ -629,32 +629,32 @@ V = 0.25, une association entre petite et moyenne (la seconde sortie de R, intit
 
 ::: {.callout-warning}
 ## ⚠️ Attention : pas de correction de Yates ici, et vérifiez les effectifs attendus
-La correction de continuité de Yates ([page 6](06-two-unpaired-groups.qmd#fisher-chi-square)) ne s'applique qu'aux tableaux 2 × 2 : les deux programmes l'omettent donc pour ce tableau 3 × 2. La règle des effectifs attendus s'applique toujours : l'exercice 3 montre un tableau qui l'enfreint, et que faire.
+La [correction de continuité de Yates](../glossary.qmd#continuity-correction){.term} ([page 6](06-two-unpaired-groups.qmd#fisher-chi-square)) ne s'applique qu'aux tableaux 2 × 2 : les deux programmes l'omettent donc pour ce tableau 3 × 2. La règle des effectifs attendus s'applique toujours : l'exercice 3 montre un tableau qui l'enfreint, et que faire.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : deux versions du V de Cramér
-`cramers_v()` d'effectsize applique par défaut une **correction du biais** de petit échantillon : c'est la seconde sortie de R ci-dessus, 0.24, intitulée `Cramer's V (adj.)`. `association()` de scipy ne le fait pas (0.25). Nous avons mis `adjust = FALSE` en R pour que les deux concordent. L'une ou l'autre est acceptable ; indiquez laquelle vous rapportez.
+`cramers_v()` d'effectsize applique par défaut une **correction du [biais](../glossary.qmd#bias){.term}** de petit échantillon : c'est la seconde sortie de R ci-dessus, 0.24, intitulée `Cramer's V (adj.)`. `association()` de scipy ne le fait pas (0.25). Nous avons mis `adjust = FALSE` en R pour que les deux concordent. L'une ou l'autre est acceptable ; indiquez laquelle vous rapportez.
 :::
 
 ## Régression de Cox {#cox}
 
-**La question :** le risque de révision diffère-t-il entre les implants A, B et C ?
+**La question :** le [risque](../glossary.qmd#risk){.term} de révision diffère-t-il entre les implants A, B et C ?
 
 ### Quand l'utiliser
 
-- Le critère est un **délai jusqu'à un événement** (la révision), comparé entre **trois groupes indépendants ou plus**.
-- Le **test du log-rank** s'étend à trois groupes ou plus et répond à « les courbes diffèrent-elles ? ». La **régression de Cox** donne en plus un [hazard ratio](../glossary.qmd#hazard-ratio){.term} pour chaque groupe par rapport à un groupe de référence, et peut ajuster sur d'autres variables.
-- Elle suppose que le hazard (risque instantané) de chaque groupe est un multiple constant de celui du groupe de référence au fil du temps (**risques proportionnels**). La [page 14](../survival/14-cox-regression.qmd#proportional-hazards) montre comment le vérifier et traite la régression de Cox en entier.
+- Le [critère](../glossary.qmd#outcome){.term} est un **[délai jusqu'à un événement](../glossary.qmd#time-to-event){.term}** (la révision), comparé entre **trois groupes [indépendants](../glossary.qmd#independence){.term} ou plus**.
+- Le **[test du log-rank](../glossary.qmd#log-rank-test){.term}** s'étend à trois groupes ou plus et répond à « les courbes diffèrent-elles ? ». La **[régression de Cox](../glossary.qmd#cox-regression){.term}** donne en plus un [hazard ratio](../glossary.qmd#hazard-ratio){.term} pour chaque groupe par rapport à un [groupe de référence](../glossary.qmd#reference-group){.term}, et peut [ajuster sur](../glossary.qmd#adjustment){.term} d'autres [variables](../glossary.qmd#variable){.term}.
+- Elle suppose que le [hazard](../glossary.qmd#hazard){.term} (risque instantané) de chaque groupe est un multiple constant de celui du groupe de référence au fil du temps (**[risques proportionnels](../glossary.qmd#proportional-hazards){.term}**). La [page 14](../survival/14-cox-regression.qmd#proportional-hazards) montre comment le vérifier et traite la régression de Cox en entier.
 
 ### Ce que fait vraiment le test
 
-La régression de Cox suit les groupes sur tout le suivi, une révision à la fois, comme le [test du log-rank](06-two-unpaired-groups.qmd#log-rank). Elle estime en plus l'ampleur de la différence entre les groupes.
+La régression de Cox suit les groupes sur tout le [suivi](../glossary.qmd#follow-up){.term}, une révision à la fois, comme le [test du log-rank](06-two-unpaired-groups.qmd#log-rank). Elle estime en plus l'ampleur de la différence entre les groupes.
 
 1. Partir de l'opération et avancer dans le temps. À chaque révision, regarder qui était encore suivi juste avant : les patients [à risque](../glossary.qmd#at-risk){.term}.
 2. Supposons que le hazard avec l'implant C soit le double du hazard avec l'implant A. Alors, à ce moment-là, chaque patient à risque avec l'implant C aurait deux fois plus de chances d'être celui qui est révisé que chaque patient à risque avec l'implant A.
-3. Le modèle essaie des valeurs pour le hazard ratio de chaque implant par rapport au groupe de référence, et garde celles avec lesquelles les révisions réellement survenues, prises ensemble, étaient les plus probables.
-4. Le test global compare ce meilleur ajustement à un modèle où chaque hazard ratio vaut 1, c'est-à-dire sans différence entre les implants. Plus les hazard ratios améliorent l'ajustement, plus la [statistique de test](../glossary.qmd#test-statistic){.term} est grande et plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
+3. Le [modèle](../glossary.qmd#model){.term} essaie des valeurs pour le hazard ratio de chaque implant par rapport au groupe de référence, et garde celles avec lesquelles les révisions réellement survenues, prises ensemble, étaient les plus probables.
+4. Le [test global](../glossary.qmd#overall-test){.term} compare ce meilleur ajustement à un modèle où chaque hazard ratio vaut 1, c'est-à-dire sans différence entre les implants. Plus les hazard ratios améliorent l'ajustement, plus la [statistique de test](../glossary.qmd#test-statistic){.term} est grande et plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
 
 Le modèle a seulement besoin de savoir comment les hazards des groupes se comparent, jamais du hazard lui-même. Il laisse donc ouverte la façon dont le risque de révision évolue au fil des années ; il suppose seulement que les hazards des groupes restent dans la même proportion (le troisième point sous « Quand l'utiliser »). Un patient qui quitte l'étude tôt est [censuré](../glossary.qmd#censored){.term} : il compte parmi les patients à risque aussi longtemps qu'il a été suivi, et plus ensuite. Une fois le modèle exécuté, un encadré sous « Lire le résultat » calcule à la main les révisions observées et attendues de chaque implant.
 
@@ -756,11 +756,11 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 
 - **n = 600, number of events = 81** (R) : 600 interventions et 81 révisions.
 - **exp(coef) :** le hazard ratio de chaque implant par rapport à l'implant A, la référence. Implant B : 0.82 ; implant C : 3.07.
-- **lower .95 / upper .95 :** les IC à 95 %. Celui de l'implant B (de 0.45 à 1.50) contient 1 : les données sont compatibles avec l'absence de différence par rapport à A. Celui de l'implant C (de 1.85 à 5.09) ne le contient pas.
+- **lower .95 / upper .95 :** les [IC](../glossary.qmd#confidence-interval){.term} à 95 %. Celui de l'implant B (de 0.45 à 1.50) contient 1 : les données sont compatibles avec l'absence de différence par rapport à A. Celui de l'implant C (de 1.85 à 5.09) ne le contient pas.
 - **Pr(>|z|)** (`p` en Python) : la valeur p de chaque implant par rapport à A (p = 0.514 pour B, p < 0.001 pour C). R affiche celle de C sous la forme `1.39e-05`, la [notation scientifique](../glossary.qmd#scientific-notation){.term} de 0.0000139 ; Python affiche `0.000014`.
-- **Likelihood ratio test = 27.6 on 2 df, p < 0.001 :** le test global qui demande si l'implant compte du tout, l'équivalent pour Cox du test F de l'ANOVA. R affiche `27.64` et `p=1e-06`. Python l'affiche sur la première ligne sous le tableau : la statistique, ses degrés de liberté et la valeur p.
-- **Score (logrank) test = 33.5 :** le test du log-rank pour les trois implants, que Python affiche sur sa dernière ligne (33.47 ; le test du score de R donne 33.48). Le test du score de Cox et le test du log-rank traitent un peu différemment les délais de révision ex æquo : ils concordent donc à une décimale près, pas exactement.
-- **Le reste de la sortie de R :** `exp(-coef)` est chaque hazard ratio retourné, l'implant A par rapport à l'autre implant (1 ÷ 0.8171 = 1.224). `coef`, `se(coef)`, `z`, la concordance et le test de Wald sont expliqués à la [page 14](../survival/14-cox-regression.qmd#hazard-ratio) ; vous n'en avez pas besoin ici.
+- **Likelihood ratio test = 27.6 on 2 df, p < 0.001 :** le test global qui demande si l'implant compte du tout, l'équivalent pour Cox du [test F](../glossary.qmd#f-statistic){.term} de l'[ANOVA](../glossary.qmd#anova){.term}. R affiche `27.64` et `p=1e-06`. Python l'affiche sur la première ligne sous le tableau : la statistique, ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} et la valeur p.
+- **Score (logrank) test = 33.5 :** le test du log-rank pour les trois implants, que Python affiche sur sa dernière ligne (33.47 ; le [test du score](../glossary.qmd#score-test){.term} de R donne 33.48). Le test du score de Cox et le test du log-rank traitent un peu différemment les délais de révision [ex æquo](../glossary.qmd#ties){.term} : ils concordent donc à une décimale près, pas exactement.
+- **Le reste de la sortie de R :** `exp(-coef)` est chaque hazard ratio retourné, l'implant A par rapport à l'autre implant (1 ÷ 0.8171 = 1.224). `coef`, `se(coef)`, `z`, la [concordance](../glossary.qmd#concordance){.term} et le [test de Wald](../glossary.qmd#wald-test){.term} sont expliqués à la [page 14](../survival/14-cox-regression.qmd#hazard-ratio) ; vous n'en avez pas besoin ici.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : révisions observées et attendues à la main
@@ -813,7 +813,7 @@ check_agree(list(expected_a = expected[["A"]], expected_b = expected[["B"]], exp
 
 ### Taille d'effet et IC à 95 %
 
-Les **hazard ratios** avec leur IC à 95 % sont les tailles d'effet : l'implant C avait un hazard de révision environ trois fois plus élevé que celui de l'implant A (3.07, IC à 95 % de 1.85 à 5.09), alors que l'implant B ne différait pas clairement de A (0.82, IC à 95 % de 0.45 à 1.50).
+Les **hazard ratios** avec leur IC à 95 % sont les [tailles d'effet](../glossary.qmd#effect-size){.term} : l'implant C avait un hazard de révision environ trois fois plus élevé que celui de l'implant A (3.07, IC à 95 % de 1.85 à 5.09), alors que l'implant B ne différait pas clairement de A (0.82, IC à 95 % de 0.45 à 1.50).
 
 ### Rédiger les résultats
 
@@ -823,12 +823,12 @@ Les **hazard ratios** avec leur IC à 95 % sont les tailles d'effet : l'implan
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le groupe de référence influence la lecture des résultats
-Chaque hazard ratio est ici relatif à l'implant A : le résultat ne compare donc pas B à C directement. Choisissez le groupe de référence à dessein (l'implant standard, le plus grand groupe) et dites lequel c'est. Et comme à la [page 4](04-describe-one-group.qmd#kaplan-meier), les décès sont ici traités comme des données censurées ; la [page 13](../survival/13-kaplan-meier.qmd#competing-risks) traite des risques concurrents.
+Chaque hazard ratio est ici relatif à l'implant A : le résultat ne compare donc pas B à C directement. Choisissez le groupe de référence à dessein (l'implant standard, le plus grand groupe) et dites lequel c'est. Et comme à la [page 4](04-describe-one-group.qmd#kaplan-meier), les décès sont ici traités comme des données censurées ; la [page 13](../survival/13-kaplan-meier.qmd#competing-risks) traite des [risques concurrents](../glossary.qmd#competing-risk){.term}.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : convergence et groupe de référence
-Les deux programmes prennent le premier groupe par ordre alphabétique (A) comme référence et traitent les délais de révision ex æquo avec la méthode d'Efron. La règle de convergence par défaut de lifelines s'arrête ici un peu trop tôt : nous la resserrons donc avec `fit_options={"precision": 1e-9}`. Voici la différence que cela fait :
+Les deux programmes prennent le premier groupe par ordre alphabétique (A) comme référence et traitent les délais de révision ex æquo avec la [méthode d'Efron](../glossary.qmd#efron-method){.term}. La règle de [convergence](../glossary.qmd#convergence){.term} par défaut de lifelines s'arrête ici un peu trop tôt : nous la resserrons donc avec `fit_options={"precision": 1e-9}`. Voici la différence que cela fait :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -865,18 +865,18 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 
 ## Quels groupes diffèrent ? {#which-groups-differ}
 
-Les tests ci-dessus répondent à « existe-t-il une différence entre les groupes ? ». Quand la réponse est oui, la question suivante est de savoir quels groupes diffèrent de quels autres. Comparer chaque paire avec un test ordinaire augmente le risque de faux positif. Avec quatre classes ASA, il y a six paires (1 et 2, 1 et 3, 1 et 4, 2 et 3, 2 et 4, 3 et 4). Chaque test au seuil de 5 % a 95 % de chances de ne *pas* donner de fausse alerte quand il ne se passe rien. Si les six tests étaient indépendants, tous resteraient silencieux avec une probabilité de 0.95^6^ = 0.74. Il reste 1 − 0.74 = 0.26, soit environ une chance sur quatre d'au moins une fausse alerte (la [page 15](../beyond/15-post-hoc.qmd#why-adjust) fait ce calcul dans le code).
+Les tests ci-dessus répondent à « existe-t-il une différence entre les groupes ? ». Quand la réponse est oui, la question suivante est de savoir quels groupes diffèrent de quels autres. Comparer chaque paire avec un test ordinaire augmente le risque de [faux positif](../glossary.qmd#false-positive){.term}. Avec quatre classes ASA, il y a six paires (1 et 2, 1 et 3, 1 et 4, 2 et 3, 2 et 4, 3 et 4). Chaque test au [seuil de 5 %](../glossary.qmd#statistical-significance){.term} a 95 % de chances de ne *pas* donner de fausse alerte quand il ne se passe rien. Si les six tests étaient indépendants, tous resteraient silencieux avec une [probabilité](../glossary.qmd#probability){.term} de 0.95^6^ = 0.74. Il reste 1 − 0.74 = 0.26, soit environ une chance sur quatre d'au moins une fausse alerte (la [page 15](../beyond/15-post-hoc.qmd#why-adjust) fait ce calcul dans le code).
 
-Les **tests post hoc** comparent les paires en gardant le taux d'erreur global à 5 % :
+Les **tests post hoc** comparent les paires en gardant le [taux d'erreur global](../glossary.qmd#family-wise-error-rate){.term} à 5 % :
 
 | Après | À utiliser | Page |
 |---|---|---|
-| ANOVA à un facteur | HSD de Tukey (Games-Howell si les dispersions diffèrent) | [15](../beyond/15-post-hoc.qmd#after-anova) |
-| Kruskal-Wallis | Test de Dunn avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-kruskal-wallis) |
-| Khi-deux | Tests de Fisher ou du khi-deux deux à deux avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-chi-square) |
-| Régression de Cox | Hazard ratios par rapport à une référence choisie, ou contrastes entre groupes | [14](../survival/14-cox-regression.qmd) |
+| [ANOVA à un facteur](../glossary.qmd#anova){.term} | [HSD de Tukey](../glossary.qmd#tukey-hsd){.term} ([Games-Howell](../glossary.qmd#games-howell){.term} si les [dispersions](../glossary.qmd#spread){.term} diffèrent) | [15](../beyond/15-post-hoc.qmd#after-anova) |
+| [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term} | [Test de Dunn](../glossary.qmd#dunn-test){.term} avec [ajustement de Holm](../glossary.qmd#holm){.term} | [15](../beyond/15-post-hoc.qmd#after-kruskal-wallis) |
+| Khi-deux | [Tests de Fisher](../glossary.qmd#fisher-exact-test){.term} ou du [khi-deux](../glossary.qmd#chi-square-test){.term} [deux à deux](../glossary.qmd#pairwise-comparison){.term} avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-chi-square) |
+| [Régression de Cox](../glossary.qmd#cox-regression){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} par rapport à une [référence](../glossary.qmd#reference-group){.term} choisie, ou [contrastes](../glossary.qmd#contrast){.term} entre groupes | [14](../survival/14-cox-regression.qmd) |
 
-Le HSD de Tukey contrôle seul les faux positifs, comme le test de Dunn et les autres tests deux à deux une fois l'ajustement de Holm appliqué : aucun n'a besoin d'un test global significatif au préalable. Décidez avant de voir les données quelles comparaisons vous ferez, et dites-le dans vos Méthodes ([page 15](../beyond/15-post-hoc.qmd#overall-test-first)).
+Le HSD de Tukey contrôle seul les faux positifs, comme le test de Dunn et les autres tests deux à deux une fois l'ajustement de Holm appliqué : aucun n'a besoin d'un [test global](../glossary.qmd#overall-test){.term} significatif au préalable. Décidez avant de voir les données quelles comparaisons vous ferez, et dites-le dans vos Méthodes ([page 15](../beyond/15-post-hoc.qmd#overall-test-first)).
 
 ```{r}
 #| include: false
@@ -983,7 +983,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** L'**IMC** (indice de masse corporelle) diffère-t-il entre les classes ASA ? Faites une ANOVA à un facteur et rapportez ω².
+**1.** L'**IMC** (indice de masse corporelle) diffère-t-il entre les classes ASA ? Faites une [ANOVA à un facteur](../glossary.qmd#anova){.term} et rapportez ω².
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -1019,7 +1019,7 @@ Cela n'a rien de surprenant : l'obésité fait partie de ce que les anesthésis
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-La durée de séjour est fortement asymétrique à droite, avec beaucoup d'ex æquo ([page 3](../foundations/03-distributions.qmd#transform)), et il y a trois groupes indépendants : le **test de Kruskal-Wallis**.
+La durée de séjour est fortement [asymétrique à droite](../glossary.qmd#skewed){.term}, avec beaucoup d'[ex æquo](../glossary.qmd#ties){.term} ([page 3](../foundations/03-distributions.qmd#transform)), et il y a trois groupes [indépendants](../glossary.qmd#independence){.term} : le **[test de Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1045,10 +1045,10 @@ print(los_test, los_test.statistic / (len(cohort) - 1))
 
 > **Results:** Median length of stay was 0 days (IQR 0 to 1) for surgeon S1, 1 day (IQR 0 to 1) for S2 and 0 days (IQR 0 to 1) for S3 (Kruskal-Wallis H = 0.73, df = 2, p = 0.694; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
 
-Il n'y a pas de preuve claire que la durée de séjour diffère entre les chirurgiens. R affiche ε² sous la forme `1.22e-03`, soit 0.00122, arrondi à 0.001.
+Il n'y a pas de preuve claire que la durée de séjour diffère entre les chirurgiens. R affiche [ε²](../glossary.qmd#epsilon-squared){.term} sous la forme `1.22e-03`, soit 0.00122, arrondi à 0.001.
 :::
 
-**3.** L'échec de la greffe dans les 2 ans diffère-t-il entre les trois greffons ? Vérifiez d'abord les effectifs attendus. Que faites-vous, et que trouvez-vous ?
+**3.** L'échec de la greffe dans les 2 ans diffère-t-il entre les trois greffons ? Vérifiez d'abord les [effectifs attendus](../glossary.qmd#expected-count){.term}. Que faites-vous, et que trouvez-vous ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -1086,7 +1086,7 @@ print(failure_fisher.pvalue)
 ```
 :::
 
-Chaque ligne du premier tableau donne le total du greffon (6 + 123 = 129 reconstructions BPTB), et le second tableau donne la part d'échecs (6 ÷ 129 = 0.047, soit 4.7 %). Avec un greffon au tendon du quadriceps, le nombre attendu d'échecs est 2.9, inférieur à 5 : le test du khi-deux n'est donc pas fiable ; R le dit lui-même, avec l'avertissement « Chi-squared approximation may be incorrect ». Regrouper les greffons changerait la question : utilisez donc le test exact de Fisher sur tout le tableau 3 × 2. `fisher.test()` de R le calcule de façon exacte (p = 0.943) ; scipy l'estime à partir de 9,999 tableaux aléatoires (la valeur par défaut de `PermutationMethod` ; 0.9405 avec cette graine), proche de R mais pas identique.
+Chaque ligne du premier tableau donne le total du greffon (6 + 123 = 129 reconstructions BPTB), et le second tableau donne la part d'échecs (6 ÷ 129 = 0.047, soit 4.7 %). Avec un greffon au tendon du quadriceps, le nombre attendu d'échecs est 2.9, inférieur à 5 : le [test du khi-deux](../glossary.qmd#chi-square-test){.term} n'est donc pas fiable ; R le dit lui-même, avec l'avertissement « Chi-squared approximation may be incorrect ». Regrouper les greffons changerait la question : utilisez donc le [test exact de Fisher](../glossary.qmd#fisher-exact-test){.term} sur tout le [tableau 3 × 2](../glossary.qmd#contingency-table){.term}. `fisher.test()` de R le calcule de façon exacte (p = 0.943) ; scipy l'estime à partir de 9,999 tableaux aléatoires (la valeur par défaut de `PermutationMethod` ; 0.9405 avec cette graine), proche de R mais pas identique.
 
 > **Results:** Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher's exact test p = 0.943).
 

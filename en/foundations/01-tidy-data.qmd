@@ -22,16 +22,16 @@ Most of the time in a research project goes into getting the data into shape, no
 
 Data are **tidy** when:
 
-1. every **variable** is a column,
+1. every **[variable](../glossary.qmd#variable){.term}** is a column,
 2. every **observation** is a row, and
-3. every **kind of observational unit** gets its own table.
+3. every **kind of [observational unit](../glossary.qmd#unit-of-analysis){.term}** gets its own table.
 
 ::: {.callout-note}
 ## 💡 In plain language
 One fact per cell, one patient-thing per row, and never two kinds of rows mixed in one table. A spreadsheet that's easy for a person to read is often hard for a computer to analyze, and the other way round. Statistics software wants the second kind.
 :::
 
-Here's a typical untidy PROM sheet: one row per patient, with a column for each visit. The *visit* is a variable, but it's hiding in the column names.
+Here's a typical untidy [PROM](../glossary.qmd#prom){.term} sheet: one row per patient, with a column for each visit. The *visit* is a variable, but it's hiding in the column names.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -83,7 +83,7 @@ chk = {"rows": float(len(long)), "mean": float(long["prom_score"].mean())}
 check_agree(list(rows = nrow(long), mean = mean(long$prom_score, na.rm = TRUE)), reticulate::py$chk)
 ```
 
-In the long version, "Is the 6-week score missing?" is just a row with a blank, and "average score at each visit" is one line of code. In the wide version, every new visit means a new column and rewritten code.
+In the [long version](../glossary.qmd#long-format){.term}, "Is the 6-week score missing?" is just a row with a blank, and "average score at each visit" is one line of code. In the wide version, every new visit means a new column and rewritten code.
 
 Untidy patterns we see most often in abstraction sheets, and the tidy fix for each:
 
@@ -99,7 +99,7 @@ Untidy patterns we see most often in abstraction sheets, and the tidy fix for ea
 
 ## Collecting tidy data {#collecting}
 
-The cheapest cleaning is the cleaning you never have to do. Before anyone abstracts a single chart, write the **data dictionary**: every variable's name, meaning, type, units and allowed values. Then build the collection sheet from the dictionary.
+The cheapest cleaning is the cleaning you never have to do. Before anyone abstracts a single chart, write the **data dictionary**: every [variable](../glossary.qmd#variable){.term}'s name, meaning, type, units and allowed values. Then build the collection sheet from the dictionary.
 
 This site includes a template you can copy: [`templates/data-collection-template.xlsx`](https://github.com/hfr-ortho/stats-formation/raw/main/templates/data-collection-template.xlsx). It has four sheets:
 
@@ -156,7 +156,7 @@ Real abstraction sheets rarely follow those rules. `data/messy_abstraction_workb
 - two tabs, **Site A** and **Site B**, whose columns don't line up (Site B has an extra `MUA` column in the middle)
 - two banner rows and a row of merged group headers above the real header
 - a **TOTAL** row at the bottom of each tab
-- two `Date` and two `Score` columns (pre-op and 1-year PROMs)
+- two `Date` and two `Score` columns (pre-op and 1-year [PROMs](../glossary.qmd#prom){.term})
 - mixed date formats, units in number cells, Roman-numeral ASA classes, five spellings of "missing"
 - revisions marked only by a red fill on the Study ID cell
 - duplicated rows
@@ -165,7 +165,7 @@ We'll fix it one step at a time. Every step is small enough to check. Run the st
 
 ### Step 1: read both tabs, as text {#step-1-read-both-tabs-as-text}
 
-Read everything as text first. If you let the software guess types, it silently turns `32.1 kg/m2` into a missing value, and you never find out. We'll convert types deliberately in step 5.
+Read everything as text first. If you let the software guess types, it silently turns `32.1 kg/m2` into a [missing value](../glossary.qmd#missing-data){.term}, and you never find out. We'll convert types deliberately in step 5.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -762,7 +762,7 @@ R and Python draw different rows, because each has its own random number generat
 
 ### What a failing check looks like {#what-a-failing-check-looks-like}
 
-Suppose we had parsed the surgery dates month-first (US style, as many online examples do) by mistake. Nothing crashes. Two checks catch it: a missing count (check 2, applied to the dates) and a new logic check that every pre-op PROM falls within a month before surgery.
+Suppose we had parsed the surgery dates month-first (US style, as many online examples do) by mistake. Nothing crashes. Two checks catch it: a missing count (check 2, applied to the dates) and a new logic check that every pre-op [PROM](../glossary.qmd#prom){.term} falls within a month before surgery.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -899,14 +899,14 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 `2`, `II` and `ASA 2` all become 2 (43 + 14 + 4 = 61 cases). The last row is the 3 cases with no ASA class: step 3 had already turned their missing codes into blanks, and they stay missing. No one in this sheet has ASA class 4.
 :::
 
-**2.** A colleague's sheet has one row per patient and the columns `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Is it tidy? If not, what should one row be?
+**2.** A colleague's sheet has one row per patient and the columns `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Is it [tidy](../glossary.qmd#tidy-data){.term}? If not, what should one row be?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
 Not tidy: *side* and *visit* are hiding in the column names. One row should be one knee at one visit, with columns `patient_id`, `side`, `visit`, `koos`. Reshape it with `pivot_longer()` (R) or `melt()` (Python), splitting each column name into side and visit, as we did for the survey export.
 :::
 
-**3.** How many cases have a 1-year PROM recorded but no pre-op PROM? Why would that matter for an analysis of improvement?
+**3.** How many cases have a 1-year [PROM](../glossary.qmd#prom){.term} recorded but no pre-op PROM? Why would that matter for an analysis of improvement?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -925,5 +925,5 @@ print(((tidy["prom_1yr"].notna()) & (tidy["prom_preop"].isna())).sum())
 ```
 :::
 
-Those patients have no baseline, so their improvement can't be computed. An analysis of change silently drops them. Report how many, so readers know.
+Those patients have no [baseline](../glossary.qmd#baseline){.term}, so their improvement can't be computed. An analysis of change silently drops them. Report how many, so readers know.
 :::

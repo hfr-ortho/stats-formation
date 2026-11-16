@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Des données **appariées** vont par deux : le même patient avant et après l'opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients appariés selon l'âge, le sexe et l'IMC. Les tests pour données appariées comparent chaque patient avec lui-même (ou avec le patient auquel il est apparié), ce qui élimine la variation entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la [page 6](06-two-unpaired-groups.qmd).
+Des données **appariées** vont par deux : le même patient avant et après l'opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients [appariés](../glossary.qmd#matched){.term} selon l'âge, le sexe et l'IMC. Les tests pour données [appariées](../glossary.qmd#paired){.term} comparent chaque patient avec lui-même (ou avec le patient auquel il est apparié), ce qui élimine la [variation](../glossary.qmd#spread){.term} entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la [page 6](06-two-unpaired-groups.qmd).
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur les données d'exercice. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
-Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
+Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la [cohorte](../glossary.qmd#cohort){.term} ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Attention : seules les paires complètes comptent
-Un test pour données appariées ne peut utiliser que les patients mesurés aux **deux** moments. Les patients qui ont manqué une visite sont exclus et, s'ils diffèrent des autres (par exemple, si les patients dont l'évolution est mauvaise cessent de venir), le résultat est biaisé. Indiquez toujours combien de patients avaient les deux mesures. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) peuvent utiliser les données de tous les patients, y compris un suivi incomplet.
+Un test pour données appariées ne peut utiliser que les patients mesurés aux **deux** moments. Les patients qui ont manqué une visite sont exclus et, s'ils diffèrent des autres (par exemple, si les patients dont l'évolution est mauvaise cessent de venir), le résultat est [biaisé](../glossary.qmd#bias){.term}. Indiquez toujours combien de patients avaient les deux mesures. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) peuvent utiliser les données de tous les patients, y compris un [suivi](../glossary.qmd#follow-up){.term} incomplet.
 :::
 
 ## Test t pour échantillons appariés {#paired-t}
@@ -37,10 +37,10 @@ Un test pour données appariées ne peut utiliser que les patients mesurés aux 
 
 ### Quand l'utiliser
 
-- Chaque patient (ou paire appariée) donne **deux mesures** de la même chose : ici, l'angle alpha de la même hanche sur deux incidences radiographiques.
-- Les **différences** entre les deux mesures sont à peu près normales, ou il y a environ 30 paires ou plus. La condition porte sur les différences, pas sur chaque mesure prise séparément.
-- Les paires sont indépendantes les unes des autres.
-- Si les différences sont asymétriques, ou si les mesures sont bornées ou ordinales → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
+- Chaque patient (ou [paire appariée](../glossary.qmd#matched){.term}) donne **deux mesures** de la même chose : ici, l'angle alpha de la même hanche sur deux incidences radiographiques.
+- Les **différences** entre les deux mesures sont [à peu près normales](../glossary.qmd#normal-distribution){.term}, ou il y a environ 30 paires ou plus. La [condition](../glossary.qmd#assumption){.term} porte sur les différences, pas sur chaque mesure prise séparément.
+- Les paires sont [indépendantes](../glossary.qmd#independence){.term} les unes des autres.
+- Si les différences sont [asymétriques](../glossary.qmd#skewed){.term}, ou si les mesures sont [bornées](../glossary.qmd#bounded-scale){.term} ou [ordinales](../glossary.qmd#ordinal){.term} → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
 
 ### Ce que fait vraiment le test
 
@@ -48,10 +48,10 @@ Le test t apparié transforme deux colonnes en une seule. Chaque hanche a deux m
 
 1. Pour chaque hanche, soustraire une mesure de l'autre. À partir d'ici, les deux colonnes d'origine ne servent plus.
 2. Calculer la [moyenne](../glossary.qmd#mean){.term} de ces différences.
-3. Estimer le bruit de cette moyenne, son [erreur standard](../glossary.qmd#standard-error){.term} : l'ET des différences divisé par √n, où n est le nombre de hanches.
-4. Diviser : **t = différence moyenne ÷ erreur standard**, puis convertir t en [valeur p](../glossary.qmd#p-value){.term}.
+3. Estimer le bruit de cette moyenne, son [erreur standard](../glossary.qmd#standard-error){.term} : l'[ET](../glossary.qmd#standard-deviation){.term} des différences divisé par √n, où [n](../glossary.qmd#sample-size){.term} est le nombre de hanches.
+4. Diviser : **t = [différence moyenne](../glossary.qmd#mean-difference){.term} ÷ erreur standard**, puis convertir t en [valeur p](../glossary.qmd#p-value){.term}.
 
-Comme chaque hanche est comparée à elle-même, les grandes différences entre hanches disparaissent. C'est pourquoi un test apparié peut détecter une petite différence qu'un test non apparié manquerait.
+Comme chaque hanche est comparée à elle-même, les grandes différences entre hanches disparaissent. C'est pourquoi un test [apparié](../glossary.qmd#paired){.term} peut détecter une petite différence qu'un test non apparié manquerait.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule t à la main.
 
@@ -59,7 +59,7 @@ Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule
 
 L'angle alpha mesure à quel point la partie antérieure de la jonction tête-col fémorale fait saillie (morphologie cam) : plus l'angle est grand, plus la bosse est importante. Les données de préservation de la hanche contiennent une ligne par hanche (une hanche par patient), chez de jeunes adultes évalués pour une chirurgie de préservation de la hanche, avec l'angle alpha mesuré sur deux incidences : l'**incidence en grenouille** (profil, *frog-leg*) et l'**incidence de Dunn à 45°**.
 
-Les données appariées doivent être en **format large** : une ligne par patient, avec les deux mesures côte à côte. C'est déjà le cas ici ; la [page 1](../foundations/01-tidy-data.qmd#reshaping) montre comment remodeler des données qui ne le sont pas.
+Les données appariées doivent être en **[format large](../glossary.qmd#long-format){.term}** : une ligne par patient, avec les deux mesures côte à côte. C'est déjà le cas ici ; la [page 1](../foundations/01-tidy-data.qmd#reshaping) montre comment remodeler des données qui ne le sont pas.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -105,7 +105,7 @@ plt.show()
 ```
 :::
 
-Les 80 hanches ont les deux incidences. Les différences forment une bosse à peu près symétrique, centrée à droite de zéro : la plupart des hanches ont une valeur plus élevée sur l'incidence de Dunn. Le tableau donne la moyenne et l'ET de chaque incidence : 61.8° (ET 11.2) sur l'incidence de Dunn et 58.2° (ET 10.8) sur l'incidence en grenouille.
+Les 80 hanches ont les deux incidences. Les différences forment une bosse à peu près [symétrique](../glossary.qmd#symmetric){.term}, centrée à droite de zéro : la plupart des hanches ont une valeur plus élevée sur l'incidence de Dunn. Le tableau donne la moyenne et l'ET de chaque incidence : 61.8° (ET 11.2) sur l'incidence de Dunn et 58.2° (ET 10.8) sur l'incidence en grenouille.
 
 ### Exécuter l'analyse
 
@@ -144,10 +144,10 @@ check_agree(list(t = unname(alpha_test$statistic), df = unname(alpha_test$parame
 
 ### Lire le résultat
 
-- **t = 7.75, df = 79 :** la différence moyenne est à presque 8 erreurs standard de zéro ; df (ddl) est le nombre de paires moins 1.
+- **t = 7.75, df = 79 :** la différence moyenne est à presque 8 erreurs standard de zéro ; [df](../glossary.qmd#degrees-of-freedom){.term} (ddl) est le nombre de paires moins 1.
 - **p < 0.001 :** une différence aussi grande serait très improbable si les deux incidences donnaient en moyenne le même angle alpha. R l'affiche sous la forme `p-value = 2.724e-11` : `e-11` signifie « déplacer le point décimal de 11 rangs vers la gauche ».
 - **mean difference 3.67 :** en moyenne, l'incidence de Dunn donnait 3.7° de plus que l'incidence en grenouille pour la même hanche.
-- **IC à 95 % de 2.73 à 4.61 :** l'intervalle de confiance (IC) de la différence moyenne.
+- **IC à 95 % de 2.73 à 4.61 :** l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) de la différence moyenne.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : la statistique t à la main
@@ -186,7 +186,7 @@ check_agree(list(mean = mean_difference, se = difference_se, t = mean_difference
 ### Taille d'effet et IC à 95 %
 
 - La **différence de moyennes** avec son IC, en degrés : 3.7° (IC à 95 % de 2.7 à 4.6).
-- Le **d~z~ de Cohen** divise la différence de moyennes par l'écart-type des différences : il dit avec quelle constance les deux incidences diffèrent d'une hanche à l'autre. Le repère habituel (0.2 petit, 0.5 moyen, 0.8 grand) s'applique.
+- Le **d~z~ de Cohen** divise la différence de moyennes par l'écart-type des différences : il dit avec quelle constance les deux incidences diffèrent d'une hanche à l'autre. Le [repère habituel](../glossary.qmd#cohen-benchmarks){.term} (0.2 petit, 0.5 moyen, 0.8 grand) s'applique.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -232,12 +232,12 @@ d~z~ = 0.87 est un grand effet : 62 des 80 hanches (78 %) ont une valeur plus 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : n'analysez pas des données appariées comme des données indépendantes
-Faire un test t pour échantillons indépendants sur les deux colonnes ignore quelles mesures appartiennent à la même hanche. Ici, il donne p = 0.037 au lieu de p < 0.001 : la différence de 3.7° entre les incidences est petite à côté de l'écart de 11° entre hanches, et seul le test pour données appariées l'élimine. Il est faux même quand il donne par hasard le même résultat, car son erreur standard suppose 160 hanches indépendantes alors qu'il n'y en a que 80. (La valeur p non appariée, 0.0365, est la dernière ligne sous « Exécuter l'analyse » ; l'ET de chaque incidence, environ 11°, figure dans le premier tableau.)
+Faire un [test t pour échantillons indépendants](../glossary.qmd#t-test){.term} sur les deux colonnes ignore quelles mesures appartiennent à la même hanche. Ici, il donne p = 0.037 au lieu de p < 0.001 : la différence de 3.7° entre les incidences est petite à côté de l'[écart](../glossary.qmd#spread){.term} de 11° entre hanches, et seul le test pour données appariées l'élimine. Il est faux même quand il donne par hasard le même résultat, car son erreur standard suppose 160 hanches indépendantes alors qu'il n'y en a que 80. (La valeur p non appariée, 0.0365, est la dernière ligne sous « Exécuter l'analyse » ; l'ET de chaque incidence, environ 11°, figure dans le premier tableau.)
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : tailles d'effet pour données appariées
-`compute_effsize(x, y, paired=True)` de pingouin ne renvoie **pas** d~z~ : il renvoie d~av~ (la différence de moyennes divisée par la racine carrée de la moyenne des deux variances), 0.33 ici. Les deux sont légitimes, mais elles répondent à des questions différentes et ne sont pas interchangeables : d~av~ compare la différence à l'écart entre hanches, d~z~ à la constance avec laquelle les deux incidences diffèrent au sein d'une hanche. Nous calculons d~z~ directement pour que les deux langages concordent ; dites laquelle vous rapportez. Ici, d~av~ vaut 3.67 / √((11.2² + 10.8²) / 2) = 3.67 / 11.0 = 0.33. Le code Python donne d~z~ sans IC ; l'IC donné sous **Results** est celui qu'affiche effectsize en R.
+`compute_effsize(x, y, paired=True)` de pingouin ne renvoie **pas** d~z~ : il renvoie d~av~ (la différence de moyennes divisée par la racine carrée de la moyenne des deux [variances](../glossary.qmd#variance){.term}), 0.33 ici. Les deux sont légitimes, mais elles répondent à des questions différentes et ne sont pas interchangeables : d~av~ compare la différence à l'écart entre hanches, d~z~ à la constance avec laquelle les deux incidences diffèrent au sein d'une hanche. Nous calculons d~z~ directement pour que les deux langages concordent ; dites laquelle vous rapportez. Ici, d~av~ vaut 3.67 / √((11.2² + 10.8²) / 2) = 3.67 / 11.0 = 0.33. Le code Python donne d~z~ sans IC ; l'IC donné sous **Results** est celui qu'affiche effectsize en R.
 :::
 
 ## Test des rangs signés de Wilcoxon {#wilcoxon-signed-rank}
@@ -246,11 +246,11 @@ Faire un test t pour échantillons indépendants sur les deux colonnes ignore qu
 
 ### Quand l'utiliser
 
-- Deux mesures appariées, et le critère est **asymétrique** ou a un **plafond ou un plancher**. Le KOOS JR à 1 an a un plafond ([page 3](../foundations/03-distributions.qmd#transform)).
-- Pour une échelle **ordinale** (satisfaction de 1 à 5), comptez les patients dont le score a monté et ceux dont il a baissé, et comparez les deux effectifs avec un test binomial (le **test des signes**, [page 5](05-one-group-vs-hypothetical.qmd#binomial-test)).
+- Deux mesures [appariées](../glossary.qmd#paired){.term}, et le [critère](../glossary.qmd#outcome){.term} est **[asymétrique](../glossary.qmd#skewed){.term}** ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**. Le KOOS JR à 1 an a un plafond ([page 3](../foundations/03-distributions.qmd#transform)).
+- Pour une échelle **[ordinale](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), comptez les patients dont le score a monté et ceux dont il a baissé, et comparez les deux effectifs avec un [test binomial](../glossary.qmd#binomial-test){.term} (le **[test des signes](../glossary.qmd#sign-test){.term}**, [page 5](05-one-group-vs-hypothetical.qmd#binomial-test)).
 - Le test classe les tailles des changements et compare les rangs des améliorations à ceux des détériorations.
 - Les changements exactement nuls ne disent rien sur la direction et sont écartés.
-- Si les changements sont à peu près normaux → le [test t pour échantillons appariés](#paired-t).
+- Si les changements sont [à peu près normaux](../glossary.qmd#normal-distribution){.term} → le [test t pour échantillons appariés](#paired-t).
 
 ### Ce que fait vraiment le test
 
@@ -324,7 +324,7 @@ print((koos["1yr"] == 100).mean())                              # proportion de 
 ```
 :::
 
-Les 246 patients qui ont les deux scores se sont tous améliorés. (Les vraies données sont rarement aussi nettes : en général, une minorité de patients se détériore. Ces données sont synthétiques.) Les quartiles donnent des médianes de 50.0 et 85.8 (49.95 s'arrondit à 50.0), avec des intervalles interquartiles de 40.8 à 58.2 et de 75.0 à 94.0. Les changements paraissent assez symétriques, mais 15 % des patients (0.150 à la dernière ligne) atteignent le maximum de 100 à 1 an : leur amélioration réelle est tronquée, c'est pourquoi nous comparons des rangs.
+Les 246 patients qui ont les deux scores se sont tous améliorés. (Les vraies données sont rarement aussi nettes : en général, une minorité de patients se détériore. Ces données sont synthétiques.) Les [quartiles](../glossary.qmd#quartile){.term} donnent des [médianes](../glossary.qmd#median){.term} de 50.0 et 85.8 (49.95 s'arrondit à 50.0), avec des [intervalles interquartiles](../glossary.qmd#iqr){.term} de 40.8 à 58.2 et de 75.0 à 94.0. Les changements paraissent assez [symétriques](../glossary.qmd#symmetric){.term}, mais 15 % des patients (0.150 à la dernière ligne) atteignent le maximum de 100 à 1 an : leur amélioration réelle est tronquée, c'est pourquoi nous comparons des rangs.
 
 ### Exécuter l'analyse
 
@@ -365,8 +365,8 @@ check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticula
 - **V = 30381** (R) : la somme des rangs des améliorations. Avec 246 patients, les rangs totalisent 246 × 247 / 2 = 30381 : tous les rangs appartiennent donc à une amélioration. Python donne la plus petite somme, celle des détériorations : **W_val = 0**.
 - **p < 0.001.** R affiche `p-value < 2.2e-16`, sa façon de dire « trop petit pour être affiché » ; Python affiche `4.179101e-42`. Les deux sont très inférieurs à 0.001.
 - **CLES = 0.965** (Python) : à ignorer ici. pingouin la calcule comme si les deux colonnes étaient deux groupes non appariés (le score à 1 an de n'importe quel patient contre le score préopératoire de n'importe quel patient) : elle ne vaut donc pas 1, bien que tous les patients se soient améliorés.
-- **(pseudo)median 34.1, IC à 95 % de 32.3 à 35.9 :** l'estimateur de Hodges-Lehmann du changement typique, ci-dessous.
-- **RBC = 1.0** (Python) : la taille d'effet bisériale par rangs, ci-dessous.
+- **(pseudo)median 34.1, IC à 95 % de 32.3 à 35.9 :** l'[estimateur de Hodges-Lehmann](../glossary.qmd#hodges-lehmann){.term} du changement typique, ci-dessous.
+- **RBC = 1.0** (Python) : la [taille d'effet](../glossary.qmd#effect-size){.term} [bisériale par rangs](../glossary.qmd#rank-biserial){.term}, ci-dessous.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : les sommes des rangs à la main
@@ -403,7 +403,7 @@ check_agree(list(up = sum(change_ranks[koos$change > 0]), down = sum(change_rank
 
 ### Taille d'effet et IC à 95 %
 
-- L'**estimateur de Hodges-Lehmann** du changement (la médiane des moyennes de chaque paire de changements), avec son IC, en points.
+- L'**estimateur de Hodges-Lehmann** du changement (la médiane des moyennes de chaque paire de changements), avec son [IC](../glossary.qmd#confidence-interval){.term}, en points.
 - La **corrélation bisériale par rangs (r) pour paires appariées** : +1 si tous les patients se sont améliorés, −1 si tous se sont détériorés, 0 si améliorations et détériorations s'équilibrent. Ici, elle vaut exactement 1.
 
 ::: {.panel-tabset group="language"}
@@ -455,14 +455,14 @@ check_agree(list(hl = unname(koos_test$estimate)), reticulate::py$chk,
 
 ::: {.callout-warning}
 ## ⚠️ Attention : « amélioration significative » ne dit pas tout
-Une valeur p minuscule dit que les scores ont augmenté en moyenne ; elle ne dit pas combien de patients se sont améliorés d'une quantité **importante**. Pour les PROM (mesures des résultats rapportés par le patient), indiquez aussi la proportion de patients dont le changement a atteint la différence minimale cliniquement importante (DMCI), un seuil propre à chaque patient ([page 3](../foundations/03-distributions.qmd#effect-sizes)).
+Une valeur p minuscule dit que les scores ont augmenté en moyenne ; elle ne dit pas combien de patients se sont améliorés d'une quantité **importante**. Pour les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient), indiquez aussi la [proportion](../glossary.qmd#proportion){.term} de patients dont le changement a atteint la [différence minimale cliniquement importante](../glossary.qmd#mcid){.term} (DMCI), un seuil propre à chaque patient ([page 3](../foundations/03-distributions.qmd#effect-sizes)).
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : valeurs par défaut du test de Wilcoxon
 - **La statistique.** R donne V, la somme des rangs des changements positifs. scipy (et pingouin) donnent la **plus petite** des deux sommes. Les valeurs p concordent.
-- **Exact ou approché.** R utilise une valeur p exacte pour moins de 50 paires sans ex æquo et ajoute une correction de continuité à l'approximation normale ; les valeurs par défaut de scipy diffèrent. Nous fixons `exact = FALSE, correct = FALSE` en R et `method="approx", correction=False` en Python pour que les résultats concordent.
-- **L'IC de Hodges-Lehmann.** R le calcule en inversant le test ; le code Python utilise un bootstrap, une autre méthode. Ici, ils concordent à deux décimales (32.30 à 35.90), comme à la [page 6](06-two-unpaired-groups.qmd#mann-whitney), mais avec d'autres données, ils peuvent différer un peu.
+- **Exact ou approché.** R utilise une [valeur p exacte](../glossary.qmd#exact-test){.term} pour moins de 50 paires sans [ex æquo](../glossary.qmd#ties){.term} et ajoute une [correction de continuité](../glossary.qmd#continuity-correction){.term} à l'approximation normale ; les valeurs par défaut de scipy diffèrent. Nous fixons `exact = FALSE, correct = FALSE` en R et `method="approx", correction=False` en Python pour que les résultats concordent.
+- **L'IC de Hodges-Lehmann.** R le calcule en inversant le test ; le code Python utilise un [bootstrap](../glossary.qmd#bootstrap){.term}, une autre méthode. Ici, ils concordent à deux décimales (32.30 à 35.90), comme à la [page 6](06-two-unpaired-groups.qmd#mann-whitney), mais avec d'autres données, ils peuvent différer un peu.
 :::
 
 ## Test de McNemar {#mcnemar}
@@ -471,9 +471,9 @@ Une valeur p minuscule dit que les scores ont augmenté en moyenne ; elle ne di
 
 ### Quand l'utiliser
 
-- Un critère **oui/non** mesuré **deux fois chez les mêmes patients** (ou une fois chez chaque membre d'une paire appariée).
+- Un [critère **oui/non**](../glossary.qmd#binary){.term} mesuré **deux fois chez les mêmes patients** (ou une fois chez chaque membre d'une [paire appariée](../glossary.qmd#matched){.term}).
 - Le test n'utilise que les **paires discordantes** : les patients qui ont changé (non → oui, ou oui → non). Les patients qui sont restés les mêmes ne renseignent pas sur la direction du changement.
-- La version du khi-deux demande au moins 10 paires discordantes environ au total. Avec moins, utilisez la version **exacte** (voir l'encadré R ou Python).
+- La version du khi-deux demande au moins 10 paires discordantes environ au total. Avec moins, utilisez la version **[exacte](../glossary.qmd#exact-test){.term}** (voir l'encadré R ou Python).
 
 ### Ce que fait vraiment le test
 
@@ -488,7 +488,7 @@ Le premier point sous « Lire le résultat » la recalcule à la main.
 
 ### Regarder d'abord les données
 
-Pour des données oui/non appariées, « regarder » veut dire faire un tableau 2 × 2 **avant × après** : chaque patient y apparaît une fois.
+Pour des données oui/non [appariées](../glossary.qmd#paired){.term}, « regarder » veut dire faire un [tableau 2 × 2](../glossary.qmd#contingency-table){.term} **avant × après** : chaque patient y apparaît une fois.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -561,12 +561,12 @@ check_agree(list(chisq = unname(aid_test$statistic), p = aid_test$p.value), reti
 
 ### Lire le résultat
 
-- **McNemar's chi-squared = 56.6, df = 1 :** à quel point la répartition 193 contre 70 est déséquilibrée, par rapport à la répartition égale qu'on attendrait si l'utilisation d'une aide n'avait pas changé. À la main : (193 − 70 − 1)² / (193 + 70) = 122² / 263 = 56.6 ; le −1 est la correction de continuité.
+- **McNemar's chi-squared = 56.6, df = 1 :** à quel point la répartition 193 contre 70 est déséquilibrée, par rapport à la répartition égale qu'on attendrait si l'utilisation d'une aide n'avait pas changé. À la main : (193 − 70 − 1)² / (193 + 70) = 122² / 263 = 56.6 ; le −1 est la [correction de continuité](../glossary.qmd#continuity-correction){.term}.
 - **p < 0.001.** R affiche `p-value = 5.36e-14`.
 
 ### Taille d'effet et IC à 95 %
 
-La taille d'effet du test de McNemar est l'**odds ratio des paires discordantes** : les patients qui ont commencé à utiliser une aide divisés par ceux qui ont arrêté, 193 / 70. Son IC exact vient d'un test binomial sur les paires discordantes. 193 des 263 patients qui ont changé ont commencé à utiliser une aide, soit une proportion de 0.734. La cote vaut proportion / (1 − proportion) : 0.734 / 0.266 = 2.76, comme 193 / 70. Le code applique le même calcul aux deux bornes de l'IC exact de la proportion (0.676 à 0.786).
+La [taille d'effet](../glossary.qmd#effect-size){.term} du test de McNemar est l'**[odds ratio](../glossary.qmd#odds-ratio){.term} des paires discordantes** : les patients qui ont commencé à utiliser une aide divisés par ceux qui ont arrêté, 193 / 70. Son IC exact vient d'un [test binomial](../glossary.qmd#binomial-test){.term} sur les paires discordantes. 193 des 263 patients qui ont changé ont commencé à utiliser une aide, soit une proportion de 0.734. La [cote](../glossary.qmd#odds){.term} vaut proportion / (1 − proportion) : 0.734 / 0.266 = 2.76, comme 193 / 70. Le code applique le même calcul aux deux bornes de l'IC exact de la proportion (0.676 à 0.786).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -606,7 +606,7 @@ check_agree(list(or = started / stopped, or_low = ci[1] / (1 - ci[1]), or_high =
             reticulate::py$chk)
 ```
 
-Les patients avaient 2.8 fois plus de chances de commencer à utiliser une aide que d'arrêter (IC à 95 % de 2.1 à 3.7).
+Les patients avaient 2.8 fois plus de chances de commencer à utiliser une aide que d'arrêter ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 2.1 à 3.7).
 
 ### Rédiger les résultats
 
@@ -616,7 +616,7 @@ Les patients avaient 2.8 fois plus de chances de commencer à utiliser une aide 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : pas de test du khi-deux ni de Fisher sur des données oui/non appariées
-Une erreur fréquente consiste à croiser « aide oui/non » avec « avant l'opération / 6 semaines » et à faire un test du khi-deux ordinaire. Ce tableau compte chaque patient deux fois, comme si 1010 patients indépendants avaient été étudiés. Le test de McNemar utilise chaque patient une seule fois, grâce au tableau avant × après.
+Une erreur fréquente consiste à croiser « aide oui/non » avec « avant l'opération / 6 semaines » et à faire un [test du khi-deux](../glossary.qmd#chi-square-test){.term} ordinaire. Ce tableau compte chaque patient deux fois, comme si 1010 patients [indépendants](../glossary.qmd#independence){.term} avaient été étudiés. Le test de McNemar utilise chaque patient une seule fois, grâce au tableau avant × après.
 :::
 
 ::: {.callout-tip}
@@ -626,13 +626,13 @@ Une erreur fréquente consiste à croiser « aide oui/non » avec « avant l'
 
 ## Régression de Cox stratifiée {#stratified-cox}
 
-**La question :** parmi des patients appariés selon l'intervention, l'âge, le sexe, l'IMC et la classe ASA, le risque de révision est-il plus élevé avec l'implant C qu'avec l'implant A ?
+**La question :** parmi des patients [appariés](../glossary.qmd#matched){.term} selon l'intervention, l'âge, le sexe, l'IMC et la classe ASA, le [risque](../glossary.qmd#risk){.term} de révision est-il plus élevé avec l'implant C qu'avec l'implant A ?
 
 ### Quand l'utiliser
 
-- Le critère est le **délai jusqu'à un événement**, et les patients forment des **paires appariées** (ou des ensembles), ou bien les deux « patients » sont les deux articulations d'une même personne.
-- Un modèle de Cox **stratifié** par paire laisse chaque paire avoir son propre hazard (risque instantané) de base, et compare les implants seulement **au sein** des paires. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*.
-- Seules les paires où un patient a été révisé alors que l'autre était encore suivi apportent une information au modèle ; avec peu d'événements, attendez-vous à un IC large.
+- Le [critère](../glossary.qmd#outcome){.term} est le **[délai jusqu'à un événement](../glossary.qmd#time-to-event){.term}**, et les patients forment des **paires appariées** (ou des ensembles), ou bien les deux « patients » sont les deux articulations d'une même personne.
+- Un [modèle de Cox](../glossary.qmd#cox-regression){.term} **[stratifié](../glossary.qmd#stratification){.term}** par paire laisse chaque paire avoir son propre hazard (risque instantané) de base, et compare les implants seulement **au sein** des paires. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*.
+- Seules les paires où un patient a été révisé alors que l'autre était encore [suivi](../glossary.qmd#follow-up){.term} apportent une information au [modèle](../glossary.qmd#model){.term} ; avec peu d'[événements](../glossary.qmd#event){.term}, attendez-vous à un [IC](../glossary.qmd#confidence-interval){.term} large.
 - La [page 14](../survival/14-cox-regression.qmd) traite la régression de Cox en détail.
 
 ### Ce que fait vraiment le test
@@ -757,12 +757,12 @@ check_agree(list(hr = pair_hr[1, "exp(coef)"], hr_low = pair_hr[1, "lower .95"],
 - **n = 104, number of events = 22 :** 52 paires, 22 révisions.
 - **exp(coef) = 3.5 :** le hazard ratio, implant C contre implant A, au sein des paires. Comme chaque paire contient un patient avec chaque implant, c'est simplement le rapport des deux effectifs ci-dessus : 14 / 4 = 3.5.
 - **lower .95 = 1.15, upper .95 = 10.63 :** son IC à 95 %. Large, parce qu'il ne repose que sur 18 révisions.
-- **Pr(>|z|) = 0.027 :** la valeur p pour l'implant. Python l'appelle `p`. C'est le test de Wald : z = 2.21, et 2.21² = 4.88 est la ligne « Wald test » au bas de la sortie de R, où R arrondit la même valeur p à 0.03.
-- R affiche aussi un test du rapport de vraisemblance, un test de Wald et un test du score pour le modèle entier ; avec un seul prédicteur, ils testent tous la même chose. Les tests du rapport de vraisemblance et du score posent la même question avec des approximations légèrement différentes (p = 0.02 pour les deux ici). **coef = 1.25** est le logarithme du hazard ratio, et **exp(-coef) = 0.29** est le hazard ratio dans l'autre sens, implant A contre implant C.
+- **Pr(>|z|) = 0.027 :** la [valeur p](../glossary.qmd#p-value){.term} pour l'implant. Python l'appelle `p`. C'est le [test de Wald](../glossary.qmd#wald-test){.term} : [z](../glossary.qmd#z-statistic){.term} = 2.21, et 2.21² = 4.88 est la ligne « Wald test » au bas de la sortie de R, où R arrondit la même valeur p à 0.03.
+- R affiche aussi un [test du rapport de vraisemblance](../glossary.qmd#likelihood-ratio-test){.term}, un test de Wald et un [test du score](../glossary.qmd#score-test){.term} pour le modèle entier ; avec un seul [prédicteur](../glossary.qmd#predictor){.term}, ils testent tous la même chose. Les tests du rapport de vraisemblance et du score posent la même question avec des approximations légèrement différentes (p = 0.02 pour les deux ici). **coef = 1.25** est le [logarithme](../glossary.qmd#logarithm){.term} du hazard ratio, et **exp(-coef) = 0.29** est le hazard ratio dans l'autre sens, implant A contre implant C.
 
 ### Taille d'effet et IC à 95 %
 
-Le **hazard ratio** est la taille d'effet : au sein de paires appariées, le hazard de révision était 3.5 fois plus élevé avec l'implant C (IC à 95 % de 1.15 à 10.63).
+Le **hazard ratio** est la [taille d'effet](../glossary.qmd#effect-size){.term} : au sein de paires appariées, le [hazard](../glossary.qmd#hazard){.term} de révision était 3.5 fois plus élevé avec l'implant C (IC à 95 % de 1.15 à 10.63).
 
 ### Rédiger les résultats
 
@@ -777,7 +777,7 @@ Un modèle de Cox ordinaire sur les mêmes 104 patients (sans `strata()`) les tr
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : strates et convergence
-R met `strata(set_id)` dans la formule du modèle ; lifelines prend `strata=["set_id"]` comme argument séparé. Avec si peu d'événements et autant de strates, la règle de convergence par défaut de lifelines s'arrête un peu trop tôt (un hazard ratio de 3.4997 au lieu de 3.5), donc nous la resserrons avec `fit_options={"precision": 1e-9}`. (Sans `fit_options`, l'ajustement affiche 3.4997.)
+R met `strata(set_id)` dans la formule du modèle ; lifelines prend `strata=["set_id"]` comme argument séparé. Avec si peu d'événements et autant de strates, la règle de [convergence](../glossary.qmd#convergence){.term} par défaut de lifelines s'arrête un peu trop tôt (un hazard ratio de 3.4997 au lieu de 3.5), donc nous la resserrons avec `fit_options={"precision": 1e-9}`. (Sans `fit_options`, l'ajustement affiche 3.4997.)
 :::
 
 ```{r}
@@ -874,7 +874,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Les mêmes hanches ont aussi eu leur torsion fémorale mesurée au scanner et sur l'incidence de Budin modifiée (`torsion_ct_deg`, `torsion_budin_deg`). L'incidence de Budin mesure-t-elle la torsion de façon systématiquement différente du scanner ? Indiquez la différence de moyennes avec son IC à 95 % et d~z~.
+**1.** Les mêmes hanches ont aussi eu leur torsion fémorale mesurée au scanner et sur l'incidence de Budin modifiée (`torsion_ct_deg`, `torsion_budin_deg`). L'incidence de Budin mesure-t-elle la torsion de façon systématiquement différente du scanner ? Indiquez la [différence de moyennes](../glossary.qmd#mean-difference){.term} avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 % et d~z~.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -907,14 +907,14 @@ print(torsion_diff.groupby(ct_torsion, observed=True).agg(["count", "mean"]))   
 
 > **Results:** In 80 hips, the mean femoral torsion was 14.5° (SD 8.9) on CT and 13.3° (SD 7.6) on the Budin view (mean difference, Budin minus CT, −1.2°, 95% CI −2.2 to −0.2; d~z~ = −0.26, 95% CI −0.48 to −0.04; p = 0.023).
 
-Une différence de moyennes d'environ 1° semble rassurante, mais elle cache la façon dont les deux méthodes divergent : l'incidence de Budin donne des valeurs élevées dans les hanches à faible torsion et basses dans celles à forte torsion, et les deux erreurs s'annulent dans la moyenne. Un test t pour échantillons appariés ne pose de question que sur la différence moyenne ; la [page 17](../beyond/17-agreement.qmd#bland-altman) montre comment juger la concordance. Le dernier tableau le montre : l'incidence de Budin donne 1.4° de trop dans les 11 hanches avec moins de 5° de torsion au CT, et 7.0° de moins dans les 8 hanches avec plus de 25°.
+Une différence de moyennes d'environ 1° semble rassurante, mais elle cache la façon dont les deux méthodes divergent : l'incidence de Budin donne des valeurs élevées dans les hanches à faible torsion et basses dans celles à forte torsion, et les deux erreurs s'annulent dans la [moyenne](../glossary.qmd#mean){.term}. Un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} ne pose de question que sur la différence moyenne ; la [page 17](../beyond/17-agreement.qmd#bland-altman) montre comment juger la [concordance](../glossary.qmd#agreement){.term}. Le dernier tableau le montre : l'incidence de Budin donne 1.4° de trop dans les 11 hanches avec moins de 5° de torsion au CT, et 7.0° de moins dans les 8 hanches avec plus de 25°.
 :::
 
 **2.** Deux évaluateurs ont mesuré l'angle hanche-genou-cheville (HKA) sur les 60 mêmes radiographies de genou (`radiographic_reliability.csv`, séance 1). L'évaluateur 2 donne-t-il systématiquement des valeurs plus élevées que l'évaluateur 1 ? Choisissez le test et exécutez-le.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Deux mesures de la même radiographie sont **appariées**, et les angles HKA sont des mesures à peu près normales : le **test t pour échantillons appariés**.
+Deux mesures de la même radiographie sont **[appariées](../glossary.qmd#paired){.term}**, et les angles HKA sont des mesures [à peu près normales](../glossary.qmd#normal-distribution){.term} : le **test t pour échantillons appariés**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -947,7 +947,7 @@ Une différence systématique aussi petite n'a peut-être pas d'importance clini
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Le KOOS JR a un plafond à 1 an : on utilise donc le **test des rangs signés de Wilcoxon**.
+Le KOOS JR a un [plafond](../glossary.qmd#ceiling-effect){.term} à 1 an : on utilise donc le **[test des rangs signés de Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -979,5 +979,5 @@ print(later[["3mo", "1yr"]].quantile([0.25, 0.50, 0.75]))
 
 > **Results:** Between 3 months and 1 year, the change in KOOS JR was positive in 176 of 225 patients and negative in 46. The median was 73.1 (IQR 65.4 to 81.5) at 3 months and 85.2 (IQR 73.6 to 93.8) at 1 year (Hodges-Lehmann estimate of the change 9.9 points, 95% CI 8.2 to 11.6; rank-biserial r = 0.74; p < 0.001).
 
-L'estimateur de Hodges-Lehmann et son IC viennent de R : la ligne `(pseudo)median` et l'IC au-dessus. La solution Python ne les calcule pas ; pour les obtenir, appliquez `hodges_lehmann()` et le bootstrap de la section ci-dessus aux changements.
+L'[estimateur de Hodges-Lehmann](../glossary.qmd#hodges-lehmann){.term} et son IC viennent de R : la ligne `(pseudo)median` et l'IC au-dessus. La solution Python ne les calcule pas ; pour les obtenir, appliquez `hodges_lehmann()` et le [bootstrap](../glossary.qmd#bootstrap){.term} de la section ci-dessus aux changements.
 :::

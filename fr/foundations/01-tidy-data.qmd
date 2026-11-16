@@ -22,16 +22,16 @@ Dans un projet de recherche, la plus grande partie du temps sert à mettre les d
 
 Des données sont **ordonnées** (*tidy*) quand :
 
-1. chaque **variable** est une colonne,
+1. chaque **[variable](../glossary.qmd#variable){.term}** est une colonne,
 2. chaque **observation** est une ligne, et
-3. chaque **type d'unité d'observation** a son propre tableau.
+3. chaque **type d'[unité d'observation](../glossary.qmd#unit-of-analysis){.term}** a son propre tableau.
 
 ::: {.callout-note}
 ## 💡 En clair
 Un fait par cellule, une observation par ligne, et jamais deux sortes de lignes mélangées dans le même tableau. Une feuille facile à lire pour une personne est souvent difficile à analyser pour un ordinateur, et inversement. Les logiciels de statistiques veulent la seconde sorte.
 :::
 
-Voici une feuille de PROM (mesure des résultats rapportés par le patient) typique, mais non ordonnée : une ligne par patient, avec une colonne par visite. La *visite* est une variable, mais elle se cache dans les noms de colonnes.
+Voici une feuille de [PROM](../glossary.qmd#prom){.term} (mesure des résultats rapportés par le patient) typique, mais non ordonnée : une ligne par patient, avec une colonne par visite. La *visite* est une variable, mais elle se cache dans les noms de colonnes.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -83,7 +83,7 @@ chk = {"rows": float(len(long)), "mean": float(long["prom_score"].mean())}
 check_agree(list(rows = nrow(long), mean = mean(long$prom_score, na.rm = TRUE)), reticulate::py$chk)
 ```
 
-Dans la version longue, « le score à 6 semaines manque-t-il ? » se résume à une ligne avec une case vide, et « le score moyen à chaque visite » tient en une ligne de code. Dans la version large, chaque nouvelle visite demande une nouvelle colonne et du code à réécrire.
+Dans la [version longue](../glossary.qmd#long-format){.term}, « le score à 6 semaines manque-t-il ? » se résume à une ligne avec une case vide, et « le score moyen à chaque visite » tient en une ligne de code. Dans la version large, chaque nouvelle visite demande une nouvelle colonne et du code à réécrire.
 
 Voici les schémas non ordonnés que nous voyons le plus souvent dans les feuilles de saisie, avec la correction pour chacun (dans le code, la prothèse totale de hanche s'écrit THA et la prothèse totale de genou TKA, comme PTH et PTG en français) :
 
@@ -99,7 +99,7 @@ Voici les schémas non ordonnés que nous voyons le plus souvent dans les feuill
 
 ## Collecter des données ordonnées {#collecting}
 
-Le nettoyage le moins cher est celui que vous n'avez jamais à faire. Avant que quiconque ne dépouille un seul dossier, écrivez le **dictionnaire de données** : le nom, la signification, le type, les unités et les valeurs autorisées de chaque variable. Construisez ensuite la feuille de collecte à partir du dictionnaire.
+Le nettoyage le moins cher est celui que vous n'avez jamais à faire. Avant que quiconque ne dépouille un seul dossier, écrivez le **dictionnaire de données** : le nom, la signification, le type, les unités et les valeurs autorisées de chaque [variable](../glossary.qmd#variable){.term}. Construisez ensuite la feuille de collecte à partir du dictionnaire.
 
 Ce site propose un modèle que vous pouvez copier : [`templates/data-collection-template.xlsx`](https://github.com/hfr-ortho/stats-formation/raw/main/templates/data-collection-template.xlsx). Il contient quatre feuilles :
 
@@ -156,7 +156,7 @@ Les vraies feuilles de saisie suivent rarement ces règles. Le fichier `data/mes
 - deux onglets, **Site A** et **Site B**, dont les colonnes ne correspondent pas (Site B a une colonne `MUA` en plus, au milieu)
 - deux lignes de bandeau et une ligne d'en-têtes de groupe fusionnés au-dessus du vrai en-tête
 - une ligne **TOTAL** au bas de chaque onglet
-- deux colonnes `Date` et deux colonnes `Score` (PROM préopératoires et à 1 an)
+- deux colonnes `Date` et deux colonnes `Score` ([PROM](../glossary.qmd#prom){.term} préopératoires et à 1 an)
 - des formats de date mélangés, des unités dans des cellules numériques, des classes ASA en chiffres romains, cinq façons d'écrire « manquant »
 - des révisions marquées uniquement par un fond rouge sur la cellule de l'identifiant d'étude (Study ID)
 - des lignes en double
@@ -165,7 +165,7 @@ Nous le corrigerons une étape à la fois. Chaque étape est assez petite pour �
 
 ### Étape 1 : lire les deux onglets comme du texte {#step-1-read-both-tabs-as-text}
 
-Lisez d'abord tout comme du texte. Si vous laissez le logiciel deviner les types, il transforme `32.1 kg/m2` en valeur manquante sans prévenir, et vous ne le saurez jamais. Nous convertirons les types délibérément à l'étape 5.
+Lisez d'abord tout comme du texte. Si vous laissez le logiciel deviner les types, il transforme `32.1 kg/m2` en [valeur manquante](../glossary.qmd#missing-data){.term} sans prévenir, et vous ne le saurez jamais. Nous convertirons les types délibérément à l'étape 5.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -765,7 +765,7 @@ R et Python tirent des lignes différentes, parce que chacun a son propre géné
 
 ### À quoi ressemble un contrôle qui échoue {#what-a-failing-check-looks-like}
 
-Supposons que nous ayons lu par erreur les dates d'opération avec le mois d'abord (style américain, comme le font beaucoup d'exemples en ligne). Rien ne plante. Deux contrôles le détectent : un décompte des valeurs manquantes (contrôle 2, appliqué aux dates) et un nouveau contrôle de logique, qui vérifie que chaque PROM préopératoire tombe dans le mois qui précède l'opération.
+Supposons que nous ayons lu par erreur les dates d'opération avec le mois d'abord (style américain, comme le font beaucoup d'exemples en ligne). Rien ne plante. Deux contrôles le détectent : un décompte des valeurs manquantes (contrôle 2, appliqué aux dates) et un nouveau contrôle de logique, qui vérifie que chaque [PROM](../glossary.qmd#prom){.term} préopératoire tombe dans le mois qui précède l'opération.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -902,14 +902,14 @@ print(asa.groupby(["raw", "clean"], dropna=False).size())
 `2`, `II` et `ASA 2` deviennent tous 2 (43 + 14 + 4 = 61 cas). La dernière ligne correspond aux 3 cas sans classe ASA : l'étape 3 avait déjà transformé leurs codes de valeur manquante en cellules vides, et ils restent manquants. Personne dans cette feuille n'a la classe ASA 4.
 :::
 
-**2.** La feuille d'un collègue a une ligne par patient et les colonnes `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Est-elle ordonnée ? Sinon, que devrait être une ligne ?
+**2.** La feuille d'un collègue a une ligne par patient et les colonnes `koos_left_preop`, `koos_left_1yr`, `koos_right_preop`, `koos_right_1yr`. Est-elle [ordonnée](../glossary.qmd#tidy-data){.term} ? Sinon, que devrait être une ligne ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
 Pas ordonnée : le *côté* et la *visite* se cachent dans les noms de colonnes. Une ligne devrait être un genou à une visite, avec les colonnes `patient_id`, `side`, `visit`, `koos`. Remodelez-la avec `pivot_longer()` (R) ou `melt()` (Python), en séparant chaque nom de colonne en côté et visite, comme nous l'avons fait pour l'export du questionnaire.
 :::
 
-**3.** Combien de cas ont un PROM à 1 an enregistré mais aucun PROM préopératoire ? Pourquoi est-ce important pour une analyse de l'amélioration ?
+**3.** Combien de cas ont un [PROM](../glossary.qmd#prom){.term} à 1 an enregistré mais aucun PROM préopératoire ? Pourquoi est-ce important pour une analyse de l'amélioration ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -928,5 +928,5 @@ print(((tidy["prom_1yr"].notna()) & (tidy["prom_preop"].isna())).sum())
 ```
 :::
 
-Ces patients n'ont pas de valeur initiale (baseline), donc leur amélioration ne peut pas être calculée. Une analyse du changement les écarte en silence. Indiquez combien ils sont, pour que les lecteurs le sachent.
+Ces patients n'ont pas de [valeur initiale](../glossary.qmd#baseline){.term} (baseline), donc leur amélioration ne peut pas être calculée. Une analyse du changement les écarte en silence. Indiquez combien ils sont, pour que les lecteurs le sachent.
 :::

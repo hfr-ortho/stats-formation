@@ -16,20 +16,20 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-The [decision table](../choose-a-test.qmd) asks two questions: what's your **goal** (the row), and what **type of data** do you have (the column). This page is about the second question, especially the hardest part of it: is a measurement "Gaussian" (normally distributed) enough for the left-hand column?
+The [decision table](../choose-a-test.qmd) asks two questions: what's your **goal** (the row), and what **type of data** do you have (the column). This page is about the second question, especially the hardest part of it: is a measurement "[Gaussian](../glossary.qmd#normal-distribution){.term}" (normally distributed) enough for the left-hand column?
 
 ## Why the shape of your data matters {#why}
 
-The tests in the first column (t tests, ANOVA, Pearson correlation) compare **means**, and they assume the data within each group follow a roughly bell-shaped, normal distribution. The tests in the second column (Mann-Whitney, Wilcoxon, Kruskal-Wallis, Spearman) work on **ranks**. They don't assume a normal distribution.
+The tests in the first column ([t tests](../glossary.qmd#t-test){.term}, [ANOVA](../glossary.qmd#anova){.term}, [Pearson correlation](../glossary.qmd#pearson-correlation){.term}) compare **[means](../glossary.qmd#mean){.term}**, and they assume the data within each group follow a roughly bell-shaped, [normal distribution](../glossary.qmd#normal-distribution){.term}. The tests in the second column ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) work on **[ranks](../glossary.qmd#rank){.term}**. They don't assume a normal distribution.
 
 ::: {.callout-note}
 ## 💡 In plain language
-A mean is a fair summary of a bell-shaped pile of numbers. It's a poor summary of a lopsided one: a few very long hospital stays drag the mean far away from what's typical. Tests built on means inherit that problem. Rank-based tests only ask "which values are bigger?", so a few extreme values can't dominate.
+A mean is a fair summary of a bell-shaped pile of numbers. It's a poor summary of a lopsided one: a few very long hospital stays drag the mean far away from what's typical. Tests built on means inherit that problem. [Rank-based tests](../glossary.qmd#nonparametric){.term} only ask "which values are bigger?", so a few extreme values can't dominate.
 :::
 
 ## Look first: histograms and QQ plots {#look}
 
-Always plot before you test. Here are three variables from the practice data: age, length of stay, and the 1-year PROM score.
+Always plot before you test. Here are three [variables](../glossary.qmd#variable){.term} from the practice data: age, length of stay, and the 1-year [PROM](../glossary.qmd#prom){.term} score.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -81,11 +81,11 @@ plt.show()
 ```
 :::
 
-- **Age** is a fairly symmetric bell.
+- **Age** is a fairly [symmetric](../glossary.qmd#symmetric){.term} bell.
 - **Length of stay** piles up at 0 and 1 days and has a long tail to the right: **right-skewed**.
-- **1-year PROM** piles up against the top of the scale (100), with a tail to the left: a **ceiling effect**.
+- **1-year PROM** piles up against the top of the scale (100), with a tail to the left: a **[ceiling effect](../glossary.qmd#ceiling-effect){.term}**.
 
-A **QQ plot** makes the comparison with a normal distribution easier to see. If the data are normal, the points fall on the straight line.
+A **QQ plot** makes the comparison with a [normal distribution](../glossary.qmd#normal-distribution){.term} easier to see. If the data are normal, the points fall on the straight line.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -113,7 +113,7 @@ plt.show()
 How to read them:
 
 - Points **on the line**: close to normal (age).
-- Points **curving up at the right end**: right skew (length of stay). The flat steps are the many ties at 0, 1 and 2 days.
+- Points **curving up at the right end**: right skew (length of stay). The flat steps are the many [ties](../glossary.qmd#ties){.term} at 0, 1 and 2 days.
 - Points **flattening at the top**: a ceiling (the PROM). Many patients share the maximum score.
 
 A number for lopsidedness is the **[skewness](../glossary.qmd#skewed){.term}**: 0 for a symmetric shape, positive for a tail to the right, negative for a tail to the left.
@@ -155,9 +155,9 @@ check_agree(list(age = skewness(cohort$age), los = skewness(cohort$los_days),
                  prom_1yr = skewness(one_year$prom_score)), reticulate::py$chk)
 ```
 
-Age: −0.05, practically symmetric. Length of stay: 1.61, a long tail to the right. 1-year PROM score: −0.73, a tail to the left. The numbers say what the histograms showed.
+Age: −0.05, practically symmetric. Length of stay: 1.61, a long tail to the right. 1-year PROM score: −0.73, a tail to the left. The numbers say what the [histograms](../glossary.qmd#histogram){.term} showed.
 
-As a rule of thumb, a skewness between −0.5 and 0.5 means a shape close to symmetric, a skewness beyond −1 or 1 means a strongly skewed one, and anything in between is moderately skewed. By that guide, age is close to symmetric, the 1-year PROM score is moderately skewed and length of stay is strongly skewed. The cut-offs are a widely used convention for describing a shape, not a test. Read them next to the plots, and don't lean on the skewness of a small sample: a few values can move it across a cut-off.
+As a rule of thumb, a skewness between −0.5 and 0.5 means a shape close to symmetric, a skewness beyond −1 or 1 means a strongly skewed one, and anything in between is moderately skewed. By that guide, age is close to symmetric, the 1-year PROM score is moderately skewed and length of stay is strongly skewed. The cut-offs are a widely used convention for describing a shape, not a test. Read them next to the plots, and don't lean on the skewness of a small [sample](../glossary.qmd#sample){.term}: a few values can move it across a cut-off.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: skewness functions
@@ -166,7 +166,7 @@ Packages define skewness in slightly different ways (`scipy.stats.skew()` and th
 
 ## Formal tests: Shapiro-Wilk, and why not to trust it alone {#shapiro}
 
-The **Shapiro-Wilk test** asks: "Could these numbers plausibly come from a normal distribution?" A small p-value means "probably not". It's tempting to let it decide: p < 0.05 → rank test, otherwise → t test. That rule fails in both directions.
+The **Shapiro-Wilk test** asks: "Could these numbers plausibly come from a [normal distribution](../glossary.qmd#normal-distribution){.term}?" A small p-value means "probably not". It's tempting to let it decide: p < 0.05 → [rank test](../glossary.qmd#nonparametric){.term}, otherwise → [t test](../glossary.qmd#t-test){.term}. That rule fails in both directions.
 
 **It's too sensitive with large samples.** Our 600 ages look like a textbook bell curve, yet:
 
@@ -184,9 +184,9 @@ print(stats.shapiro(cohort["age"]))
 ```
 :::
 
-p = 0.001: "not normal". With 600 values the test can detect departures far too small to matter. A t test on these ages would be perfectly fine. The other number, W (`statistic` in Python), is the test statistic: 1 would be a perfect fit to the normal curve. You don't report it; read the [p-value](../glossary.qmd#p-value){.term} (`p-value` in R, `pvalue` in Python).
+p = 0.001: "not normal". With 600 values the test can detect departures far too small to matter. A t test on these ages would be perfectly fine. The other number, W (`statistic` in Python), is the [test statistic](../glossary.qmd#test-statistic){.term}: 1 would be a perfect fit to the normal curve. You don't report it; read the [p-value](../glossary.qmd#p-value){.term} (`p-value` in R, `pvalue` in Python).
 
-**It's too weak with small samples.** Take just the first 10 patients' 1-year PROM scores, from a variable we *know* is skewed with a ceiling:
+**It's too weak with small samples.** Take just the first 10 patients' 1-year PROM scores, from a [variable](../glossary.qmd#variable){.term} we *know* is [skewed](../glossary.qmd#skewed){.term} with a ceiling:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -226,14 +226,14 @@ p = 0.173: "no evidence against normality". Ten values simply can't reveal the s
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: don't let one p-value choose your test
-Decide from the plots, from what you know about the measurement (a bounded score, a count of days), and from the sample size. Use Shapiro-Wilk as supporting evidence, not as the judge. Then say how you decided in your Methods.
+Decide from the plots, from what you know about the measurement (a [bounded](../glossary.qmd#bounded-scale){.term} score, a count of days), and from the [sample size](../glossary.qmd#sample-size){.term}. Use Shapiro-Wilk as supporting evidence, not as the judge. Then say how you decided in your Methods.
 :::
 
 ## Check within groups, not the pooled data {#within-groups}
 
-The normality assumption is about the data **within each group** (or, for regression models, the **residuals**: what's left after the model's prediction). Pooling groups with different centers can make perfectly normal data look non-normal.
+The [normality](../glossary.qmd#normal-distribution){.term} [assumption](../glossary.qmd#assumption){.term} is about the data **within each group** (or, for [regression models](../glossary.qmd#model){.term}, the **[residuals](../glossary.qmd#residual){.term}**: what's left after the model's prediction). Pooling groups with different centers can make perfectly normal data look non-normal.
 
-Here's an extreme, made-up example: two groups of 200 values, each exactly normal, with means of 40 and 60 and an SD of 5, so 4 standard deviations apart.
+Here's an extreme, made-up example: two groups of 200 values, each exactly normal, with [means](../glossary.qmd#mean){.term} of 40 and 60 and an [SD](../glossary.qmd#standard-deviation){.term} of 5, so 4 standard deviations apart.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -278,11 +278,11 @@ check_agree(list(one = shapiro.test(group_a)$p.value,
                  pooled = shapiro.test(c(group_a, group_b))$p.value), reticulate::py$chk)
 ```
 
-Each group alone passes easily (p ≈ 1). Pooled, p < 0.001: the histogram of the pooled values has two humps, one around 40 and one around 60, which is not what a normal distribution looks like.
+Each group alone passes easily (p ≈ 1). Pooled, p < 0.001: the [histogram](../glossary.qmd#histogram){.term} of the pooled values has two humps, one around 40 and one around 60, which is not what a normal distribution looks like.
 
-The pooled p-value prints as `9.267769e-11`. That is [scientific notation](../glossary.qmd#scientific-notation){.term}: 9.27 × 10⁻¹¹, or 0.0000000000927. For one group alone, R rounds the p-value to 1 and Python prints 0.999999999999995.
+The pooled [p-value](../glossary.qmd#p-value){.term} prints as `9.267769e-11`. That is [scientific notation](../glossary.qmd#scientific-notation){.term}: 9.27 × 10⁻¹¹, or 0.0000000000927. For one group alone, R rounds the p-value to 1 and Python prints 0.999999999999995.
 
-In real data the groups are usually much closer together. BMI differs by only about a third of a standard deviation between THA and TKA patients (the SMD of 0.33 in [Table 1](02-demographics.qmd#smd)), so pooling barely matters. What you see instead is Shapiro-Wilk's verdict bouncing around 0.05 depending on how you slice the same data:
+In real data the groups are usually much closer together. BMI differs by only about a third of a standard deviation between THA and TKA patients (the [SMD](../glossary.qmd#smd){.term} of 0.33 in [Table 1](02-demographics.qmd#smd)), so pooling barely matters. What you see instead is [Shapiro-Wilk](../glossary.qmd#shapiro-wilk-test){.term}'s verdict bouncing around 0.05 depending on how you slice the same data:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -333,27 +333,27 @@ check_agree(list(pooled = shapiro.test(cohort$bmi)$p.value,
                  residuals = shapiro.test(residuals(fit))$p.value), reticulate::py$chk)
 ```
 
-Pooled p = 0.044, THA alone 0.051, TKA alone 0.124, residuals 0.306: four slices of the same data, on both sides of 0.05, while the QQ plot is a near-perfect straight line. That's the lesson of the previous section again: decide from the plots and what you know about the measurement, not from one p-value.
+Pooled p = 0.044, THA alone 0.051, TKA alone 0.124, residuals 0.306: four slices of the same data, on both sides of 0.05, while the [QQ plot](../glossary.qmd#qq-plot){.term} is a near-perfect straight line. That's the lesson of the previous section again: decide from the plots and what you know about the measurement, not from one p-value.
 
 ## How much does normality matter? {#robustness}
 
-Less than you might think, once groups are reasonably large. Tests on means rely on the **average** being roughly normal, not on every individual value. Thanks to the *central limit theorem*, averages of about 30 or more values are close to normal even when the values themselves are skewed.
+Less than you might think, once groups are reasonably large. Tests on [means](../glossary.qmd#mean){.term} rely on the **average** being [roughly normal](../glossary.qmd#normal-distribution){.term}, not on every individual value. Thanks to the *central limit theorem*, averages of about 30 or more values are close to normal even when the values themselves are [skewed](../glossary.qmd#skewed){.term}.
 
 A practical guide:
 
-- **About 30 or more per group, moderate skew, no wild outliers:** t tests and ANOVA are fine. With very skewed data, the rank test is still often the better summary.
+- **About 30 or more per group, moderate skew, no wild outliers:** [t tests](../glossary.qmd#t-test){.term} and [ANOVA](../glossary.qmd#anova){.term} are fine. With very skewed data, the [rank test](../glossary.qmd#nonparametric){.term} is still often the better summary.
 - **Strong skew or extreme outliers:** use the rank column.
-- **Small groups (under about 15 per group):** plots can't show the shape, and no test has much power. Choose from what you know about the measurement: the rank column for skewed or ordinal measures, the Gaussian column for measurements known to be roughly normal. Expect wide confidence intervals either way.
-- **Ordinal scales, or a ceiling or floor:** use the rank column whatever the sample size (below).
+- **Small groups (under about 15 per group):** plots can't show the shape, and no test has much [power](../glossary.qmd#power){.term}. Choose from what you know about the measurement: the rank column for skewed or [ordinal](../glossary.qmd#ordinal){.term} measures, the Gaussian column for measurements known to be roughly normal. Expect wide [confidence intervals](../glossary.qmd#confidence-interval){.term} either way.
+- **Ordinal scales, or a ceiling or floor:** use the rank column whatever the [sample size](../glossary.qmd#sample-size){.term} (below).
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the central limit theorem
-If you take many random samples of size *n* from almost any distribution and compute each sample's mean, those means form a distribution that gets closer to normal as *n* grows. Its spread shrinks in proportion to 1/√n. t tests are built on the distribution of the mean, which is why they tolerate non-normal raw data when *n* is large. "About 30" is a rule of thumb, not a law: the more skewed the data, the larger *n* needs to be.
+If you take many random [samples](../glossary.qmd#sample){.term} of size *n* from almost any [distribution](../glossary.qmd#distribution){.term} and compute each sample's mean, those means form a distribution that gets closer to normal as *n* grows. Its [spread](../glossary.qmd#spread){.term} shrinks in proportion to 1/√n. t tests are built on the distribution of the mean, which is why they tolerate non-normal raw data when *n* is large. "About 30" is a rule of thumb, not a law: the more skewed the data, the larger *n* needs to be.
 :::
 
 ## Skew, ceilings and transformations {#transform}
 
-A common fix for right skew is to analyze the **logarithm** of the values. For length of stay we have to use log(days + 1), because log(0) doesn't exist.
+A common fix for [right skew](../glossary.qmd#skewed){.term} is to analyze the **[logarithm](../glossary.qmd#logarithm){.term}** of the values. For length of stay we have to use log(days + 1), because log(0) doesn't exist.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -393,9 +393,9 @@ check_agree(list(skew_log = skewness(log1p(cohort$los_days)),
                  ceiling_1yr = mean(one_year$prom_score == 100)), reticulate::py$chk)
 ```
 
-The log helps (skewness falls from about 1.6 to 0.6), but nearly half the stays are 0 days (`share_zero`: 0.485, or 48.5%) and no transformation can spread out a pile of identical values. Results on a log scale are also harder to explain ("a 0.3 difference in log(days + 1)"). Here the rank-based tests are simpler and more honest.
+The log helps (skewness falls from about 1.6 to 0.6), but nearly half the stays are 0 days (`share_zero`: 0.485, or 48.5%) and no transformation can spread out a pile of identical values. Results on a log scale are also harder to explain ("a 0.3 difference in log(days + 1)"). Here the [rank-based tests](../glossary.qmd#nonparametric){.term} are simpler and more honest.
 
-The same goes for the **ceiling**: 17% of the patients with a 1-year score reach the maximum (`ceiling_1yr`: 0.17), and no transformation can tell those patients apart. Compare groups with rank-based tests, or report the proportion reaching the ceiling (or a clinically important improvement) as a yes/no outcome.
+The same goes for the **[ceiling](../glossary.qmd#ceiling-effect){.term}**: 17% of the patients with a 1-year score reach the maximum (`ceiling_1yr`: 0.17), and no transformation can tell those patients apart. Compare groups with rank-based tests, or report the [proportion](../glossary.qmd#proportion){.term} reaching the ceiling (or a clinically important improvement) as a [yes/no outcome](../glossary.qmd#binary){.term}.
 
 ## Ordinal data always go in the rank column {#ordinal}
 
@@ -429,19 +429,19 @@ check_agree(list(very_satisfied = sum(cohort$satisfaction_1yr == 5, na.rm = TRUE
 
 250 patients chose 5 ("very satisfied") and 15 chose 1. The last row (`NA` in R, `NaN` in Python) is the 98 patients with no answer; say how many are missing when you report the scale. Python prints the scores as `1.0` to `5.0` because the column has blanks.
 
-Report ordinal data as counts and percentages, or as a median (IQR), and compare groups with rank-based tests. Never compute a t test on Likert scores, however many patients you have.
+Report ordinal data as counts and percentages, or as a [median](../glossary.qmd#median){.term} ([IQR](../glossary.qmd#iqr){.term}), and compare groups with [rank-based tests](../glossary.qmd#nonparametric){.term}. Never compute a [t test](../glossary.qmd#t-test){.term} on [Likert](../glossary.qmd#likert-scale){.term} scores, however many patients you have.
 
 ## Paired or unpaired? Matched or unmatched? {#paired}
 
-The decision table's rows also ask whether your groups are **independent** or **paired/matched**.
+The decision table's rows also ask whether your groups are **[independent](../glossary.qmd#independence){.term}** or **paired/matched**.
 
 - **Unpaired (independent):** different patients in each group. THA vs TKA; Site A vs Site B; men vs women.
-- **Paired:** the same patients measured twice, or natural pairs. Pre-op vs 1-year PROM in the same patients; left vs right knee in bilateral patients; two raters measuring the same X-rays.
+- **Paired:** the same patients measured twice, or natural pairs. Pre-op vs 1-year [PROM](../glossary.qmd#prom){.term} in the same patients; left vs right knee in bilateral patients; two raters measuring the same X-rays.
 - **Matched:** each patient in one group has been chosen to resemble a patient in the other group (by age, sex, BMI…). Treat matched sets like pairs.
 
-**Bilateral patients need care.** In our cohort, 80 patients appear twice, once for each side ([page 2](02-demographics.qmd#setup) counts them). Their two procedures share the same person's age, sex and health, so they are not independent. When both fall in the same comparison group, tests that treat every row as a separate patient are a little overconfident (p-values too small, CIs too narrow). Either analyse one procedure per patient (for example, the first), or use methods built for clustered data, such as [mixed models](../beyond/16-mixed-models.qmd#bilateral). Say which you did.
+**Bilateral patients need care.** In our [cohort](../glossary.qmd#cohort){.term}, 80 patients appear twice, once for each side ([page 2](02-demographics.qmd#setup) counts them). Their two procedures share the same person's age, sex and health, so they are not independent. When both fall in the same comparison group, tests that treat every row as a separate patient are a little overconfident ([p-values](../glossary.qmd#p-value){.term} too small, [CIs](../glossary.qmd#confidence-interval){.term} too narrow). Either analyse one procedure per patient (for example, the first), or use methods built for [clustered data](../glossary.qmd#clustered-data){.term}, such as [mixed models](../beyond/16-mixed-models.qmd#bilateral). Say which you did.
 
-Pairing matters because measurements on the same patient are related. A paired analysis uses each patient as their own control, which removes the patient-to-patient variation and usually gives a more precise answer. Analyzing paired data as if unpaired is one of the most common mistakes in the literature.
+Pairing matters because measurements on the same patient are related. A paired analysis uses each patient as their own control, which removes the patient-to-patient variation and usually gives a more [precise](../glossary.qmd#precision){.term} answer. Analyzing paired data as if unpaired is one of the most common mistakes in the literature.
 
 ## From your question to a test {#flowchart}
 
@@ -469,22 +469,22 @@ Then find your row and column in the [decision table](../choose-a-test.qmd). Som
 
 | Question | Row | Column | Test |
 |------|------|------|------|
-| Is the EFAS score at 3 months different with a boot than with a cast? | Two unpaired groups | Gaussian | [Unpaired t test](../catalog/06-two-unpaired-groups.qmd#unpaired-t) |
-| Is pain 6 weeks after the injury different with a boot than with a cast? | Two unpaired groups | Rank (ordinal) | [Mann-Whitney test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) |
-| Did KOOS JR improve from pre-op to 1 year? | Two paired groups | Rank (ceiling) | [Wilcoxon signed-rank test](../catalog/07-two-paired-groups.qmd#wilcoxon-signed-rank) |
+| Is the EFAS score at 3 months different with a boot than with a cast? | Two unpaired groups | [Gaussian](../glossary.qmd#normal-distribution){.term} | [Unpaired t test](../catalog/06-two-unpaired-groups.qmd#unpaired-t) |
+| Is pain 6 weeks after the injury different with a boot than with a cast? | Two unpaired groups | [Rank](../glossary.qmd#rank){.term} ([ordinal](../glossary.qmd#ordinal){.term}) | [Mann-Whitney test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) |
+| Did KOOS JR improve from pre-op to 1 year? | Two [paired](../glossary.qmd#paired){.term} groups | Rank ([ceiling](../glossary.qmd#ceiling-effect){.term}) | [Wilcoxon signed-rank test](../catalog/07-two-paired-groups.qmd#wilcoxon-signed-rank) |
 | Does graft failure within 2 years differ between hamstring and BPTB grafts? | Two unpaired groups | Binomial | [Fisher's exact test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) |
 | Does satisfaction differ between surgeons S1, S2 and S3? | Three or more unmatched groups | Rank (ordinal) | [Kruskal-Wallis test](../catalog/08-three-plus-unmatched.qmd#kruskal-wallis) |
-| Does implant design affect revision-free survival? | Three or more unmatched groups | Survival | [Cox regression](../catalog/08-three-plus-unmatched.qmd#cox) |
+| Does implant design affect [revision-free survival](../glossary.qmd#survival){.term}? | Three or more unmatched groups | Survival | [Cox regression](../catalog/08-three-plus-unmatched.qmd#cox) |
 
 ## p-values, effect sizes and confidence intervals {#effect-sizes}
 
 Every test on this site reports three things. They answer different questions, and a good Results section gives all three.
 
-- The **effect size** answers *how big?* For example, the difference between two means.
+- The **effect size** answers *how big?* For example, the difference between two [means](../glossary.qmd#mean){.term}.
 - The **95% confidence interval (CI)** answers *how sure are we about that size?* It's the range of effect sizes compatible with the data.
 - The **p-value** answers *how surprising would data like these be if there were really no difference at all?* It doesn't measure the size or importance of an effect.
 
-Here's all three for BMI in TKA vs THA, using the unpaired (Welch's) t test from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t):
+Here's all three for BMI in TKA vs THA, using the [unpaired (Welch's) t test](../glossary.qmd#welch-test){.term} from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t):
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -541,7 +541,7 @@ Is a difference of 1.8 kg/m² *clinically* important? The p-value can't tell you
 R's `t.test(bmi ~ procedure)` subtracts in alphabetical order of the groups (THA minus TKA). `scipy`'s `ttest_ind(tka, tha)` subtracts the second argument from the first. Same answer, opposite sign. Always say which group was subtracted from which, as we did above.
 :::
 
-For PROMs, judge differences against the **minimal clinically important difference (MCID)**: the smallest change patients notice as meaningful. Published MCIDs vary with the study and the method used to derive them, so cite the one you use. Be careful how you use it: an MCID is a *within-patient* threshold for one person's change. A difference between two groups' averages that is smaller than the MCID doesn't prove no patient benefited, and a larger one doesn't mean every patient did. Comparing the proportion of patients in each group who reached the MCID is often the clearer analysis.
+For [PROMs](../glossary.qmd#prom){.term}, judge differences against the **minimal clinically important difference (MCID)**: the smallest change patients notice as meaningful. Published MCIDs vary with the study and the method used to derive them, so cite the one you use. Be careful how you use it: an MCID is a *within-patient* threshold for one person's change. A difference between two groups' averages that is smaller than the MCID doesn't prove no patient benefited, and a larger one doesn't mean every patient did. Comparing the [proportion](../glossary.qmd#proportion){.term} of patients in each group who reached the MCID is often the clearer analysis.
 
 ```{r}
 #| include: false
@@ -585,7 +585,7 @@ stopifnot(
 
 ## Exercises {#exercises}
 
-**1.** Draw a histogram and a QQ plot of the **pre-op** PROM score. Is it closer to normal than the 1-year score? Why might that be?
+**1.** Draw a [histogram](../glossary.qmd#histogram){.term} and a [QQ plot](../glossary.qmd#qq-plot){.term} of the **pre-op** [PROM](../glossary.qmd#prom){.term} score. Is it closer to [normal](../glossary.qmd#normal-distribution){.term} than the 1-year score? Why might that be?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -612,21 +612,21 @@ print(skewness(preop["prom_score"]))
 ```
 :::
 
-Much closer to normal: skewness about 0.1 and the QQ points follow the line. Before surgery, scores sit in the middle of the scale, far from the ceiling. After a successful operation many patients hit the maximum, which creates the ceiling.
+Much closer to normal: [skewness](../glossary.qmd#skewed){.term} about 0.1 and the QQ points follow the line. Before surgery, scores sit in the middle of the scale, far from the ceiling. After a successful operation many patients hit the maximum, which creates the [ceiling](../glossary.qmd#ceiling-effect){.term}.
 :::
 
-**2.** A fellow wants to compare operative time between surgeons S1 and S2, about 40 cases each. The histogram is fairly symmetric, with a few long cases. Which column of the decision table would you use, and how would you justify it in the Methods?
+**2.** A fellow wants to compare operative time between surgeons S1 and S2, about 40 cases each. The histogram is fairly [symmetric](../glossary.qmd#symmetric){.term}, with a few long cases. Which column of the decision table would you use, and how would you justify it in the Methods?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The Gaussian column (an unpaired t test, Welch's version) is reasonable. With about 40 cases per group and a roughly symmetric shape, the t test is robust. Check the QQ plot within each surgeon, and check that the few long cases aren't extreme outliers. Methods: "Operative time was approximately normally distributed within each group on visual inspection of histograms and QQ plots, and was compared with Welch's t test." If the long cases were extreme, a Mann-Whitney test would be the safer choice; say so.
+The Gaussian column (an [unpaired t test](../glossary.qmd#t-test){.term}, [Welch's version](../glossary.qmd#welch-test){.term}) is reasonable. With about 40 cases per group and a roughly symmetric shape, the t test is [robust](../glossary.qmd#robust){.term}. Check the QQ plot within each surgeon, and check that the few long cases aren't extreme [outliers](../glossary.qmd#outlier){.term}. Methods: "Operative time was approximately normally distributed within each group on visual inspection of histograms and QQ plots, and was compared with Welch's t test." If the long cases were extreme, a [Mann-Whitney test](../glossary.qmd#mann-whitney-test){.term} would be the safer choice; say so.
 :::
 
-**3.** A study reports: "1-year KOOS JR was 2.1 points higher with the new implant (95% CI −1.5 to 5.7; p = 0.25)." Suppose the MCID for KOOS JR is 14 points. Write one sentence interpreting this result.
+**3.** A study reports: "1-year KOOS JR was 2.1 points higher with the new implant (95% CI −1.5 to 5.7; p = 0.25)." Suppose the [MCID](../glossary.qmd#mcid){.term} for KOOS JR is 14 points. Write one sentence interpreting this result.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
 "The study found no clear difference in 1-year KOOS JR between implants: the estimate (2.1 points) and the whole 95% CI (−1.5 to 5.7) are far smaller than the 14-point MCID, so a large average benefit of the new implant is unlikely."
 
-This is stronger than "not significant": the CI rules out a large average difference. Strictly, the MCID is a within-patient threshold, so the clearest follow-up analysis compares the proportion of patients in each group who improved by at least 14 points.
+This is stronger than "not [significant](../glossary.qmd#statistical-significance){.term}": the [CI](../glossary.qmd#confidence-interval){.term} rules out a large average difference. Strictly, the MCID is a within-patient threshold, so the clearest follow-up analysis compares the [proportion](../glossary.qmd#proportion){.term} of patients in each group who improved by at least 14 points.
 :::

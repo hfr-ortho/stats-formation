@@ -25,7 +25,7 @@ Table 1 *describes* your patients. It doesn't answer your research question. Its
 
 ## Load the data and pick the variables {#setup}
 
-We'll describe the practice cohort: 600 primary hip and knee replacements (THA and TKA). Table 1 usually holds the characteristics measured *before* surgery.
+We'll describe the practice [cohort](../glossary.qmd#cohort){.term}: 600 primary hip and knee replacements (THA and TKA). Table 1 usually holds the characteristics measured *before* surgery.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -86,7 +86,7 @@ check_agree(list(rows = nrow(cohort), one = sum(table(cohort$patient_id) == 1), 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: one row per procedure, not per patient
-The cohort has one row per *procedure*. The count above shows 440 patients with one procedure and 80 with two (both sides): 440 + 80 = 520 patients, and 440 + 2 × 80 = 600 procedures. Say which one your table counts, for example in a footnote: "600 procedures in 520 patients". The two procedures of a bilateral patient are not independent (same person, same age, sex and health), so tests that treat every row as a separate patient are slightly overconfident. [Distributions & choosing a test](03-distributions.qmd#paired) explains the options.
+The cohort has one row per *procedure*. The count above shows 440 patients with one procedure and 80 with two (both sides): 440 + 80 = 520 patients, and 440 + 2 × 80 = 600 procedures. Say which one your table counts, for example in a footnote: "600 procedures in 520 patients". The two procedures of a bilateral patient are not [independent](../glossary.qmd#independence){.term} (same person, same age, sex and health), so tests that treat every row as a separate patient are slightly overconfident. [Distributions & choosing a test](03-distributions.qmd#paired) explains the options.
 :::
 
 ## One group {#one-group}
@@ -135,7 +135,7 @@ check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(coho
             reticulate::py$chk)
 ```
 
-What happens if you don't tell it? Here is each package left to guess, on one variable:
+What happens if you don't tell it? Here is each package left to guess, on one [variable](../glossary.qmd#variable){.term}:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -155,7 +155,7 @@ print(TableOne(pd.read_csv("data/cohort.csv"), columns=["asa"]).tabulate(tablefm
 ## ⚠️ Watch out: tell the software what each variable is
 Software guesses variable types, and the guesses are often wrong:
 
-- **ASA class** looks like a number, so tableone averages it unless you list it under `categorical`: "mean (SD) 2.4 (0.7)" in the Python output above. It's a category.
+- **ASA class** looks like a number, so tableone averages it unless you list it under `categorical`: "mean (SD) 2.4 (0.7)" in the Python output above. It's a [category](../glossary.qmd#categorical-variable){.term}.
 - **Length of stay** has only a few distinct values, so gtsummary treats it as a category and lists a row for 0, 1, 2 … days, as in the R output above. It's a count.
 - **0/1 columns** such as `diabetes`: gtsummary shows a single row (how many are 1, i.e. yes), while tableone shows both the 0 and the 1 row. In a paper, show just the "yes" row.
 
@@ -164,15 +164,15 @@ Set the type of every variable yourself (`type =` in R, `categorical =` in Pytho
 
 ## Mean (SD) or median (IQR)? {#which-summary}
 
-- **Roughly symmetric** continuous variables (age, BMI): mean (SD).
-- **Skewed or bounded** variables (length of stay, most PROMs): median (IQR). One patient with a 30-day stay drags the mean far more than the median.
+- **Roughly symmetric** continuous variables (age, BMI): [mean](../glossary.qmd#mean){.term} ([SD](../glossary.qmd#standard-deviation){.term}).
+- **Skewed or bounded** variables (length of stay, most [PROMs](../glossary.qmd#prom){.term}): [median](../glossary.qmd#median){.term} ([IQR](../glossary.qmd#iqr){.term}). One patient with a 30-day stay drags the mean far more than the median.
 - **Categories**: n (%).
 
-How do you know whether a variable is skewed? Look at it: [Distributions & choosing a test](03-distributions.qmd) shows how. Length of stay is strongly right-skewed, which is why it gets a median.
+How do you know whether a [variable](../glossary.qmd#variable){.term} is [skewed](../glossary.qmd#skewed){.term}? Look at it: [Distributions & choosing a test](03-distributions.qmd) shows how. Length of stay is strongly right-skewed, which is why it gets a median.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: quartiles
-gtsummary and tableone use different formulas for quartiles (in R's terms, `quantile()` types 2 and 7). With whole-number data like length of stay the results can differ. In the table above the two agree (0 to 1 day). In the THA column of the [next table](#by-group) they don't: the upper quartile is 2 days in R (`1 (0–2)`) and 1.8 in Python (`1.0 [0.0,1.8]`). Neither is wrong. Say in your Methods which software you used.
+gtsummary and tableone use different formulas for [quartiles](../glossary.qmd#quartile){.term} (in R's terms, `quantile()` types 2 and 7). With whole-number data like length of stay the results can differ. In the table above the two agree (0 to 1 day). In the THA column of the [next table](#by-group) they don't: the upper quartile is 2 days in R (`1 (0–2)`) and 1.8 in Python (`1.0 [0.0,1.8]`). Neither is wrong. Say in your Methods which software you used.
 :::
 
 ## Comparing groups {#by-group}
@@ -230,17 +230,17 @@ p_r <- by_procedure$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 ```
 
-Each p-value comes from a test you'll meet in the catalog: [Welch's t test](../catalog/06-two-unpaired-groups.qmd#unpaired-t) for the symmetric continuous variables, a [rank-based test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) for length of stay (Kruskal-Wallis with two groups is the Mann-Whitney test), and the [chi-square test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) for the categories. For diabetes R prints `>0.999` and Python `1.000`. It is the same p-value: tableone rounds it to three decimals. Report it as p > 0.999, as this site's conventions do.
+Each [p-value](../glossary.qmd#p-value){.term} comes from a test you'll meet in the catalog: [Welch's t test](../catalog/06-two-unpaired-groups.qmd#unpaired-t) for the [symmetric](../glossary.qmd#symmetric){.term} [continuous variables](../glossary.qmd#continuous-variable){.term}, a [rank-based test](../catalog/06-two-unpaired-groups.qmd#mann-whitney) for length of stay ([Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term} with two groups is the [Mann-Whitney test](../glossary.qmd#mann-whitney-test){.term}), and the [chi-square test](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) for the [categories](../glossary.qmd#categorical-variable){.term}. For diabetes R prints `>0.999` and Python `1.000`. It is the same p-value: tableone rounds it to three decimals. Report it as p > 0.999, as this site's conventions do.
 
 ## p-values or standardized mean differences? {#smd}
 
 Look at sex in the table above: 66% of THA patients are women against 50% of TKA patients, p < 0.001. Is that a real difference between hip and knee patients?
 
-In this practice dataset we know the answer, because we wrote the program that made it: sex was drawn **completely independently** of procedure. The difference is pure chance. (In real arthroplasty cohorts, TKA patients are usually *more* often female.) That's the first problem with p-values in Table 1: across a long table, chance differences turn up.
+In this practice dataset we know the answer, because we wrote the program that made it: sex was drawn **completely independently** of procedure. The difference is pure chance. (In real arthroplasty [cohorts](../glossary.qmd#cohort){.term}, TKA patients are usually *more* often female.) That's the first problem with [p-values](../glossary.qmd#p-value){.term} in [Table 1](../glossary.qmd#table-1){.term}: across a long table, chance differences turn up.
 
 The second problem is that a p-value mixes up *how big* a difference is with *how many patients* you have. With 6,000 patients a trivial difference gets p < 0.001. With 30, a large one doesn't.
 
-The **standardized mean difference (SMD)** measures only the size of the imbalance, in standard-deviation units, whatever the sample size. A common rule of thumb: |SMD| below 0.1 is negligible.
+The **standardized mean difference (SMD)** measures only the size of the imbalance, in [standard-deviation](../glossary.qmd#standard-deviation){.term} units, whatever the [sample size](../glossary.qmd#sample-size){.term}. A common rule of thumb: |SMD| below 0.1 is negligible.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -290,7 +290,7 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Ignoring the signs for now (the box below explains them), sex (SMD 0.31) and BMI (0.33) are the clear imbalances. Age (0.10), ASA class (0.12) and smoking (0.15) are just over 0.1: worth a sentence, not alarm. Diabetes and length of stay are negligible. R's table also gives a 95% CI for each SMD; tableone doesn't compute one.
+Ignoring the signs for now (the box below explains them), sex (SMD 0.31) and BMI (0.33) are the clear imbalances. Age (0.10), ASA class (0.12) and smoking (0.15) are just over 0.1: worth a sentence, not alarm. Diabetes and length of stay are negligible. R's table also gives a 95% [CI](../glossary.qmd#confidence-interval){.term} for each SMD; tableone doesn't compute one.
 
 The two packages agree to three decimals. To see where they part, print the age SMD with more digits:
 
@@ -322,18 +322,18 @@ check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), re
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: SMDs differ slightly
-- **Sign.** For the variables entered as numbers (age, BMI, length of stay), gtsummary subtracts TKA from THA and tableone subtracts THA from TKA, so the signs are opposite. For categories (sex, ASA class, smoking) the SMD has no direction and is positive in both. Report the absolute value, or say which group was subtracted from which.
-- **Fourth decimal.** For continuous variables, R's `smd` package divides the variances by *n*, while tableone divides by *n − 1* (the usual textbook formula). Age comes out as 0.1048 in R and 0.1046 in Python (the two numbers printed just above the box). Categorical SMDs match exactly.
+- **Sign.** For the [variables](../glossary.qmd#variable){.term} entered as numbers (age, BMI, length of stay), gtsummary subtracts TKA from THA and tableone subtracts THA from TKA, so the signs are opposite. For [categories](../glossary.qmd#categorical-variable){.term} (sex, ASA class, smoking) the SMD has no direction and is positive in both. Report the absolute value, or say which group was subtracted from which.
+- **Fourth decimal.** For [continuous variables](../glossary.qmd#continuous-variable){.term}, R's `smd` package divides the [variances](../glossary.qmd#variance){.term} by *n*, while tableone divides by *n − 1* (the usual textbook formula). Age comes out as 0.1048 in R and 0.1046 in Python (the two numbers printed just above the box). Categorical SMDs match exactly.
 :::
 
 **Which should you report?**
 
-- **Matched or weighted cohorts** (propensity-score studies, such as a matched study of patients over 80): SMDs only. The matching made the groups alike on purpose, so a test of "did they differ?" makes no sense.
+- **Matched or weighted cohorts** ([propensity-score](../glossary.qmd#propensity-score){.term} studies, such as a [matched](../glossary.qmd#matched){.term} study of patients over 80): SMDs only. The matching made the groups alike on purpose, so a test of "did they differ?" makes no sense.
 - **Other observational comparisons**: many journals still expect p-values. Give SMDs alongside, and discuss differences by their size, not their p-value.
 
 ## Missing data {#missing}
 
-The tidy version of the messy workbook from [page 1](01-tidy-data.qmd) has a few BMIs, ASA classes and lengths of stay that the abstractor couldn't find. Missing values must show up in Table 1. Never drop them silently.
+The [tidy](../glossary.qmd#tidy-data){.term} version of the messy workbook from [page 1](01-tidy-data.qmd) has a few BMIs, ASA classes and lengths of stay that the abstractor couldn't find. [Missing values](../glossary.qmd#missing-data){.term} must show up in [Table 1](../glossary.qmd#table-1){.term}. Never drop them silently.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -381,7 +381,7 @@ R adds a "Missing" row under each variable that has any, with one count per site
 
 ## Exporting to Word {#export}
 
-Journals want Table 1 in Word. Save it into your `scratch/` folder (git ignores it), open it, and paste it into the manuscript.
+Journals want [Table 1](../glossary.qmd#table-1){.term} in Word. Save it into your `scratch/` folder (git ignores it), open it, and paste it into the manuscript.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -411,7 +411,7 @@ doc.save("scratch/table1-python.docx")
 ```
 :::
 
-In Word, tidy the formatting to the journal's style: usually no vertical lines, and a footnote that says which statistics are shown ("mean (SD); median (IQR); n (%)") and which tests produced the p-values.
+In Word, tidy the formatting to the journal's style: usually no vertical lines, and a footnote that says which statistics are shown ("mean (SD); median (IQR); n (%)") and which tests produced the [p-values](../glossary.qmd#p-value){.term}.
 
 ```{r}
 #| include: false
@@ -469,7 +469,7 @@ assert by_procedure.tableone.loc[("Length of stay, days, median [Q1,Q3]", ""),
 
 ## Exercises {#exercises}
 
-**1.** Make a Table 1 comparing **Site A with Site B** instead of THA with TKA. Which variable differs most between sites, by SMD?
+**1.** Make a [Table 1](../glossary.qmd#table-1){.term} comparing **Site A with Site B** instead of THA with TKA. Which [variable](../glossary.qmd#variable){.term} differs most between sites, by [SMD](../glossary.qmd#smd){.term}?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -497,21 +497,21 @@ print(by_site.smd_table)
 ```
 :::
 
-Smoking status (0.23) and length of stay (0.22; Python prints −0.22, see the box on signs) differ most between sites. In R's table their 95% CIs (0.07 to 0.39 and 0.06 to 0.39) exclude zero; tableone gives no CI. Yet site was assigned completely at random in this dataset, independent of everything else. With seven variables, a couple of chance imbalances above 0.1 are to be expected: judge each SMD by its size and by whether it could plausibly matter, not by whether it is "significant".
+Smoking status (0.23) and length of stay (0.22; Python prints −0.22, see the box on signs) differ most between sites. In R's table their 95% [CIs](../glossary.qmd#confidence-interval){.term} (0.07 to 0.39 and 0.06 to 0.39) exclude zero; tableone gives no CI. Yet site was assigned completely at random in this dataset, independent of everything else. With seven variables, a couple of chance imbalances above 0.1 are to be expected: judge each SMD by its size and by whether it could plausibly matter, not by whether it is "[significant](../glossary.qmd#statistical-significance){.term}".
 :::
 
-**2.** A fellow is comparing patients aged 80 or older with younger patients, matched on sex, BMI and ASA class. Should the baseline table show p-values or SMDs? Why?
+**2.** A fellow is comparing patients aged 80 or older with younger patients, [matched](../glossary.qmd#matched){.term} on sex, BMI and ASA class. Should the [baseline](../glossary.qmd#baseline){.term} table show [p-values](../glossary.qmd#p-value){.term} or SMDs? Why?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-SMDs. The matching was designed to make the groups alike, so testing whether they differ answers a question nobody asked, and with matched data the p-value mostly reflects sample size. SMDs show how well the matching worked: aim for |SMD| below 0.1 on every matching variable.
+SMDs. The matching was designed to make the groups alike, so testing whether they differ answers a question nobody asked, and with matched data the p-value mostly reflects [sample size](../glossary.qmd#sample-size){.term}. SMDs show how well the matching worked: aim for |SMD| below 0.1 on every matching variable.
 :::
 
-**3.** Write the first sentence of the Results describing this cohort, using the reporting conventions from [How to use this site](../getting-started/using-this-site.qmd).
+**3.** Write the first sentence of the Results describing this [cohort](../glossary.qmd#cohort){.term}, using the reporting conventions from [How to use this site](../getting-started/using-this-site.qmd).
 
 ::: {.callout-tip collapse="true"}
 ## Solution
 "We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
-Check every number against your own table: mean and SD for age, n (%) for sex, median (IQR) for length of stay. The 520 patients come from the count in [the first step](#setup).
+Check every number against your own table: [mean](../glossary.qmd#mean){.term} and [SD](../glossary.qmd#standard-deviation){.term} for age, n (%) for sex, [median](../glossary.qmd#median){.term} ([IQR](../glossary.qmd#iqr){.term}) for length of stay. The 520 patients come from the count in [the first step](#setup).
 :::

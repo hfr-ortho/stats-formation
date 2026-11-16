@@ -16,28 +16,28 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-[Page 13](13-kaplan-meier.qmd) compared survival curves. **Cox regression** goes further: it gives each group or predictor a **hazard ratio** with a 95% CI, and it can adjust for several predictors at once. Pages [8](../catalog/08-three-plus-unmatched.qmd#cox), [11](../catalog/11-predict-from-one.qmd#cox) and [12](../catalog/12-predict-from-several.qmd#cox) each fitted a Cox model in a few steps. This page covers the whole job:
+[Page 13](13-kaplan-meier.qmd) compared [survival curves](../glossary.qmd#survival){.term}. **[Cox regression](../glossary.qmd#cox-regression){.term}** goes further: it gives each group or [predictor](../glossary.qmd#predictor){.term} a **[hazard ratio](../glossary.qmd#hazard-ratio){.term}** with a 95% [CI](../glossary.qmd#confidence-interval){.term}, and it can [adjust for](../glossary.qmd#adjustment){.term} [several predictors at once](../glossary.qmd#multivariable){.term}. Pages [8](../catalog/08-three-plus-unmatched.qmd#cox), [11](../catalog/11-predict-from-one.qmd#cox) and [12](../catalog/12-predict-from-several.qmd#cox) each fitted a Cox model in a few steps. This page covers the whole job:
 - what a hazard ratio means
 - how to choose covariates
-- how to check the model's assumptions, and what to do when one fails
-- how to handle matched sets and bilateral patients
-- how to model competing risks
+- how to check the [model](../glossary.qmd#model){.term}'s [assumptions](../glossary.qmd#assumption){.term}, and what to do when one fails
+- how to handle [matched](../glossary.qmd#matched){.term} sets and bilateral patients
+- how to model [competing risks](../glossary.qmd#competing-risk){.term}
 - how to report the result
 
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages, data and models made earlier.
 
-Until the section on [bilateral patients](#stratified-cox), the examples use every case as if it were a separate patient, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them).
+Until the section on [bilateral patients](#stratified-cox), the examples use every case as if it were a separate patient, including both cases of patients who had both sides operated on (80 patients in the whole [cohort](../glossary.qmd#cohort){.term}; [page 2](../foundations/02-demographics.qmd#setup) counts them).
 :::
 
 ## The hazard ratio {#hazard-ratio}
 
-The **hazard** is the rate of revision at a given moment among the implants still in place: the chance, per unit of time, that an unrevised implant is revised at that moment. It can rise or fall over time. The **[hazard ratio](../glossary.qmd#hazard-ratio){.term}** (HR) divides one group's hazard by another's. A Cox model assumes that this ratio stays the same over the whole follow-up, even if the hazards themselves change: the hazards are **proportional**.
+The **hazard** is the rate of revision at a given moment among the implants still in place: the [chance](../glossary.qmd#probability){.term}, per unit of time, that an unrevised implant is revised at that moment. It can rise or fall over time. The **[hazard ratio](../glossary.qmd#hazard-ratio){.term}** (HR) divides one group's hazard by another's. A Cox model assumes that this ratio stays the same over the whole [follow-up](../glossary.qmd#follow-up){.term}, even if the hazards themselves change: the hazards are **proportional**.
 
-How does the model find the hazard ratio? At each revision, it compares the implant that was revised with all the implants still at risk at that moment. It then keeps the hazard ratios under which the revisions that really happened, taken together, were most likely. [Page 8](../catalog/08-three-plus-unmatched.qmd#cox) goes through this step by step. A box under the output below checks the result against a simple ratio of revision rates.
+How does the [model](../glossary.qmd#model){.term} find the hazard ratio? At each revision, it compares the implant that was revised with all the implants still [at risk](../glossary.qmd#at-risk){.term} at that moment. It then keeps the hazard ratios under which the revisions that really happened, taken together, were most likely. [Page 8](../catalog/08-three-plus-unmatched.qmd#cox) goes through this step by step. A box under the output below checks the result against a simple ratio of revision rates.
 
-Here is the Cox model for implant alone, with implant A as the reference:
+Here is the Cox model for implant alone, with implant A as the [reference](../glossary.qmd#reference-group){.term}:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -106,13 +106,13 @@ check_agree(list(hr_b = implant_hr["implantB", "exp(coef)"], hr_c = implant_hr["
 
 Reading the output, line by line:
 - **n = 600, number of events = 81** (Python: the line `600 81` under the table): the procedures and the revisions. The revisions, not the procedures, set how much a Cox model can learn.
-- **coef:** the log hazard ratio. Nobody reports it; it's what the model estimates.
+- **coef:** the [log](../glossary.qmd#logarithm){.term} hazard ratio. Nobody reports it; it's what the model estimates.
 - **exp(coef):** the **hazard ratio**. Implant C: 3.07. At any moment during follow-up, an unrevised implant C was revised at about three times the rate of an unrevised implant A. Implant B: 0.82.
-- **se(coef), z, Pr(>|z|)** (Python: **p**): the [standard error](../glossary.qmd#standard-error){.term} of the coefficient, and the Wald test of whether the hazard ratio differs from 1 (p < 0.001 for C, p = 0.514 for B). R prints implant C's p-value as `1.39e-05`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.0000139. Python rounds it to 0.000.
+- **se(coef), z, Pr(>|z|)** (Python: **p**): the [standard error](../glossary.qmd#standard-error){.term} of the [coefficient](../glossary.qmd#coefficient){.term}, and the [Wald test](../glossary.qmd#wald-test){.term} of whether the hazard ratio differs from 1 (p < 0.001 for C, p = 0.514 for B). R prints implant C's [p-value](../glossary.qmd#p-value){.term} as `1.39e-05`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.0000139. Python rounds it to 0.000.
 - **lower .95 / upper .95** (Python: `exp(coef) lower 95%` and `exp(coef) upper 95%`): the 95% [CI](../glossary.qmd#confidence-interval){.term} of each hazard ratio: 1.85 to 5.09 for C, 0.45 to 1.50 for B.
 - **exp(-coef)** (R only): the same hazard ratio the other way round. For implant A against implant C it is 1 / 3.07 = 0.33.
 - **Concordance = 0.659:** how often, in pairs of patients, the one revised sooner had the higher predicted risk. 0.5 is a coin toss and 1 is perfect.
-- **Likelihood ratio, Wald and score tests:** three versions of the overall test that implant matters at all. With enough events they agree; the likelihood ratio test (27.6 on 2 df, p < 0.001) is the most reliable. R prints its p-value as `1e-06`, which is 0.000001. Python prints the concordance and then this test's statistic, df and p-value under the table.
+- **Likelihood ratio, Wald and score tests:** three versions of the [overall test](../glossary.qmd#overall-test){.term} that implant matters at all. With enough [events](../glossary.qmd#event){.term} they agree; the [likelihood ratio test](../glossary.qmd#likelihood-ratio-test){.term} (27.6 on 2 [df](../glossary.qmd#degrees-of-freedom){.term}, p < 0.001) is the most reliable. R prints its p-value as `1e-06`, which is 0.000001. Python prints the [concordance](../glossary.qmd#concordance){.term} and then this test's [statistic](../glossary.qmd#test-statistic){.term}, df and p-value under the table.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: a rough check with revision rates
@@ -161,12 +161,12 @@ check_agree(list(years_a = rates$years[1], years_c = rates$years[3], rate_a = ra
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and the printout
-Both programs handle tied revision times with Efron's method and use the first group alphabetically (A) as the reference. lifelines' default rule for when to stop iterating stops slightly early, so its hazard ratios can differ from R's in the fifth or sixth digit. Every Python model on this page tightens it with `fit_options={"precision": 1e-12}`. R's `summary()` prints the concordance and three overall tests; lifelines keeps them in `concordance_index_` and `log_likelihood_ratio_test()`. (lifelines' `print_summary()` shows everything at once, including the time the model was fitted.)
+Both programs handle [tied](../glossary.qmd#ties){.term} revision times with [Efron's method](../glossary.qmd#efron-method){.term} and use the first group alphabetically (A) as the reference. lifelines' default rule for when to [stop iterating](../glossary.qmd#convergence){.term} stops slightly early, so its hazard ratios can differ from R's in the fifth or sixth digit. Every Python model on this page tightens it with `fit_options={"precision": 1e-12}`. R's `summary()` prints the concordance and three overall tests; lifelines keeps them in `concordance_index_` and `log_likelihood_ratio_test()`. (lifelines' `print_summary()` shows everything at once, including the time the model was fitted.)
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a hazard ratio isn't a risk ratio
-"Three times the hazard" doesn't mean three times as many revisions by 5 years. By 5 years, 28.9% of implant C knees and hips had been revised (1 − Kaplan-Meier), against 10.1% of implant A: 2.85 times as many, not 3.07 (the code below prints the three risks and this ratio). The two ratios are close when revisions are rare and drift apart as they become common. Report the hazard ratio as a ratio of rates, and give the cumulative risks separately.
+"Three times the hazard" doesn't mean three times as many revisions by 5 years. By 5 years, 28.9% of implant C knees and hips had been revised (1 − [Kaplan-Meier](../glossary.qmd#kaplan-meier){.term}), against 10.1% of implant A: 2.85 times as many, not 3.07 (the code below prints the three [risks](../glossary.qmd#risk){.term} and this ratio). The two ratios are close when revisions are rare and drift apart as they become common. Report the hazard ratio as a ratio of rates, and give the cumulative risks separately.
 :::
 
 ::: {.panel-tabset group="language"}
@@ -206,17 +206,17 @@ check_agree(list(risk_A = risk_5[1], risk_B = risk_5[2], risk_C = risk_5[3]), re
 
 ## Choosing covariates {#choosing-covariates}
 
-A study comparing implants has one question: does implant C carry a higher revision risk than implant A? The other predictors in the model are there to make that comparison fair. These **covariates** are chosen before you look at the results, for a reason you can write down:
+A study comparing implants has one question: does implant C carry a higher revision risk than implant A? The other [predictors](../glossary.qmd#predictor){.term} in the [model](../glossary.qmd#model){.term} are there to make that comparison fair. These **covariates** are chosen before you look at the results, for a reason you can write down:
 
 - **Adjust for confounders:** factors that affect both which implant a patient gets and their risk of revision. Age, sex and BMI are the usual ones in arthroplasty: surgeons may choose implants differently for older, heavier or female patients, and these factors can change revision risk.
-- **Don't adjust for what the implant causes.** A dislocation or a reoperation that follows the implant choice is part of the implant's effect, not a reason for it. Adjusting for it hides the effect you're trying to measure.
-- **Don't choose covariates from the data.** Keeping only the predictors with p < 0.2 in univariable models, or letting a stepwise procedure pick them, makes p-values and CIs look more certain than they are and gives different answers in every sample.
+- **Don't adjust for what the implant causes.** A dislocation or a reoperation that follows the implant choice is part of the implant's effect, not a reason for it. [Adjusting](../glossary.qmd#adjustment){.term} for it hides the effect you're trying to measure.
+- **Don't choose covariates from the data.** Keeping only the predictors with p < 0.2 in [univariable](../glossary.qmd#multivariable){.term} models, or letting a [stepwise](../glossary.qmd#stepwise-selection){.term} procedure pick them, makes [p-values](../glossary.qmd#p-value){.term} and [CIs](../glossary.qmd#confidence-interval){.term} look more certain than they are and gives different answers in every [sample](../glossary.qmd#sample){.term}.
 
-**Events limit the model.** A Cox model needs about **10 events per term**, where a term is one coefficient: a two-level predictor like sex is one term, implant (B and C against A) is two, and a spline with 3 degrees of freedom is three. The practice cohort has 81 revisions, enough for about eight terms. Implant, age, sex and BMI use five, about 16 events per term. With fewer events, adjust for fewer things, and say so.
+**Events limit the model.** A [Cox model](../glossary.qmd#cox-regression){.term} needs about **10 events per term**, where a term is one [coefficient](../glossary.qmd#coefficient){.term}: a two-level predictor like sex is one term, implant (B and C against A) is two, and a [spline](../glossary.qmd#spline){.term} with 3 degrees of freedom is three. The practice [cohort](../glossary.qmd#cohort){.term} has 81 revisions, enough for about eight terms. Implant, age, sex and BMI use five, about 16 [events](../glossary.qmd#event){.term} per term. With fewer events, adjust for fewer things, and say so.
 
 ## From univariable to multivariable {#univariable-multivariable}
 
-A **univariable** (or unadjusted) model has one predictor, like the implant model above. A **multivariable** (or adjusted) model has several; each hazard ratio is then that predictor's effect with the others held fixed.
+A **univariable** (or unadjusted) [model](../glossary.qmd#model){.term} has one [predictor](../glossary.qmd#predictor){.term}, like the implant model above. A **multivariable** (or [adjusted](../glossary.qmd#adjustment){.term}) model has several; each [hazard ratio](../glossary.qmd#hazard-ratio){.term} is then that predictor's effect with the others held fixed.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -256,16 +256,16 @@ check_agree(list(hr_c = adjusted_hr["implantC", "exp(coef)"], low_c = adjusted_h
             reticulate::py$chk)
 ```
 
-Implant C's hazard ratio moved from 3.07 unadjusted to **3.19 adjusted** (95% CI 1.92 to 5.29). Age, sex and BMI don't explain the difference between the implants. When an adjusted estimate moves a lot, the covariates were probably confounding the unadjusted one; say so in the Discussion. Small moves mean little: a hazard ratio shifts a bit whenever a strong predictor is added, even without confounding.
+Implant C's hazard ratio moved from 3.07 unadjusted to **3.19 adjusted** (95% [CI](../glossary.qmd#confidence-interval){.term} 1.92 to 5.29). Age, sex and BMI don't explain the difference between the implants. When an adjusted [estimate](../glossary.qmd#estimate){.term} moves a lot, the covariates were probably [confounding](../glossary.qmd#confounding){.term} the unadjusted one; say so in the Discussion. Small moves mean little: a hazard ratio shifts a bit whenever a strong predictor is added, even without confounding.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the covariates' own hazard ratios aren't findings
-The model also prints hazard ratios for age, sex and BMI. Men's hazard of revision was about half of women's (0.51, 95% CI 0.32 to 0.81). It's tempting to report that as a second result, but the model wasn't built to answer it: nobody chose covariates that would make the comparison of men and women fair. Report the covariates' estimates in the table, and describe any you discuss as exploratory, as [page 12](../catalog/12-predict-from-several.qmd#cox) does.
+The model also prints hazard ratios for age, sex and BMI. Men's [hazard](../glossary.qmd#hazard){.term} of revision was about half of women's (0.51, 95% CI 0.32 to 0.81). It's tempting to report that as a second result, but the model wasn't built to answer it: nobody chose covariates that would make the comparison of men and women fair. Report the covariates' estimates in the table, and describe any you discuss as [exploratory](../glossary.qmd#prespecified){.term}, as [page 12](../catalog/12-predict-from-several.qmd#cox) does.
 :::
 
 ## Is the effect a straight line? {#linearity}
 
-A measured predictor like age enters the model as a straight line: each extra 10 years multiplies the hazard by the same amount, whether from 50 to 60 or from 75 to 85. To check, let the effect bend with a **natural cubic spline** ([page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explains splines) and compare the two models with a likelihood ratio test:
+A measured [predictor](../glossary.qmd#predictor){.term} like age enters the [model](../glossary.qmd#model){.term} as a straight line: each extra 10 years multiplies the [hazard](../glossary.qmd#hazard){.term} by the same amount, whether from 50 to 60 or from 75 to 85. To check, let the effect bend with a **[natural cubic spline](../glossary.qmd#spline){.term}** ([page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explains splines) and compare the two models with a [likelihood ratio test](../glossary.qmd#likelihood-ratio-test){.term}:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -311,11 +311,11 @@ age_bend <- anova(adjusted_model, age_spline_model)
 check_agree(list(lr = age_bend$Chisq[2], p = age_bend$`Pr(>|Chi|)`[2]), reticulate::py$chk)
 ```
 
-The spline didn't clearly improve the fit (χ² = 0.29, df = 2, p = 0.864), so the straight line for age stands. Report the check in the Methods. (Exercise 2 checks BMI.)
+The spline didn't clearly improve the fit ([χ²](../glossary.qmd#chi-square-statistic){.term} = 0.29, [df](../glossary.qmd#degrees-of-freedom){.term} = 2, p = 0.864), so the straight line for age stands. Report the check in the Methods. (Exercise 2 checks BMI.)
 
 ## Checking proportional hazards {#proportional-hazards}
 
-The Cox model assumes each hazard ratio stays the same over the whole follow-up. The standard check uses **Schoenfeld residuals**. At each revision, the model compares the revised patient's predictors with those of everyone still at risk. Rescaled and added to the model's coefficient, each residual estimates the log hazard ratio at that moment. If the hazard ratio is constant, these estimates scatter around a flat line; if they drift with time, the assumption fails.
+The [Cox model](../glossary.qmd#cox-regression){.term} assumes each [hazard ratio](../glossary.qmd#hazard-ratio){.term} stays the same over the whole [follow-up](../glossary.qmd#follow-up){.term}. The standard check uses **Schoenfeld residuals**. At each revision, the [model](../glossary.qmd#model){.term} compares the revised patient's [predictors](../glossary.qmd#predictor){.term} with those of everyone still [at risk](../glossary.qmd#at-risk){.term}. Rescaled and added to the model's [coefficient](../glossary.qmd#coefficient){.term}, each residual estimates the log hazard ratio at that moment. If the hazard ratio is constant, these [estimates](../glossary.qmd#estimate){.term} scatter around a flat line; if they drift with time, the [assumption](../glossary.qmd#assumption){.term} fails.
 
 **First, the adjusted model.**
 
@@ -349,7 +349,7 @@ chk = {"hr_age": float(adjusted_model.summary.loc["age_10", "exp(coef)"])}
 check_agree(list(hr_age = adjusted_hr["age_10", "exp(coef)"]), reticulate::py$chk)
 ```
 
-No predictor's hazard ratio clearly changed over time (R's `GLOBAL` line: p = 0.359; BMI had the smallest p-value, 0.106; R's second table shows these digits). lifelines has no global test, tests implant B and implant C separately and uses a slightly different formula, so its p-value for BMI is 0.100. The R vs Python box below explains. That's no clear evidence against proportional hazards, which isn't the same as proof that they hold: with 81 revisions, the test can miss a modest change.
+No predictor's hazard ratio clearly changed over time (R's `GLOBAL` line: p = 0.359; BMI had the smallest [p-value](../glossary.qmd#p-value){.term}, 0.106; R's second table shows these digits). lifelines has no [global test](../glossary.qmd#overall-test){.term}, tests implant B and implant C separately and uses a slightly different formula, so its p-value for BMI is 0.100. The R vs Python box below explains. That's no clear evidence against proportional hazards, which isn't the same as proof that they hold: with 81 revisions, the test can miss a modest change.
 
 **Now a real violation.** The practice data have one built in: in total hips, the posterior approach has a much higher revision rate in the first months after surgery (early dislocation), and no higher rate after that. [Page 13](13-kaplan-meier.qmd#log-rank) showed the curves crossing.
 
@@ -415,8 +415,8 @@ check_agree(list(hr = unname(exp(coef(approach_model))), mean_log_hr = mean(appr
             reticulate::py$chk)
 ```
 
-- **The model:** one hazard ratio for the whole follow-up, 1.37 (95% CI 0.72 to 2.61). `coef`, 0.31, is its logarithm. Both are in the first lines of the output.
-- **The test:** p < 0.001 (R's χ² = 11.3 on 1 df). The posterior approach's hazard ratio isn't constant.
+- **The model:** one hazard ratio for the whole follow-up, 1.37 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.72 to 2.61). `coef`, 0.31, is its [logarithm](../glossary.qmd#logarithm){.term}. Both are in the first lines of the output.
+- **The test:** p < 0.001 (R's [χ²](../glossary.qmd#chi-square-statistic){.term} = 11.3 on 1 [df](../glossary.qmd#degrees-of-freedom){.term}). The posterior approach's hazard ratio isn't constant.
 - **The points:** one per revision. Points near +2 are posterior hips and points near −2 are anterior hips, so early on almost every point sits high.
 - **The solid line** smooths the points into an estimate of the log hazard ratio at each time. It starts high in the first months, when posterior hips were revised far more often, then falls below the dashed line, which marks the model's single hazard ratio of 1.37 (log hazard ratio 0.31).
 
@@ -424,19 +424,19 @@ That single hazard ratio (1.37, 95% CI 0.72 to 2.61) mixes a large early effect 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: test and look
-With many events, the test flags changes too small to matter; with few, it misses real ones. Always look at the plot too. And report a non-significant test as "no clear evidence that the hazard ratios changed over time", never as proof that the assumption holds.
+With many [events](../glossary.qmd#event){.term}, the test flags changes too small to matter; with few, it misses real ones. Always look at the plot too. And report a [non-significant](../glossary.qmd#statistical-significance){.term} test as "no clear evidence that the hazard ratios changed over time", never as proof that the assumption holds.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two versions of the test
-R's `cox.zph()` (survival 3.0 and later) computes the full score test, one per predictor, with implant's two terms tested together. lifelines' `proportional_hazard_test()` uses Grambsch and Therneau's simpler original approximation and tests every column separately (implant B and implant C each get their own line), and it has no global test. The statistics differ slightly (11.3 in R, 11.2 in Python for the approach) and lead to the same conclusions here. lifelines' scaled Schoenfeld residuals leave out the coefficient that R adds, so the Python code adds it back. R's plot spaces the revisions evenly along the time axis (its "km" scale); the Python plot uses a log scale for the same reason: to keep the many early revisions from piling up at zero.
+R's `cox.zph()` (survival 3.0 and later) computes the full [score test](../glossary.qmd#score-test){.term}, one per predictor, with implant's two terms tested together. lifelines' `proportional_hazard_test()` uses Grambsch and Therneau's simpler original [approximation](../glossary.qmd#exact-test){.term} and tests every column separately (implant B and implant C each get their own line), and it has no global test. The [statistics](../glossary.qmd#test-statistic){.term} differ slightly (11.3 in R, 11.2 in Python for the approach) and lead to the same conclusions here. lifelines' scaled Schoenfeld residuals leave out the coefficient that R adds, so the Python code adds it back. R's plot spaces the revisions evenly along the time axis (its "km" scale); the Python plot uses a log scale for the same reason: to keep the many early revisions from piling up at zero.
 :::
 
 ## When hazards aren't proportional {#remedies}
 
-There are two common fixes. Which one fits depends on whether you need the hazard ratio of the predictor that breaks the assumption.
+There are two common fixes. Which one fits depends on whether you need the [hazard ratio](../glossary.qmd#hazard-ratio){.term} of the [predictor](../glossary.qmd#predictor){.term} that breaks the [assumption](../glossary.qmd#assumption){.term}.
 
-**1. Stratify, when it's only an adjustment.** Suppose the question is implant, in total hips, and approach is just a covariate. A Cox model **stratified** by approach gives each approach its own baseline hazard, of any shape, and estimates the implant hazard ratios within approaches. Approach gets no hazard ratio of its own, so its non-proportional effect no longer matters.
+**1. Stratify, when it's only an adjustment.** Suppose the question is implant, in total hips, and approach is just a covariate. A [Cox model](../glossary.qmd#cox-regression){.term} **[stratified](../glossary.qmd#stratification){.term}** by approach gives each approach its own [baseline hazard](../glossary.qmd#hazard){.term}, of any shape, and estimates the implant hazard ratios within approaches. Approach gets no hazard ratio of its own, so its non-proportional effect no longer matters.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -472,9 +472,9 @@ check_agree(list(hr_b = stratified_hr["implantB", "exp(coef)"], hr_c = stratifie
             reticulate::py$chk)
 ```
 
-In total hips, with approach as a stratum, implant C's hazard ratio was 2.11 (95% CI 1.02 to 4.40) against implant A.
+In total hips, with approach as a stratum, implant C's hazard ratio was 2.11 (95% [CI](../glossary.qmd#confidence-interval){.term} 1.02 to 4.40) against implant A.
 
-**2. Split the follow-up, when you need the effect.** If the approach *is* the question, give it one hazard ratio for the first 6 months and another for the time after. Each patient followed beyond 6 months gets two rows, one per period; the model then estimates the approach's effect separately in each:
+**2. Split the follow-up, when you need the effect.** If the approach *is* the question, give it one hazard ratio for the first 6 months and another for the time after. Each patient [followed](../glossary.qmd#follow-up){.term} beyond 6 months gets two rows, one per period; the [model](../glossary.qmd#model){.term} then estimates the approach's effect separately in each:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -545,9 +545,9 @@ check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early 
             reticulate::py$chk)
 ```
 
-In the first 6 months, the hazard of revision was 8.47 times as high after the posterior approach (95% CI 1.93 to 37.3). After 6 months the estimate was 0.43 (95% CI 0.16 to 1.16), which is imprecise. The CI for the early effect is wide because it rests on 16 early revisions: 14 after the posterior approach and only 2 after the anterior approach (the first output).
+In the first 6 months, the hazard of revision was 8.47 times as high after the posterior approach (95% CI 1.93 to 37.3). After 6 months the [estimate](../glossary.qmd#estimate){.term} was 0.43 (95% CI 0.16 to 1.16), which is [imprecise](../glossary.qmd#precision){.term}. The CI for the early effect is wide because it rests on 16 early revisions: 14 after the posterior approach and only 2 after the anterior approach (the first output).
 
-Choose the cut point before you look, from clinical reasoning: here, the period of highest dislocation risk after hip replacement. Trying several cut points until one gives a striking result is data dredging. R can also let a hazard ratio change smoothly with time (the `tt()` argument of `coxph()`), which avoids choosing a cut point.
+Choose the cut point before you look, from clinical reasoning: here, the period of highest dislocation risk after hip replacement. Trying several cut points until one gives a striking result is [data dredging](../glossary.qmd#p-hacking){.term}. R can also let a hazard ratio change smoothly with time (the `tt()` argument of `coxph()`), which avoids choosing a cut point.
 
 > **Methods:** Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.
 >
@@ -555,14 +555,14 @@ Choose the cut point before you look, from clinical reasoning: here, the period 
 
 ## Stratified Cox: matched sets and bilateral patients {#stratified-cox}
 
-A Cox model assumes every row is an independent patient. Two common designs break that.
+A [Cox model](../glossary.qmd#cox-regression){.term} assumes every row is an [independent](../glossary.qmd#independence){.term} patient. Two common designs break that.
 
-**Matched sets.** When each implant C patient is matched with similar patients who got other implants, the matched patients belong together. A Cox model **stratified by matched set**, `strata(set_id)`, compares implants only within sets. The decision table calls this *conditional proportional hazards regression*. [Page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) works through matched pairs and [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) matched sets of three.
+**Matched sets.** When each implant C patient is [matched](../glossary.qmd#matched){.term} with similar patients who got other implants, the matched patients belong together. A Cox model **stratified by matched set**, `strata(set_id)`, compares implants only within sets. The decision table calls this *conditional proportional hazards regression*. [Page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) works through matched pairs and [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) matched sets of three.
 
-**Bilateral patients.** 80 patients in the cohort had both sides replaced. Their two joints share the same patient's bone, activity and surgeon, so their outcomes aren't independent, and treating them as independent makes the CIs too narrow. There are three common choices:
+**Bilateral patients.** 80 patients in the [cohort](../glossary.qmd#cohort){.term} had both sides replaced. Their two joints share the same patient's bone, activity and surgeon, so their outcomes aren't independent, and treating them as independent makes the [CIs](../glossary.qmd#confidence-interval){.term} too narrow. There are three common choices:
 
-- **Keep both joints and use robust standard errors** clustered on patient. The hazard ratios don't change; the CIs allow for the pairing. This is the usual choice.
-- **Stratify by patient**, `strata(patient_id)`, to compare the two sides of each patient. Only patients whose two joints differ in the predictor, and who had a revision, contribute anything, so it's rarely precise enough.
+- **Keep both joints and use robust standard errors** [clustered](../glossary.qmd#clustered-data){.term} on patient. The [hazard ratios](../glossary.qmd#hazard-ratio){.term} don't change; the CIs allow for the [pairing](../glossary.qmd#paired){.term}. This is the usual choice.
+- **Stratify by patient**, `strata(patient_id)`, to compare the two sides of each patient. Only patients whose two joints differ in the predictor, and who had a revision, contribute anything, so it's rarely [precise](../glossary.qmd#precision){.term} enough.
 - **Keep one joint per patient**, such as the first one operated on. Simple, but it throws away data.
 
 ::: {.panel-tabset group="language"}
@@ -623,16 +623,16 @@ check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), 
 
 - **exp(coef):** unchanged: implant C's hazard ratio is still 3.19.
 - **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same (0.259 and 0.258 for implant C), so the CI barely moves (1.92 to 5.28). Only 20 of the 80 bilateral patients had a revision (the two numbers the code prints first), so the pairing matters little in this cohort. It can matter much more in yours: check, and say in the Methods what you did.
-- **Pr(>|z|)** (R's table): the p-values, now from the robust standard errors. R prints them in [scientific notation](../glossary.qmd#scientific-notation){.term}: `5.463870e-01` is 0.546, and `6.743766e-06` is 0.00000674, reported as p < 0.001. The table under [Reporting](#reporting) shows them rounded.
+- **Pr(>|z|)** (R's table): the [p-values](../glossary.qmd#p-value){.term}, now from the robust [standard errors](../glossary.qmd#standard-error){.term}. R prints them in [scientific notation](../glossary.qmd#scientific-notation){.term}: `5.463870e-01` is 0.546, and `6.743766e-06` is 0.00000674, reported as p < 0.001. The table under [Reporting](#reporting) shows them rounded.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: robust standard errors
-Both programs compute the same robust ("sandwich") standard errors. When follow-up times are tied, R also applies Efron's tie correction inside the robust variance and lifelines doesn't, so the two differ in the fourth significant figure.
+Both programs compute the same [robust ("sandwich") standard errors](../glossary.qmd#robust-standard-error){.term}. When [follow-up](../glossary.qmd#follow-up){.term} times are [tied](../glossary.qmd#ties){.term}, R also applies [Efron's tie correction](../glossary.qmd#efron-method){.term} inside the robust [variance](../glossary.qmd#variance){.term} and lifelines doesn't, so the two differ in the fourth significant figure.
 :::
 
 ## Competing risks regression: Fine-Gray (R only) {#fine-gray}
 
-Every Cox model above treated death as censoring. That's a **cause-specific** Cox model: its hazard ratios describe the revision rate among patients still alive, which is the right question for whether an implant performs worse. But as [page 13](13-kaplan-meier.qmd#competing-risks) showed, deaths also stop revisions from ever happening. For "which patients will actually be revised?" use the **Fine-Gray** model, which models the cumulative incidence of revision directly. Its effect sizes are **subdistribution hazard ratios** (SHR).
+Every [Cox model](../glossary.qmd#cox-regression){.term} above treated death as [censoring](../glossary.qmd#censored){.term}. That's a **cause-specific** Cox model: its [hazard ratios](../glossary.qmd#hazard-ratio){.term} describe the revision rate among patients still alive, which is the right question for whether an implant performs worse. But as [page 13](13-kaplan-meier.qmd#competing-risks) showed, deaths also stop revisions from ever happening. For "which patients will actually be revised?" use the **Fine-Gray** model, which models the [cumulative incidence](../glossary.qmd#cumulative-incidence){.term} of revision directly. Its [effect sizes](../glossary.qmd#effect-size){.term} are **subdistribution hazard ratios** (SHR).
 
 Fine-Gray regression has no mature Python implementation, so this section is R only. tidycmprsk's `crr()` takes the same three-level status as page 13's cumulative incidence:
 
@@ -649,9 +649,9 @@ fine_gray <- crr(Surv(followup_years, status) ~ implant + age_10 + sex + bmi_5,
 fine_gray
 ```
 
-`crr()` heads the column `HR`, but these are subdistribution hazard ratios. Compare them with the cause-specific model (`adjusted_model`, [above](#univariable-multivariable)):
-- **Implant C:** SHR 3.09 (95% CI 1.86 to 5.14), close to the cause-specific HR of 3.19. The cumulative incidence of death didn't clearly differ between implants (Gray's test on [page 13](13-kaplan-meier.qmd#competing-risks)), so allowing for death changes little.
-- **Age:** SHR 1.07 per 10 years (95% CI 0.86 to 1.33), against a cause-specific HR of 1.22. Older patients may be revised at a somewhat higher rate while alive, but more of them die before they can be revised, so the subdistribution estimate is closer to 1: there's no clear evidence that age changes how many patients are actually revised.
+`crr()` heads the column `HR`, but these are subdistribution hazard ratios. Compare them with the cause-specific [model](../glossary.qmd#model){.term} (`adjusted_model`, [above](#univariable-multivariable)):
+- **Implant C:** SHR 3.09 (95% [CI](../glossary.qmd#confidence-interval){.term} 1.86 to 5.14), close to the cause-specific HR of 3.19. The cumulative incidence of death didn't clearly differ between implants ([Gray's test](../glossary.qmd#gray-test){.term} on [page 13](13-kaplan-meier.qmd#competing-risks)), so allowing for death changes little.
+- **Age:** SHR 1.07 per 10 years (95% CI 0.86 to 1.33), against a cause-specific HR of 1.22. Older patients may be revised at a somewhat higher rate while alive, but more of them die before they can be revised, so the subdistribution [estimate](../glossary.qmd#estimate){.term} is closer to 1: there's no clear evidence that age changes how many patients are actually revised.
 
 Report the cause-specific model to compare implants, and the Fine-Gray model when the question is how many patients will be revised. Many papers report both, and say which is which.
 
@@ -659,12 +659,12 @@ Report the cause-specific model to compare implants, and the Fine-Gray model whe
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a subdistribution hazard ratio isn't a hazard ratio
-The SHR has no simple meaning as a rate: patients who have died stay in its "at risk" group. Read it only as "higher or lower cumulative incidence", and call it a subdistribution hazard ratio in the text and tables.
+The SHR has no simple meaning as a rate: patients who have died stay in its "[at risk](../glossary.qmd#at-risk){.term}" group. Read it only as "higher or lower cumulative incidence", and call it a subdistribution hazard ratio in the text and tables.
 :::
 
 ## Reporting a Cox model {#reporting}
 
-Most papers present Cox models as a table: one row per predictor, with the univariable and the multivariable hazard ratios side by side. Both columns use robust standard errors clustered on patient ([above](#stratified-cox)), so their CIs allow for the bilateral patients. That is why the univariable column differs slightly from the first model on this page: implant C's CI is 1.87 to 5.04 here and was 1.85 to 5.09 there, and implant B's p-value is 0.511 here and was 0.514 there.
+Most papers present [Cox models](../glossary.qmd#cox-regression){.term} as a table: one row per [predictor](../glossary.qmd#predictor){.term}, with the [univariable](../glossary.qmd#multivariable){.term} and the multivariable [hazard ratios](../glossary.qmd#hazard-ratio){.term} side by side. Both columns use robust [standard errors](../glossary.qmd#standard-error){.term} [clustered](../glossary.qmd#clustered-data){.term} on patient ([above](#stratified-cox)), so their [CIs](../glossary.qmd#confidence-interval){.term} allow for the bilateral patients. That is why the univariable column differs slightly from the first [model](../glossary.qmd#model){.term} on this page: implant C's CI is 1.87 to 5.04 here and was 1.85 to 5.09 there, and implant B's [p-value](../glossary.qmd#p-value){.term} is 0.511 here and was 0.514 there.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -729,7 +729,7 @@ check_agree(list(uni_age = unname(uni_hr("age_10")), uni_male = unname(uni_hr("s
             reticulate::py$chk)
 ```
 
-The Results start with the events: 81 revisions in 600 procedures (the first line of the implant model's output), and 81 / 600 = 0.135, or 13.5%.
+The Results start with the [events](../glossary.qmd#event){.term}: 81 revisions in 600 procedures (the first line of the implant model's output), and 81 / 600 = 0.135, or 13.5%.
 
 > **Methods:** The association between implant and revision for any reason was estimated with Cox proportional hazards regression, with time from surgery as the time scale and implant A as the reference. Age, sex and body mass index were chosen in advance as covariates. Age entered the model as a linear term after a natural cubic spline showed no clear evidence of non-linearity. Proportional hazards were checked with scaled Schoenfeld residuals. In the Cox models, robust standard errors clustered on patient accounted for patients who had both sides replaced. A Fine-Gray model, treating death as a competing risk, was fitted as a sensitivity analysis.
 >
@@ -738,8 +738,8 @@ The Results start with the events: 81 revisions in 600 procedures (the first lin
 Before you submit, check that the paper states:
 - the number of patients, procedures and events
 - time zero and the event definition ([page 13](13-kaplan-meier.qmd#time-zero))
-- which covariates were adjusted for, and why
-- how continuous predictors were modeled, and how proportional hazards were checked
+- which covariates were [adjusted for](../glossary.qmd#adjustment){.term}, and why
+- how [continuous](../glossary.qmd#continuous-variable){.term} predictors were modeled, and how [proportional hazards](../glossary.qmd#proportional-hazards){.term} were checked
 - how bilateral patients and deaths were handled
 
 ```{r}
@@ -820,7 +820,7 @@ stopifnot(
 
 The solutions use the packages, data and models made in the sections above, so run the page from the top first.
 
-**1.** Fit a univariable Cox model for ASA class (as a number, 1 to 4) and write the Results sentence.
+**1.** Fit a [univariable](../glossary.qmd#multivariable){.term} [Cox model](../glossary.qmd#cox-regression){.term} for ASA class (as a number, 1 to 4) and write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -845,10 +845,10 @@ print(asa_model.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95
 
 > **Results:** The hazard ratio for revision per ASA class was 1.38 (95% CI 0.99 to 1.93; p = 0.060).
 
-The estimate is imprecise: the data are compatible with no association and with a near doubling of the hazard per class.
+The [estimate](../glossary.qmd#estimate){.term} is [imprecise](../glossary.qmd#precision){.term}: the data are compatible with no [association](../glossary.qmd#association){.term} and with a near doubling of the [hazard](../glossary.qmd#hazard){.term} per class.
 :::
 
-**2.** Check whether BMI's effect in the adjusted model is a straight line, using a natural cubic spline with 3 degrees of freedom.
+**2.** Check whether BMI's effect in the [adjusted](../glossary.qmd#adjustment){.term} [model](../glossary.qmd#model){.term} is a [straight line](../glossary.qmd#linear-relationship){.term}, using a [natural cubic spline](../glossary.qmd#spline){.term} with 3 degrees of freedom.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -885,7 +885,7 @@ print(bmi_lr, chi2.sf(bmi_lr, df=2))
 There's no clear evidence that BMI's effect bends, so the straight line stands.
 :::
 
-**3.** Total hips and total knees may have different baseline revision rates. Refit the adjusted model stratified by procedure. Does implant C's hazard ratio change? Write the Results sentence.
+**3.** Total hips and total knees may have different baseline revision rates. Refit the adjusted model [stratified](../glossary.qmd#stratification){.term} by procedure. Does implant C's [hazard ratio](../glossary.qmd#hazard-ratio){.term} change? Write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution

@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Une corrélation ([page 10](10-association.qmd)) dit à quel point deux choses vont ensemble. La **régression** dit **de combien le critère de jugement change pour chaque unité du prédicteur**, et permet de prédire le critère pour un nouveau patient. Le type de régression dépend du critère : une mesure qui suit une droite ou une courbe, une mesure qui n'est pas normale, un critère oui/non, ou un délai jusqu'à un événement. Pour plusieurs prédicteurs à la fois, voir la [page 12](12-predict-from-several.qmd).
+Une [corrélation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) dit à quel point deux choses vont ensemble. La **régression** dit **de combien le [critère de jugement](../glossary.qmd#outcome){.term} change pour chaque unité du [prédicteur](../glossary.qmd#predictor){.term}**, et permet de prédire le critère pour un nouveau patient. Le type de régression dépend du critère : une [mesure](../glossary.qmd#continuous-variable){.term} qui suit une droite ou une courbe, une mesure qui n'est pas [normale](../glossary.qmd#normal-distribution){.term}, un [critère oui/non](../glossary.qmd#binary){.term}, ou un délai jusqu'à un [événement](../glossary.qmd#event){.term}. Pour plusieurs prédicteurs à la fois, voir la [page 12](12-predict-from-several.qmd).
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données d'exercice : la cohorte de prothèses articulaires et les PROM (mesures des résultats rapportés par le patient), la fracture du fémur proximal pour la régression logistique, les reconstructions du ligament croisé antérieur (LCA) pour la régression de Cox. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires et les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient), la fracture du fémur proximal pour la [régression logistique](../glossary.qmd#logistic-regression){.term}, les reconstructions du ligament croisé antérieur (LCA) pour la [régression de Cox](../glossary.qmd#cox-regression){.term}. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
@@ -32,21 +32,21 @@ Pour garder le code court, les exemples de prothèses articulaires utilisent tou
 
 ### Quand l'utiliser
 
-- Le critère est une **mesure**, et vous voulez savoir de combien il change **par unité d'un prédicteur**, ou le prédire.
-- La relation est à peu près une **droite**, et le critère de chaque patient est indépendant de celui des autres.
-- Les **résidus** (la distance de chaque patient à la droite) sont à peu près normaux, avec une dispersion semblable tout le long de la droite. Vérifiez-les après l'ajustement.
-- Si la relation est courbe → [régression non linéaire](#nonlinear-regression). Si le critère est asymétrique ou a un plafond → [régression non paramétrique](#nonparametric-regression). S'il est oui/non → [régression logistique](#logistic-regression).
+- Le [critère](../glossary.qmd#outcome){.term} est une **[mesure](../glossary.qmd#continuous-variable){.term}**, et vous voulez savoir de combien il change **par unité d'un [prédicteur](../glossary.qmd#predictor){.term}**, ou le prédire.
+- La relation est à peu près une **droite**, et le critère de chaque patient est [indépendant](../glossary.qmd#independence){.term} de celui des autres.
+- Les **[résidus](../glossary.qmd#residual){.term}** (la distance de chaque patient à la droite) sont à peu près [normaux](../glossary.qmd#normal-distribution){.term}, avec une [dispersion](../glossary.qmd#spread){.term} semblable tout le long de la droite. Vérifiez-les après l'ajustement.
+- Si la relation est courbe → [régression non linéaire](#nonlinear-regression). Si le critère est [asymétrique](../glossary.qmd#skewed){.term} ou a un [plafond](../glossary.qmd#ceiling-effect){.term} → [régression non paramétrique](#nonparametric-regression). S'il est [oui/non](../glossary.qmd#binary){.term} → [régression logistique](#logistic-regression).
 
 ### Ce que fait vraiment le test
 
-La régression linéaire trace la droite qui s'ajuste le mieux aux points, puis demande à quel point on peut être sûr de sa pente.
+La régression linéaire trace la droite qui s'ajuste le mieux aux points, puis demande à quel point on peut être sûr de sa [pente](../glossary.qmd#slope){.term}.
 
 1. Pour n'importe quelle droite, mesurer la distance verticale entre chaque patient et elle : le **résidu**.
-2. Élever les résidus au carré et les additionner. La **droite des moindres carrés** est la seule droite pour laquelle cette somme est la plus petite possible. Le logiciel la trouve avec une formule, pas par tâtonnement.
-3. La **pente** de cette droite dit de combien le critère de jugement change, en moyenne, pour chaque unité supplémentaire du prédicteur. La droite passe toujours par le point où les deux variables sont à leur [moyenne](../glossary.qmd#mean){.term}.
+2. Élever les résidus au carré et les additionner. La **droite des [moindres carrés](../glossary.qmd#least-squares){.term}** est la seule droite pour laquelle cette somme est la plus petite possible. Le logiciel la trouve avec une formule, pas par tâtonnement.
+3. La **pente** de cette droite dit de combien le critère de jugement change, en moyenne, pour chaque unité supplémentaire du prédicteur. La droite passe toujours par le point où les deux [variables](../glossary.qmd#variable){.term} sont à leur [moyenne](../glossary.qmd#mean){.term}.
 4. Le test demande si la pente est plus éloignée de 0 que le hasard ne l'expliquerait : t = pente ÷ son [erreur standard](../glossary.qmd#standard-error){.term}, converti en [valeur p](../glossary.qmd#p-value){.term}. L'erreur standard est plus petite avec plus de patients, avec moins de dispersion autour de la droite, et avec un prédicteur plus étalé.
 
-Une fois le modèle exécuté, un encadré sous « Lire le résultat » recalcule la droite à la main.
+Une fois le [modèle](../glossary.qmd#model){.term} exécuté, un encadré sous « Lire le résultat » recalcule la droite à la main.
 
 ### Regarder d'abord les données
 
@@ -90,7 +90,7 @@ print(bmi_range)   # IMC le plus bas et le plus élevé des données
 ```
 :::
 
-Les points se dispersent autour d'une droite ascendante, sans courbe ni valeur atypique extrême. L'IMC va de 18.0 à 44.5 (la dernière ligne de la sortie).
+Les points se dispersent autour d'une droite ascendante, sans courbe ni [valeur atypique](../glossary.qmd#outlier){.term} extrême. L'IMC va de 18.0 à 44.5 (la dernière ligne de la sortie).
 
 ### Exécuter l'analyse
 
@@ -135,7 +135,7 @@ check_agree(list(intercept = coef(bmi_model)[["(Intercept)"]], slope = coef(bmi_
 - **IC à 95 % de 1.15 à 1.58** (le `confint()` de R ; les colonnes `[0.025 0.975]` de Python) : l'intervalle de confiance (IC) de la pente.
 - **R-squared = 0.20 :** l'IMC explique un cinquième de la variation de la durée opératoire.
 - **Residual standard error 14.7** (R seulement) : l'écart typique entre la durée opératoire d'un patient et la droite, en minutes.
-- **Tout le reste** (dans R, les quartiles des résidus, les étoiles de significativité et la statistique F ; en Python, Omnibus, Durbin-Watson, Jarque-Bera, AIC et BIC) : vous pouvez l'ignorer pour un modèle à un seul prédicteur. Avec un seul prédicteur, le test F répète le test de la pente.
+- **Tout le reste** (dans R, les [quartiles](../glossary.qmd#quartile){.term} des résidus, les étoiles de [significativité](../glossary.qmd#statistical-significance){.term} et la [statistique F](../glossary.qmd#f-statistic){.term} ; en Python, Omnibus, Durbin-Watson, Jarque-Bera, AIC et BIC) : vous pouvez l'ignorer pour un modèle à un seul prédicteur. Avec un seul prédicteur, le test F répète le test de la pente.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : la droite à la main
@@ -168,7 +168,7 @@ print(np.sqrt((residuals_by_hand ** 2).sum() / (600 - 2)))                      
 ```
 :::
 
-La droite calculée à la main a une ordonnée à l'origine de 42.8 et une pente de 1.37, comme dans la sortie. R² vaut 1 moins la part de la variation qui reste autour de la droite : 0.20. L'erreur standard résiduelle, 14.7 minutes, est la taille typique d'un résidu.
+La droite calculée à la main a une [ordonnée à l'origine](../glossary.qmd#intercept){.term} de 42.8 et une pente de 1.37, comme dans la sortie. [R²](../glossary.qmd#r-squared){.term} vaut 1 moins la part de la variation qui reste autour de la droite : 0.20. L'erreur standard résiduelle, 14.7 minutes, est la taille typique d'un résidu.
 :::
 
 ```{python}
@@ -213,7 +213,7 @@ C'est le cas ici : une bande régulière, sans courbe ni forme d'entonnoir.
 
 ### Taille d'effet et IC à 95 %
 
-La **pente** avec son IC à 95 % est la taille d'effet : 1.37 minute par kg/m² (IC à 95 % de 1.15 à 1.58). Ramenez-la à une différence qui compte cliniquement : 5 kg/m² d'IMC vont avec 5 × 1.368 = 6.8 minutes de plus (IC à 95 % de 5 × 1.151 = 5.8 à 5 × 1.585 = 7.9). La pente et les deux bornes de son IC sont multipliées par 5, avec les nombres non arrondis de la sortie. **R² = 0.20** dit quelle part de la variation la droite explique.
+La **pente** avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 % est la [taille d'effet](../glossary.qmd#effect-size){.term} : 1.37 minute par kg/m² (IC à 95 % de 1.15 à 1.58). Ramenez-la à une différence qui compte cliniquement : 5 kg/m² d'IMC vont avec 5 × 1.368 = 6.8 minutes de plus (IC à 95 % de 5 × 1.151 = 5.8 à 5 × 1.585 = 7.9). La pente et les deux bornes de son IC sont multipliées par 5, avec les nombres non arrondis de la sortie. **R² = 0.20** dit quelle part de la variation la droite explique.
 
 ### Rédiger les résultats
 
@@ -232,8 +232,8 @@ La droite prédit la durée opératoire **moyenne** pour chaque IMC. Les patient
 
 ### Quand l'utiliser
 
-- Le critère suit une **courbe dont vous connaissez la forme à l'avance**, et les nombres de la courbe ont un sens : ici un score de départ, un plateau et une vitesse de récupération.
-- Vous fournissez la formule et des valeurs de départ approximatives, et le programme trouve les valeurs qui s'ajustent le mieux (moindres carrés non linéaires).
+- Le [critère](../glossary.qmd#outcome){.term} suit une **courbe dont vous connaissez la forme à l'avance**, et les nombres de la courbe ont un sens : ici un score de départ, un plateau et une vitesse de récupération.
+- Vous fournissez la formule et des valeurs de départ approximatives, et le programme trouve les valeurs qui s'ajustent le mieux ([moindres carrés non linéaires](../glossary.qmd#least-squares){.term}).
 - Si vous ne connaissez pas la forme → [splines](12-predict-from-several.qmd#multiple-nonlinear-regression) ou [LOWESS](#nonparametric-regression). Si c'est une droite → [régression linéaire](#linear-regression).
 
 La courbe de récupération utilisée ici :
@@ -246,14 +246,14 @@ $$\text{score} = \text{plateau} - (\text{plateau} - \text{start}) \times e^{-\te
 
 ### Ce que fait vraiment le test
 
-La régression non linéaire ajuste une courbe comme la régression linéaire ajuste une droite : en rendant les carrés des distances entre les points et la courbe aussi petits que possible.
+La régression non linéaire ajuste une courbe comme la [régression linéaire](../glossary.qmd#linear-regression){.term} ajuste une droite : en rendant les carrés des distances entre les points et la courbe aussi petits que possible.
 
 1. Partir de vos valeurs de départ approximatives pour les nombres de la courbe (ici plateau, start et τ) et tracer cette courbe.
 2. Mesurer la distance verticale entre chaque score et la courbe, élever les distances au carré et les additionner.
 3. Modifier un peu les nombres dans le sens qui diminue la somme, et recommencer. Pour une courbe, aucune formule ne donne la réponse en une seule étape : c'est pourquoi le programme a besoin de valeurs de départ.
-4. S'arrêter quand aucun petit changement ne diminue plus la somme : l'ajustement a **convergé**. Les nombres obtenus à ce moment sont les estimations.
+4. S'arrêter quand aucun petit changement ne diminue plus la somme : l'ajustement a **[convergé](../glossary.qmd#convergence){.term}**. Les nombres obtenus à ce moment sont les [estimations](../glossary.qmd#estimate){.term}.
 
-Une fois le modèle exécuté, un encadré sous « Lire le résultat » montre la somme pour les valeurs de départ et pour la courbe ajustée.
+Une fois le [modèle](../glossary.qmd#model){.term} exécuté, un encadré sous « Lire le résultat » montre la somme pour les valeurs de départ et pour la courbe ajustée.
 
 ### Regarder d'abord les données
 
@@ -352,7 +352,7 @@ check_agree(list(plateau = recovery_coef["plateau", "Estimate"], start = recover
 - **plateau = 84.2 :** le KOOS JR se stabilise à environ 84 points.
 - **start = 49.8 :** le score estimé le jour de l'opération.
 - **tau = 80.9 :** la constante de temps, en jours.
-- **Std. Error :** l'incertitude de chaque estimation. Les valeurs t et les valeurs p testent si chaque nombre est nul, ce dont personne ne doute ici ; ignorez-les.
+- **Std. Error :** l'incertitude de chaque estimation. Les valeurs t et les [valeurs p](../glossary.qmd#p-value){.term} testent si chaque nombre est nul, ce dont personne ne doute ici ; ignorez-les.
 - **Residual standard error 12.33 on 1143 degrees of freedom** (R seulement) : les scores individuels s'écartent d'environ 12 points de la courbe.
 
 ::: {.callout-note collapse="true"}
@@ -385,7 +385,7 @@ print(np.sqrt(squared_distance(*estimates) / (1146 - 3)))          # erreur stan
 ```
 :::
 
-Les valeurs de départ donnent une somme de 176095. La courbe ajustée la fait descendre à 173841, et aucune autre valeur des trois nombres ne donne une somme plus petite : faire passer τ de 80.9 à 60 jours, par exemple, la fait remonter à 181009. En divisant la plus petite somme par 1146 − 3 et en prenant la racine carrée, on obtient l'erreur standard résiduelle, 12.33 points.
+Les valeurs de départ donnent une somme de 176095. La courbe ajustée la fait descendre à 173841, et aucune autre valeur des trois nombres ne donne une somme plus petite : faire passer τ de 80.9 à 60 jours, par exemple, la fait remonter à 181009. En divisant la plus petite somme par 1146 − 3 et en prenant la racine carrée, on obtient l'[erreur standard résiduelle](../glossary.qmd#residual){.term}, 12.33 points.
 :::
 
 ```{python}
@@ -403,7 +403,7 @@ check_agree(list(guess = squared_distance(85, 50, 100), fitted = squared_distanc
 
 ### Taille d'effet et IC à 95 %
 
-Les nombres de la courbe, avec leur IC à 95 %, sont les tailles d'effet. La moitié du gain final est atteinte après τ × ln 2 jours.
+Les nombres de la courbe, avec leur [IC](../glossary.qmd#confidence-interval){.term} à 95 %, sont les [tailles d'effet](../glossary.qmd#effect-size){.term}. La moitié du gain final est atteinte après τ × ln 2 jours.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -435,13 +435,13 @@ Le KOOS JR est passé d'environ 49.8 points (IC à 95 % de 48.5 à 51.2) le jou
 
 ::: {.callout-warning}
 ## ⚠️ Attention : chaque genou apparaît jusqu'à quatre fois
-Chaque genou a jusqu'à quatre scores (avant l'opération, à 6 semaines, à 3 mois et à 1 an). Les moindres carrés non linéaires traitent les 1146 scores comme 1146 patients indépendants, alors qu'ils proviennent de 330 genoux, et que les scores d'un même genou sont liés. Ces IC ne sont donc pas fiables : selon le nombre, ils peuvent être trop étroits ou trop larges. Un modèle mixte ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) en tient compte. Et si l'ajustement ne converge pas, essayez des valeurs de départ plus proches de ce que montre le graphique.
+Chaque genou a jusqu'à quatre scores (avant l'opération, à 6 semaines, à 3 mois et à 1 an). Les moindres carrés non linéaires traitent les 1146 scores comme 1146 patients [indépendants](../glossary.qmd#independence){.term}, alors qu'ils proviennent de 330 genoux, et que les scores d'un même genou sont liés. Ces IC ne sont donc pas fiables : selon le nombre, ils peuvent être trop étroits ou trop larges. Un [modèle mixte](../glossary.qmd#mixed-model){.term} ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) en tient compte. Et si l'ajustement ne converge pas, essayez des valeurs de départ plus proches de ce que montre le graphique.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : deux sortes d'IC
-- Le `nls()` de R et le `curve_fit()` de scipy utilisent des algorithmes d'ajustement différents, mais trouvent les mêmes estimations et les mêmes erreurs standard.
-- Le `confint()` de R fait un **profil** de l'ajustement : il éloigne chaque nombre de son estimation jusqu'à ce que l'ajustement se dégrade nettement. scipy ne donne que les erreurs standard : le code Python utilise donc estimation ± t × erreur standard. Les deux IC diffèrent légèrement ; ici, l'IC de τ va de 71.0 à 92.5 jours avec R, et de 69.9 à 91.8 avec Python ; l'IC du demi-gain va donc de 49 à 64 jours avec R et de 48 à 64 avec Python. L'un et l'autre conviennent ; dites lequel vous avez utilisé.
+- Le `nls()` de R et le `curve_fit()` de scipy utilisent des algorithmes d'ajustement différents, mais trouvent les mêmes estimations et les mêmes [erreurs standard](../glossary.qmd#standard-error){.term}.
+- Le `confint()` de R fait un **[profil](../glossary.qmd#profile-interval){.term}** de l'ajustement : il éloigne chaque nombre de son estimation jusqu'à ce que l'ajustement se dégrade nettement. scipy ne donne que les erreurs standard : le code Python utilise donc estimation ± t × erreur standard. Les deux IC diffèrent légèrement ; ici, l'IC de τ va de 71.0 à 92.5 jours avec R, et de 69.9 à 91.8 avec Python ; l'IC du demi-gain va donc de 49 à 64 jours avec R et de 48 à 64 avec Python. L'un et l'autre conviennent ; dites lequel vous avez utilisé.
 :::
 
 ## Régression non paramétrique {#nonparametric-regression}
@@ -450,9 +450,9 @@ Chaque genou a jusqu'à quatre scores (avant l'opération, à 6 semaines, à 3 m
 
 ### Quand l'utiliser
 
-- Le critère est une mesure qui **n'est pas normale** : elle a un plafond, une asymétrie ou des valeurs atypiques, si bien que les résidus d'une droite ne seront pas normaux.
+- Le [critère](../glossary.qmd#outcome){.term} est une [mesure](../glossary.qmd#continuous-variable){.term} qui **n'est pas [normale](../glossary.qmd#normal-distribution){.term}** : elle a un [plafond](../glossary.qmd#ceiling-effect){.term}, une [asymétrie](../glossary.qmd#skewed){.term} ou des [valeurs atypiques](../glossary.qmd#outlier){.term}, si bien que les [résidus](../glossary.qmd#residual){.term} d'une droite ne seront pas normaux.
 - Le **LOWESS** (lissage localement pondéré) dessine la forme sans formule : il ajuste de nombreuses petites droites, chacune aux points proches d'elle, et les relie en une courbe lisse. Il donne une image, pas une valeur p.
-- La **pente de Theil-Sen** est la médiane des pentes entre toutes les paires de patients. Quelques patients extrêmes la déplacent à peine, et son IC vient des rangs, pas de résidus normaux.
+- La **pente de Theil-Sen** est la médiane des [pentes](../glossary.qmd#slope){.term} entre toutes les paires de patients. Quelques patients extrêmes la déplacent à peine, et son [IC](../glossary.qmd#confidence-interval){.term} vient des [rangs](../glossary.qmd#rank){.term}, pas de résidus normaux.
 - Si les résidus sont à peu près normaux → [régression linéaire](#linear-regression).
 
 ### Ce que fait vraiment le test
@@ -594,7 +594,7 @@ check_agree(list(slope = ts_slope, intercept = ts_intercept, low = ts_ci[1], hig
 
 ### Taille d'effet et IC à 95 %
 
-La **pente de Theil-Sen** avec son IC est la taille d'effet : 0.39 point à 1 an par point préopératoire (IC à 95 % de 0.27 à 0.52). Une droite des moindres carrés ordinaires donne 0.43 (le code ci-dessous l'ajuste) ; les deux différeraient davantage si quelques patients inhabituels tiraient la droite des moindres carrés.
+La **pente de Theil-Sen** avec son IC est la [taille d'effet](../glossary.qmd#effect-size){.term} : 0.39 point à 1 an par point préopératoire (IC à 95 % de 0.27 à 0.52). Une droite des [moindres carrés](../glossary.qmd#least-squares){.term} ordinaires donne 0.43 (le code ci-dessous l'ajuste) ; les deux différeraient davantage si quelques patients inhabituels tiraient la droite des moindres carrés.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -633,29 +633,29 @@ Theil-Sen résiste aux valeurs atypiques, mais rien ne peut voir au-dessus d'un 
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : Theil-Sen dans R, et réglages de LOWESS
-- **Theil-Sen dans R :** certains packages R calculent mal l'IC quand des scores sont ex æquo, ce qui est toujours le cas des scores de PROM (deming 1.4-1 applique mal sa correction des ex æquo ; l'IC de mblm est beaucoup trop étroit). Le code R calcule donc directement la pente et l'IC de Sen, de la même façon que scipy, et les deux concordent exactement.
+- **Theil-Sen dans R :** certains packages R calculent mal l'IC quand des scores sont [ex æquo](../glossary.qmd#ties){.term}, ce qui est toujours le cas des scores de [PROM](../glossary.qmd#prom){.term} (deming 1.4-1 applique mal sa correction des ex æquo ; l'IC de mblm est beaucoup trop étroit). Le code R calcule donc directement la pente et l'IC de Sen, de la même façon que scipy, et les deux concordent exactement.
 - **Intercept :** la valeur par défaut de scipy (`method="separate"`) le calcule comme median(y) − pente × median(x). Le code R calcule median(y − pente × x), ce que scipy appelle `method="joint"`. La pente est la même dans les deux cas.
 - **LOWESS :** le `lowess()` de R et le `lowess()` de statsmodels exécutent le même algorithme, mais les valeurs par défaut de statsmodels diffèrent (il fixe `delta` à 0) : le code Python écrit donc explicitement les réglages de R. Le `geom_smooth()` de ggplot2 utilise un autre lisseur, `loess()`, qui trace une courbe semblable mais pas identique.
 :::
 
 ## Régression logistique simple {#logistic-regression}
 
-**La question :** le risque de décès dans les 30 jours augmente-t-il avec le délai avant l'opération ?
+**La question :** le [risque](../glossary.qmd#risk){.term} de décès dans les 30 jours augmente-t-il avec le délai avant l'opération ?
 
 ### Quand l'utiliser
 
-- Le critère est **oui/non** (décédé ou non), et vous voulez l'**odds ratio** par unité d'un prédicteur.
-- Elle suppose que le logarithme des odds change en ligne droite avec le prédicteur : chaque jour de retard en plus multiplie les odds par le même facteur.
+- Le [critère](../glossary.qmd#outcome){.term} est **[oui/non](../glossary.qmd#binary){.term}** (décédé ou non), et vous voulez l'**odds ratio** par unité d'un [prédicteur](../glossary.qmd#predictor){.term}.
+- Elle suppose que le [logarithme des odds](../glossary.qmd#odds){.term} change en ligne droite avec le prédicteur : chaque jour de retard en plus multiplie les odds par le même facteur.
 - Il faut assez de patients avec l'événement : une règle empirique courante est d'au moins 10 par prédicteur.
-- Si le critère est un délai jusqu'à un événement → [régression de Cox](#cox).
+- Si le critère est un délai jusqu'à un [événement](../glossary.qmd#event){.term} → [régression de Cox](#cox).
 
 ### Ce que fait vraiment le test
 
 La régression logistique trace elle aussi une droite, mais sur une échelle où un critère oui/non peut en suivre une : le logarithme des odds.
 
-1. Un risque ne peut pas suivre longtemps une droite, car il doit rester entre 0 % et 100 %. Le modèle travaille donc avec les **odds** (le risque divisé par 1 moins le risque), puis avec leur logarithme, les **log-odds**, qui peuvent prendre n'importe quelle valeur.
-2. Le modèle suppose que les log-odds changent en ligne droite avec le prédicteur : log-odds = ordonnée à l'origine + coefficient × prédicteur.
-3. Il essaie des valeurs pour l'ordonnée à l'origine et le coefficient, et garde la paire avec laquelle les résultats réellement observés (qui est décédé et qui a survécu), pris ensemble, étaient les plus probables. C'est la méthode du maximum de vraisemblance.
+1. Un risque ne peut pas suivre longtemps une droite, car il doit rester entre 0 % et 100 %. Le [modèle](../glossary.qmd#model){.term} travaille donc avec les **odds** (le risque divisé par 1 moins le risque), puis avec leur [logarithme](../glossary.qmd#logarithm){.term}, les **log-odds**, qui peuvent prendre n'importe quelle valeur.
+2. Le modèle suppose que les log-odds changent en ligne droite avec le prédicteur : log-odds = [ordonnée à l'origine](../glossary.qmd#intercept){.term} + [coefficient](../glossary.qmd#coefficient){.term} × prédicteur.
+3. Il essaie des valeurs pour l'ordonnée à l'origine et le coefficient, et garde la paire avec laquelle les résultats réellement observés (qui est décédé et qui a survécu), pris ensemble, étaient les plus probables. C'est la méthode du [maximum de vraisemblance](../glossary.qmd#maximum-likelihood){.term}.
 4. Ajouter le coefficient aux log-odds revient à multiplier les odds par e élevé à la puissance du coefficient. Ce nombre est l'[odds ratio](../glossary.qmd#odds-ratio){.term} par unité du prédicteur.
 
 Une fois le modèle exécuté, un encadré sous « Lire le résultat » convertit à la main les deux coefficients en risques prédits.
@@ -754,7 +754,7 @@ check_agree(list(coef = delay_coef["hours_24", "Estimate"], se = delay_coef["hou
 - **hours_24 = 0.41 :** la variation du **logarithme des odds** de décès dans les 30 jours par 24 heures de retard. Le logarithme des odds est difficile à lire : transformez donc le coefficient en odds ratio (étape suivante).
 - **Std. Error 0.11, z = 3.78, p < 0.001 :** le test de savoir si le délai avant l'opération compte tant soit peu.
 - **Intercept = −3.29 :** le logarithme des odds pour une opération dès l'admission (0 heure), qui ne sert qu'à ancrer la droite.
-- **Null deviance** et **Residual deviance** (R) : le défaut d'ajustement du modèle sans et avec le délai avant l'opération. Leur différence, 555.67 − 543.20 = 12.47 pour 1 degré de liberté, est le test du rapport de vraisemblance du modèle. Python affiche sa valeur p sous **LLR p-value** (0.0004). Avec un seul prédicteur, il dit la même chose que le test z ci-dessus.
+- **Null deviance** et **Residual deviance** (R) : le défaut d'ajustement du modèle sans et avec le délai avant l'opération. Leur différence, 555.67 − 543.20 = 12.47 pour 1 [degré de liberté](../glossary.qmd#degrees-of-freedom){.term}, est le [test du rapport de vraisemblance](../glossary.qmd#likelihood-ratio-test){.term} du modèle. Python affiche sa [valeur p](../glossary.qmd#p-value){.term} sous **LLR p-value** (0.0004). Avec un seul prédicteur, il dit la même chose que le [test z](../glossary.qmd#z-statistic){.term} ci-dessus.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : des coefficients au risque prédit, à la main
@@ -816,7 +816,7 @@ print(odds_ratios)
 ```
 :::
 
-Chaque période de 24 heures de retard a multiplié les odds de décès dans les 30 jours par 1.50 (IC à 95 % de 1.21 à 1.85).
+Chaque période de 24 heures de retard a multiplié les odds de décès dans les 30 jours par 1.50 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 1.21 à 1.85).
 
 ### Rédiger les résultats
 
@@ -826,7 +826,7 @@ Chaque période de 24 heures de retard a multiplié les odds de décès dans les
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une droite sur l'échelle des log-odds est une hypothèse
-Le modèle dit que chaque période de 24 heures multiplie les odds par le même facteur, 1.50. C'est une hypothèse, et les tranches ci-dessus ne permettent pas de la tester à l'œil. La dernière tranche est ouverte : ses patients ont attendu 97 heures en moyenne, si bien qu'une droite lui prédit déjà un taux plus élevé (17.2 % selon le modèle, 18.2 % observé ; le code ci-dessous calcule les trois nombres). Pour tester la forme, laissez l'effet se courber et comparez les deux ajustements, comme le fait l'[exercice 3 de la page 12](12-predict-from-several.qmd#exercises) avec les [splines](12-predict-from-several.qmd#multiple-nonlinear-regression). Un odds ratio n'est pas un risque relatif : les deux ne sont proches que lorsque l'événement est rare, comme ici (6.2 %). Et cela ne prouve pas un lien de cause à effet : les patients trop malades pour être opérés attendent peut-être plus longtemps, et ils décéderaient plus souvent quel que soit le moment de l'opération.
+Le modèle dit que chaque période de 24 heures multiplie les odds par le même facteur, 1.50. C'est une [hypothèse](../glossary.qmd#assumption){.term}, et les tranches ci-dessus ne permettent pas de la tester à l'œil. La dernière tranche est ouverte : ses patients ont attendu 97 heures en moyenne, si bien qu'une droite lui prédit déjà un taux plus élevé (17.2 % selon le modèle, 18.2 % observé ; le code ci-dessous calcule les trois nombres). Pour tester la forme, laissez l'effet se courber et comparez les deux ajustements, comme le fait l'[exercice 3 de la page 12](12-predict-from-several.qmd#exercises) avec les [splines](12-predict-from-several.qmd#multiple-nonlinear-regression). Un odds ratio n'est pas un [risque relatif](../glossary.qmd#risk-ratio){.term} : les deux ne sont proches que lorsque l'événement est rare, comme ici (6.2 %). Et cela ne prouve pas un lien de cause à effet : les patients trop malades pour être opérés attendent peut-être plus longtemps, et ils décéderaient plus souvent quel que soit le moment de l'opération.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -865,26 +865,26 @@ check_agree(list(wait = mean(hip_fracture$hours_to_surgery[over_72]), predicted 
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : IC par profil de vraisemblance et IC de Wald
-Le `confint()` de R appliqué à un `glm()` fait un **profil** de la vraisemblance, ce qui est plus précis dans les petits échantillons. Le `conf_int()` de statsmodels utilise la méthode de **Wald**, plus simple (estimation ± 1.96 erreur standard), qui donne ici 1.22 à 1.86 ; le `confint.default()` de R fait de même. Dites laquelle vous avez utilisée.
+Le `confint()` de R appliqué à un `glm()` fait un **[profil](../glossary.qmd#profile-interval){.term}** de la vraisemblance, ce qui est plus précis dans les petits [échantillons](../glossary.qmd#sample){.term}. Le `conf_int()` de statsmodels utilise la méthode de **[Wald](../glossary.qmd#wald-interval){.term}**, plus simple ([estimation](../glossary.qmd#estimate){.term} ± 1.96 [erreur standard](../glossary.qmd#standard-error){.term}), qui donne ici 1.22 à 1.86 ; le `confint.default()` de R fait de même. Dites laquelle vous avez utilisée.
 :::
 
 ## Régression de Cox {#cox}
 
-**La question :** le hazard (risque instantané) d'échec de la greffe du LCA augmente-t-il avec la pente tibiale postérieure ?
+**La question :** le [hazard](../glossary.qmd#hazard){.term} (risque instantané) d'échec de la greffe du LCA augmente-t-il avec la pente tibiale postérieure ?
 
 ### Quand l'utiliser
 
-- Le critère est un **délai jusqu'à un événement** (échec de la greffe), et le prédicteur est une **mesure** (la pente tibiale).
+- Le [critère](../glossary.qmd#outcome){.term} est un **délai jusqu'à un [événement](../glossary.qmd#event){.term}** (échec de la greffe), et le [prédicteur](../glossary.qmd#predictor){.term} est une **[mesure](../glossary.qmd#continuous-variable){.term}** (la pente tibiale).
 - La régression de Cox donne un **hazard ratio par unité** du prédicteur. Choisissez une unité qui a un sens : ici, par degré.
-- Elle suppose que le hazard ratio reste le même au cours du temps (**risques proportionnels**) et que le logarithme du hazard change en ligne droite avec la pente. La [page 14](../survival/14-cox-regression.qmd) montre comment vérifier les deux et présente la régression de Cox de façon complète.
-- Les décès sont censurés dans tout modèle de Cox portant sur un autre événement. Cela compte à peine chez les jeunes patients opérés du LCA, qui meurent rarement pendant le suivi. Chez les patients plus âgés, cela compte : le hazard ratio décrit alors le taux parmi les patients encore en vie, et la probabilité réelle qu'un patient ait l'événement demande l'[incidence cumulée](../survival/13-kaplan-meier.qmd#competing-risks) ou un [modèle de Fine-Gray](../survival/14-cox-regression.qmd#fine-gray).
+- Elle suppose que le hazard ratio reste le même au cours du temps (**[risques proportionnels](../glossary.qmd#proportional-hazards){.term}**) et que le logarithme du hazard change en ligne droite avec la pente. La [page 14](../survival/14-cox-regression.qmd) montre comment vérifier les deux et présente la régression de Cox de façon complète.
+- Les décès sont censurés dans tout modèle de Cox portant sur un autre événement. Cela compte à peine chez les jeunes patients opérés du LCA, qui meurent rarement pendant le [suivi](../glossary.qmd#follow-up){.term}. Chez les patients plus âgés, cela compte : le hazard ratio décrit alors le taux parmi les patients encore en vie, et la probabilité réelle qu'un patient ait l'événement demande l'[incidence cumulée](../survival/13-kaplan-meier.qmd#competing-risks) ou un [modèle de Fine-Gray](../survival/14-cox-regression.qmd#fine-gray).
 
 ### Ce que fait vraiment le test
 
 Le modèle de Cox fonctionne comme à la [page 8](08-three-plus-unmatched.qmd#cox), avec une mesure à la place des groupes.
 
 1. Partir de l'opération et avancer dans le temps. À chaque échec de la greffe, regarder qui était encore suivi juste avant : les patients [à risque](../glossary.qmd#at-risk){.term}.
-2. Le modèle suppose que chaque degré de pente supplémentaire multiplie le hazard par le même facteur, le [hazard ratio](../glossary.qmd#hazard-ratio){.term}. Pour un patient dont la pente est plus raide de 2°, le hazard est multiplié deux fois par ce facteur.
+2. Le [modèle](../glossary.qmd#model){.term} suppose que chaque degré de pente supplémentaire multiplie le hazard par le même facteur, le [hazard ratio](../glossary.qmd#hazard-ratio){.term}. Pour un patient dont la pente est plus raide de 2°, le hazard est multiplié deux fois par ce facteur.
 3. Il essaie des valeurs pour le hazard ratio et garde celle avec laquelle les échecs réellement survenus, pris ensemble, étaient les plus probables : à chaque échec, était-ce l'une des pentes les plus raides parmi les patients à risque ?
 4. Le test demande si ce hazard ratio est plus éloigné de 1 que le hasard ne l'expliquerait, et donne une [valeur p](../glossary.qmd#p-value){.term}.
 
@@ -983,14 +983,14 @@ check_agree(list(hr = slope_hr["tibial_slope_deg", "exp(coef)"], low = slope_hr[
 ### Lire le résultat
 
 - **exp(coef) = 1.27 :** le hazard ratio par degré de pente tibiale : le hazard d'échec de la greffe est 1.27 fois plus élevé pour une pente plus raide de 1°.
-- **lower .95 / upper .95 = 1.09 à 1.48 :** l'IC à 95 %, qui exclut 1 (aucune différence). R affiche 1.095 et 1.485, qui sont 1.0946 et 1.4847 déjà arrondis (Python montre plus de chiffres) : ne les arrondissez donc pas une seconde fois.
+- **lower .95 / upper .95 = 1.09 à 1.48 :** l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %, qui exclut 1 (aucune différence). R affiche 1.095 et 1.485, qui sont 1.0946 et 1.4847 déjà arrondis (Python montre plus de chiffres) : ne les arrondissez donc pas une seconde fois.
 - **Pr(>|z|) = 0.002 :** la valeur p de la pente.
-- **Likelihood ratio test = 10.1 on 1 df, p = 0.002 :** le test global ; avec un seul prédicteur, il dit la même chose que la valeur p de la pente. R l'affiche sous la forme `10.08 on 1 df, p=0.002` ; Python affiche la statistique, ses degrés de liberté et la valeur p sur la ligne sous son tableau. La première ligne de R, `n= 350, number of events= 31`, donne les reconstructions et les échecs ; Python les affiche en dernier.
+- **Likelihood ratio test = 10.1 on 1 df, p = 0.002 :** le [test global](../glossary.qmd#overall-test){.term} ; avec un seul prédicteur, il dit la même chose que la valeur p de la pente. R l'affiche sous la forme `10.08 on 1 df, p=0.002` ; Python affiche la [statistique](../glossary.qmd#test-statistic){.term}, ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} et la valeur p sur la ligne sous son tableau. La première ligne de R, `n= 350, number of events= 31`, donne les reconstructions et les échecs ; Python les affiche en dernier.
 - **Concordance = 0.67** (R seulement) : à quelle fréquence le modèle classe correctement les délais d'échec de la greffe de deux patients. 0.5 correspond à un tirage à pile ou face : la pente seule fait donc mieux que pile ou face, mais elle est loin de permettre une prédiction pour un patient. R affiche 0.665 (0.6654 avant arrondi).
 
 ### Taille d'effet et IC à 95 %
 
-Le **hazard ratio par degré**, 1.27 (IC à 95 % de 1.09 à 1.48), est la taille d'effet. Les hazard ratios se multiplient : une pente plus raide de 5° a un hazard 3.37 fois plus élevé (IC à 95 % de 1.57 à 7.21), calculé à partir du hazard ratio non arrondi élevé à la puissance 5 : 1.2748^5^ = 3.37. Le code ci-dessous fait de même pour l'IC.
+Le **hazard ratio par degré**, 1.27 (IC à 95 % de 1.09 à 1.48), est la [taille d'effet](../glossary.qmd#effect-size){.term}. Les hazard ratios se multiplient : une pente plus raide de 5° a un hazard 3.37 fois plus élevé (IC à 95 % de 1.57 à 7.21), calculé à partir du hazard ratio non arrondi élevé à la puissance 5 : 1.2748^5^ = 3.37. Le code ci-dessous fait de même pour l'IC.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1033,7 +1033,7 @@ La pente n'a pas été attribuée aux patients : ceux qui ont une pente forte p
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : lifelines s'arrête trop tôt
-Par défaut, lifelines arrête ses itérations un peu trop tôt : le code Python resserre donc la tolérance avec `fit_options={"precision": 1e-9}`. Ici, cela ne change rien de visible ; à la page 12, si.
+Par défaut, lifelines arrête ses [itérations](../glossary.qmd#convergence){.term} un peu trop tôt : le code Python resserre donc la tolérance avec `fit_options={"precision": 1e-9}`. Ici, cela ne change rien de visible ; à la page 12, si.
 :::
 
 ```{r}
@@ -1130,7 +1130,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** De combien la durée opératoire change-t-elle avec l'**âge** ? Ajustez une régression linéaire simple et rapportez la pente avec son IC à 95 %.
+**1.** De combien la durée opératoire change-t-elle avec l'**âge** ? Ajustez une [régression linéaire simple](../glossary.qmd#linear-regression){.term} et rapportez la [pente](../glossary.qmd#slope){.term} avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 %.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -1155,14 +1155,14 @@ print(age_time.params, age_time.conf_int(), age_time.pvalues, age_time.rsquared,
 
 > **Results:** The slope of operative time on age was 0.24 minutes per year (95% CI 0.11 to 0.38; p < 0.001; R² = 0.02).
 
-Cela fait environ 2.4 minutes par décennie, et l'âge n'explique que 2 % de la variation, contre 20 % pour l'IMC. Les deux programmes affichent la valeur p sous la forme `5.910612e-04`, soit 0.00059, donc p < 0.001.
+Cela fait environ 2.4 minutes par décennie, et l'âge n'explique que 2 % de la [variation](../glossary.qmd#spread){.term}, contre 20 % pour l'IMC. Les deux programmes affichent la [valeur p](../glossary.qmd#p-value){.term} sous la forme `5.910612e-04`, soit 0.00059, donc p < 0.001.
 :::
 
 **2.** Un collègue demande si les patients plus âgés avec une fracture du fémur proximal risquent davantage de décéder dans les 30 jours. Quelle régression utiliseriez-vous, et que trouvez-vous ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Le critère est oui/non et le prédicteur est une mesure : **régression logistique simple**. 74 décès suffisent largement pour un seul prédicteur.
+Le [critère](../glossary.qmd#outcome){.term} est [oui/non](../glossary.qmd#binary){.term} et le [prédicteur](../glossary.qmd#predictor){.term} est une [mesure](../glossary.qmd#continuous-variable){.term} : **[régression logistique simple](../glossary.qmd#logistic-regression){.term}**. 74 décès suffisent largement pour un seul prédicteur.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1187,7 +1187,7 @@ print(death_ors, death_model.pvalues, sep="\n")
 
 > **Results:** The odds ratio for death within 30 days per 10 years of age was 1.88 (95% CI 1.34 to 2.67; p < 0.001).
 
-L'IC est l'IC par profil de vraisemblance de R.
+L'IC est l'[IC par profil de vraisemblance](../glossary.qmd#profile-interval){.term} de R.
 :::
 
 **3.** Ajustez la courbe de récupération au **HOOS JR** (score de la hanche pour prothèse articulaire, version abrégée), donc pour les prothèses de hanche, et rédigez la phrase de Résultats.
@@ -1228,7 +1228,7 @@ print(len(hoos), hoos["case_id"].nunique())
 
 > **Results:** In 270 hips (906 scores), the fitted curve gave an estimated HOOS JR of 45.6 points (95% CI 44.2 to 46.9) at surgery and a plateau of 87.9 points (95% CI 86.3 to 89.4); half of the change was reached at about 37 days (95% CI 33 to 41).
 
-Les IC sont les IC par profil de vraisemblance de R ; ceux de Python, calculés à partir des erreurs standard, donnent ici les mêmes nombres une fois arrondis.
+Les IC sont les IC par profil de vraisemblance de R ; ceux de Python, calculés à partir des [erreurs standard](../glossary.qmd#standard-error){.term}, donnent ici les mêmes nombres une fois arrondis.
 
-Les hanches semblent se rétablir plus vite que les genoux (la moitié du gain vers 5 semaines, contre 8). Pour tester cette différence, ajustez les deux dans un seul modèle ([page 12](12-predict-from-several.qmd#multiple-nonlinear-regression)).
+Les hanches semblent se rétablir plus vite que les genoux (la moitié du gain vers 5 semaines, contre 8). Pour tester cette différence, ajustez les deux dans un seul [modèle](../glossary.qmd#model){.term} ([page 12](12-predict-from-several.qmd#multiple-nonlinear-regression)).
 :::

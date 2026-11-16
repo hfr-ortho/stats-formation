@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Deux choses mesurées chez les mêmes patients : la torsion fémorale au scanner et sur l'incidence de Budin modifiée, l'amélioration des PROM (mesures des résultats rapportés par le patient) et la satisfaction, la classe ASA et l'hypertension. Les tests de cette page ne comparent pas des groupes. Ils donnent **un seul nombre pour dire à quel point les deux vont ensemble**, avec un IC à 95 % (intervalle de confiance). Si vous voulez **prédire** l'une à partir de l'autre, utilisez la régression ([page 11](11-predict-from-one.qmd)).
+Deux choses mesurées chez les mêmes patients : la torsion fémorale au scanner et sur l'incidence de Budin modifiée, l'amélioration des [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient) et la satisfaction, la classe ASA et l'hypertension. Les tests de cette page ne comparent pas des groupes. Ils donnent **un seul nombre pour dire à quel point les deux vont ensemble**, avec un [IC](../glossary.qmd#confidence-interval){.term} à 95 % (intervalle de confiance). Si vous voulez **prédire** l'une à partir de l'autre, utilisez la régression ([page 11](11-predict-from-one.qmd)).
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données d'exercice (l'imagerie de la hanche pour Pearson, la cohorte de prothèses articulaires pour les autres). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données d'exercice (l'imagerie de la hanche pour Pearson, la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires pour les autres). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
 Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
@@ -32,10 +32,10 @@ Pour garder le code court, les exemples de prothèses articulaires utilisent tou
 
 ### Quand l'utiliser
 
-- Deux **mesures** chez les mêmes patients, et vous voulez un seul nombre pour dire à quel point elles évoluent ensemble le long d'une **droite**.
-- Les deux sont à peu près normales, sans valeur atypique extrême, et le nuage de points ressemble à un nuage étiré le long d'une droite.
-- Si l'une est [asymétrique](../glossary.qmd#skewed){.term} ou ordinale, a des valeurs atypiques, ou si les points suivent une courbe → [corrélation de Spearman](#spearman).
-- Si vous voulez prédire l'une à partir de l'autre, ou ajuster sur d'autres variables → [régression linéaire](11-predict-from-one.qmd#linear-regression).
+- Deux **[mesures](../glossary.qmd#continuous-variable){.term}** chez les mêmes patients, et vous voulez un seul nombre pour dire à quel point elles évoluent ensemble le long d'une **droite**.
+- Les deux sont à peu près [normales](../glossary.qmd#normal-distribution){.term}, sans [valeur atypique](../glossary.qmd#outlier){.term} extrême, et le [nuage de points](../glossary.qmd#scatter-plot){.term} ressemble à un nuage étiré le long d'une droite.
+- Si l'une est [asymétrique](../glossary.qmd#skewed){.term} ou [ordinale](../glossary.qmd#ordinal){.term}, a des valeurs atypiques, ou si les points suivent une courbe → [corrélation de Spearman](#spearman).
+- Si vous voulez prédire l'une à partir de l'autre, ou [ajuster sur](../glossary.qmd#adjustment){.term} d'autres [variables](../glossary.qmd#variable){.term} → [régression linéaire](11-predict-from-one.qmd#linear-regression).
 
 ### Ce que fait vraiment le test
 
@@ -43,7 +43,7 @@ Le r de Pearson mesure à quel point les points suivent une droite.
 
 1. Pour chaque patient, calculer à quelle distance chacune des deux mesures se trouve de sa propre [moyenne](../glossary.qmd#mean){.term}, comptée en [écarts-types](../glossary.qmd#standard-deviation){.term}. Une hanche située à 1 écart-type au-dessus de la moyenne au scanner vaut +1 au scanner.
 2. Multiplier les deux résultats de chaque patient. Le produit est positif quand les deux mesures sont du même côté de leur moyenne (toutes deux au-dessus ou toutes deux en dessous), et négatif quand elles sont de côtés opposés.
-3. Faire la moyenne des produits sur tous les patients (en divisant par n − 1). Cette moyenne est **r**. Quand une valeur élevée va avec une valeur élevée et une basse avec une basse, la plupart des produits sont positifs et r est proche de +1. Quand il n'y a pas de relation en ligne droite, les produits positifs et négatifs se compensent et r est proche de 0.
+3. Faire la moyenne des produits sur tous les patients (en divisant par n − 1). Cette moyenne est **r**. Quand une valeur élevée va avec une valeur élevée et une basse avec une basse, la plupart des produits sont positifs et r est proche de +1. Quand il n'y a pas de [relation en ligne droite](../glossary.qmd#linear-relationship){.term}, les produits positifs et négatifs se compensent et r est proche de 0.
 4. Le test demande si r est plus éloigné de 0 que le hasard ne l'expliquerait. Il convertit r en [statistique de test](../glossary.qmd#test-statistic){.term}, t = r × √(n − 2) ÷ √(1 − r²), puis t en [valeur p](../glossary.qmd#p-value){.term}.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule r et t à la main.
@@ -120,8 +120,8 @@ check_agree(list(r = unname(torsion_corr$estimate), p = torsion_corr$p.value,
 ### Lire le résultat
 
 - **cor** (R) ou **statistic** (Python) : le **r = 0.86** de Pearson. Il va de −1 (une droite parfaitement descendante), en passant par 0 (aucune relation en ligne droite), jusqu'à +1 (une droite parfaitement montante).
-- **t = 14.7, df = 78 :** la statistique de test, avec ses degrés de liberté (ddl) : 80 hanches moins 2. Python ne l'affiche pas.
-- **p < 0.001** (R affiche `p-value < 2.2e-16`, la plus petite valeur qu'il montre ; Python affiche `3.0576926692219362e-24`. Les deux sont la [notation scientifique](../glossary.qmd#scientific-notation){.term} de nombres très inférieurs à 0.001) : une corrélation aussi forte serait très improbable si la torsion au scanner et sur l'incidence de Budin n'étaient pas liées.
+- **t = 14.7, df = 78 :** la statistique de test, avec ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} (ddl) : 80 hanches moins 2. Python ne l'affiche pas.
+- **p < 0.001** (R affiche `p-value < 2.2e-16`, la plus petite valeur qu'il montre ; Python affiche `3.0576926692219362e-24`. Les deux sont la [notation scientifique](../glossary.qmd#scientific-notation){.term} de nombres très inférieurs à 0.001) : une [corrélation](../glossary.qmd#correlation){.term} aussi forte serait très improbable si la torsion au scanner et sur l'incidence de Budin n'étaient pas liées.
 - **IC à 95 % de 0.79 à 0.91.**
 
 ::: {.callout-note collapse="true"}
@@ -166,7 +166,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 
 ### Taille d'effet et IC à 95 %
 
-**r est la taille d'effet** : r = 0.86 (IC à 95 % de 0.79 à 0.91). Comme repère approximatif, 0.1 est petit, 0.3 moyen et 0.5 grand. Son carré donne la part de la variation de la torsion sur Budin qui va avec la torsion au scanner : r² = 0.74, soit environ les trois quarts.
+**r est la taille d'effet** : r = 0.86 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.79 à 0.91). Comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term}, 0.1 est petit, 0.3 moyen et 0.5 grand. Son carré donne la part de la [variation](../glossary.qmd#spread){.term} de la torsion sur Budin qui va avec la torsion au scanner : [r²](../glossary.qmd#r-squared){.term} = 0.74, soit environ les trois quarts.
 
 ### Rédiger les résultats
 
@@ -178,7 +178,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 ## ⚠️ Attention : r ne voit que les droites, n'est pas une cause et n'est pas une concordance
 Une relation qui monte puis redescend peut avoir un r proche de 0, et une seule valeur atypique peut créer ou masquer une corrélation : regardez donc toujours d'abord le nuage de points. De plus, une corrélation ne dit pas laquelle des deux variables cause l'autre, ni si un troisième facteur (âge, sexe) influence les deux. Pour ajuster sur d'autres variables, utilisez la [régression multiple](12-predict-from-several.qmd#multiple-linear-regression).
 
-**Un r élevé n'est pas une concordance.** Deux méthodes peuvent monter et descendre ensemble tout en lisant des angles différents. Ici r = 0.86, et pourtant la lecture sur Budin s'écartait de celle du scanner jusqu'à 12.9°, et l'on s'attend à ce que 95 % des différences se situent de −10.2° à 7.8° (la différence moyenne ± 1.96 écart-type). Même ces limites cachent une tendance : chez les 8 hanches avec 25° ou plus au scanner, la lecture sur Budin était en moyenne inférieure de 7.0°. Le code ci-dessous calcule ces nombres. Pour savoir si une méthode peut remplacer l'autre, utilisez les [limites de Bland-Altman](../beyond/17-agreement.qmd#bland-altman).
+**Un r élevé n'est pas une concordance.** Deux méthodes peuvent monter et descendre ensemble tout en lisant des angles différents. Ici r = 0.86, et pourtant la lecture sur Budin s'écartait de celle du scanner jusqu'à 12.9°, et l'on s'attend à ce que 95 % des différences se situent de −10.2° à 7.8° (la [différence moyenne](../glossary.qmd#mean-difference){.term} ± 1.96 écart-type). Même ces limites cachent une tendance : chez les 8 hanches avec 25° ou plus au scanner, la lecture sur Budin était en moyenne inférieure de 7.0°. Le code ci-dessous calcule ces nombres. Pour savoir si une méthode peut remplacer l'autre, utilisez les [limites de Bland-Altman](../beyond/17-agreement.qmd#bland-altman).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -224,15 +224,15 @@ check_agree(list(largest = max(abs(difference)), low = mean(difference) - 1.96 *
 
 ### Quand l'utiliser
 
-- Deux variables chez les mêmes patients, dont au moins une est **ordinale** (satisfaction de 1 à 5), **[asymétrique](../glossary.qmd#skewed){.term}** ou comporte des **valeurs atypiques**.
-- La relation va dans un seul sens (toujours vers le haut, ou toujours vers le bas), sans être forcément une droite. Le ρ (rho) de Spearman est le r de Pearson calculé sur les **rangs**.
-- Si les deux sont à peu près normales et que la relation est une droite → [corrélation de Pearson](#pearson).
+- Deux [variables](../glossary.qmd#variable){.term} chez les mêmes patients, dont au moins une est **[ordinale](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), **[asymétrique](../glossary.qmd#skewed){.term}** ou comporte des **[valeurs atypiques](../glossary.qmd#outlier){.term}**.
+- La relation va dans un seul sens (toujours vers le haut, ou toujours vers le bas), sans être forcément une droite. Le ρ (rho) de Spearman est le [r de Pearson](../glossary.qmd#pearson-correlation){.term} calculé sur les **rangs**.
+- Si les deux sont à peu près [normales](../glossary.qmd#normal-distribution){.term} et que la relation est une droite → [corrélation de Pearson](#pearson).
 
 ### Ce que fait vraiment le test
 
 Le ρ de Spearman est le r de Pearson à une différence près : il est calculé sur les [rangs](../glossary.qmd#rank){.term} et non sur les valeurs elles-mêmes.
 
-1. Classer les patients selon la première variable, de la valeur la plus basse à la plus élevée. Les valeurs ex æquo partagent la moyenne de leurs rangs.
+1. Classer les patients selon la première variable, de la valeur la plus basse à la plus élevée. Les [valeurs ex æquo](../glossary.qmd#ties){.term} partagent la moyenne de leurs rangs.
 2. Faire de même, séparément, pour la seconde variable.
 3. Calculer le [r de Pearson](#pearson) entre les deux séries de rangs. Le résultat est **ρ** : proche de +1 quand les patients bien classés pour une variable le sont aussi pour l'autre, proche de −1 quand les deux classements vont en sens opposé, et proche de 0 quand ils n'ont rien à voir l'un avec l'autre.
 4. Le test demande si ρ est plus éloigné de 0 que le hasard ne l'expliquerait, et donne une [valeur p](../glossary.qmd#p-value){.term}.
@@ -299,7 +299,7 @@ print(change.groupby("satisfaction_1yr")["improvement"].agg(["count", "median"])
 ```
 :::
 
-404 interventions ont un score préopératoire et un score à 1 an, ainsi qu'une réponse de satisfaction (le premier nombre affiché). L'amélioration médiane augmente à chaque niveau de satisfaction, de 25.4 points chez les 14 patients très insatisfaits à 43.8 chez les 198 très satisfaits. La satisfaction n'a que cinq valeurs : il y a donc beaucoup de valeurs ex æquo.
+404 interventions ont un score préopératoire et un score à 1 an, ainsi qu'une réponse de satisfaction (le premier nombre affiché). L'amélioration [médiane](../glossary.qmd#median){.term} augmente à chaque niveau de satisfaction, de 25.4 points chez les 14 patients très insatisfaits à 43.8 chez les 198 très satisfaits. La satisfaction n'a que cinq valeurs : il y a donc beaucoup de valeurs ex æquo.
 
 ### Exécuter l'analyse
 
@@ -333,8 +333,8 @@ check_agree(list(rho = unname(satisfaction_corr$estimate), p = satisfaction_corr
 ### Lire le résultat
 
 - **rho** (R) ou **statistic** (Python) : **ρ = 0.38**. Comme r, il va de −1 à +1 ; ici, il indique que les patients dont l'amélioration est plus grande ont tendance à donner des scores de satisfaction plus élevés.
-- **S = 6764534** (R seulement) : la statistique de test, construite à partir des écarts entre les deux classements. Vous n'avez pas besoin de la rapporter.
-- **p < 0.001** (R affiche `1.111e-15`, Python le même nombre avec plus de chiffres ; c'est la [notation scientifique](../glossary.qmd#scientific-notation){.term} : avec `e-15`, le point décimal recule de 15 rangs vers la gauche) : une corrélation aussi forte serait très improbable si l'amélioration et la satisfaction n'étaient pas liées.
+- **S = 6764534** (R seulement) : la [statistique de test](../glossary.qmd#test-statistic){.term}, construite à partir des écarts entre les deux classements. Vous n'avez pas besoin de la rapporter.
+- **p < 0.001** (R affiche `1.111e-15`, Python le même nombre avec plus de chiffres ; c'est la [notation scientifique](../glossary.qmd#scientific-notation){.term} : avec `e-15`, le point décimal recule de 15 rangs vers la gauche) : une [corrélation](../glossary.qmd#correlation){.term} aussi forte serait très improbable si l'amélioration et la satisfaction n'étaient pas liées.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : ρ à la main
@@ -376,7 +376,7 @@ check_agree(list(rho = cor(improvement_ranks, satisfaction_ranks),
 
 ### Taille d'effet et IC à 95 %
 
-**ρ est la taille d'effet.** Ni `cor.test()` ni scipy n'en donnent l'IC à 95 %. R utilise donc DescTools, et Python la formule qui le sous-tend (transformation z de Fisher).
+**ρ est la taille d'effet.** Ni `cor.test()` ni scipy n'en donnent l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %. R utilise donc DescTools, et Python la formule qui le sous-tend (transformation z de Fisher).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -406,7 +406,7 @@ satisfaction_rho <- DescTools::SpearmanRho(change$improvement, change$satisfacti
 check_agree(list(low = satisfaction_rho[["lwr.ci"]], high = satisfaction_rho[["upr.ci"]]), reticulate::py$chk)
 ```
 
-ρ = 0.38 (IC à 95 % de 0.30 à 0.46) : une association modérée, avec le même repère approximatif que pour r.
+ρ = 0.38 (IC à 95 % de 0.30 à 0.46) : une [association](../glossary.qmd#association){.term} modérée, avec le même [repère approximatif](../glossary.qmd#cohen-benchmarks){.term} que pour r.
 
 ### Rédiger les résultats
 
@@ -421,8 +421,8 @@ Les patients avec une prothèse de hanche répondent au HOOS JR, et ceux avec un
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : valeurs ex æquo et IC
-- Avec moins de 1290 patients, le `cor.test()` de R essaie de calculer une valeur p **exacte**. En présence de valeurs ex æquo, il n'y arrive pas : il affiche un avertissement et revient à l'approximation habituelle, celle que scipy utilise toujours. `exact = FALSE` demande directement l'approximation, sans avertissement.
-- Ni l'un ni l'autre ne donne d'IC pour ρ. Le `SpearmanRho()` de DescTools et la formule Python utilisent la même méthode : le z de Fisher avec une erreur standard de 1/√(n − 3).
+- Avec moins de 1290 patients, le `cor.test()` de R essaie de calculer une valeur p **[exacte](../glossary.qmd#exact-test){.term}**. En présence de valeurs ex æquo, il n'y arrive pas : il affiche un avertissement et revient à l'approximation habituelle, celle que scipy utilise toujours. `exact = FALSE` demande directement l'approximation, sans avertissement.
+- Ni l'un ni l'autre ne donne d'IC pour ρ. Le `SpearmanRho()` de DescTools et la formule Python utilisent la même méthode : le z de Fisher avec une [erreur standard](../glossary.qmd#standard-error){.term} de 1/√(n − 3).
 :::
 
 ## Coefficients de contingence {#contingency-coefficients}
@@ -431,18 +431,18 @@ Les patients avec une prothèse de hanche répondent au HOOS JR, et ceux avec un
 
 ### Quand l'utiliser
 
-- Deux variables **catégorielles** chez les mêmes patients. Le test du khi-deux ([page 8](08-three-plus-unmatched.qmd#chi-square)) demande si elles sont liées, tout court ; un coefficient de contingence dit **à quel point**.
-- **Phi (φ)** sert pour les tableaux 2 × 2. Le **V de Cramér** convient à un tableau de n'importe quelle taille et égale φ (sans son signe) sur un tableau 2 × 2. Les deux vont de 0 (aucun lien) à 1 (chaque catégorie de l'une prédit exactement l'autre).
+- Deux [variables](../glossary.qmd#variable){.term} **[catégorielles](../glossary.qmd#categorical-variable){.term}** chez les mêmes patients. Le [test du khi-deux](../glossary.qmd#chi-square-test){.term} ([page 8](08-three-plus-unmatched.qmd#chi-square)) demande si elles sont liées, tout court ; un coefficient de contingence dit **à quel point**.
+- **Phi (φ)** sert pour les [tableaux 2 × 2](../glossary.qmd#contingency-table){.term}. Le **V de Cramér** convient à un tableau de n'importe quelle taille et égale φ (sans son signe) sur un tableau 2 × 2. Les deux vont de 0 (aucun lien) à 1 (chaque catégorie de l'une prédit exactement l'autre).
 - Le **coefficient de contingence de Pearson (C)** est plus ancien. Son maximum est inférieur à 1 et dépend de la taille du tableau (il vaut √((k − 1) ÷ k), où k est le plus petit des deux nombres, lignes ou colonnes : √(1 ÷ 2) = 0.71 pour un tableau à deux colonnes), ce qui le rend difficile à lire : préférez donc V.
-- La valeur p du khi-deux exige que chaque [effectif attendu](../glossary.qmd#expected-count){.term} soit d'au moins 5.
+- La [valeur p](../glossary.qmd#p-value){.term} du khi-deux exige que chaque [effectif attendu](../glossary.qmd#expected-count){.term} soit d'au moins 5.
 
 ### Ce que fait vraiment le test
 
-Un coefficient de contingence transforme la statistique du khi-deux en un nombre entre 0 et 1 qui dit quelle est la force du lien.
+Un coefficient de contingence transforme la [statistique du khi-deux](../glossary.qmd#chi-square-statistic){.term} en un nombre entre 0 et 1 qui dit quelle est la force du lien.
 
 1. Exécuter le [test du khi-deux](08-three-plus-unmatched.qmd#chi-square). Il compare le tableau observé au tableau attendu si les deux variables n'étaient pas liées, et résume l'écart entre les deux par χ².
 2. χ² augmente avec la force du lien, mais aussi avec le nombre de patients : si l'on double chaque effectif du tableau, χ² double, alors que le lien n'est pas plus fort.
-3. Le **V de Cramér** retire l'effet de la taille de l'échantillon : V = √(χ² ÷ (n × (k − 1))), où n est le nombre de patients et k le plus petit des deux nombres, lignes ou colonnes.
+3. Le **V de Cramér** retire l'effet de la [taille de l'échantillon](../glossary.qmd#sample-size){.term} : V = √(χ² ÷ (n × (k − 1))), où n est le nombre de patients et k le plus petit des deux nombres, lignes ou colonnes.
 4. Le **C de Pearson** utilise une formule un peu différente, C = √(χ² ÷ (χ² + n)), qui ne peut jamais atteindre 1.
 
 Une fois le test exécuté, un encadré sous « Lire le résultat » calcule V et C à la main.
@@ -591,7 +591,7 @@ asa_c <- effectsize::pearsons_c(asa_hypertension)
 check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 ```
 
-**V de Cramér = 0.20**, une association de petite à moyenne (comme repère approximatif pour les tableaux à deux lignes ou deux colonnes, 0.1 est petit, 0.3 moyen et 0.5 grand). R affiche aussi un IC à 95 % unilatéral (0.12 à 1.00) : V ne peut pas être négatif, donc seule sa borne inférieure est informative. scipy ne calcule pas cet IC. Le deuxième résultat de R, intitulé `Cramer's V (adj.)`, est expliqué dans l'encadré R ou Python. Le C de Pearson vaut ici 0.19, mais son plafond pour ce tableau est de 0.71, et non de 1 : le même nombre en dit donc plus qu'il n'y paraît, une raison de plus de rapporter V.
+**V de Cramér = 0.20**, une [association](../glossary.qmd#association){.term} de petite à moyenne (comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term} pour les tableaux à deux lignes ou deux colonnes, 0.1 est petit, 0.3 moyen et 0.5 grand). R affiche aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % [unilatéral](../glossary.qmd#two-sided){.term} (0.12 à 1.00) : V ne peut pas être négatif, donc seule sa borne inférieure est informative. scipy ne calcule pas cet IC. Le deuxième résultat de R, intitulé `Cramer's V (adj.)`, est expliqué dans l'encadré R ou Python. Le C de Pearson vaut ici 0.19, mais son plafond pour ce tableau est de 0.71, et non de 1 : le même nombre en dit donc plus qu'il n'y paraît, une raison de plus de rapporter V.
 
 ### Rédiger les résultats
 
@@ -601,12 +601,12 @@ check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 
 ::: {.callout-warning}
 ## ⚠️ Attention : V donne la force du lien, pas son profil
-Mélanger les lignes du tableau ne change pas V : V ne peut donc pas dire que l'hypertension augmente **régulièrement** avec la classe ASA. Ce sont les pourcentages par ligne qui montrent le profil ; mettez-les dans vos Résultats. Si les catégories sont ordonnées et que vous attendez une tendance, un test de tendance peut être plus puissant que le test du khi-deux simple.
+Mélanger les lignes du tableau ne change pas V : V ne peut donc pas dire que l'hypertension augmente **régulièrement** avec la classe ASA. Ce sont les pourcentages par ligne qui montrent le profil ; mettez-les dans vos Résultats. Si les catégories sont ordonnées et que vous attendez une tendance, un test de tendance peut être plus [puissant](../glossary.qmd#power){.term} que le test du khi-deux simple.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : le V de Cramér existe en deux versions
-`cramers_v()` et `phi()` d'effectsize appliquent par défaut une correction du biais des petits échantillons (ici V = 0.18, le résultat intitulé `Cramer's V (adj.)` dans l'onglet R), alors que `association()` de scipy n'en applique pas. `adjust = FALSE` la désactive pour que les deux concordent ; quelle que soit la version que vous utilisez, dites laquelle dans vos Méthodes. Sur un tableau 2 × 2, `association(method="cramer")` donne φ sans son signe.
+`cramers_v()` et `phi()` d'effectsize appliquent par défaut une correction du [biais](../glossary.qmd#bias){.term} des petits [échantillons](../glossary.qmd#sample){.term} (ici V = 0.18, le résultat intitulé `Cramer's V (adj.)` dans l'onglet R), alors que `association()` de scipy n'en applique pas. `adjust = FALSE` la désactive pour que les deux concordent ; quelle que soit la version que vous utilisez, dites laquelle dans vos Méthodes. Sur un tableau 2 × 2, `association(method="cramer")` donne φ sans son signe.
 :::
 
 ```{r}
@@ -679,7 +679,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Quelle est la force du lien entre les **angles alpha** mesurés sur les incidences de Dunn à 45° et de grenouille (frog-leg) ? Rapportez le r de Pearson avec son IC à 95 %.
+**1.** Quelle est la force du lien entre les **angles alpha** mesurés sur les incidences de Dunn à 45° et de grenouille (frog-leg) ? Rapportez le [r de Pearson](../glossary.qmd#pearson-correlation){.term} avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 %.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -703,14 +703,14 @@ print((imaging["alpha_dunn45_deg"] - imaging["alpha_frogleg_deg"]).mean())
 
 > **Results:** The correlation between the alpha angle on the Dunn 45° and frog-leg views was r = 0.93 (Pearson; 95% CI 0.89 to 0.95; p < 0.001; n = 80 hips).
 
-Une corrélation forte, et pourtant l'incidence de Dunn donnait en moyenne 3.7° de plus (le dernier nombre affiché ; voir aussi la [page 7](07-two-paired-groups.qmd#paired-t)) : r ne voit pas un décalage constant.
+Une [corrélation](../glossary.qmd#correlation){.term} forte, et pourtant l'incidence de Dunn donnait en moyenne 3.7° de plus (le dernier nombre affiché ; voir aussi la [page 7](07-two-paired-groups.qmd#paired-t)) : r ne voit pas un décalage constant.
 :::
 
 **2.** Un collègue demande si les patients plus âgés restent plus longtemps à l'hôpital. Quelle corrélation utiliseriez-vous, et que trouvez-vous ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-La durée de séjour est fortement asymétrique vers la droite, avec beaucoup de valeurs ex æquo ([page 3](../foundations/03-distributions.qmd#transform)) : **corrélation de Spearman**.
+La durée de séjour est fortement [asymétrique](../glossary.qmd#skewed){.term} vers la droite, avec beaucoup de valeurs [ex æquo](../glossary.qmd#ties){.term} ([page 3](../foundations/03-distributions.qmd#transform)) : **[corrélation de Spearman](../glossary.qmd#spearman-correlation){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -731,10 +731,10 @@ print(los_corr, np.tanh(z - half_width), np.tanh(z + half_width))
 
 > **Results:** The correlation between age and length of stay was ρ = 0.15 (Spearman; 95% CI 0.07 to 0.22; p < 0.001).
 
-Les patients plus âgés avaient tendance à rester un peu plus longtemps, mais l'association est faible.
+Les patients plus âgés avaient tendance à rester un peu plus longtemps, mais l'[association](../glossary.qmd#association){.term} est faible.
 :::
 
-**3.** L'apnée du sommeil est-elle plus fréquente chez les hommes que chez les femmes, et quelle est la force de son lien avec le sexe ? Rédigez la phrase de Résultats avec φ.
+**3.** L'apnée du sommeil est-elle plus fréquente chez les hommes que chez les femmes, et quelle est la force de son lien avec le sexe ? Rédigez la phrase de Résultats avec [φ](../glossary.qmd#cramers-v){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution

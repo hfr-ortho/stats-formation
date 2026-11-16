@@ -16,9 +16,9 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Les PROM (mesures des résultats rapportés par le patient) sont recueillis à plusieurs visites, et les patients en manquent certaines. La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé des scores répétés avec l'ANOVA à mesures répétées, qui n'utilise que les patients mesurés à chaque visite. Un **modèle linéaire mixte** utilise tous les scores de tous les patients, et répond aux questions qu'une étude de PROM pose d'habitude : de combien les patients s'améliorent-ils, à quelle échéance, et la récupération diffère-t-elle entre les groupes ?
+Les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient) sont recueillis à plusieurs visites, et les patients en manquent certaines. La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé des [scores répétés](../glossary.qmd#repeated-measures){.term} avec l'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term}, qui n'utilise que les patients mesurés à chaque visite. Un **modèle linéaire mixte** utilise tous les scores de tous les patients, et répond aux questions qu'une étude de PROM pose d'habitude : de combien les patients s'améliorent-ils, à quelle échéance, et la récupération diffère-t-elle entre les groupes ?
 
-Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire, le HOOS JR (score de la hanche pour prothèse articulaire, version abrégée), et rien ne garantit qu'un point sur l'un vaille un point sur l'autre : les deux ne sont donc pas mélangés dans un même modèle. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'essai orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
+Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire, le HOOS JR (score de la hanche pour prothèse articulaire, version abrégée), et rien ne garantit qu'un point sur l'un vaille un point sur l'autre : les deux ne sont donc pas mélangés dans un même [modèle](../glossary.qmd#model){.term}. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'[essai](../glossary.qmd#randomized-trial){.term} orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
@@ -83,16 +83,16 @@ per_knee <- count(knees, case_id)
 check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores = nrow(knees)), reticulate::py$chk)
 ```
 
-Les 330 genoux ont tous au moins un score (4 + 28 + 106 + 192 = 330), 1146 scores au total (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), mais seulement 192 genoux ont les quatre. L'ANOVA à mesures répétées écarterait les 138 autres genoux (138 / 330 = 42 %) avec tous les scores qu'ils ont donnés. Un modèle mixte garde les 1146 scores.
+Les 330 genoux ont tous au moins un score (4 + 28 + 106 + 192 = 330), 1146 scores au total (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), mais seulement 192 genoux ont les quatre. L'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term} écarterait les 138 autres genoux (138 / 330 = 42 %) avec tous les scores qu'ils ont donnés. Un [modèle mixte](../glossary.qmd#mixed-model){.term} garde les 1146 scores.
 
-Écarter des patients n'est pas seulement du gaspillage. Cela peut biaiser le résultat, et cela dépend de la raison pour laquelle des scores manquent :
-- **Données manquantes complètement au hasard :** une visite manquée n'a rien à voir avec la récupération du patient (le service a reporté le rendez-vous, le patient a déménagé). Les deux méthodes sont non biaisées ; le modèle mixte est plus précis parce qu'il utilise plus de données.
-- **Données manquantes au hasard :** le fait de manquer dépend de choses que vous avez mesurées, comme un score antérieur. Un patient qui a eu un mauvais score à 6 semaines a moins de chances de revenir à 3 mois. L'ANOVA à mesures répétées est alors biaisée, parce que les patients qu'elle garde ont mieux récupéré ; un modèle mixte reste non biaisé, tant que le modèle décrit comment les scores d'un genou sont liés, parce qu'il utilise les scores antérieurs pour compléter le tableau.
+Écarter des patients n'est pas seulement du gaspillage. Cela peut [biaiser](../glossary.qmd#bias){.term} le résultat, et cela dépend de la raison pour laquelle des scores [manquent](../glossary.qmd#missing-data){.term} :
+- **Données manquantes complètement au hasard :** une visite manquée n'a rien à voir avec la récupération du patient (le service a reporté le rendez-vous, le patient a déménagé). Les deux méthodes sont non biaisées ; le modèle mixte est plus [précis](../glossary.qmd#precision){.term} parce qu'il utilise plus de données.
+- **Données manquantes au hasard :** le fait de manquer dépend de choses que vous avez mesurées, comme un score antérieur. Un patient qui a eu un mauvais score à 6 semaines a moins de chances de revenir à 3 mois. L'ANOVA à mesures répétées est alors biaisée, parce que les patients qu'elle garde ont mieux récupéré ; un modèle mixte reste non biaisé, tant que le [modèle](../glossary.qmd#model){.term} décrit comment les scores d'un genou sont liés, parce qu'il utilise les scores antérieurs pour compléter le tableau.
 - **Données manquantes non au hasard :** le fait de manquer dépend du score qui n'a pas été recueilli (les patients ne viennent pas *parce que* leur genou va plus mal cette semaine-là). Rien dans les données seules ne le corrige. Signalez-le comme une limite de l'étude.
 
 ## Un intercept aléatoire pour chaque genou {#random-intercept}
 
-Les scores d'un même genou sont liés : un genou qui part bas reste en général plus bas que la moyenne. Un modèle mixte en tient compte avec un **intercept aléatoire** : chaque genou a son propre niveau de départ, décalé vers le haut ou vers le bas par rapport à la moyenne. Les **effets fixes** (ici, les visites) décrivent le patient moyen ; les intercepts aléatoires décrivent de combien les genoux diffèrent de cette moyenne.
+Les scores d'un même genou sont liés : un genou qui part bas reste en général plus bas que la moyenne. Un [modèle mixte](../glossary.qmd#mixed-model){.term} en tient compte avec un **intercept aléatoire** : chaque genou a son propre niveau de départ, décalé vers le haut ou vers le bas par rapport à la moyenne. Les **effets fixes** (ici, les visites) décrivent le patient moyen ; les intercepts aléatoires décrivent de combien les genoux diffèrent de cette moyenne.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -133,10 +133,10 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 ```
 
 Lire le résultat :
-- **Fixed effects :** le KOOS JR moyen était de 50.0 avant l'opération (l'intercept), et plus haut de 12.5 points à 6 semaines, de 24.2 à 3 mois et de 33.9 à 1 an. Le coefficient de chaque visite est sa différence avec la visite préopératoire.
-- **Random effects :** les niveaux de départ propres aux genoux varient autour de la moyenne avec un [écart-type (ET)](../glossary.qmd#standard-deviation){.term} de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET résiduel de 8.6 points (ligne « Residual » de R : variance 73.45, ET 8.570 ; Python n'affiche que la variance, sous la forme « Scale: 73.4507 » dans l'en-tête, et √73.45 = 8.57).
-- **Part de la variation qui se situe entre les genoux :** la variance des genoux divisée par la variance des genoux plus la variance résiduelle, 78.1 / (78.1 + 73.5) = 0.52, le coefficient de corrélation intraclasse (CCI ; la [page 17](17-agreement.qmd#icc) reprend la même idée pour les évaluateurs). Environ la moitié de la dispersion des scores vient du fait que les genoux diffèrent les uns des autres ; c'est pourquoi les scores ne peuvent pas être traités comme indépendants.
-- **REML :** les deux programmes ajustent le modèle par maximum de vraisemblance restreint, le choix habituel pour l'estimer.
+- **Fixed effects :** le KOOS JR moyen était de 50.0 avant l'opération (l'[intercept](../glossary.qmd#intercept){.term}), et plus haut de 12.5 points à 6 semaines, de 24.2 à 3 mois et de 33.9 à 1 an. Le [coefficient](../glossary.qmd#coefficient){.term} de chaque visite est sa différence avec la visite préopératoire.
+- **Random effects :** les niveaux de départ propres aux genoux varient autour de la moyenne avec un [écart-type (ET)](../glossary.qmd#standard-deviation){.term} de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET [résiduel](../glossary.qmd#residual){.term} de 8.6 points (ligne « Residual » de R : variance 73.45, ET 8.570 ; Python n'affiche que la variance, sous la forme « Scale: 73.4507 » dans l'en-tête, et √73.45 = 8.57).
+- **Part de la variation qui se situe entre les genoux :** la variance des genoux divisée par la variance des genoux plus la variance résiduelle, 78.1 / (78.1 + 73.5) = 0.52, le [coefficient de corrélation intraclasse](../glossary.qmd#icc){.term} (CCI ; la [page 17](17-agreement.qmd#icc) reprend la même idée pour les évaluateurs). Environ la moitié de la [dispersion](../glossary.qmd#spread){.term} des scores vient du fait que les genoux diffèrent les uns des autres ; c'est pourquoi les scores ne peuvent pas être traités comme [indépendants](../glossary.qmd#independence){.term}.
+- **REML :** les deux programmes ajustent le [modèle](../glossary.qmd#model){.term} par [maximum de vraisemblance restreint](../glossary.qmd#reml){.term}, le choix habituel pour l'estimer.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : les deux variances à la main
@@ -173,9 +173,9 @@ print(side_by_side.corr().round(2))
 ```
 :::
 
-Autour des moyennes des visites, les scores ont une variance de 150.8. Le modèle répartit cette dispersion en 78.1 entre les genoux et 73.5 au sein d'un genou, soit 151.6 au total, presque la même chose.
+Autour des [moyennes](../glossary.qmd#mean){.term} des visites, les scores ont une variance de 150.8. Le modèle répartit cette dispersion en 78.1 entre les genoux et 73.5 au sein d'un genou, soit 151.6 au total, presque la même chose.
 
-Le tableau donne la corrélation entre les scores d'un même genou à deux visites. Les six corrélations vont de 0.43 à 0.57. Un intercept aléatoire les décrit par un seul nombre, le coefficient de corrélation intraclasse de 0.52 : deux scores du même genou se ressemblent à peu près autant, quelles que soient les deux visites choisies.
+Le tableau donne la [corrélation](../glossary.qmd#correlation){.term} entre les scores d'un même genou à deux visites. Les six corrélations vont de 0.43 à 0.57. Un intercept aléatoire les décrit par un seul nombre, le coefficient de corrélation intraclasse de 0.52 : deux scores du même genou se ressemblent à peu près autant, quelles que soient les deux visites choisies.
 :::
 
 ```{python}
@@ -194,12 +194,12 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : degrés de liberté
-Les estimations concordent. Les erreurs standard concordent à trois ou quatre chiffres significatifs : lme4 les calcule en maintenant les variances du genou et résiduelle à leurs estimations, statsmodels à partir de la courbure de toute la vraisemblance. Les valeurs p et les intervalles de confiance (IC) diffèrent un peu plus. lmerTest donne à chaque effet fixe un test t avec des degrés de liberté de **Satterthwaite**, une approximation de la quantité d'information sur laquelle repose l'estimation. statsmodels utilise un test z, comme si les degrés de liberté étaient infinis. Avec 330 genoux, la différence se situe à la troisième décimale ; avec une petite étude, fiez-vous à R.
+Les [estimations](../glossary.qmd#estimate){.term} concordent. Les [erreurs standard](../glossary.qmd#standard-error){.term} concordent à trois ou quatre chiffres significatifs : lme4 les calcule en maintenant les variances du genou et résiduelle à leurs estimations, statsmodels à partir de la courbure de toute la [vraisemblance](../glossary.qmd#maximum-likelihood){.term}. Les [valeurs p](../glossary.qmd#p-value){.term} et les [intervalles de confiance](../glossary.qmd#confidence-interval){.term} (IC) diffèrent un peu plus. lmerTest donne à chaque effet fixe un [test t](../glossary.qmd#t-test){.term} avec des degrés de liberté de **Satterthwaite**, une approximation de la quantité d'information sur laquelle repose l'estimation. statsmodels utilise un [test z](../glossary.qmd#z-statistic){.term}, comme si les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} étaient infinis. Avec 330 genoux, la différence se situe à la troisième décimale ; avec une petite étude, fiez-vous à R.
 :::
 
 ## Moyennes marginales estimées {#estimated-marginal-means}
 
-Rapportez l'estimation du modèle à chaque visite, avec son IC à 95 %. Ce sont les **moyennes marginales estimées** (*estimated marginal means*, EMM) : le score moyen que le modèle prédit à chaque visite, en utilisant tous les genoux, y compris ceux qui ont manqué des visites.
+Rapportez l'[estimation](../glossary.qmd#estimate){.term} du [modèle](../glossary.qmd#model){.term} à chaque visite, avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 %. Ce sont les **moyennes marginales estimées** (*estimated marginal means*, EMM) : le score moyen que le modèle prédit à chaque visite, en utilisant tous les genoux, y compris ceux qui ont manqué des visites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -259,13 +259,13 @@ check_agree(list(knees = n_distinct(complete$case_id), preop = mean(complete$pro
 ```
 
 - **emmean, lower.CL / upper.CL :** le KOOS JR moyen était de 50.0 (IC à 95 % de 48.6 à 51.3) avant l'opération, de 62.5 à 6 semaines, de 74.2 à 3 mois et de 83.9 (IC à 95 % de 82.5 à 85.3) à 1 an.
-- **contrast :** la comparaison planifiée, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % de 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)). Dans R, les quatre poids correspondent aux quatre visites dans l'ordre : −1 pour la visite préopératoire, 0 pour 6 semaines et pour 3 mois, et +1 pour 1 an ; le contraste est donc la moyenne à 1 an moins la moyenne préopératoire. Dans Python, la même différence est le coefficient `visit[T.1yr]`, parce que la visite préopératoire est la référence.
+- **contrast :** la [comparaison planifiée](../glossary.qmd#planned-comparison){.term}, l'amélioration entre la visite préopératoire et 1 an : 33.9 points (IC à 95 % de 32.5 à 35.3). Choisissez de telles comparaisons à l'avance ; comparer toutes les paires de visites demanderait un ajustement ([page 15](15-post-hoc.qmd#planned-comparisons)). Dans R, les quatre poids correspondent aux quatre visites dans l'ordre : −1 pour la visite préopératoire, 0 pour 6 semaines et pour 3 mois, et +1 pour 1 an ; le [contraste](../glossary.qmd#contrast){.term} est donc la [moyenne](../glossary.qmd#mean){.term} à 1 an moins la moyenne préopératoire. Dans Python, la même différence est le [coefficient](../glossary.qmd#coefficient){.term} `visit[T.1yr]`, parce que la visite préopératoire est la [référence](../glossary.qmd#reference-group){.term}.
 
-Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an (le dernier tableau de la sortie). C'est proche du résultat du modèle mixte, comme on peut s'y attendre ici : dans cette cohorte synthétique, les visites manquées le sont presque entièrement au hasard ; par simple coïncidence, ou parce que le suivi était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
+Les 192 genoux qui ont les quatre scores ont en moyenne 49.2 avant l'opération et 84.0 à 1 an (le dernier tableau de la sortie). C'est proche du résultat du [modèle mixte](../glossary.qmd#mixed-model){.term}, comme on peut s'y attendre ici : dans cette [cohorte](../glossary.qmd#cohort){.term} synthétique, les visites manquées le sont presque entièrement au hasard ; par simple coïncidence, ou parce que le [suivi](../glossary.qmd#follow-up){.term} était terminé. Avec de vrais patients, vous ne pouvez pas compter là-dessus, et la réponse du modèle mixte, qui utilise les 330 genoux, est celle à rapporter.
 
 ## Le temps : catégories ou courbe ? {#time}
 
-Jusqu'ici, chaque visite a sa propre moyenne : c'est le **temps en catégories**. Cela convient quand tout le monde est vu aux mêmes quelques visites programmées, et cela ne suppose rien sur la forme de la récupération. L'alternative est le **temps comme nombre**, les jours depuis l'opération, avec une courbe. Elle convient à de nombreuses visites ou à des visites irrégulières, mais la forme de la courbe doit être juste. La récupération n'est pas une droite : utilisez donc une spline cubique naturelle (la [page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explique les splines) :
+Jusqu'ici, chaque visite a sa propre [moyenne](../glossary.qmd#mean){.term} : c'est le **temps en catégories**. Cela convient quand tout le monde est vu aux mêmes quelques visites programmées, et cela ne [suppose](../glossary.qmd#assumption){.term} rien sur la forme de la récupération. L'alternative est le **temps comme nombre**, les jours depuis l'opération, avec une courbe. Elle convient à de nombreuses visites ou à des visites irrégulières, mais la forme de la courbe doit être juste. La récupération n'est pas une droite : utilisez donc une [spline cubique naturelle](../glossary.qmd#spline){.term} (la [page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explique les splines) :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -328,7 +328,7 @@ check_agree(list(day = curve$visit_days[which.max(curve$prom_score)]), reticulat
 check_agree(list(score = max(curve$prom_score)), reticulate::py$chk_peak_score, tol = 1e-4)
 ```
 
-La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an (le deuxième et le quatrième nombre affichés), contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic de 88.6 points au jour 247, environ 8 mois après l'opération, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les catégories sont plus simples, ne font aucune affirmation de ce genre, et ce sont elles que le reste de cette page utilise.
+La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaines et 84.1 à 1 an (le deuxième et le quatrième nombre affichés), contre 62.5 et 83.9. Mais regardez entre 3 mois et 1 an. Aucun genou n'a reçu de score à ce moment, et la courbe invente un pic de 88.6 points au jour 247, environ 8 mois après l'opération, puis redescend. Avec quelques visites fixes, une courbe n'a rien à suivre entre elles. Les [catégories](../glossary.qmd#categorical-variable){.term} sont plus simples, ne font aucune affirmation de ce genre, et ce sont elles que le reste de cette page utilise.
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une droite pour le temps
@@ -337,7 +337,7 @@ La courbe passe près des moyennes des visites (les points) : 62.7 à 6 semaine
 
 ## La récupération diffère-t-elle entre les groupes ? {#group-by-time}
 
-Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le bras de traitement (*arm*) et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'effet principal du bras seul ne compare que les niveaux moyens. Le modèle utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre (80 / 120 = 66.7 % ; la première ligne de la sortie les compte).
+Pour savoir si la récupération avec une orthèse diffère de la récupération avec un plâtre, ajoutez le [bras de traitement](../glossary.qmd#randomized-trial){.term} (*arm*) et son **interaction** avec la visite. L'interaction permet à chaque bras d'avoir son propre profil de changement. Son test demande si les profils diffèrent, ce qui est la question ; l'[effet principal](../glossary.qmd#main-effect){.term} du bras seul ne compare que les niveaux moyens. Le [modèle](../glossary.qmd#model){.term} utilise les 431 scores EFAS des 120 patients randomisés, bien que 80 seulement aient les quatre (80 / 120 = 66.7 % ; la première ligne de la sortie les compte).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -438,10 +438,10 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds degrés de liberté comme `DenDF` 309.58 et la valeur p comme `6.924e-15`. Le test de Wald de Python est un test du khi-deux à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le F de R est cette statistique divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les erreurs standard des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
+- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} comme `DenDF` 309.58 et la [valeur p](../glossary.qmd#p-value){.term} comme `6.924e-15`. Le [test de Wald](../glossary.qmd#wald-test){.term} de Python est un test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le [F](../glossary.qmd#f-statistic){.term} de R est cette [statistique](../glossary.qmd#test-statistic){.term} divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les [erreurs standard](../glossary.qmd#standard-error){.term} des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
 - **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
 
-Deux autres regards sur les données expliquent le paragraphe qui suit : la dispersion des scores, et la visite à 12 mois.
+Deux autres regards sur les données expliquent le paragraphe qui suit : la [dispersion](../glossary.qmd#spread){.term} des scores, et la visite à 12 mois.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -494,21 +494,21 @@ check_agree(list(sd_3mo = sigma(lm(efas ~ arm, data = filter(trial, visit == "3m
 check_agree(list(sd_score = sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov))), reticulate::py$chk_sd, tol = 1e-5)
 ```
 
-Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'IC à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la même dispersion aux quatre visites (ET 2.9, la deuxième sortie ci-dessus), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 autour des moyennes des bras, la troisième sortie ; la page 6 donne l'ET propre à chaque bras, 2.9 avec une orthèse et 3.4 avec un plâtre). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois (effet plafond ; 24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5, sur 60 patients par bras ; le tableau ci-dessus les compte) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
+Ces chiffres diffèrent un peu de ceux de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui n'utilisait que les scores à 3 mois : là, l'[IC](../glossary.qmd#confidence-interval){.term} à 95 % de la différence à 3 mois allait de 2.4 à 4.8, et ici de 2.5 à 4.6, surtout parce que le modèle suppose la [même dispersion](../glossary.qmd#equal-variances){.term} aux quatre visites ([ET](../glossary.qmd#standard-deviation){.term} 2.9, la deuxième sortie ci-dessus), alors que les scores à 3 mois sont un peu plus dispersés (ET 3.2 autour des [moyennes](../glossary.qmd#mean){.term} des bras, la troisième sortie ; la page 6 donne l'ET propre à chaque bras, 2.9 avec une orthèse et 3.4 avec un plâtre). Deux mises en garde. Les scores EFAS se concentrent près de leur maximum à 12 mois ([effet plafond](../glossary.qmd#ceiling-effect){.term} ; 24 points pour 7 des 55 patients avec une orthèse et 8 des 47 avec un plâtre), si bien que les moyennes du modèle y sont approximatives. Et le bras plâtre a manqué plus de visites à 12 mois (13 contre 5, sur 60 patients par bras ; le tableau ci-dessus les compte) : le modèle garde les scores antérieurs de ces patients, ce qui aide tant que les visites manquées sont [manquantes au hasard](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : lisez une interaction d'après les moyennes
-Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, un p = 0.898 après ajustement de Holm signifie que les données ne peuvent pas montrer de différence ; ce résultat ne montre pas que les bras sont identiques, et l'IC s'étend encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les EMM et la différence avec leurs IC pour que les lecteurs voient les deux.
+Une interaction claire dit que l'écart entre les bras change au cours du temps. Elle ne dit pas que l'orthèse est meilleure : cela dépend du moment où l'on regarde. À 12 mois, un p = 0.898 après [ajustement de Holm](../glossary.qmd#holm){.term} signifie que les données ne peuvent pas montrer de différence ; ce résultat ne montre pas que les bras sont identiques, et l'IC s'étend encore de 1.5 point en faveur du plâtre à 0.7 en faveur de l'orthèse. Rapportez les [EMM](../glossary.qmd#estimated-marginal-means){.term} et la différence avec leurs IC pour que les lecteurs voient les deux.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les différences entre bras
-Python calcule les différences à partir des effets fixes avec des tests z : ses valeurs p ajustées selon Holm diffèrent à la troisième décimale (0.897 contre 0.898).
+Python calcule les différences à partir des [effets fixes](../glossary.qmd#fixed-effect){.term} avec des [tests z](../glossary.qmd#z-statistic){.term} : ses valeurs p ajustées selon Holm diffèrent à la troisième décimale (0.897 contre 0.898).
 :::
 
 ## Patients bilatéraux {#bilateral}
 
-46 des patients opérés du genou ont eu les deux genoux remplacés : 2 × 46 = 92 des 330 genoux forment donc des paires (la première sortie ci-dessous). Les deux genoux appartiennent à la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième intercept aléatoire, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
+46 des patients opérés du genou ont eu les deux genoux remplacés : 2 × 46 = 92 des 330 genoux forment donc des paires (la première sortie ci-dessous). Les deux genoux appartiennent à la même personne, si bien que leurs scores peuvent être liés au-delà de ce que capte l'intercept propre à chaque genou. La solution habituelle est un deuxième [intercept aléatoire](../glossary.qmd#random-effect){.term}, pour le patient, avec les genoux **emboîtés** dans les patients : dans lme4, `(1 | patient_id/case_id)` ; dans statsmodels, `groups="patient_id"` avec une composante de variance pour `case_id`.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -551,7 +551,7 @@ check_agree(list(both_knees = sum(table(distinct(knees, patient_id, case_id)$pat
 check_agree(list(sd_knee_nested = nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"]), reticulate::py$chk_sd, tol = 1e-4)
 ```
 
-Dans cette cohorte, l'intercept au niveau du patient est presque exactement nul : un ET de moins de 0.001 point entre les patients, contre 8.8 entre les genoux (Python affiche les deux variances, presque exactement 0 et 78.1). Les données ne montrent aucune ressemblance supplémentaire entre les deux genoux d'un même patient, et le modèle du genou ci-dessus suffit donc. Quand vous exécutez ce code, lme4 affiche « boundary (singular) fit » et un avertissement de convergence, et statsmodels avertit que l'estimation « may be on the boundary of the parameter space » ; la page masque ces messages. Dans vos données, ajustez le modèle emboîté et rapportez-le, sauf s'il est singulier. La [page 3](../foundations/03-distributions.qmd#paired) explique pourquoi les patients bilatéraux demandent de l'attention, et la [page 14](../survival/14-cox-regression.qmd#stratified-cox) montre la version pour l'analyse de survie.
+Dans cette [cohorte](../glossary.qmd#cohort){.term}, l'intercept au niveau du patient est presque exactement nul : un [ET](../glossary.qmd#standard-deviation){.term} de moins de 0.001 point entre les patients, contre 8.8 entre les genoux (Python affiche les deux variances, presque exactement 0 et 78.1). Les données ne montrent aucune ressemblance supplémentaire entre les deux genoux d'un même patient, et le [modèle](../glossary.qmd#model){.term} du genou ci-dessus suffit donc. Quand vous exécutez ce code, lme4 affiche « boundary (singular) fit » et un avertissement de [convergence](../glossary.qmd#convergence){.term}, et statsmodels avertit que l'[estimation](../glossary.qmd#estimate){.term} « may be on the boundary of the parameter space » ; la page masque ces messages. Dans vos données, ajustez le modèle [emboîté](../glossary.qmd#clustered-data){.term} et rapportez-le, sauf s'il est singulier. La [page 3](../foundations/03-distributions.qmd#paired) explique pourquoi les patients bilatéraux demandent de l'attention, et la [page 14](../survival/14-cox-regression.qmd#stratified-cox) montre la version pour l'[analyse de survie](../glossary.qmd#time-to-event){.term}.
 
 ## Rédiger les résultats {#reporting}
 
@@ -659,7 +659,7 @@ stopifnot(
 
 Les solutions utilisent les packages, les données et les fonctions chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Ajustez le même modèle à intercept aléatoire au HOOS JR (score de la hanche pour prothèse articulaire, version abrégée) pour les prothèses totales de hanche et rapportez la moyenne estimée à chaque visite.
+**1.** Ajustez le même [modèle](../glossary.qmd#model){.term} à [intercept aléatoire](../glossary.qmd#random-effect){.term} au HOOS JR (score de la hanche pour prothèse articulaire, version abrégée) pour les prothèses totales de hanche et rapportez la [moyenne](../glossary.qmd#mean){.term} estimée à chaque visite.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -692,7 +692,7 @@ print(marginal_means(hip_model, visit_grid).round(2))
 > **Results:** Of 270 hips, 136 had all four scores; all 906 scores were used. The estimated mean HOOS JR was 45.5 before surgery, 68.6 at 6 weeks, 80.1 at 3 months and 88.2 (95% CI 86.7 to 89.7) at 1 year.
 :::
 
-**2.** La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé la fonction physique PROMIS avec l'ANOVA à mesures répétées pour les 328 prothèses articulaires mesurées aux quatre visites. Ajustez plutôt un modèle mixte avec tous les scores. Combien de prothèses articulaires utilise-t-il, et les moyennes des visites changent-elles ?
+**2.** La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a analysé la fonction physique PROMIS avec l'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term} pour les 328 prothèses articulaires mesurées aux quatre visites. Ajustez plutôt un [modèle mixte](../glossary.qmd#mixed-model){.term} avec tous les scores. Combien de prothèses articulaires utilise-t-il, et les moyennes des visites changent-elles ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -727,7 +727,7 @@ print(pf_complete.groupby("visit", observed=True)["promis_pf"].agg(["size", "mea
 ```
 :::
 
-Le modèle mixte utilise les 600 prothèses articulaires (2052 scores) au lieu des 328 qui ont les quatre scores. Ses moyennes de visites, 36.1, 39.8, 44.9 et 48.2, sont presque les mêmes que celles de la [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) pour ces 328 (36.1, 39.4, 44.9 et 48.2, le dernier tableau de la sortie) : dans cette cohorte synthétique, les visites ont été manquées presque entièrement au hasard, si bien qu'écarter les cas incomplets a coûté de la précision plutôt que de l'exactitude.
+Le modèle mixte utilise les 600 prothèses articulaires (2052 scores) au lieu des 328 qui ont les quatre scores. Ses moyennes de visites, 36.1, 39.8, 44.9 et 48.2, sont presque les mêmes que celles de la [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) pour ces 328 (36.1, 39.4, 44.9 et 48.2, le dernier tableau de la sortie) : dans cette [cohorte](../glossary.qmd#cohort){.term} synthétique, les visites ont été manquées presque entièrement au hasard, si bien qu'[écarter les cas incomplets](../glossary.qmd#complete-case-analysis){.term} a coûté de la [précision](../glossary.qmd#precision){.term} plutôt que de l'exactitude.
 :::
 
 **3.** La douleur change-t-elle différemment avec une orthèse et avec un plâtre ? Ajustez le modèle visite × bras pour pain_nrs et rédigez la phrase de Résultats.
@@ -758,7 +758,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Le test de Wald de Python donne 14.43 sur 3 degrés de liberté, p = 0.002. C'est la même statistique : 14.43 / 3 = 4.81. Les valeurs p diffèrent à la troisième décimale parce que le test F de R utilise les degrés de liberté de Satterthwaite (317) et que le test du khi-deux de Python les considère comme infinis, comme dans le premier encadré « R ou Python ». Rapportez celle de R.
+Le [test de Wald](../glossary.qmd#wald-test){.term} de Python donne 14.43 sur 3 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. C'est la même [statistique](../glossary.qmd#test-statistic){.term} : 14.43 / 3 = 4.81. Les [valeurs p](../glossary.qmd#p-value){.term} diffèrent à la troisième décimale parce que le [test F](../glossary.qmd#f-statistic){.term} de R utilise les [degrés de liberté de Satterthwaite](../glossary.qmd#satterthwaite){.term} (317) et que le test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} de Python les considère comme infinis, comme dans le premier encadré « R ou Python ». Rapportez celle de R.
 
 La douleur est un score en nombres entiers : un modèle linéaire n'en est donc qu'une approximation ; avec quatre visites et 120 patients, c'est une approximation raisonnable.
 :::

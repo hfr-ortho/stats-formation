@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Outcomes rarely depend on one thing. Heavier patients may take longer to operate on, but so may older ones, and knees take longer than hips. **Multiple regression** puts several predictors in one model, so each coefficient is that predictor's effect **with the others held fixed**: adjusted for them. The regressions are the same four as on [page 11](11-predict-from-one.qmd), with more than one predictor.
+[Outcomes](../glossary.qmd#outcome){.term} rarely depend on one thing. Heavier patients may take longer to operate on, but so may older ones, and knees take longer than hips. **[Multiple regression](../glossary.qmd#multivariable){.term}** puts several [predictors](../glossary.qmd#predictor){.term} in one [model](../glossary.qmd#model){.term}, so each [coefficient](../glossary.qmd#coefficient){.term} is that predictor's effect **with the others held fixed**: [adjusted for](../glossary.qmd#adjustment){.term} them. The regressions are the same four as on [page 11](11-predict-from-one.qmd), with more than one predictor.
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about one of the practice's datasets: the joint replacement cohort and PROMs, and ACL reconstructions for logistic regression. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term} and [PROMs](../glossary.qmd#prom){.term}, and ACL reconstructions for [logistic regression](../glossary.qmd#logistic-regression){.term}. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
 To keep the code short, the joint replacement examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them). In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
@@ -32,16 +32,16 @@ To keep the code short, the joint replacement examples use every case, including
 
 ### When to use it
 
-- The outcome is a **measurement**, and you want the effect of each of **several predictors**, adjusted for the others.
-- The assumptions of [simple linear regression](11-predict-from-one.qmd#linear-regression) still apply: straight-line effects, independent patients, and residuals that are roughly normal with an even spread.
+- The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}**, and you want the effect of each of **several [predictors](../glossary.qmd#predictor){.term}**, adjusted for the others.
+- The [assumptions](../glossary.qmd#assumption){.term} of [simple linear regression](11-predict-from-one.qmd#linear-regression) still apply: straight-line effects, [independent](../glossary.qmd#independence){.term} patients, and [residuals](../glossary.qmd#residual){.term} that are [roughly normal](../glossary.qmd#normal-distribution){.term} with an even [spread](../glossary.qmd#spread){.term}.
 - Choose the predictors **before** looking at the results, from what you know clinically. As a rule of thumb, allow at least 10 to 20 patients per predictor.
-- If an effect may bend → [splines](#multiple-nonlinear-regression). If the outcome is yes/no → [multiple logistic regression](#multiple-logistic-regression).
+- If an effect may bend → [splines](#multiple-nonlinear-regression). If the outcome is [yes/no](../glossary.qmd#binary){.term} → [multiple logistic regression](#multiple-logistic-regression).
 
 ### What the test really does
 
-Multiple linear regression works like [simple linear regression](11-predict-from-one.qmd#linear-regression), with one coefficient for each predictor.
+Multiple linear regression works like [simple linear regression](11-predict-from-one.qmd#linear-regression), with one [coefficient](../glossary.qmd#coefficient){.term} for each predictor.
 
-1. The model predicts each patient's outcome by adding up the predictors, each multiplied by its own coefficient, plus an intercept.
+1. The [model](../glossary.qmd#model){.term} predicts each patient's outcome by adding up the predictors, each multiplied by its own coefficient, plus an [intercept](../glossary.qmd#intercept){.term}.
 2. As before, it measures each patient's distance from that prediction (the residual) and finds the set of coefficients for which the sum of the squared residuals is as small as possible.
 3. Each coefficient ends up describing only what its predictor adds once the others have explained what they can. BMI's coefficient compares patients who differ in BMI but are alike in age, sex and procedure. That is what "adjusted" means.
 4. Each coefficient gets its own [standard error](../glossary.qmd#standard-error){.term}, [confidence interval](../glossary.qmd#confidence-interval){.term} and [p-value](../glossary.qmd#p-value){.term}, read as in simple regression.
@@ -90,7 +90,7 @@ print(cohort.groupby("procedure")["op_time_min"].agg(["count", "mean", "std"]))
 ```
 :::
 
-Operative time rises with BMI for both procedures, and TKAs take longer than THAs on average: 88.3 minutes (SD 16.2) against 79.8 (SD 15.5).
+Operative time rises with BMI for both procedures, and TKAs take longer than THAs on average: 88.3 minutes ([SD](../glossary.qmd#standard-deviation){.term} 16.2) against 79.8 (SD 15.5).
 
 ### Run it
 
@@ -135,7 +135,7 @@ Each coefficient is the change in operative time for one unit of that predictor,
 
 - **bmi = 1.27:** 1.27 more minutes per kg/m² (95% CI 1.06 to 1.49), for patients of the same age, sex and procedure.
 - **age = 0.27:** 0.27 more minutes per year of age (95% CI 0.15 to 0.39).
-- **sexMale** (R) or **sex[T.Male]** (Python) **= −1.48:** men took 1.48 minutes less than women, but the CI (−3.81 to 0.84) includes 0. Women are the reference group because "Female" comes first alphabetically.
+- **sexMale** (R) or **sex[T.Male]** (Python) **= −1.48:** men took 1.48 minutes less than women, but the CI (−3.81 to 0.84) includes 0. Women are the [reference group](../glossary.qmd#reference-group){.term} because "Female" comes first alphabetically.
 - **procedureTKA = 6.74:** TKAs took 6.74 minutes longer than THAs (95% CI 4.40 to 9.08).
 - **Multiple R-squared = 0.27, adjusted R-squared = 0.26:** the four predictors together explain about a quarter of the variation. The adjusted value is penalized for the number of predictors.
 - **F-statistic, p < 0.001:** the test that all four predictors together explain nothing.
@@ -163,7 +163,7 @@ print(smf.ols("op_time_min ~ bmi", data=cohort).fit().params["bmi"])            
 ```
 :::
 
-Take out of both operative time and BMI everything that age, sex and procedure can explain, then fit a simple regression between what is left: its slope is 1.27, exactly the `bmi` coefficient of the full model. On its own, without adjustment, BMI's slope is 1.37 (the last line).
+Take out of both operative time and BMI everything that age, sex and procedure can explain, then fit a simple regression between what is left: its [slope](../glossary.qmd#slope){.term} is 1.27, exactly the `bmi` coefficient of the full model. On its own, without adjustment, BMI's slope is 1.37 (the last line).
 :::
 
 ```{python}
@@ -180,7 +180,7 @@ check_agree(list(by_hand = coef(lm(time_left ~ bmi_left))[["bmi_left"]],
 
 ### Effect size and 95% CI
 
-The **adjusted coefficients** with their 95% CIs are the effect sizes, with **R²** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own (the last line of the box above; [page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
+The **adjusted coefficients** with their 95% CIs are the [effect sizes](../glossary.qmd#effect-size){.term}, with **[R²](../glossary.qmd#r-squared){.term}** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own (the last line of the box above; [page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
 
 ### How to report it
 
@@ -190,12 +190,12 @@ The **adjusted coefficients** with their 95% CIs are the effect sizes, with **R�
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: "adjusted" isn't "caused", and more predictors isn't better
-Adjusting removes the part of an effect explained by the variables **in** the model, not by the ones you left out or never measured, so an adjusted coefficient still isn't proof of cause. Choose the predictors in advance and stop there: adding variables until something becomes significant, or dropping those that don't (stepwise selection), gives results that won't replicate.
+Adjusting removes the part of an effect explained by the [variables](../glossary.qmd#variable){.term} **in** the model, not by the ones you left out or never measured, so an adjusted coefficient still isn't proof of cause. Choose the predictors in advance and stop there: adding variables until something becomes [significant](../glossary.qmd#statistical-significance){.term}, or dropping those that don't ([stepwise selection](../glossary.qmd#stepwise-selection){.term}), gives results that won't replicate.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: names for the same coefficients
-Both programs use the first category alphabetically as the reference (Female, THA). R names the coefficients `sexMale` and `procedureTKA`; statsmodels names them `sex[T.Male]` and `procedure[T.TKA]` (T for "treatment" coding). The numbers are the same.
+Both programs use the first [category](../glossary.qmd#categorical-variable){.term} alphabetically as the reference (Female, THA). R names the coefficients `sexMale` and `procedureTKA`; statsmodels names them `sex[T.Male]` and `procedure[T.TKA]` (T for "treatment" coding). The numbers are the same.
 :::
 
 ## Multiple nonlinear regression {#multiple-nonlinear-regression}
@@ -204,8 +204,8 @@ Both programs use the first category alphabetically as the reference (Female, TH
 
 ### When to use it
 
-- **The curve's shape is known, but its numbers may depend on other variables.** Extend the [recovery curve](11-predict-from-one.qmd#nonlinear-regression) so that each of its numbers can differ between hips and knees, and fit one model with nonlinear least squares.
-- **The shape isn't known.** Let a measured predictor's effect bend with a **spline**: a flexible curve made of short cubic pieces joined smoothly at points called knots. A **natural** (or **restricted**) cubic spline is a straight line beyond the outer knots, which keeps it from flailing at the ends. Splines fit inside an ordinary linear, logistic or Cox model, and they're the usual way to check whether a straight line is good enough.
+- **The curve's shape is known, but its numbers may depend on other variables.** Extend the [recovery curve](11-predict-from-one.qmd#nonlinear-regression) so that each of its numbers can differ between hips and knees, and fit one [model](../glossary.qmd#model){.term} with [nonlinear least squares](../glossary.qmd#least-squares){.term}.
+- **The shape isn't known.** Let a measured [predictor](../glossary.qmd#predictor){.term}'s effect bend with a **spline**: a flexible curve made of short cubic pieces joined smoothly at points called knots. A **natural** (or **restricted**) cubic spline is a straight line beyond the outer knots, which keeps it from flailing at the ends. Splines fit inside an ordinary linear, logistic or Cox model, and they're the usual way to check whether a straight line is good enough.
 - If every effect is a straight line → [multiple linear regression](#multiple-linear-regression).
 
 ### What the test really does
@@ -213,9 +213,9 @@ Both programs use the first category alphabetically as the reference (Female, TH
 Both tools in this section are least-squares fits, like the ones on [page 11](11-predict-from-one.qmd#nonlinear-regression).
 
 1. **A curve that differs between groups.** Give each of the curve's numbers two parts: its value for hips, and the difference for knees. The program then finds all six numbers at once, by making the squared distances between the scores and the two curves as small as possible.
-2. Each difference comes with its own standard error and [confidence interval](../glossary.qmd#confidence-interval){.term}, so the model shows directly how hips and knees differ.
-3. **A spline.** Replace the single BMI column of a linear regression with a few columns built from BMI, which together can draw a smooth bend. The regression itself stays linear.
-4. Compare the fit with and without the bend: an F test asks whether the squared residuals shrink by more than the extra coefficients would achieve by chance.
+2. Each difference comes with its own [standard error](../glossary.qmd#standard-error){.term} and [confidence interval](../glossary.qmd#confidence-interval){.term}, so the model shows directly how hips and knees differ.
+3. **A spline.** Replace the single BMI column of a [linear regression](../glossary.qmd#linear-regression){.term} with a few columns built from BMI, which together can draw a smooth bend. The regression itself stays linear.
+4. Compare the fit with and without the bend: an [F test](../glossary.qmd#f-statistic){.term} asks whether the squared [residuals](../glossary.qmd#residual){.term} shrink by more than the extra [coefficients](../glossary.qmd#coefficient){.term} would achieve by chance.
 
 ### Look at the data first
 
@@ -332,7 +332,7 @@ check_agree(list(tau_hip = joint_coef["tau_hip", "Estimate"], tau_diff = joint_c
             reticulate::py$chk, tol = 1e-4)   # both approximate the curve's derivatives numerically, so they agree to ~5 digits
 ```
 
-**A second question, for the second case (shape unknown):** is BMI's effect on operative time a straight line? Here a natural cubic spline lets the effect bend, and an F test asks whether the bend improves on the straight line of the [multiple linear regression](#multiple-linear-regression). `df = 3` gives BMI three coefficients where the straight line has one, so the test has 2 extra degrees of freedom.
+**A second question, for the second case (shape unknown):** is BMI's effect on operative time a straight line? Here a natural cubic spline lets the effect bend, and an F test asks whether the bend improves on the straight line of the [multiple linear regression](#multiple-linear-regression). `df = 3` gives BMI three coefficients where the straight line has one, so the test has 2 extra [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -382,7 +382,7 @@ The spline:
 
 ### Effect size and 95% CI
 
-The **differences between hips and knees**, with their 95% CIs, are the effect sizes.
+The **differences between hips and knees**, with their 95% CIs, are the [effect sizes](../glossary.qmd#effect-size){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -415,13 +415,13 @@ The time constant was 27.5 days longer for knees (95% CI 15.9 to 40.1). Half of 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: two questionnaires, and repeated scores
-Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal a point on the other, so the differences in start and plateau mix up the joints with the questionnaires. The time constant is measured in days, not points, so it compares more fairly, as long as both questionnaires track recovery in a similar way. As on [page 11](11-predict-from-one.qmd#nonlinear-regression), each joint contributes up to four related scores, so these CIs can't be trusted: some may be too narrow and others too wide. A mixed model ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) handles that.
+Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal a point on the other, so the differences in start and plateau mix up the joints with the questionnaires. The time constant is measured in days, not points, so it compares more fairly, as long as both questionnaires track recovery in a similar way. As on [page 11](11-predict-from-one.qmd#nonlinear-regression), each joint contributes up to four related scores, so these CIs can't be trusted: some may be too narrow and others too wide. A [mixed model](../glossary.qmd#mixed-model){.term} ([page 16](../beyond/16-mixed-models.qmd#random-intercept)) handles that.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: splines and CIs
-- R's `ns()` and Python's `cr()` (from patsy, the formula library statsmodels uses) build the same natural cubic spline only when the knots match. `ns(df = 3)` puts knots at the 1/3 and 2/3 quantiles and at the minimum and maximum, so the Python code sets those explicitly. Other tools, like `rms::rcs()`, place the knots elsewhere and give slightly different curves. `constraints='center'` removes one column from patsy's spline so that it doesn't repeat the model's intercept, as `ns()` does by default; both splines then use 3 degrees of freedom.
-- As on [page 11](11-predict-from-one.qmd#nonlinear-regression), R's `confint()` profiles the nonlinear fit, while the Python code uses estimate ± t × standard error, so the CIs differ slightly (τ difference: 15.3 to 39.7 days in Python).
+- R's `ns()` and Python's `cr()` (from patsy, the formula library statsmodels uses) build the same natural cubic spline only when the knots match. `ns(df = 3)` puts knots at the 1/3 and 2/3 quantiles and at the minimum and maximum, so the Python code sets those explicitly. Other tools, like `rms::rcs()`, place the knots elsewhere and give slightly different curves. `constraints='center'` removes one column from patsy's spline so that it doesn't repeat the model's [intercept](../glossary.qmd#intercept){.term}, as `ns()` does by default; both splines then use 3 degrees of freedom.
+- As on [page 11](11-predict-from-one.qmd#nonlinear-regression), R's `confint()` [profiles](../glossary.qmd#profile-interval){.term} the nonlinear fit, while the Python code uses [estimate](../glossary.qmd#estimate){.term} ± t × standard error, so the CIs differ slightly (τ difference: 15.3 to 39.7 days in Python).
 :::
 
 ## Multiple logistic regression {#multiple-logistic-regression}
@@ -430,19 +430,19 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 
 ### When to use it
 
-- The outcome is **yes/no**, and you want the **odds ratio** for each of several predictors, adjusted for the others.
-- The assumptions of [simple logistic regression](11-predict-from-one.qmd#logistic-regression) still apply, for every measured predictor.
-- **Events limit predictors.** A common rule of thumb is at least 10 patients in the smaller outcome group per predictor. Here 173 returned and 177 didn't, so this model can afford about 17.
-- If the outcome is time until an event → [Cox regression](#cox).
+- The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}**, and you want the **odds ratio** for each of several [predictors](../glossary.qmd#predictor){.term}, [adjusted for](../glossary.qmd#adjustment){.term} the others.
+- The [assumptions](../glossary.qmd#assumption){.term} of [simple logistic regression](11-predict-from-one.qmd#logistic-regression) still apply, for every measured predictor.
+- **Events limit predictors.** A common rule of thumb is at least 10 patients in the smaller outcome group per predictor. Here 173 returned and 177 didn't, so this [model](../glossary.qmd#model){.term} can afford about 17.
+- If the outcome is time until an [event](../glossary.qmd#event){.term} → [Cox regression](#cox).
 
 ### What the test really does
 
-Multiple logistic regression works like [simple logistic regression](11-predict-from-one.qmd#logistic-regression), with one coefficient for each predictor.
+Multiple logistic regression works like [simple logistic regression](11-predict-from-one.qmd#logistic-regression), with one [coefficient](../glossary.qmd#coefficient){.term} for each predictor.
 
-1. The model adds up the predictors, each multiplied by its own coefficient, to get each patient's log odds of the outcome.
+1. The model adds up the predictors, each multiplied by its own coefficient, to get each patient's [log odds](../glossary.qmd#odds){.term} of the outcome.
 2. It tries out values for all the coefficients together and keeps the set under which the outcomes that really happened, taken together, were most likely.
 3. Each coefficient describes what its predictor adds once the others are accounted for: e raised to the coefficient is the **adjusted** [odds ratio](../glossary.qmd#odds-ratio){.term}.
-4. A predictor with more than two categories gets one coefficient for each category except the first, which serves as the reference.
+4. A predictor with more than two [categories](../glossary.qmd#categorical-variable){.term} gets one coefficient for each category except the first, which serves as the [reference](../glossary.qmd#reference-group){.term}.
 
 The more coefficients a model has to estimate, the more outcomes it needs in the smaller group: that is where the rule of thumb under "When to use it" comes from.
 
@@ -546,7 +546,7 @@ print(odds_ratios)
 ```
 :::
 
-The **adjusted odds ratios** are the effect sizes: 0.71 per 10 years of age (95% CI 0.51 to 0.96) and 1.42 per Tegner level (95% CI 1.22 to 1.67). For a hamstring graft the odds ratio is 0.41 (0.25 to 0.69) and for a quadriceps graft 0.33 (0.17 to 0.63), both compared with BPTB. The CI for male sex (0.73, 0.46 to 1.17) is wide.
+The **adjusted odds ratios** are the [effect sizes](../glossary.qmd#effect-size){.term}: 0.71 per 10 years of age (95% [CI](../glossary.qmd#confidence-interval){.term} 0.51 to 0.96) and 1.42 per Tegner level (95% CI 1.22 to 1.67). For a hamstring graft the odds ratio is 0.41 (0.25 to 0.69) and for a quadriceps graft 0.33 (0.17 to 0.63), both compared with BPTB. The CI for male sex (0.73, 0.46 to 1.17) is wide.
 
 ### How to report it
 
@@ -556,7 +556,7 @@ The **adjusted odds ratios** are the effect sizes: 0.71 per 10 years of age (95%
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the smaller group sets the limit, and predictors must come first
-The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2, and the first line of output below). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let p-values choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome. The table below shows it: the `TRUE` row (`True` in Python) holds 6 and 0.
+The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2, and the first line of output below). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let [p-values](../glossary.qmd#p-value){.term} choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome. The table below shows it: the `TRUE` row (`True` in Python) holds 6 and 0.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -591,26 +591,26 @@ check_agree(list(failed_2y = sum(acl$failure_2y), early = sum(early_failure),
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: profile and Wald CIs, again
-As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` profiles the likelihood and statsmodels uses Wald CIs. With few events the two can differ in the second decimal: Python gives 0.52 to 0.97 for age, 1.22 to 1.66 for Tegner level and 0.17 to 0.64 for the quadriceps graft; the text above quotes R's. Say which you used.
+As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` [profiles the likelihood](../glossary.qmd#profile-interval){.term} and statsmodels uses [Wald CIs](../glossary.qmd#wald-interval){.term}. With few events the two can differ in the second decimal: Python gives 0.52 to 0.97 for age, 1.22 to 1.66 for Tegner level and 0.17 to 0.64 for the quadriceps graft; the text above quotes R's. Say which you used.
 :::
 
 ## Cox regression {#cox}
 
-**The question:** Does implant C still carry a higher hazard of revision after adjusting for age, sex and BMI?
+**The question:** Does implant C still carry a higher [hazard](../glossary.qmd#hazard){.term} of revision after [adjusting for](../glossary.qmd#adjustment){.term} age, sex and BMI?
 
 ### When to use it
 
-- The outcome is **time until an event** (revision), and you want each predictor's **hazard ratio**, adjusted for the others.
-- **Events limit predictors**, as in logistic regression: about 10 events per predictor. 81 revisions allow about eight; implant (which uses two, B and C against A), age, sex and BMI use five.
-- Proportional hazards must hold for every predictor. [Page 14](../survival/14-cox-regression.qmd#proportional-hazards) shows how to check it and covers Cox regression in full.
+- The [outcome](../glossary.qmd#outcome){.term} is **time until an [event](../glossary.qmd#event){.term}** (revision), and you want each [predictor](../glossary.qmd#predictor){.term}'s **hazard ratio**, adjusted for the others.
+- **Events limit predictors**, as in [logistic regression](../glossary.qmd#logistic-regression){.term}: about 10 events per predictor. 81 revisions allow about eight; implant (which uses two, B and C against A), age, sex and BMI use five.
+- [Proportional hazards](../glossary.qmd#proportional-hazards){.term} must hold for every predictor. [Page 14](../survival/14-cox-regression.qmd#proportional-hazards) shows how to check it and covers Cox regression in full.
 
 ### What the test really does
 
 This is the Cox model of [page 8](08-three-plus-unmatched.qmd#cox) with more than one predictor.
 
-1. Start at surgery and move forward in time. Each time a revision happens, look at who was still being followed just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
-2. Each predictor has its own [hazard ratio](../glossary.qmd#hazard-ratio){.term}. A patient's hazard, compared with a reference patient, is the product of the hazard ratios that apply to them.
-3. The model tries out values for all the hazard ratios together and keeps the set under which the revisions that really happened, taken together, were most likely.
+1. Start at surgery and move forward in time. Each time a revision happens, look at who was still being [followed](../glossary.qmd#follow-up){.term} just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
+2. Each predictor has its own [hazard ratio](../glossary.qmd#hazard-ratio){.term}. A patient's hazard, compared with a [reference](../glossary.qmd#reference-group){.term} patient, is the product of the hazard ratios that apply to them.
+3. The [model](../glossary.qmd#model){.term} tries out values for all the hazard ratios together and keeps the set under which the revisions that really happened, taken together, were most likely.
 4. Each hazard ratio then describes what its predictor adds once the others are accounted for: implant C against implant A, for patients of the same age, sex and BMI.
 
 ### Look at the data first
@@ -697,14 +697,14 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 ### Read the output
 
 - **implantC = 3.19 (95% CI 1.92 to 5.29):** adjusted for age, sex and BMI, implant C carried about three times the hazard of revision of implant A, almost the same as without adjustment (3.07, [page 8](08-three-plus-unmatched.qmd#cox)).
-- **implantB = 0.83 (95% CI 0.45 to 1.52):** imprecise: the CI runs from about half to one and a half times the hazard of implant A.
+- **implantB = 0.83 (95% CI 0.45 to 1.52):** [imprecise](../glossary.qmd#precision){.term}: the [CI](../glossary.qmd#confidence-interval){.term} runs from about half to one and a half times the hazard of implant A.
 - **sexMale = 0.51 (95% CI 0.32 to 0.81, p = 0.005):** men had about half the hazard of revision of women.
 - **age_10 = 1.22 (95% CI 0.96 to 1.57)** and **bmi_5 = 1.03 (95% CI 0.84 to 1.27):** imprecise.
-- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** the five terms together predict revision. R prints `p=2e-07`; Python prints the statistic, its degrees of freedom and the p-value on the line under its table.
+- **Likelihood ratio test = 39.1 on 5 df, p < 0.001:** the five terms together predict revision. R prints `p=2e-07`; Python prints the [statistic](../glossary.qmd#test-statistic){.term}, its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} and the [p-value](../glossary.qmd#p-value){.term} on the line under its table.
 
 ### Effect size and 95% CI
 
-The **adjusted hazard ratios** with their 95% CIs are the effect sizes. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29). Without adjustment the hazard ratios are 0.82 for B and 3.07 for C (the code below), so adjusting for age, sex and BMI changes little.
+The **adjusted hazard ratios** with their 95% CIs are the [effect sizes](../glossary.qmd#effect-size){.term}. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29). Without adjustment the hazard ratios are 0.82 for B and 3.07 for C (the code below), so adjusting for age, sex and BMI changes little.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -741,12 +741,12 @@ check_agree(list(hr_b = unadjusted_alone[["implantB"]], hr_c = unadjusted_alone[
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the unexpected finding
-The sex difference wasn't the question; the model was built to adjust for sex, not to test it. An unplanned finding like this is a reason for a new study, not a conclusion: report it as exploratory. And check proportional hazards for every predictor before trusting any of them ([page 14](../survival/14-cox-regression.qmd#proportional-hazards)).
+The sex difference wasn't the question; the model was built to adjust for sex, not to test it. An unplanned finding like this is a reason for a new study, not a conclusion: report it as [exploratory](../glossary.qmd#prespecified){.term}. And check proportional hazards for every predictor before trusting any of them ([page 14](../survival/14-cox-regression.qmd#proportional-hazards)).
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and names
-As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default convergence rule stops a little early (without `fit_options`, the hazard ratio for implant B comes out as 0.82915 instead of the 0.82912 in the output above), so the Python code tightens it with `fit_options={"precision": 1e-9}`. lifelines names the terms `implant[T.C]` and `sex[T.Male]`; R names them `implantC` and `sexMale`.
+As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default [convergence](../glossary.qmd#convergence){.term} rule stops a little early (without `fit_options`, the hazard ratio for implant B comes out as 0.82915 instead of the 0.82912 in the output above), so the Python code tightens it with `fit_options={"precision": 1e-9}`. lifelines names the terms `implant[T.C]` and `sex[T.Male]`; R names them `implantC` and `sexMale`.
 :::
 
 ```{r}
@@ -846,7 +846,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** Add **surgeon** to the multiple linear regression for operative time. Does it improve the model, and does BMI's coefficient change?
+**1.** Add **surgeon** to the [multiple linear regression](../glossary.qmd#linear-regression){.term} for operative time. Does it improve the [model](../glossary.qmd#model){.term}, and does BMI's [coefficient](../glossary.qmd#coefficient){.term} change?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -879,11 +879,11 @@ print(surgeon_table.loc[["bmi", "surgeon[T.S2]", "surgeon[T.S3]"]])
 There's no clear evidence that adding surgeon improves the model, and BMI's coefficient doesn't change.
 :::
 
-**2.** A colleague wants to know which factors predict graft failure within 2 years. Only 15 grafts failed. Which model would you use, how many predictors can it take, and what do you find with tibial slope and age?
+**2.** A colleague wants to know which factors predict graft failure within 2 years. Only 15 grafts failed. Which model would you use, how many [predictors](../glossary.qmd#predictor){.term} can it take, and what do you find with tibial slope and age?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The outcome is yes/no: **multiple logistic regression**. With 15 events, the rule of thumb allows one predictor, two at a stretch, and the CIs show the strain.
+The [outcome](../glossary.qmd#outcome){.term} is [yes/no](../glossary.qmd#binary){.term}: **[multiple logistic regression](../glossary.qmd#logistic-regression){.term}**. With 15 [events](../glossary.qmd#event){.term}, the rule of thumb allows one predictor, two at a stretch, and the [CIs](../glossary.qmd#confidence-interval){.term} show the strain.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -907,10 +907,10 @@ print(fail_ors)
 
 > **Results:** The odds ratios for graft failure within 2 years were 1.26 per degree of posterior tibial slope (95% CI 1.01 to 1.59) and 0.49 per 10 years of age (95% CI 0.19 to 1.04).
 
-The CIs are R's profile CIs. With time-to-event data, Cox regression uses all 31 failures ([page 11](11-predict-from-one.qmd#cox)).
+The CIs are R's [profile CIs](../glossary.qmd#profile-interval){.term}. With [time-to-event](../glossary.qmd#time-to-event){.term} data, [Cox regression](../glossary.qmd#cox-regression){.term} uses all 31 failures ([page 11](11-predict-from-one.qmd#cox)).
 :::
 
-**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), the death rate was highest in patients who waited more than 72 hours. Fit the time to surgery as a natural cubic spline (3 degrees of freedom) in the logistic regression, compare it with the straight line, and write the Results sentence.
+**3.** On [page 11](11-predict-from-one.qmd#logistic-regression), the death rate was highest in patients who waited more than 72 hours. Fit the time to surgery as a [natural cubic spline](../glossary.qmd#spline){.term} (3 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}) in the logistic regression, compare it with the straight line, and write the Results sentence.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -945,5 +945,5 @@ print(np.exp(24 * line_model.conf_int().loc["hours_to_surgery"]))   # its 95% CI
 
 > **Results:** Comparing a natural cubic spline for time to surgery with a straight line gave a likelihood ratio χ² of 2.45 (df = 2, p = 0.294). With time to surgery modeled as linear, the odds ratio for death within 30 days per 24 hours was 1.50 (95% CI 1.21 to 1.85).
 
-The CI is R's profile CI. The spline adds nothing clear, because the straight line already predicts the rate after 72 hours (17.2% predicted, 18.2% observed; [page 11](11-predict-from-one.qmd#logistic-regression)). And only 8 of the 74 deaths came that late (the band table on page 11), too few to pin down a curve. In R's table, the likelihood ratio χ² is the `Deviance` column.
+The CI is R's profile CI. The spline adds nothing clear, because the straight line already predicts the rate after 72 hours (17.2% predicted, 18.2% observed; [page 11](11-predict-from-one.qmd#logistic-regression)). And only 8 of the 74 deaths came that late (the band table on page 11), too few to pin down a curve. In R's table, the [likelihood ratio χ²](../glossary.qmd#likelihood-ratio-test){.term} is the `Deviance` column.
 :::

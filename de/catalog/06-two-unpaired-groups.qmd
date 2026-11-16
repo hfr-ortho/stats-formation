@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Zwei Gruppen **verschiedener** Patientinnen und Patienten: ein Walker gegen einen Gips in einer Studie, Hamstring- gegen BPTB-Transplantate, Implantat A gegen Implantat C. Das ist der häufigste Vergleich in der klinischen Forschung. Wenn dieselben Patientinnen und Patienten zweimal gemessen wurden oder wenn die Patientinnen und Patienten paarweise gematcht wurden, verwenden Sie stattdessen [Seite 7](07-two-paired-groups.qmd).
+Zwei Gruppen **verschiedener** Patientinnen und Patienten: ein Walker gegen einen Gips in einer Studie, Hamstring- gegen BPTB-Transplantate, Implantat A gegen Implantat C. Das ist der häufigste Vergleich in der klinischen Forschung. Wenn dieselben Patientinnen und Patienten zweimal gemessen wurden oder wenn die Patientinnen und Patienten paarweise [gematcht](../glossary.qmd#matched){.term} wurden, verwenden Sie stattdessen [Seite 7](07-two-paired-groups.qmd).
 
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
-Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zu einer randomisierten Studie zu Gips und Walker nach einer Mittelfussverletzung (t-Test und Mann-Whitney-Test), zu VKB-Rekonstruktionen (vorderes Kreuzband; Test nach Fisher) und zur Gelenkersatz-Kohorte (Log-Rank-Test). Die Studie und ihre Resultate sind für den Unterricht erfunden. Der erste Codeblock jedes Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
+Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zu einer [randomisierten Studie](../glossary.qmd#randomized-trial){.term} zu Gips und Walker nach einer Mittelfussverletzung (t-Test und [Mann-Whitney-Test](../glossary.qmd#mann-whitney-test){.term}), zu VKB-Rekonstruktionen (vorderes Kreuzband; [Test nach Fisher](../glossary.qmd#fisher-exact-test){.term}) und zur [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term} ([Log-Rank-Test](../glossary.qmd#log-rank-test){.term}). Die Studie und ihre Resultate sind für den Unterricht erfunden. Der erste Codeblock jedes Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
 
 Damit der Code kurz bleibt, verwendet das Beispiel zum Gelenkersatz alle Fälle, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; [Seite 2](../foundations/02-demographics.qmd#setup) zählt sie). Entscheiden Sie in einer echten Studie, wie Sie mit ihnen umgehen ([Seite 3](../foundations/03-distributions.qmd#paired)), und halten Sie fest, was Sie getan haben.
 :::
@@ -32,26 +32,26 @@ Damit der Code kurz bleibt, verwendet das Beispiel zum Gelenkersatz alle Fälle,
 
 ### Wann verwenden
 
-- Die Zielgrösse ist ein **Messwert**, der zwischen **zwei unabhängigen Gruppen** verglichen wird.
-- Sie ist **innerhalb jeder Gruppe** ungefähr normalverteilt, oder jede Gruppe ist gross (etwa 30 oder mehr) und nicht stark schief ([Seite 3](../foundations/03-distributions.qmd#within-groups)).
-- Ein Score, der mehrere Fragen aufsummiert, wie der EFAS-Score (sechs Fragen mit je 0 bis 4 Punkten, also 0 bis 24), lässt sich als Messwert behandeln, wenn nur wenige Patientinnen und Patienten am Boden oder an der Decke des Scores liegen.
-- Verwenden Sie die Version nach **Welch**, die nicht voraussetzt, dass beide Gruppen gleich stark streuen. Sie ist in R der Standard, in Python aber nicht (siehe den Kasten «R oder Python»).
-- Wenn die Zielgrösse schief ist, sich am Boden oder an der Decke häuft oder ordinal ist → verwenden Sie den [Mann-Whitney-Test](#mann-whitney).
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist ein **[Messwert](../glossary.qmd#continuous-variable){.term}**, der zwischen **zwei [unabhängigen](../glossary.qmd#independence){.term} Gruppen** verglichen wird.
+- Sie ist **innerhalb jeder Gruppe** [ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term}, oder jede Gruppe ist gross (etwa 30 oder mehr) und nicht stark [schief](../glossary.qmd#skewed){.term} ([Seite 3](../foundations/03-distributions.qmd#within-groups)).
+- Ein Score, der mehrere Fragen aufsummiert, wie der EFAS-Score (sechs Fragen mit je 0 bis 4 Punkten, also 0 bis 24), lässt sich als Messwert behandeln, wenn nur wenige Patientinnen und Patienten am [Boden oder an der Decke](../glossary.qmd#ceiling-effect){.term} des Scores liegen.
+- Verwenden Sie die Version nach **Welch**, die nicht voraussetzt, dass beide Gruppen gleich stark [streuen](../glossary.qmd#spread){.term}. Sie ist in R der Standard, in Python aber nicht (siehe den Kasten «R oder Python»).
+- Wenn die Zielgrösse schief ist, sich am Boden oder an der Decke häuft oder [ordinal](../glossary.qmd#ordinal){.term} ist → verwenden Sie den [Mann-Whitney-Test](#mann-whitney).
 
 ### Was der Test wirklich macht
 
-Der t-Test stellt eine einzige Frage: Ist die Differenz zwischen den beiden [Mittelwerten](../glossary.qmd#mean){.term} gross im Vergleich dazu, wie stark diese Differenz von Stichprobe zu Stichprobe schwanken würde?
+Der t-Test stellt eine einzige Frage: Ist die Differenz zwischen den beiden [Mittelwerten](../glossary.qmd#mean){.term} gross im Vergleich dazu, wie stark diese Differenz von [Stichprobe](../glossary.qmd#sample){.term} zu Stichprobe schwanken würde?
 
 1. Die **Differenz** der beiden Mittelwerte bilden.
 2. Das Rauschen in dieser Differenz schätzen, ihren [Standardfehler](../glossary.qmd#standard-error){.term}. Er wird kleiner, wenn die Gruppen grösser sind, und grösser, wenn die Scores stärker streuen.
 3. Teilen: **t = Differenz ÷ Standardfehler**. Ein t von 0 bedeutet gar keine Differenz. Ein t jenseits von etwa ±2 bedeutet, dass die Differenz im Vergleich zum Rauschen gross ist.
-4. t in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen: die Wahrscheinlichkeit für ein t, das mindestens so weit von 0 entfernt ist, wenn beide Gruppen in Wahrheit denselben Mittelwert hätten.
+4. t in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen: die [Wahrscheinlichkeit](../glossary.qmd#probability){.term} für ein t, das mindestens so weit von 0 entfernt ist, wenn beide Gruppen in Wahrheit denselben Mittelwert hätten.
 
 Die Variante nach Welch berechnet den Standardfehler aus der Streuung jeder Gruppe einzeln und braucht deshalb keine gleichen Streuungen. Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» t von Hand nach.
 
 ### Zuerst die Daten ansehen
 
-In der Studie wurden 120 Patientinnen und Patienten randomisiert, 60 pro Studienarm, und der EFAS-Score (Europäische Gesellschaft für Fuss- und Sprunggelenkchirurgie; 24 ist der beste Wert) wurde nach 6 Wochen, 3 Monaten, 6 Monaten und 12 Monaten gemessen.
+In der Studie wurden 120 Patientinnen und Patienten [randomisiert](../glossary.qmd#randomized-trial){.term}, 60 pro Studienarm, und der EFAS-Score (Europäische Gesellschaft für Fuss- und Sprunggelenkchirurgie; 24 ist der beste Wert) wurde nach 6 Wochen, 3 Monaten, 6 Monaten und 12 Monaten gemessen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -139,10 +139,10 @@ check_agree(list(t = unname(efas_test$statistic), df = unname(efas_test$paramete
 
 ### Ausgabe lesen
 
-- **t = 6.00:** Die Differenz zwischen den Mittelwerten beträgt 6 Standardfehler. Python nennt es `statistic`.
-- **df = 106.05:** Der Test nach Welch passt die Freiheitsgrade an ungleiche Streuungen an, daher sind sie keine ganze Zahl.
+- **t = 6.00:** Die [Differenz zwischen den Mittelwerten](../glossary.qmd#mean-difference){.term} beträgt 6 Standardfehler. Python nennt es `statistic`.
+- **df = 106.05:** Der Test nach Welch passt die [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} an ungleiche Streuungen an, daher sind sie keine ganze Zahl.
 - **p < 0.001:** Eine so grosse Differenz wäre sehr unwahrscheinlich, wenn beide Arme denselben mittleren EFAS-Score hätten. R gibt ihn als `p-value = 2.738e-08` aus. `e-08` bedeutet «den Dezimalpunkt um 8 Stellen nach links verschieben», das ist also 0.000000027; Python gibt dieselbe Zahl als `pvalue=` aus.
-- **95% CI 2.40 to 4.77:** das Konfidenzintervall (KI) für die **Differenz der Mittelwerte**, Walker minus Gips.
+- **95% CI 2.40 to 4.77:** das [Konfidenzintervall](../glossary.qmd#confidence-interval){.term} (KI) für die **Differenz der Mittelwerte**, Walker minus Gips.
 - **mean in group boot 17.4, mean in group cast 13.8:** die beiden Mittelwerte.
 
 ::: {.callout-note collapse="true"}
@@ -185,8 +185,8 @@ check_agree(list(difference = efas_difference, se = efas_se, t = efas_difference
 
 ### Effektstärke und 95%-KI
 
-- Die **Mittelwertsdifferenz** mit ihrem KI ist die Effektstärke, die am verständlichsten ist: 3.6 Punkte (95%-KI 2.4 bis 4.8). R gibt die beiden Mittelwerte aus und überlässt Ihnen die Subtraktion (17.40 − 13.82 = 3.58); die zweite Zeile von Python gibt die Differenz aus, 3.585, und danach das KI.
-- **Hedges' g** gibt die Differenz in Standardabweichungen an, sodass sich Effekte vergleichen lassen, die auf verschiedenen Skalen gemessen wurden. Als grobe Richtschnur: 0.2 ist klein, 0.5 mittel und 0.8 gross.
+- Die **Mittelwertsdifferenz** mit ihrem KI ist die [Effektstärke](../glossary.qmd#effect-size){.term}, die am verständlichsten ist: 3.6 Punkte (95%-KI 2.4 bis 4.8). R gibt die beiden Mittelwerte aus und überlässt Ihnen die Subtraktion (17.40 − 13.82 = 3.58); die zweite Zeile von Python gibt die Differenz aus, 3.585, und danach das KI.
+- **Hedges' g** gibt die Differenz in [Standardabweichungen](../glossary.qmd#standard-deviation){.term} an, sodass sich Effekte vergleichen lassen, die auf verschiedenen Skalen gemessen wurden. Als [grobe Richtschnur](../glossary.qmd#cohen-benchmarks){.term}: 0.2 ist klein, 0.5 mittel und 0.8 gross.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -216,7 +216,7 @@ check_agree(list(g = efas_g$Hedges_g), reticulate::py$chk,
             tol = 1e-5)   # effectsize corrects g for small samples exactly, pingouin with the usual approximation
 ```
 
-Hedges' g beträgt 1.13: Der Mittelwert des Walker-Arms liegt mehr als eine Standardabweichung höher, ein grosser Effekt. Ob 3.6 Punkte auf einem Score von 24 Punkten für die Patientinnen und Patienten etwas ausmachen, ist eine klinische und keine statistische Frage.
+[Hedges' g](../glossary.qmd#hedges-g){.term} beträgt 1.13: Der Mittelwert des Walker-Arms liegt mehr als eine Standardabweichung höher, ein grosser Effekt. Ob 3.6 Punkte auf einem Score von 24 Punkten für die Patientinnen und Patienten etwas ausmachen, ist eine klinische und keine statistische Frage.
 
 ### Resultate formulieren
 
@@ -226,14 +226,14 @@ Hedges' g beträgt 1.13: Der Mittelwert des Walker-Arms liegt mehr als eine Stan
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Testen Sie die Varianzen nicht vorab
-Früher war es üblich, zuerst einen Test auf gleiche Varianzen (etwa nach Levene) durchzuführen und dann je nach Resultat den t-Test nach Student oder nach Welch zu wählen. Tun Sie das nicht: Das zweistufige Vorgehen verzerrt den p-Wert. Verwenden Sie von Anfang an den Test nach Welch. Wenn die Varianzen tatsächlich gleich sind, liefert er fast dieselbe Antwort wie der Test nach Student.
+Früher war es üblich, zuerst einen Test auf [gleiche Varianzen](../glossary.qmd#equal-variances){.term} (etwa nach [Levene](../glossary.qmd#levene-test){.term}) durchzuführen und dann je nach Resultat den t-Test nach Student oder nach Welch zu wählen. Tun Sie das nicht: Das zweistufige Vorgehen verzerrt den p-Wert. Verwenden Sie von Anfang an den Test nach Welch. Wenn die [Varianzen](../glossary.qmd#variance){.term} tatsächlich gleich sind, liefert er fast dieselbe Antwort wie der Test nach Student.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Student oder Welch?
 - **Der Standardwert ist verschieden.** `t.test()` in R führt den Test nach **Welch** aus, ausser Sie fügen `var.equal = TRUE` hinzu. `ttest_ind()` in scipy führt den Test nach **Student** aus, ausser Sie fügen `equal_var=False` hinzu. Legen Sie ihn in Python immer ausdrücklich fest.
 - **Die Reihenfolge der Gruppen.** R subtrahiert in der Reihenfolge der Faktorstufen (wir haben boot an die erste Stelle gesetzt); scipy zieht das zweite Argument vom ersten ab.
-- **Das KI für Hedges' g.** effectsize verwendet eine exakte Methode und pingouin eine Näherung, daher können die KI leicht voneinander abweichen (0.73 bis 1.52 in R, 0.73 bis 1.53 in Python). Die Schätzwerte stimmen auf fünf Dezimalstellen überein: Beide korrigieren g für kleine Stichproben, effectsize mit der exakten Formel und pingouin mit der üblichen Näherung. Die Tabelle von R rundet g auf 1.13; ungerundet liefert R 1.130197 und Python 1.130200.
+- **Das KI für Hedges' g.** effectsize verwendet eine [exakte Methode](../glossary.qmd#exact-test){.term} und pingouin eine Näherung, daher können die KI leicht voneinander abweichen (0.73 bis 1.52 in R, 0.73 bis 1.53 in Python). Die [Schätzwerte](../glossary.qmd#estimate){.term} stimmen auf fünf Dezimalstellen überein: Beide korrigieren g für kleine Stichproben, effectsize mit der exakten Formel und pingouin mit der üblichen Näherung. Die Tabelle von R rundet g auf 1.13; ungerundet liefert R 1.130197 und Python 1.130200.
 :::
 
 ## Mann-Whitney-Test {#mann-whitney}
@@ -242,20 +242,20 @@ Früher war es üblich, zuerst einen Test auf gleiche Varianzen (etwa nach Leven
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **schief**, hat einen **Decken- oder Bodeneffekt** oder ist **ordinal**, und Sie vergleichen **zwei unabhängige Gruppen**.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[schief](../glossary.qmd#skewed){.term}**, hat einen **[Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}** oder ist **[ordinal](../glossary.qmd#ordinal){.term}**, und Sie vergleichen **zwei [unabhängige](../glossary.qmd#independence){.term} Gruppen**.
 - Der Test fragt, ob die Werte der einen Gruppe **tendenziell grösser** sind als die der anderen: Wenn Sie aus jeder Gruppe zufällig eine Person auswählen, wie wahrscheinlich ist es, dass die erste den höheren Wert hat?
 - Er ist derselbe Test wie der **Wilcoxon-Rangsummentest**. R nennt ihn `wilcox.test()`.
-- Wenn die Zielgrösse innerhalb jeder Gruppe ungefähr normalverteilt ist → [t-Test für unabhängige Stichproben](#unpaired-t).
+- Wenn die Zielgrösse innerhalb jeder Gruppe [ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term} ist → [t-Test für unabhängige Stichproben](#unpaired-t).
 
 ### Was der Test wirklich macht
 
 Der Mann-Whitney-Test beachtet nicht, wie weit zwei Scores auseinanderliegen. Er schaut nur, welcher der höhere ist.
 
 1. Jede Person der einen Gruppe mit jeder Person der anderen Gruppe paaren.
-2. In jedem Paar schauen, wer den höheren Score hat. Die Paare zählen, in denen die Person der ersten Gruppe höher liegt; eine Bindung zählt als halbes Paar. Diese Anzahl ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **U**.
+2. In jedem Paar schauen, wer den höheren Score hat. Die Paare zählen, in denen die Person der ersten Gruppe höher liegt; eine [Bindung](../glossary.qmd#ties){.term} zählt als halbes Paar. Diese Anzahl ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **U**.
 3. Wären die beiden Gruppen gleich, läge die Person der ersten Gruppe in etwa der Hälfte der Paare höher. Je weiter U von der Hälfte aller Paare entfernt ist, desto kleiner der [p-Wert](../glossary.qmd#p-value){.term}.
 
-Software kommt schneller zum selben U. Sie sortiert alle Scores beider Gruppen vom tiefsten zum höchsten und gibt jedem seine Position in dieser Reihe, 1, 2, 3 und so weiter: seinen [Rang](../glossary.qmd#rank){.term}. Gebundene Scores teilen sich den Mittelwert ihrer Positionen. U ergibt sich dann durch einfaches Rechnen aus der Summe der Ränge einer Gruppe; deshalb heisst der Test auch Rangsummentest. Der Schritt zur Effektstärke weiter unten zählt die Paare für unsere Daten.
+Software kommt schneller zum selben U. Sie sortiert alle Scores beider Gruppen vom tiefsten zum höchsten und gibt jedem seine Position in dieser Reihe, 1, 2, 3 und so weiter: seinen [Rang](../glossary.qmd#rank){.term}. Gebundene Scores teilen sich den Mittelwert ihrer Positionen. U ergibt sich dann durch einfaches Rechnen aus der Summe der Ränge einer Gruppe; deshalb heisst der Test auch Rangsummentest. Der Schritt zur [Effektstärke](../glossary.qmd#effect-size){.term} weiter unten zählt die Paare für unsere Daten.
 
 ### Zuerst die Daten ansehen
 
@@ -314,7 +314,7 @@ print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75
 ```
 :::
 
-Vier Personen verpassten die Studienvisite nach 6 Wochen (2 in jedem Arm), sodass 116 der 120 randomisierten Personen analysiert werden. Die meisten Scores liegen zwischen 2 und 6, und viele Personen haben denselben Score (Bindungen). Bei ganzen Zahlen auf einer ordinalen Skala sind Mediane die passende Zusammenfassung: 4 Punkte mit Walker und 5 mit Gips. (Die Tabelle zeigt 58 Personen pro Arm, also verpassten in jedem Arm 60 − 58 = 2 die Kontrolle.) Das obere Quartil im Walker-Arm, 4.75, ist kein ganzer Score: Sortiert man die 58 Scores, liegt das Quartil zwischen dem 43. (einer 4) und dem 44. (einer 5), und beide Programme setzen es auf drei Viertel des Wegs dazwischen.
+Vier Personen verpassten die Studienvisite nach 6 Wochen (2 in jedem Arm), sodass 116 der 120 [randomisierten](../glossary.qmd#randomized-trial){.term} Personen analysiert werden. Die meisten Scores liegen zwischen 2 und 6, und viele Personen haben denselben Score (Bindungen). Bei ganzen Zahlen auf einer ordinalen Skala sind [Mediane](../glossary.qmd#median){.term} die passende Zusammenfassung: 4 Punkte mit Walker und 5 mit Gips. (Die Tabelle zeigt 58 Personen pro Arm, also verpassten in jedem Arm 60 − 58 = 2 die Kontrolle.) Das obere [Quartil](../glossary.qmd#quartile){.term} im Walker-Arm, 4.75, ist kein ganzer Score: Sortiert man die 58 Scores, liegt das Quartil zwischen dem 43. (einer 4) und dem 44. (einer 5), und beide Programme setzen es auf drei Viertel des Wegs dazwischen.
 
 ### Analyse durchführen
 
@@ -351,9 +351,9 @@ check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticu
 
 - **W = 1074.5** (R) oder **U_val = 1074.5** (Python): die U-Statistik nach Mann-Whitney für den Walker-Arm, also die Anzahl der Paare (Walker, Gips), bei denen die Person mit Walker mehr Schmerz angab, wobei Bindungen als halbes Paar zählen. Es gibt 58 × 58 = 3,364 Paare, ein U von 1,682 würde also bedeuten, dass keine Tendenz in eine der beiden Richtungen besteht. R nennt sie W.
 - **p < 0.001:** Ein solcher Unterschied wäre ungewöhnlich, wenn der Schmerz in beiden Armen gleich verteilt wäre.
-- **difference in location −1.00, 95% CI −2.00 to −1.00** (nur R): der Hodges-Lehmann-Schätzer, siehe unten. R findet ihn durch eine numerische Suche und gibt deshalb −1.000041 und Ähnliches aus; die letzten Stellen sind Rauschen.
-- **RBC = −0.361** (Python): die biseriale Rangkorrelation als Effektstärke, siehe unten.
-- **CLES = 0.319** (Python): die «Common Language Effect Size», U geteilt durch die Anzahl Paare (1,074.5 ÷ 3,364). Sie ist die Wahrscheinlichkeit, dass eine zufällig gewählte Person mit Walker mehr Schmerz angibt als eine zufällig gewählte Person mit Gips, wobei eine Bindung halb zählt.
+- **difference in location −1.00, 95% CI −2.00 to −1.00** (nur R): der [Hodges-Lehmann-Schätzer](../glossary.qmd#hodges-lehmann){.term}, siehe unten. R findet ihn durch eine numerische Suche und gibt deshalb −1.000041 und Ähnliches aus; die letzten Stellen sind Rauschen.
+- **RBC = −0.361** (Python): die [biseriale Rangkorrelation](../glossary.qmd#rank-biserial){.term} als Effektstärke, siehe unten.
+- **CLES = 0.319** (Python): die «[Common Language Effect Size](../glossary.qmd#cles){.term}», U geteilt durch die Anzahl Paare (1,074.5 ÷ 3,364). Sie ist die [Wahrscheinlichkeit](../glossary.qmd#probability){.term}, dass eine zufällig gewählte Person mit Walker mehr Schmerz angibt als eine zufällig gewählte Person mit Gips, wobei eine Bindung halb zählt.
 
 ### Effektstärke und 95%-KI
 
@@ -421,12 +421,12 @@ check_agree(list(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied 
             reticulate::py$chk_pairs)
 ```
 
-Mit Walker war der Schmerz typischerweise 1 Punkt tiefer (95%-KI 2 Punkte tiefer bis 1 Punkt tiefer), und r = −0.36. Die letzten Codezeilen zeigen, woher r kommt. Von allen 3,364 Paaren (Walker, Gips) gab die Person mit Walker in 61 % weniger Schmerz an, in 25 % mehr, und 14 % waren gebunden. r ist die Differenz zwischen dem Anteil «mehr» und dem Anteil «weniger»: 0.25 − 0.61 = −0.36. U zählt dieselben Paare, wie die letzte Zeile von Hand zeigt: 1,074.5, das W (R) oder U_val (Python), das der Test ausgegeben hat. Und 1,074.5 ÷ 3,364 = 0.32, der Anteil «mehr» plus der halbe Anteil der Bindungen (0.25 + 0.07). Bei ganzzahligen Scores ist jede Differenz zwischen zwei Personen eine ganze Zahl, daher liegen auch der Hodges-Lehmann-Schätzer und sein KI auf ganzen Zahlen, und der Schätzwert kann am Rand seines eigenen KI liegen, wie hier.
+Mit Walker war der Schmerz typischerweise 1 Punkt tiefer (95%-[KI](../glossary.qmd#confidence-interval){.term} 2 Punkte tiefer bis 1 Punkt tiefer), und r = −0.36. Die letzten Codezeilen zeigen, woher r kommt. Von allen 3,364 Paaren (Walker, Gips) gab die Person mit Walker in 61 % weniger Schmerz an, in 25 % mehr, und 14 % waren gebunden. r ist die Differenz zwischen dem Anteil «mehr» und dem Anteil «weniger»: 0.25 − 0.61 = −0.36. U zählt dieselben Paare, wie die letzte Zeile von Hand zeigt: 1,074.5, das W (R) oder U_val (Python), das der Test ausgegeben hat. Und 1,074.5 ÷ 3,364 = 0.32, der Anteil «mehr» plus der halbe Anteil der Bindungen (0.25 + 0.07). Bei ganzzahligen Scores ist jede Differenz zwischen zwei Personen eine ganze Zahl, daher liegen auch der Hodges-Lehmann-Schätzer und sein KI auf ganzen Zahlen, und der [Schätzwert](../glossary.qmd#estimate){.term} kann am Rand seines eigenen KI liegen, wie hier.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: warum der Standard-Bootstrap von scipy hier `nan` liefert
 
-Die Standardmethode von scipy für den Bootstrap (BCa) justiert ihr Intervall danach, wie stark sich der Schätzwert ändert, wenn man jeweils eine Person weglässt. Bei ganzzahligen Scores kann der Hodges-Lehmann-Schätzer nur auf ganzen oder halben Punkten liegen, und hier ändert er sich gar nicht:
+Die Standardmethode von scipy für den [Bootstrap](../glossary.qmd#bootstrap){.term} (BCa) justiert ihr Intervall danach, wie stark sich der Schätzwert ändert, wenn man jeweils eine Person weglässt. Bei ganzzahligen Scores kann der Hodges-Lehmann-Schätzer nur auf ganzen oder halben Punkten liegen, und hier ändert er sich gar nicht:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -471,12 +471,12 @@ check_agree(list(n = length(leave_one_out), all_minus_one = as.numeric(all(leave
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Es ist kein Test der Mediane
-Der Mann-Whitney-Test fragt, ob die Werte der einen Gruppe **tendenziell grösser** sind, nicht, ob sich die Mediane unterscheiden. Zwei Gruppen können denselben Median und einen signifikanten Mann-Whitney-Test haben (wenn ihre Verteilungen verschieden geformt sind), oder verschiedene Mediane und einen nicht signifikanten. Berichten Sie die Mediane, um die Gruppen zu beschreiben, schreiben Sie aber nicht «die Mediane unterschieden sich signifikant».
+Der Mann-Whitney-Test fragt, ob die Werte der einen Gruppe **tendenziell grösser** sind, nicht, ob sich die Mediane unterscheiden. Zwei Gruppen können denselben Median und einen [signifikanten](../glossary.qmd#statistical-significance){.term} Mann-Whitney-Test haben (wenn ihre Verteilungen verschieden geformt sind), oder verschiedene Mediane und einen nicht signifikanten. Berichten Sie die Mediane, um die Gruppen zu beschreiben, schreiben Sie aber nicht «die Mediane unterschieden sich signifikant».
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Standardwerte beim Mann-Whitney-Test
-- **Exakt oder näherungsweise.** Bei Bindungen (wie hier) verwenden beide Programme eine Normalapproximation. Ohne Bindungen berechnet R bei Gruppen unter 50 einen exakten p-Wert, scipy nur bei sehr kleinen Gruppen. Wir setzen `exact = FALSE` in R und `method="asymptotic"` in Python, damit beide immer übereinstimmen.
+- **Exakt oder näherungsweise.** Bei Bindungen (wie hier) verwenden beide Programme eine [Normalapproximation](../glossary.qmd#exact-test){.term}. Ohne Bindungen berechnet R bei Gruppen unter 50 einen exakten p-Wert, scipy nur bei sehr kleinen Gruppen. Wir setzen `exact = FALSE` in R und `method="asymptotic"` in Python, damit beide immer übereinstimmen.
 - **Stetigkeitskorrektur.** Beide Programme wenden sie bei der Näherung standardmässig an; wir setzen sie trotzdem ausdrücklich.
 - **Das Hodges-Lehmann-KI.** R berechnet es durch Umkehrung des Tests; der Python-Code verwendet einen Bootstrap, also eine andere Methode. Bei ganzzahligen Scores bewegt sich der Schätzwert kaum: Lässt man eine beliebige Person weg, ergibt sich weiterhin −1 (der Kasten unter «Effektstärke und 95%-KI» zeigt es). Die Standardmethode von scipy für den Bootstrap (BCa) braucht aber Schätzwerte, die variieren, wenn man jeweils eine Person weglässt, und liefert deshalb hier `nan` mit einer Warnung. Die Perzentilmethode (`method="percentile"`) braucht sie nicht. Hier stimmen die beiden KI überein (−2.00 bis −1.00); bei anderen Daten können sie leicht voneinander abweichen.
 - **Das KI für r.** effectsize gibt ein 95%-KI für die biseriale Rangkorrelation r aus. `mwu()` von pingouin liefert r (die Spalte `RBC`) ohne KI; das KI im Results-Satz stammt also aus R.
@@ -488,9 +488,9 @@ Der Mann-Whitney-Test fragt, ob die Werte der einen Gruppe **tendenziell grösse
 
 ### Wann verwenden
 
-- Die Zielgrösse ist **Ja/Nein**, verglichen zwischen **zwei unabhängigen Gruppen**: eine 2 × 2-Tabelle.
-- Der **exakte Test nach Fisher** gilt für jede Stichprobengrösse. Der **Chi-Quadrat-Test** ist eine Näherung für grosse Stichproben: Verwenden Sie ihn nur, wenn jede *erwartete* Häufigkeit mindestens 5 beträgt. Im Zweifel verwenden Sie den Test nach Fisher.
-- Wenn die Patientinnen und Patienten unterschiedlich lang nachbeobachtet wurden und das Ereignis jederzeit eintreten kann → [Log-Rank-Test](#log-rank).
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}**, verglichen zwischen **zwei [unabhängigen](../glossary.qmd#independence){.term} Gruppen**: eine [2 × 2-Tabelle](../glossary.qmd#contingency-table){.term}.
+- Der **exakte Test nach Fisher** gilt für jede [Stichprobengrösse](../glossary.qmd#sample-size){.term}. Der **Chi-Quadrat-Test** ist eine [Näherung für grosse Stichproben](../glossary.qmd#exact-test){.term}: Verwenden Sie ihn nur, wenn jede *erwartete* Häufigkeit mindestens 5 beträgt. Im Zweifel verwenden Sie den Test nach Fisher.
+- Wenn die Patientinnen und Patienten unterschiedlich lang [nachbeobachtet](../glossary.qmd#follow-up){.term} wurden und das [Ereignis](../glossary.qmd#event){.term} jederzeit eintreten kann → [Log-Rank-Test](#log-rank).
 
 ### Was der Test wirklich macht
 
@@ -499,14 +499,14 @@ Beide Tests vergleichen die beobachtete Tabelle mit der Tabelle, die zu erwarten
 **Der Chi-Quadrat-Test**
 
 1. Für jede der vier Zellen die [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} berechnen: Zeilensumme × Spaltensumme ÷ Gesamtsumme. So viele Fälle wären zu sehen, wenn beide Transplantate gleich häufig versagten.
-2. Für jede Zelle (beobachtet − erwartet)² ÷ erwartet berechnen und die vier Ergebnisse addieren. Die Summe ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **χ²**: 0, wenn die Tabelle genau den erwarteten Häufigkeiten entspricht, und umso grösser, je weiter sie davon entfernt ist.
+2. Für jede Zelle (beobachtet − erwartet)² ÷ erwartet berechnen und die vier Ergebnisse addieren. Die Summe ist die [Teststatistik](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}**: 0, wenn die Tabelle genau den erwarteten Häufigkeiten entspricht, und umso grösser, je weiter sie davon entfernt ist.
 3. χ² mit der Chi-Quadrat-Verteilung in einen [p-Wert](../glossary.qmd#p-value){.term} umrechnen. Dieser Schritt ist eine Näherung, und eine schlechte, wenn erwartete Häufigkeiten klein sind. Daher kommt die Regel «mindestens 5».
 
-**Der exakte Test nach Fisher** braucht keine Näherung. Er hält die Zeilen- und Spaltensummen fest und listet jede Tabelle auf, die diese Summen haben könnte. Er berechnet die exakte Wahrscheinlichkeit jeder dieser Tabellen und addiert die Wahrscheinlichkeiten aller Tabellen, die nicht wahrscheinlicher sind als Ihre. Diese Summe ist der p-Wert.
+**Der exakte Test nach Fisher** braucht keine Näherung. Er hält die Zeilen- und Spaltensummen fest und listet jede Tabelle auf, die diese Summen haben könnte. Er berechnet die exakte [Wahrscheinlichkeit](../glossary.qmd#probability){.term} jeder dieser Tabellen und addiert die Wahrscheinlichkeiten aller Tabellen, die nicht wahrscheinlicher sind als Ihre. Diese Summe ist der p-Wert.
 
 ### Zuerst die Daten ansehen
 
-Die VKB-Daten enthalten eine Zeile pro primärer Rekonstruktion. Alle wurden mindestens 2 Jahre nachbeobachtet, ausser das Transplantat versagte vorher; das Versagen innerhalb von 2 Jahren (`failure_2y`) ist also für jede Rekonstruktion bekannt. Bei zwei Ja/Nein-Variablen heisst «Ansehen», die 2 × 2-Tabelle mit dem Prozentsatz in jeder Gruppe zu betrachten.
+Die VKB-Daten enthalten eine Zeile pro primärer Rekonstruktion. Alle wurden mindestens 2 Jahre nachbeobachtet, ausser das Transplantat versagte vorher; das Versagen innerhalb von 2 Jahren (`failure_2y`) ist also für jede Rekonstruktion bekannt. Bei zwei [Ja/Nein-Variablen](../glossary.qmd#variable){.term} heisst «Ansehen», die 2 × 2-Tabelle mit dem Prozentsatz in jeder Gruppe zu betrachten.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -588,9 +588,9 @@ check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq
 ### Ausgabe lesen
 
 - **Fisher's test, p-value = 0.7754:** Eine Tabelle wie diese wäre häufig, wenn das Versagen nicht mit dem Transplantat zusammenhinge. Wir berichten p = 0.775.
-- **odds ratio 0.83, 95% CI 0.22 to 3.20** (R): die Effektstärke, siehe unten.
+- **odds ratio 0.83, 95% CI 0.22 to 3.20** (R): die [Effektstärke](../glossary.qmd#effect-size){.term}, siehe unten.
 - **Erwartete Häufigkeiten:** was jede Zelle enthielte, wenn das Versagen nicht mit dem Transplantat zusammenhinge. Alle betragen mindestens 5, aber nur knapp (die kleinste ist 5.5), daher ist auch der Chi-Quadrat-Test gültig.
-- **X-squared = 0.0003, p-value = 0.986:** der Chi-Quadrat-Test mit Stetigkeitskorrektur nach Yates stimmt überein.
+- **X-squared = 0.0003, p-value = 0.986:** der Chi-Quadrat-Test mit [Stetigkeitskorrektur nach Yates](../glossary.qmd#continuity-correction){.term} stimmt überein.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: Chi-Quadrat von Hand
@@ -645,8 +645,8 @@ Der Chi-Quadrat-Test behandelt Häufigkeiten so, als könnten sie jeden Wert ann
 
 Zwei Effektstärken, und es lohnt sich, beide zu berichten:
 
-- Die **Risikodifferenz**: die Differenz zwischen den beiden Prozentsätzen, in Prozentpunkten. Sie ist für Patientinnen und Patienten wie für Ärztinnen und Ärzte verständlich. Sein KI ist hier das einfache Intervall «Schätzwert ± 1.96 Standardfehler», das Wald-KI heisst: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
-- Das **Odds Ratio**: die Odds für Versagen mit einem Hamstring-Transplantat geteilt durch die Odds mit einem BPTB-Transplantat. Es ist das, was die logistische Regression berichtet ([Seite 11](11-predict-from-one.qmd#logistic-regression)), und eignet sich daher für den Vergleich mit anderen Studien.
+- Die **[Risikodifferenz](../glossary.qmd#risk-difference){.term}**: die Differenz zwischen den beiden Prozentsätzen, in [Prozentpunkten](../glossary.qmd#percentage-point){.term}. Sie ist für Patientinnen und Patienten wie für Ärztinnen und Ärzte verständlich. Sein [KI](../glossary.qmd#confidence-interval){.term} ist hier das einfache Intervall «[Schätzwert](../glossary.qmd#estimate){.term} ± 1.96 [Standardfehler](../glossary.qmd#standard-error){.term}», das [Wald-KI](../glossary.qmd#wald-interval){.term} heisst: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
+- Das **[Odds Ratio](../glossary.qmd#odds-ratio){.term}**: die [Odds](../glossary.qmd#odds){.term} für Versagen mit einem Hamstring-Transplantat geteilt durch die Odds mit einem BPTB-Transplantat. Es ist das, was die [logistische Regression](../glossary.qmd#logistic-regression){.term} berichtet ([Seite 11](11-predict-from-one.qmd#logistic-regression)), und eignet sich daher für den Vergleich mit anderen Studien.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -691,7 +691,7 @@ check_agree(list(or = unname(failure_fisher$estimate), or_low = failure_fisher$c
             tol = 1e-4)   # both programs find the odds ratio and its CI by root-finding, accurate to about 1e-5
 ```
 
-Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer (95%-KI 5.5 Punkte tiefer bis 4.0 Punkte höher), ein Odds Ratio von 0.83 (95%-KI 0.22 bis 3.20). Die beiden Versagensraten sind 3.9 % und 4.7 %, die Risikodifferenz ist also 3.9 − 4.7 = −0.8 Prozentpunkte. Das KI wird als Anteile ausgegeben, −0.055 und 0.040; mal 100 sind das −5.5 bis 4.0 Punkte.
+Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer (95%-KI 5.5 Punkte tiefer bis 4.0 Punkte höher), ein Odds Ratio von 0.83 (95%-KI 0.22 bis 3.20). Die beiden Versagensraten sind 3.9 % und 4.7 %, die Risikodifferenz ist also 3.9 − 4.7 = −0.8 Prozentpunkte. Das KI wird als [Anteile](../glossary.qmd#proportion){.term} ausgegeben, −0.055 und 0.040; mal 100 sind das −5.5 bis 4.0 Punkte.
 
 ### Resultate formulieren
 
@@ -701,32 +701,32 @@ Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer 
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: «Kein Unterschied» braucht ein schmales KI
-Das KI des Odds Ratio reicht von 0.22 bis 3.20: Die Daten sind damit vereinbar, dass ein Hamstring-Transplantat nur ein Fünftel der Odds für Versagen eines BPTB-Transplantats hat oder aber das Dreifache. Bei nur 12 Versagen kann diese Studie das nicht entscheiden. «Kein signifikanter Unterschied» ist die ehrliche Formulierung; «Hamstring- und BPTB-Transplantate versagen gleich häufig» ist es nicht.
+Das KI des Odds Ratio reicht von 0.22 bis 3.20: Die Daten sind damit vereinbar, dass ein Hamstring-Transplantat nur ein Fünftel der Odds für Versagen eines BPTB-Transplantats hat oder aber das Dreifache. Bei nur 12 Versagen kann diese Studie das nicht entscheiden. «Kein [signifikanter](../glossary.qmd#statistical-significance){.term} Unterschied» ist die ehrliche Formulierung; «Hamstring- und BPTB-Transplantate versagen gleich häufig» ist es nicht.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: zwei verschiedene Odds Ratios
-`fisher_exact()` in scipy gibt das einfache **Stichproben**-Odds-Ratio (a × d) / (b × c) an, hier 0.8311. `fisher.test()` in R gibt das **bedingte Maximum-Likelihood**-Odds-Ratio an, 0.8316, das zu seinem exakten KI gehört. Verwenden Sie `scipy.stats.contingency.odds_ratio(..., kind="conditional")`, um die Zahl und das KI von R zu erhalten. Die beiden liegen immer nahe beieinander; geben Sie an, welches Sie berichten. In unserer Tabelle ist das Odds Ratio der Stichprobe (6 × 123) / (148 × 6) = 0.8311.
+`fisher_exact()` in scipy gibt das einfache **Stichproben**-Odds-Ratio (a × d) / (b × c) an, hier 0.8311. `fisher.test()` in R gibt das **bedingte [Maximum-Likelihood](../glossary.qmd#maximum-likelihood){.term}**-Odds-Ratio an, 0.8316, das zu seinem exakten KI gehört. Verwenden Sie `scipy.stats.contingency.odds_ratio(..., kind="conditional")`, um die Zahl und das KI von R zu erhalten. Die beiden liegen immer nahe beieinander; geben Sie an, welches Sie berichten. In unserer Tabelle ist das Odds Ratio der Stichprobe (6 × 123) / (148 × 6) = 0.8311.
 :::
 
 ## Log-Rank-Test {#log-rank}
 
-**Die Frage:** Unterscheidet sich das revisionsfreie Überleben zwischen Implantat A und Implantat C?
+**Die Frage:** Unterscheidet sich das [revisionsfreie Überleben](../glossary.qmd#survival){.term} zwischen Implantat A und Implantat C?
 
 ### Wann verwenden
 
-- Die Zielgrösse ist die **Zeit bis zu einem Ereignis** (Revision), die Patientinnen und Patienten wurden unterschiedlich lang nachbeobachtet, und Sie vergleichen **zwei unabhängige Gruppen**.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist die **[Zeit bis zu einem Ereignis](../glossary.qmd#time-to-event){.term}** (Revision), die Patientinnen und Patienten wurden unterschiedlich lang [nachbeobachtet](../glossary.qmd#follow-up){.term}, und Sie vergleichen **zwei [unabhängige](../glossary.qmd#independence){.term} Gruppen**.
 - Er vergleicht die gesamten Überlebenskurven, nicht das Überleben zu einem einzelnen Zeitpunkt.
 - Der **Mantel-Haenszel-Test** (oder Mantel-Cox-Test) in der Entscheidungstabelle ist derselbe Test unter einem anderen Namen.
-- Er hat die grösste Teststärke, wenn der Hazard der einen Gruppe über die Zeit ein gleichbleibendes Vielfaches des Hazards der anderen ist (proportionale Hazards; der Hazard ist die momentane Ereignisrate). Wenn sich die Kurven kreuzen, siehe [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards).
-- Um drei oder mehr Gruppen zu vergleichen oder für andere Variablen zu adjustieren → [Cox-Regression](08-three-plus-unmatched.qmd#cox).
+- Er hat die grösste [Teststärke](../glossary.qmd#power){.term}, wenn der [Hazard](../glossary.qmd#hazard){.term} der einen Gruppe über die Zeit ein gleichbleibendes Vielfaches des Hazards der anderen ist ([proportionale Hazards](../glossary.qmd#proportional-hazards){.term}; der Hazard ist die momentane Ereignisrate). Wenn sich die Kurven kreuzen, siehe [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards).
+- Um drei oder mehr Gruppen zu vergleichen oder für andere [Variablen](../glossary.qmd#variable){.term} zu [adjustieren](../glossary.qmd#adjustment){.term} → [Cox-Regression](08-three-plus-unmatched.qmd#cox).
 
 ### Was der Test wirklich macht
 
 Der Log-Rank-Test vergleicht die beiden Gruppen über die ganze Nachbeobachtung, eine Revision nach der anderen.
 
 1. Bei der Operation beginnen und in der Zeit vorwärtsgehen. Bei jeder Revision schauen, wer unmittelbar davor noch nachbeobachtet wurde: die Personen [unter Risiko](../glossary.qmd#at-risk){.term}.
-2. Hätten beide Implantate dasselbe Risiko, könnte diese Revision jede Person unter Risiko gleich wahrscheinlich treffen. Der **erwartete** Anteil jeder Gruppe an der Revision ist also einfach ihr Anteil an den Personen unter Risiko.
+2. Hätten beide Implantate dasselbe [Risiko](../glossary.qmd#risk){.term}, könnte diese Revision jede Person unter Risiko gleich wahrscheinlich treffen. Der **erwartete** Anteil jeder Gruppe an der Revision ist also einfach ihr Anteil an den Personen unter Risiko.
 3. Diese Anteile über alle Revisionen addieren. Am Ende hat jede Gruppe eine **beobachtete** und eine **erwartete** Anzahl Revisionen.
 4. Die [Teststatistik](../glossary.qmd#test-statistic){.term} misst, wie weit beobachtet von erwartet entfernt ist, im Vergleich dazu, wie weit der Zufall allein sie auseinanderbrächte. Ein grosser Abstand ergibt einen kleinen [p-Wert](../glossary.qmd#p-value){.term}.
 
@@ -864,7 +864,7 @@ check_agree(list(observed_a = sum(a_vs_c$revised[a_vs_c$implant == "A"]), expect
 
 ### Effektstärke und 95%-KI
 
-Der Log-Rank-Test hat keine eigene Effektstärke. Üblich ist das **Hazard Ratio** aus einem Cox-Modell: wievielmal höher der Hazard einer Revision in jedem Moment mit Implantat C ist als mit Implantat A. [Seite 14](../survival/14-cox-regression.qmd) erklärt die Cox-Regression ausführlich.
+Der Log-Rank-Test hat keine eigene [Effektstärke](../glossary.qmd#effect-size){.term}. Üblich ist das **[Hazard Ratio](../glossary.qmd#hazard-ratio){.term}** aus einem [Cox-Modell](../glossary.qmd#cox-regression){.term}: wievielmal höher der Hazard einer Revision in jedem Moment mit Implantat C ist als mit Implantat A. [Seite 14](../survival/14-cox-regression.qmd) erklärt die Cox-Regression ausführlich.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -897,7 +897,7 @@ check_agree(list(hr = hr[1, "exp(coef)"], hr_low = hr[1, "lower .95"], hr_high =
             reticulate::py$chk)
 ```
 
-Der Hazard einer Revision war mit Implantat C etwa dreimal so hoch (Hazard Ratio 3.04, 95%-KI 1.83 bis 5.04).
+Der Hazard einer Revision war mit Implantat C etwa dreimal so hoch (Hazard Ratio 3.04, 95%-[KI](../glossary.qmd#confidence-interval){.term} 1.83 bis 5.04).
 
 Der Results-Satz nennt auch das revisionsfreie Überleben jedes Implantats nach 5 Jahren mit seinem KI:
 
@@ -945,12 +945,12 @@ check_agree(list(surv_a = survival_5$surv[1], low_a = survival_5$lower[1], high_
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Überlappende KI sind kein Test
-Die KI der beiden Kurven zu einem Zeitpunkt zu vergleichen («die KI nach 5 Jahren überlappen, also gibt es keinen Unterschied») ist kein gültiger Test, und der Vergleich der rohen Anteile von Patientinnen und Patienten mit einer Revision ist es ebenso wenig. Verwenden Sie den Log-Rank-Test für die ganzen Kurven. Und wie auf [Seite 4](04-describe-one-group.qmd#kaplan-meier) werden Todesfälle hier als zensiert behandelt; [Seite 13](../survival/13-kaplan-meier.qmd#competing-risks) behandelt konkurrierende Risiken.
+Die KI der beiden Kurven zu einem Zeitpunkt zu vergleichen («die KI nach 5 Jahren überlappen, also gibt es keinen Unterschied») ist kein gültiger Test, und der Vergleich der rohen Anteile von Patientinnen und Patienten mit einer Revision ist es ebenso wenig. Verwenden Sie den Log-Rank-Test für die ganzen Kurven. Und wie auf [Seite 4](04-describe-one-group.qmd#kaplan-meier) werden Todesfälle hier als zensiert behandelt; [Seite 13](../survival/13-kaplan-meier.qmd#competing-risks) behandelt [konkurrierende Risiken](../glossary.qmd#competing-risk){.term}.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: eine Formel oder zwei Gruppen
-`survdiff()` in R nimmt eine Formel mit einer Gruppierungsvariable. `logrank_test()` in lifelines nimmt die Nachbeobachtungszeiten und Ereignisse jeder Gruppe getrennt (`multivariate_logrank_test()` nimmt eine Gruppierungsspalte). Sie berechnen denselben Test. Beide Cox-Modelle behandeln gebundene Revisionszeiten mit der Methode von Efron, daher stimmen die Hazard Ratios überein. Der R-Code setzt `conf.type = "log-log"`, weil lifelines diese KI-Methode verwendet ([Seite 4](04-describe-one-group.qmd#kaplan-meier)).
+`survdiff()` in R nimmt eine Formel mit einer Gruppierungsvariable. `logrank_test()` in lifelines nimmt die Nachbeobachtungszeiten und [Ereignisse](../glossary.qmd#event){.term} jeder Gruppe getrennt (`multivariate_logrank_test()` nimmt eine Gruppierungsspalte). Sie berechnen denselben Test. Beide Cox-Modelle behandeln [gebundene](../glossary.qmd#ties){.term} Revisionszeiten mit der [Methode von Efron](../glossary.qmd#efron-method){.term}, daher stimmen die Hazard Ratios überein. Der R-Code setzt `conf.type = "log-log"`, weil lifelines diese KI-Methode verwendet ([Seite 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
 ```{r}
@@ -1051,7 +1051,7 @@ stopifnot(
 
 Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten geladen wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.
 
-**1.** Vergleichen Sie den **EFAS-Score nach 6 Wochen** zwischen dem Walker- und dem Gips-Arm mit dem t-Test nach Welch. Berichten Sie Mittelwert und Standardabweichung (SD) jedes Arms sowie die Mittelwertsdifferenz mit ihrem 95%-KI.
+**1.** Vergleichen Sie den **EFAS-Score nach 6 Wochen** zwischen dem Walker- und dem [Gips-Arm](../glossary.qmd#randomized-trial){.term} mit dem [t-Test nach Welch](../glossary.qmd#welch-test){.term}. Berichten Sie [Mittelwert](../glossary.qmd#mean){.term} und [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) jedes Arms sowie die [Mittelwertsdifferenz](../glossary.qmd#mean-difference){.term} mit ihrem 95%-[KI](../glossary.qmd#confidence-interval){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -1088,7 +1088,7 @@ Die Tabelle von R zeigt drei Ziffern: Die SD von 2.75 im Walker-Arm ist gerundet
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Nach 12 Monaten liegen viele Personen an oder nahe an der Decke von 24 (13 % mit Walker und 17 % mit Gips erzielten 24), also der **Mann-Whitney-Test**.
+Nach 12 Monaten liegen viele Personen an oder nahe an der [Decke](../glossary.qmd#ceiling-effect){.term} von 24 (13 % mit Walker und 17 % mit Gips erzielten 24), also der **[Mann-Whitney-Test](../glossary.qmd#mann-whitney-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1121,14 +1121,14 @@ print(efas_12mo.groupby("arm")["efas"].agg(at_24=lambda s: (s == 24).sum(), perc
 
 > **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
 
-Es gibt keinen klaren Hinweis auf einen Unterschied nach 12 Monaten, nach dem Vorsprung von 3.6 Punkten, den der Walker nach 3 Monaten hatte. Beachten Sie auch, dass 18 der 120 Patientinnen und Patienten die Studienvisite nach 12 Monaten verpassten, 5 im Walker-Arm und 13 im Gips-Arm: Wenn ein Arm mehr Personen verliert, sind die verbleibenden Personen womöglich nicht mehr mit denen des anderen Arms vergleichbar. Ob sich die Differenz zwischen den Armen im Zeitverlauf wirklich verändert, ist eine Frage für ein einziges Modell mit allen Studienvisiten: [Seite 16](../beyond/16-mixed-models.qmd#group-by-time) zeigt, wie das geht. (Die Tabelle zeigt 55 und 47 Personen: 60 − 55 = 5 und 60 − 47 = 13.)
+Es gibt keinen klaren Hinweis auf einen Unterschied nach 12 Monaten, nach dem Vorsprung von 3.6 Punkten, den der Walker nach 3 Monaten hatte. Beachten Sie auch, dass 18 der 120 Patientinnen und Patienten die Studienvisite nach 12 Monaten verpassten, 5 im Walker-Arm und 13 im Gips-Arm: Wenn ein Arm mehr Personen verliert, sind die verbleibenden Personen womöglich nicht mehr mit denen des anderen Arms vergleichbar. Ob sich die Differenz zwischen den Armen im Zeitverlauf wirklich verändert, ist eine Frage für ein einziges [Modell](../glossary.qmd#model){.term} mit allen Studienvisiten: [Seite 16](../beyond/16-mixed-models.qmd#group-by-time) zeigt, wie das geht. (Die Tabelle zeigt 55 und 47 Personen: 60 − 55 = 5 und 60 − 47 = 13.)
 :::
 
-**3.** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Frauen und Männern? Wählen Sie den Test, führen Sie ihn durch und schreiben Sie den Results-Satz mit der Risikodifferenz und dem Odds Ratio.
+**3.** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Frauen und Männern? Wählen Sie den Test, führen Sie ihn durch und schreiben Sie den Results-Satz mit der [Risikodifferenz](../glossary.qmd#risk-difference){.term} und dem [Odds Ratio](../glossary.qmd#odds-ratio){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Eine Ja/Nein-Zielgrösse, zwei unabhängige Gruppen: der **exakte Test nach Fisher**.
+Eine [Ja/Nein-Zielgrösse](../glossary.qmd#binary){.term}, zwei [unabhängige](../glossary.qmd#independence){.term} Gruppen: der **[exakte Test nach Fisher](../glossary.qmd#fisher-exact-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1160,5 +1160,5 @@ print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_y
 
 > **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
 
-Die Risikodifferenz ist 53.3 − 46.5 = 6.8 Prozentpunkte; die KI-Zeile gibt Anteile aus, also mit 100 multiplizieren.
+Die Risikodifferenz ist 53.3 − 46.5 = 6.8 [Prozentpunkte](../glossary.qmd#percentage-point){.term}; die KI-Zeile gibt [Anteile](../glossary.qmd#proportion){.term} aus, also mit 100 multiplizieren.
 :::

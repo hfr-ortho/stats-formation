@@ -16,28 +16,28 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-"How long do the implants last?" is the central question of arthroplasty research, and it needs its own methods. Patients join the study over several years and are followed for different lengths of time, and most of them are never revised. **Survival analysis** uses every patient's follow-up for as long as it lasts.
+"How long do the implants last?" is the central question of arthroplasty research, and it needs its own methods. Patients join the study over several years and are followed for different lengths of time, and most of them are never revised. **[Survival analysis](../glossary.qmd#time-to-event){.term}** uses every patient's [follow-up](../glossary.qmd#follow-up){.term} for as long as it lasts.
 
 Pages [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalog/06-two-unpaired-groups.qmd#log-rank) and [8](../catalog/08-three-plus-unmatched.qmd#cox) each showed one survival method in a few steps. This page covers the whole method:
-- what censoring is
+- what [censoring](../glossary.qmd#censored){.term} is
 - how to set up the data
-- how to read and report a Kaplan-Meier curve
+- how to read and report a [Kaplan-Meier curve](../glossary.qmd#kaplan-meier){.term}
 - how long the patients were followed
 - how to compare groups
 - what to do when patients die before they can be revised
 
-[Page 14](14-cox-regression.qmd) covers Cox regression.
+[Page 14](14-cox-regression.qmd) covers [Cox regression](../glossary.qmd#cox-regression){.term}.
 
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages and data loaded earlier.
 
-To keep the code short, the examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them). In a real study, decide how to handle them ([page 14](14-cox-regression.qmd#stratified-cox)) and say what you did.
+To keep the code short, the examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole [cohort](../glossary.qmd#cohort){.term}; [page 2](../foundations/02-demographics.qmd#setup) counts them). In a real study, decide how to handle them ([page 14](14-cox-regression.qmd#stratified-cox)) and say what you did.
 :::
 
 ## What censoring means {#censoring}
 
-Picture six patients, each followed from surgery until either a revision or the end of their follow-up:
+Picture six patients, each followed from surgery until either a revision or the end of their [follow-up](../glossary.qmd#follow-up){.term}:
 
 | Patient | Years followed | Revised? |
 |---|---|---|
@@ -48,7 +48,7 @@ Picture six patients, each followed from surgery until either a revision or the 
 | E | 5 | yes |
 | F | 6 | no: the study closed |
 
-Patients B, D and F are **[censored](../glossary.qmd#censored){.term}**. We know they went *at least* that long without a revision, but not what happened afterwards. Censoring isn't missing data: it's partial information, and survival methods use all of it.
+Patients B, D and F are **[censored](../glossary.qmd#censored){.term}**. We know they went *at least* that long without a revision, but not what happened afterwards. Censoring isn't [missing data](../glossary.qmd#missing-data){.term}: it's partial information, and survival methods use all of it.
 
 Two simple summaries both get this wrong:
 - **"3 of 6 (50%) were revised"** ignores time. Patient B was followed for only 2 years, so B's implant never had the chance to fail at 4 or 5 years.
@@ -112,12 +112,12 @@ check_agree(list(surv_1 = toy_summary$surv[1], surv_3 = toy_summary$surv[2], sur
 R's table has a row only for the times when a revision happens. Python's has a row for every time, with the patients at risk just before it.
 
 Reading the output, one revision at a time:
-- **Year 1:** 6 patients at risk, 1 revised. Survival = 5/6 = 0.833.
+- **Year 1:** 6 patients at risk, 1 revised. [Survival](../glossary.qmd#survival){.term} = 5/6 = 0.833.
 - **Year 2:** B is censored. Nothing happens to the curve, but the at-risk group shrinks from 5 to 4 before the next revision.
 - **Year 3:** 4 at risk, 1 revised. Survival = 0.833 × 3/4 = 0.625.
 - **Year 5:** 2 at risk (D was censored at year 4), 1 revised. Survival = 0.625 × 1/2 = 0.3125.
 
-So the estimated chance of a revision by 5 years is 1 − 0.3125 = 69%, not 50%. Each censored patient counts fully while they're followed and then leaves the at-risk group. The CIs R prints are very wide (the upper limit is 1 in every row) because there are only six patients.
+So the estimated [chance](../glossary.qmd#probability){.term} of a revision by 5 years is 1 − 0.3125 = 69%, not 50%. Each censored patient counts fully while they're followed and then leaves the at-risk group. The [CIs](../glossary.qmd#confidence-interval){.term} R prints are very wide (the upper limit is 1 in every row) because there are only six patients.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the product-limit formula
@@ -135,12 +135,12 @@ Kaplan-Meier assumes a censored patient has the same future risk as the patients
 
 ## Time zero and the event {#time-zero}
 
-Every survival analysis needs two definitions, fixed before you look at the results:
+Every [survival analysis](../glossary.qmd#time-to-event){.term} needs two definitions, fixed before you look at the results:
 
 - **Time zero**, when the clock starts. For implant survival it's the **date of surgery**: every patient starts at the same clinical moment. Starting at the first clinic visit instead would ignore revisions that happened before that visit.
 - **The event**, what stops the clock. Here it's **revision for any reason**: any reoperation that removes or exchanges a component. Other studies use aseptic revision, or any reoperation. Choose one in advance and define it in the Methods.
 
-Real data rarely arrive as "years followed" and "revised: yes/no". You build those columns from dates. The practice cohort already has them: `followup_years` and `event_status`, where 0 means censored, 1 means revised and 2 means died without a revision. Here's how to make them from a table of dates, for four made-up patients:
+Real data rarely arrive as "years followed" and "revised: yes/no". You build those columns from dates. The practice [cohort](../glossary.qmd#cohort){.term} already has them: `followup_years` and `event_status`, where 0 means [censored](../glossary.qmd#censored){.term}, 1 means revised and 2 means died without a revision. Here's how to make them from a table of dates, for four made-up patients:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -207,7 +207,7 @@ check_agree(list(years_p1 = follow_up$followup_years[1], years_p2 = follow_up$fo
             reticulate::py$chk)
 ```
 
-- **P1** was revised in 2019 and died in 2023. The revision came first, so P1's follow-up ends at the revision, 3.30 years after surgery.
+- **P1** was revised in 2019 and died in 2023. The revision came first, so P1's [follow-up](../glossary.qmd#follow-up){.term} ends at the revision, 3.30 years after surgery.
 - **P2** died 3.21 years after surgery without a revision. Death ends the follow-up: P2 can never be revised. (The section on [competing risks](#competing-risks) explains why that matters.)
 - **P3** was alive and unrevised at the last visit: censored at 5.38 years.
 - **P4** was revised at 0.27 years: 0.271 × 365.25 = 99 days after surgery.
@@ -219,7 +219,7 @@ Don't set every unrevised patient's end date to the date you pulled the data. A 
 
 ## The Kaplan-Meier curve {#kaplan-meier}
 
-Now the practice cohort: 600 procedures, each followed from surgery to revision, death or the last visit.
+Now the practice [cohort](../glossary.qmd#cohort){.term}: 600 procedures, each [followed](../glossary.qmd#follow-up){.term} from surgery to revision, death or the last visit.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -277,8 +277,8 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 ```
 
 How to read it:
-- **The steps:** the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still at risk.
-- **The ticks** mark censored patients. They don't move the curve; they leave the at-risk group.
+- **The steps:** the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still [at risk](../glossary.qmd#at-risk){.term}.
+- **The ticks** mark [censored](../glossary.qmd#censored){.term} patients. They don't move the curve; they leave the at-risk group.
 - **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens as patients leave.
 - **The table below the plot** gives the number of procedures still being followed (**at risk**) at each time, 600 at surgery, 332 at 4 years and 84 at 8 years in R (lifelines shows 331 and 83; the R vs Python box below explains why), and the revisions so far. Always publish the numbers at risk with the curve: they tell the reader how much to trust each part of it.
 
@@ -289,7 +289,7 @@ By 10 years only 21 procedures are still followed, so each late revision moves t
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: the confidence band
-R's `survfit()` uses a "log" CI by default; lifelines uses "log-log". We set `conf.type = "log-log"` in R so the two match, as on [page 4](../catalog/04-describe-one-group.qmd#kaplan-meier). The numbers at risk can differ by one or two: R counts the patients followed for *at least* 4 years, lifelines those followed for *more than* 4 years, so a patient censored at exactly 4.00 years is in R's count only. Here that is one case at 4 years and one at 8 years. lifelines' `add_at_risk_counts()` also adds a row of censored patients unless you choose rows with `rows_to_show`.
+R's `survfit()` uses a "log" CI by default; lifelines uses "[log-log](../glossary.qmd#log-log-interval){.term}". We set `conf.type = "log-log"` in R so the two match, as on [page 4](../catalog/04-describe-one-group.qmd#kaplan-meier). The numbers at risk can differ by one or two: R counts the patients followed for *at least* 4 years, lifelines those followed for *more than* 4 years, so a patient censored at exactly 4.00 years is in R's count only. Here that is one case at 4 years and one at 8 years. lifelines' `add_at_risk_counts()` also adds a row of censored patients unless you choose rows with `rows_to_show`.
 :::
 
 ## Survivorship at 2, 5 and 10 years {#survivorship}
@@ -334,8 +334,8 @@ check_agree(list(surv_2 = km_2_5_10$surv[1], low_2 = km_2_5_10$lower[1], high_2 
 ```
 
 - **survival:** 0.939 at 2 years, 0.863 at 5 years and 0.780 at 10 years.
-- **lower 95% CI / upper 95% CI:** the CI around each one. The 10-year CI (0.725 to 0.826) is the widest.
-- **n.risk:** 496 procedures still followed at 2 years, 263 at 5 years and only 21 at 10 years.
+- **lower 95% CI / upper 95% CI:** the [CI](../glossary.qmd#confidence-interval){.term} around each one. The 10-year CI (0.725 to 0.826) is the widest.
+- **n.risk:** 496 procedures still [followed](../glossary.qmd#follow-up){.term} at 2 years, 263 at 5 years and only 21 at 10 years.
 - **n.event:** the revisions *since the previous time shown*, not the running total.
 - **Python** prints the same numbers in one row per time: years, survival, [lower, upper] and the number at risk. It has no n.event.
 
@@ -345,12 +345,12 @@ check_agree(list(surv_2 = km_2_5_10$surv[1], low_2 = km_2_5_10$lower[1], high_2 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: "86% survival" needs its time point, CI and numbers at risk
-A survivorship figure means nothing without the time it refers to. Give the 95% CI, and the number still at risk at the time you quote, so readers can see how much data the estimate rests on.
+A survivorship figure means nothing without the time it refers to. Give the 95% CI, and the number still [at risk](../glossary.qmd#at-risk){.term} at the time you quote, so readers can see how much data the [estimate](../glossary.qmd#estimate){.term} rests on.
 :::
 
 ## How long were patients followed? {#follow-up}
 
-Every survival paper reports the **median follow-up**. The obvious way to calculate it is wrong:
+Every survival paper reports the **[median](../glossary.qmd#median){.term} follow-up**. The obvious way to calculate it is wrong:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -394,7 +394,7 @@ check_agree(list(crude = median(cohort$followup_years), q1 = follow_up_quartiles
 
 The plain median, 4.4 years, mixes two things: how long the study watched patients, and how soon they were revised or died. A patient revised at 1 year wasn't "followed for 1 year" in the sense readers care about. The study would have kept watching them.
 
-The **reverse Kaplan-Meier** method answers the real question: how long would patients have been followed if nothing had happened to them? It swaps the roles: being censored at the end of follow-up becomes the "event", and revisions and deaths become the censored observations. The median follow-up is **5.62 years** ([IQR](../glossary.qmd#iqr){.term} 3.52 to 7.93).
+The **reverse Kaplan-Meier** method answers the real question: how long would patients have been followed if nothing had happened to them? It swaps the roles: being [censored](../glossary.qmd#censored){.term} at the end of follow-up becomes the "[event](../glossary.qmd#event){.term}", and revisions and deaths become the censored observations. The median follow-up is **5.62 years** ([IQR](../glossary.qmd#iqr){.term} 3.52 to 7.93).
 
 > **Methods:** Median follow-up was estimated with the reverse Kaplan-Meier method.
 >
@@ -402,7 +402,7 @@ The **reverse Kaplan-Meier** method answers the real question: how long would pa
 
 ## Comparing groups: the log-rank test {#log-rank}
 
-The **log-rank test** asks whether two or more survival curves differ. At every revision time it compares each group's observed revisions with the [number expected](../glossary.qmd#expected-count){.term} if all groups had the same risk, then adds up the differences across the whole follow-up. [Page 6](../catalog/06-two-unpaired-groups.qmd#log-rank) rebuilds the observed and expected counts by hand. It's the same test as the **Mantel-Haenszel** (or Mantel-Cox) test in the decision table.
+The **log-rank test** asks whether two or more [survival curves](../glossary.qmd#survival){.term} differ. At every revision time it compares each group's observed revisions with the [number expected](../glossary.qmd#expected-count){.term} if all groups had the same risk, then adds up the differences across the whole [follow-up](../glossary.qmd#follow-up){.term}. [Page 6](../catalog/06-two-unpaired-groups.qmd#log-rank) rebuilds the observed and expected counts by hand. It's the same test as the **Mantel-Haenszel** (or Mantel-Cox) test in the decision table.
 
 **Two groups.** In total hips, does the surgical approach (anterior or posterior) affect revision?
 
@@ -461,11 +461,11 @@ chk = {"chisq": float(approach_logrank.test_statistic), "p": float(approach_logr
 check_agree(list(chisq = approach_logrank$chisq, p = approach_logrank$pvalue), reticulate::py$chk)
 ```
 
-- **N:** the number of hips in each group, 145 anterior and 125 posterior. N, Observed and Expected are in R's table only: lifelines prints the test statistic and the p-value.
+- **N:** the number of hips in each group, 145 anterior and 125 posterior. N, Observed and Expected are in R's table only: lifelines prints the [test statistic](../glossary.qmd#test-statistic){.term} and the [p-value](../glossary.qmd#p-value){.term}.
 - **Observed / Expected:** the posterior hips had 19 revisions where 16.1 were expected; the anterior hips had 18 where 20.9 were expected.
 - **Chisq = 0.9 on 1 degree of freedom, p = 0.340:** R's printout rounds p to 0.3, and the line under it gives 0.33968. Python prints the test statistic and then p. No clear evidence that the curves differ over the whole follow-up.
 
-But look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the CIs overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.
+But look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the [CIs](../glossary.qmd#confidence-interval){.term} overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -535,7 +535,7 @@ check_agree(list(chisq = implant_logrank$chisq, p = implant_logrank$pvalue), ret
 ```
 
 - **Observed / Expected** (R's table only): implant C had 38 revisions where 16.9 were expected. Implants A (25 vs 34.0) and B (18 vs 30.0) had fewer than expected.
-- **Chisq = 33.5 on 2 degrees of freedom, p < 0.001:** R prints `p= 5e-08`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.00000005. Python prints the test statistic, the degrees of freedom and p. At least one implant's curve differs from the others. The test doesn't say which; [page 15](../beyond/15-post-hoc.qmd#after-log-rank) covers comparing pairs of groups. [Page 8](../catalog/08-three-plus-unmatched.qmd#cox) gives each implant's [hazard ratio](../glossary.qmd#hazard-ratio){.term}.
+- **Chisq = 33.5 on 2 degrees of freedom, p < 0.001:** R prints `p= 5e-08`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for 0.00000005. Python prints the test statistic, the [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} and p. At least one implant's curve differs from the others. The test doesn't say which; [page 15](../beyond/15-post-hoc.qmd#after-log-rank) covers comparing pairs of groups. [Page 8](../catalog/08-three-plus-unmatched.qmd#cox) gives each implant's [hazard ratio](../glossary.qmd#hazard-ratio){.term}.
 
 > **Methods:** Revision-free survival was compared between groups with the log-rank test.
 >
@@ -543,7 +543,7 @@ check_agree(list(chisq = implant_logrank$chisq, p = implant_logrank$pvalue), ret
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: always plot the curves before you trust the test
-The log-rank test is most powerful when one group's hazard is a steady multiple of the other's over time (proportional hazards). When the curves cross, as with the surgical approach here, a non-significant test can hide a real difference. And don't compare groups at one hand-picked time point to get a significant result: decide your time points before you look.
+The log-rank test is most [powerful](../glossary.qmd#power){.term} when one group's [hazard](../glossary.qmd#hazard){.term} is a steady multiple of the other's over time ([proportional hazards](../glossary.qmd#proportional-hazards){.term}). When the curves cross, as with the surgical approach here, a [non-significant](../glossary.qmd#statistical-significance){.term} test can hide a real difference. And don't compare groups at one hand-picked time point to get a significant result: decide your time points before you look.
 :::
 
 ::: {.callout-tip}
@@ -553,13 +553,13 @@ R's `survdiff()` takes a formula and handles two groups or more. lifelines has `
 
 ## Competing risks: when patients die first {#competing-risks}
 
-So far, patients who died were treated as censored. That assumes they would have gone on to be revised at the same rate as everyone else. They can't: a patient who has died can never be revised. Death is a **competing risk**.
+So far, patients who died were treated as [censored](../glossary.qmd#censored){.term}. That assumes they would have gone on to be revised at the same rate as everyone else. They can't: a patient who has died can never be revised. Death is a **competing risk**.
 
-With death treated as censored, 1 − Kaplan-Meier estimates the risk of revision in an imaginary world where nobody dies. In an older population, where many patients die during follow-up, it **overstates** the real proportion who will be revised. The **cumulative incidence function** (CIF), estimated with the **Aalen-Johansen** method, gives the real proportion: the chance of being revised by a given time, allowing for the chance of dying first.
+With death treated as censored, 1 − [Kaplan-Meier](../glossary.qmd#kaplan-meier){.term} estimates the [risk](../glossary.qmd#risk){.term} of revision in an imaginary world where nobody dies. In an older population, where many patients die during [follow-up](../glossary.qmd#follow-up){.term}, it **overstates** the real [proportion](../glossary.qmd#proportion){.term} who will be revised. The **cumulative incidence function** (CIF), estimated with the **[Aalen-Johansen](../glossary.qmd#aalen-johansen){.term}** method, gives the real proportion: the [chance](../glossary.qmd#probability){.term} of being revised by a given time, allowing for the chance of dying first.
 
-Here is how the cumulative incidence is calculated. At each moment when a revision happens, take the share of cases that are still alive and unrevised just before it, and multiply it by the fraction of the cases at risk that are revised at that moment. Add these small pieces up to the time you are interested in. 1 − Kaplan-Meier is the same sum with one difference: its "still unrevised" share ignores the deaths, so it is too big, and so is every piece. A box under "Reading it" does both sums by hand.
+Here is how the cumulative incidence is calculated. At each moment when a revision happens, take the share of cases that are still alive and unrevised just before it, and multiply it by the fraction of the cases [at risk](../glossary.qmd#at-risk){.term} that are revised at that moment. Add these small pieces up to the time you are interested in. 1 − Kaplan-Meier is the same sum with one difference: its "still unrevised" share ignores the deaths, so it is too big, and so is every piece. A box under "Reading it" does both sums by hand.
 
-The data need one status column with three values. In the cohort, `event_status` is 0 for censored, 1 for revised and 2 for died.
+The data need one status column with three values. In the [cohort](../glossary.qmd#cohort){.term}, `event_status` is 0 for censored, 1 for revised and 2 for died.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -643,8 +643,8 @@ check_agree(list(cif_2 = revision_rows$estimate[1], cif_5 = revision_rows$estima
 Reading it:
 - **The revision curve** is the cumulative incidence of revision: 5.9% at 2 years (R prints 0.0595, which is 0.05949 before rounding), 12.8% at 5 years and 19.3% at 10 years.
 - **The death curve** ends higher: 24.0% of patients had died without a revision by 10 years (the `death` row at 10 years).
-- **1 − Kaplan-Meier** says 22.0% by 10 years, against a cumulative incidence of 19.3%. That is 22.0 − 19.3 = 2.7 percentage points too many, because it pretends the patients who died could still have been revised.
-- **Python's rows** read: outcome, years, cumulative incidence, lower and upper CI limit. Its last three rows are the years and 1 − Kaplan-Meier.
+- **1 − Kaplan-Meier** says 22.0% by 10 years, against a cumulative incidence of 19.3%. That is 22.0 − 19.3 = 2.7 [percentage points](../glossary.qmd#percentage-point){.term} too many, because it pretends the patients who died could still have been revised.
+- **Python's rows** read: outcome, years, cumulative incidence, lower and upper [CI](../glossary.qmd#confidence-interval){.term} limit. Its last three rows are the years and 1 − Kaplan-Meier.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the cumulative incidence by hand
@@ -717,7 +717,7 @@ check_agree(list(moments = nrow(cif_steps), by_hand = sum(cif_steps$revised_now)
 
 The gap grows with the number of deaths. It's small at 2 years, when few patients have died, and largest in older patients (see exercise 2).
 
-**Comparing groups: Gray's test (R only).** Gray's test is the competing-risks counterpart of the log-rank test: it compares cumulative incidence curves between groups. The tidycmprsk package runs it:
+**Comparing groups: Gray's test (R only).** Gray's test is the competing-risks counterpart of the [log-rank test](../glossary.qmd#log-rank-test){.term}: it compares cumulative incidence curves between groups. The tidycmprsk package runs it:
 
 ```{r}
 #| warning: false
@@ -728,7 +728,7 @@ glance(cif_by_implant) |>
   select(outcome_1, statistic_1, df_1, p.value_1, outcome_2, statistic_2, df_2, p.value_2)
 ```
 
-The cumulative incidence of revision differed between implants (Gray's test: `statistic_1` is χ² = 31.5, with df = 2 and p < 0.001; the output prints p as 0.000000142); there was no clear evidence that the cumulative incidence of death differed (`statistic_2`: χ² = 0.97, p = 0.616).
+The cumulative incidence of revision differed between implants (Gray's test: `statistic_1` is [χ²](../glossary.qmd#chi-square-statistic){.term} = 31.5, with [df](../glossary.qmd#degrees-of-freedom){.term} = 2 and p < 0.001; the output prints p as 0.000000142); there was no clear evidence that the cumulative incidence of death differed (`statistic_2`: χ² = 0.97, p = 0.616).
 
 > **Methods:** The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk, and compared between implants with Gray's test.
 >
@@ -736,8 +736,8 @@ The cumulative incidence of revision differed between implants (Gray's test: `st
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: which number answers your question?
-Both estimates are useful, but they answer different questions:
-- **1 − Kaplan-Meier** answers "how well does the implant perform while patients are alive?" It's the usual measure for comparing implants, and registries report it.
+Both [estimates](../glossary.qmd#estimate){.term} are useful, but they answer different questions:
+- **1 − Kaplan-Meier** answers "how well does the implant perform while patients are alive?" It's the usual measure for comparing implants, and [registries](../glossary.qmd#registry){.term} report it.
 - **The cumulative incidence** answers "what proportion of patients will actually be revised?" Use it to counsel patients or plan services, especially for older patients.
 
 Say which one you report. Never call 1 − Kaplan-Meier "the proportion of patients revised" when many patients died.
@@ -745,9 +745,9 @@ Say which one you report. Never call 1 − Kaplan-Meier "the proportion of patie
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: which tools
-- **The cumulative incidence:** R's `survfit()` estimates it whenever the status has more than two levels. In Python, use statsmodels' `CumIncidenceRight()`: it gives the estimates and their standard errors but no CI, so the code builds the same log-log CI as R. lifelines also has an `AalenJohansenFitter`, but it moves tied follow-up times by a small random amount, which can shift an estimate read at exactly 5 or 10 years, so we don't use it.
+- **The cumulative incidence:** R's `survfit()` estimates it whenever the status has more than two [levels](../glossary.qmd#categorical-variable){.term}. In Python, use statsmodels' `CumIncidenceRight()`: it gives the estimates and their [standard errors](../glossary.qmd#standard-error){.term} but no CI, so the code builds the same [log-log CI](../glossary.qmd#log-log-interval){.term} as R. lifelines also has an `AalenJohansenFitter`, but it moves [tied](../glossary.qmd#ties){.term} follow-up times by a small random amount, which can shift an estimate read at exactly 5 or 10 years, so we don't use it.
 - **Gray's test:** Python has no mature implementation of Gray's test. Plot the curves in Python, but run the test in R. tidycmprsk's `cuminc()` also gives the cumulative incidences, with a slightly different CI method.
-- **Fine-Gray regression** models the cumulative incidence with several predictors at once; it's R only too ([page 14](14-cox-regression.qmd#fine-gray)).
+- **Fine-Gray regression** models the cumulative incidence with [several predictors at once](../glossary.qmd#multivariable){.term}; it's R only too ([page 14](14-cox-regression.qmd#fine-gray)).
 :::
 
 ```{r}
@@ -822,7 +822,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** Compare revision-free survival between total hips (THA) and total knees (TKA). Give each procedure's survivorship at 5 years with its 95% CI, and the log-rank test.
+**1.** Compare [revision-free survival](../glossary.qmd#survival){.term} between total hips (THA) and total knees (TKA). Give each procedure's survivorship at 5 years with its 95% [CI](../glossary.qmd#confidence-interval){.term}, and the [log-rank test](../glossary.qmd#log-rank-test){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -858,11 +858,11 @@ R's printout rounds the test to `Chisq= 0` and `p= 0.9`. The line under it, like
 > **Results:** Survivorship free of revision at 5 years was 86.9% (95% CI 81.4% to 90.8%) after THA and 85.9% (95% CI 80.9% to 89.6%) after TKA (log-rank χ² = 0.01, df = 1, p = 0.937).
 :::
 
-**2.** A surgeon asks: "Of my patients aged 75 and over, what proportion will need a revision within 5 years?" Which estimate answers that question? Calculate it, and compare it with 1 − Kaplan-Meier.
+**2.** A surgeon asks: "Of my patients aged 75 and over, what [proportion](../glossary.qmd#proportion){.term} will need a revision within 5 years?" Which [estimate](../glossary.qmd#estimate){.term} answers that question? Calculate it, and compare it with 1 − [Kaplan-Meier](../glossary.qmd#kaplan-meier){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The surgeon wants the real proportion of patients revised, and many patients over 75 die during follow-up. That's the **cumulative incidence**, with death as a competing risk.
+The surgeon wants the real proportion of patients revised, and many patients over 75 die during [follow-up](../glossary.qmd#follow-up){.term}. That's the **[cumulative incidence](../glossary.qmd#cumulative-incidence){.term}**, with death as a [competing risk](../glossary.qmd#competing-risk){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -894,14 +894,14 @@ print(1 - old_km.survival_function_at_times(5).iloc[0])
 ```
 :::
 
-The three counts add up to the 100 procedures: 46 censored, 13 revised and 41 who died.
+The three counts add up to the 100 procedures: 46 [censored](../glossary.qmd#censored){.term}, 13 revised and 41 who died.
 
 > **Results:** Of the 100 procedures in patients aged 75 and over, 41 ended in death and 13 in revision. The cumulative incidence of revision at 5 years was 13.9% (95% CI 7.8% to 21.8%); 1 − Kaplan-Meier at 5 years was 16.5%.
 
 1 − Kaplan-Meier (16.5%) is about a fifth higher than the cumulative incidence (13.9%): 16.5 / 13.9 ≈ 1.2. It overstates the real proportion revised by that much.
 :::
 
-**3.** Estimate the cumulative incidence of revision at 5 years for each implant, with death as a competing risk, and write the Results sentence, including Gray's test.
+**3.** Estimate the cumulative incidence of revision at 5 years for each implant, with death as a competing risk, and write the Results sentence, including [Gray's test](../glossary.qmd#gray-test){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -929,7 +929,7 @@ for implant, group in cohort.groupby("implant"):
 
 :::
 
-Gray's test by implant is the one run in the section above (`glance(cif_by_implant)`): χ² = 31.5, df = 2, p < 0.001. Python has no Gray's test.
+Gray's test by implant is the one run in the section above (`glance(cif_by_implant)`): [χ²](../glossary.qmd#chi-square-statistic){.term} = 31.5, [df](../glossary.qmd#degrees-of-freedom){.term} = 2, p < 0.001. Python has no Gray's test.
 
 > **Results:** The cumulative incidence of revision at 5 years, with death as a competing risk, was 9.7% (95% CI 6.2% to 14.1%) with implant A, 6.8% (95% CI 3.7% to 11.2%) with implant B and 27.3% (95% CI 19.5% to 35.6%) with implant C (Gray's test χ² = 31.5, df = 2, p < 0.001).
 :::

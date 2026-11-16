@@ -25,7 +25,7 @@ Le tableau 1 *décrit* vos patients. Il ne répond pas à votre question de rech
 
 ## Charger les données et choisir les variables {#setup}
 
-Nous allons décrire la cohorte d'exercice : 600 prothèses primaires de hanche et de genou (PTH et PTG). Dans le code, elles s'appellent THA et TKA. Le tableau 1 contient en général les caractéristiques mesurées *avant* l'opération.
+Nous allons décrire la [cohorte](../glossary.qmd#cohort){.term} d'exercice : 600 prothèses primaires de hanche et de genou (PTH et PTG). Dans le code, elles s'appellent THA et TKA. Le tableau 1 contient en général les caractéristiques mesurées *avant* l'opération.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -86,7 +86,7 @@ check_agree(list(rows = nrow(cohort), one = sum(table(cohort$patient_id) == 1), 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : une ligne par intervention, pas par patient
-La cohorte compte une ligne par *intervention*. Le décompte ci-dessus montre 440 patients avec une intervention et 80 avec deux (les deux côtés) : 440 + 80 = 520 patients, et 440 + 2 × 80 = 600 interventions. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas indépendantes (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop optimistes (valeurs p trop petites, IC trop étroits). [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
+La cohorte compte une ligne par *intervention*. Le décompte ci-dessus montre 440 patients avec une intervention et 80 avec deux (les deux côtés) : 440 + 80 = 520 patients, et 440 + 2 × 80 = 600 interventions. Précisez ce que compte votre tableau, par exemple dans une note de bas de tableau : « 600 interventions chez 520 patients ». Les deux interventions d'un patient opéré des deux côtés ne sont pas [indépendantes](../glossary.qmd#independence){.term} (même personne, même âge, même sexe, même état de santé). Les tests qui traitent chaque ligne comme un patient distinct sont donc un peu trop optimistes (valeurs p trop petites, IC trop étroits). [Distributions et choix d'un test](03-distributions.qmd#paired) présente les options.
 :::
 
 ## Un seul groupe {#one-group}
@@ -135,7 +135,7 @@ check_agree(list(n = nrow(cohort), mean_age = mean(cohort$age), sd_age = sd(coho
             reticulate::py$chk)
 ```
 
-Que se passe-t-il si vous ne le dites pas ? Voici chaque package laissé à ses suppositions, sur une variable :
+Que se passe-t-il si vous ne le dites pas ? Voici chaque package laissé à ses suppositions, sur une [variable](../glossary.qmd#variable){.term} :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -155,7 +155,7 @@ print(TableOne(pd.read_csv("data/cohort.csv"), columns=["asa"]).tabulate(tablefm
 ## ⚠️ Attention : dites au logiciel de quel type est chaque variable
 Les logiciels devinent le type des variables, et ils se trompent souvent :
 
-- **La classe ASA** ressemble à un nombre, donc tableone en fait la moyenne si vous ne la listez pas sous `categorical` : « mean (SD) 2.4 (0.7) » dans la sortie Python ci-dessus. C'est une catégorie.
+- **La classe ASA** ressemble à un nombre, donc tableone en fait la moyenne si vous ne la listez pas sous `categorical` : « mean (SD) 2.4 (0.7) » dans la sortie Python ci-dessus. C'est une [catégorie](../glossary.qmd#categorical-variable){.term}.
 - **La durée de séjour** n'a que quelques valeurs distinctes, donc gtsummary la traite comme une catégorie et liste une ligne pour 0, 1, 2 … jours, comme dans la sortie R ci-dessus. C'est un comptage (un nombre de jours).
 - **Les colonnes 0/1**, comme `diabetes` : gtsummary montre une seule ligne (combien valent 1, donc « oui »), alors que tableone montre la ligne 0 et la ligne 1. Dans un article, montrez seulement la ligne « oui ».
 
@@ -164,15 +164,15 @@ Définissez vous-même le type de chaque variable (`type =` en R, `categorical =
 
 ## Moyenne (ET) ou médiane (IIQ) ? {#which-summary}
 
-- **Variables continues à peu près symétriques** (âge, IMC) : moyenne (écart-type, ET).
-- **Variables asymétriques ou bornées** (durée de séjour, la plupart des PROM, mesures des résultats rapportés par le patient) : médiane (intervalle interquartile, IIQ). Un patient resté 30 jours déplace la moyenne bien plus que la médiane.
+- **Variables continues à peu près symétriques** (âge, IMC) : [moyenne](../glossary.qmd#mean){.term} ([écart-type](../glossary.qmd#standard-deviation){.term}, ET).
+- **Variables asymétriques ou bornées** (durée de séjour, la plupart des [PROM](../glossary.qmd#prom){.term}, mesures des résultats rapportés par le patient) : [médiane](../glossary.qmd#median){.term} ([intervalle interquartile](../glossary.qmd#iqr){.term}, IIQ). Un patient resté 30 jours déplace la moyenne bien plus que la médiane.
 - **Catégories** : n (%).
 
-Comment savoir si une variable est asymétrique ? Regardez-la : [Distributions et choix d'un test](03-distributions.qmd) explique comment. La durée de séjour est nettement asymétrique à droite, c'est pourquoi on en donne la médiane.
+Comment savoir si une [variable](../glossary.qmd#variable){.term} est [asymétrique](../glossary.qmd#skewed){.term} ? Regardez-la : [Distributions et choix d'un test](03-distributions.qmd) explique comment. La durée de séjour est nettement asymétrique à droite, c'est pourquoi on en donne la médiane.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les quartiles
-gtsummary et tableone calculent les quartiles avec des formules différentes (selon la terminologie de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer. Dans le tableau ci-dessus, les deux concordent (0 à 1 jour). Dans la colonne THA du [tableau suivant](#by-group), ce n'est pas le cas : le quartile supérieur est de 2 jours en R (`1 (0–2)`) et de 1.8 en Python (`1.0 [0.0,1.8]`). Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
+gtsummary et tableone calculent les [quartiles](../glossary.qmd#quartile){.term} avec des formules différentes (selon la terminologie de R, les types 2 et 7 de `quantile()`). Avec des nombres entiers, comme la durée de séjour, les résultats peuvent différer. Dans le tableau ci-dessus, les deux concordent (0 à 1 jour). Dans la colonne THA du [tableau suivant](#by-group), ce n'est pas le cas : le quartile supérieur est de 2 jours en R (`1 (0–2)`) et de 1.8 en Python (`1.0 [0.0,1.8]`). Aucun des deux n'a tort. Dites dans vos Méthodes quel logiciel vous avez utilisé.
 :::
 
 ## Comparer des groupes {#by-group}
@@ -230,17 +230,17 @@ p_r <- by_procedure$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 ```
 
-Chaque valeur p vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les variables continues symétriques, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, Kruskal-Wallis revient au test de Mann-Whitney) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les catégories. Pour le diabète, R affiche `>0.999` et Python `1.000`. C'est la même valeur p : tableone l'arrondit à trois décimales. Rapportez-la comme p > 0.999, selon les conventions de ce site.
+Chaque [valeur p](../glossary.qmd#p-value){.term} vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les [variables continues](../glossary.qmd#continuous-variable){.term} [symétriques](../glossary.qmd#symmetric){.term}, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term} revient au [test de Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les [catégories](../glossary.qmd#categorical-variable){.term}. Pour le diabète, R affiche `>0.999` et Python `1.000`. C'est la même valeur p : tableone l'arrondit à trois décimales. Rapportez-la comme p > 0.999, selon les conventions de ce site.
 
 ## Valeurs p ou différences moyennes standardisées ? {#smd}
 
 Regardez le sexe dans le tableau ci-dessus : 66 % des patients PTH sont des femmes, contre 50 % des patients PTG, p < 0.001. Est-ce une vraie différence entre les patients de hanche et de genou ?
 
-Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au seul hasard. (Dans les vraies cohortes de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.) C'est le premier problème des valeurs p dans le tableau 1 : sur un long tableau, des différences dues au hasard apparaissent.
+Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au seul hasard. (Dans les vraies [cohortes](../glossary.qmd#cohort){.term} de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.) C'est le premier problème des [valeurs p](../glossary.qmd#p-value){.term} dans le [tableau 1](../glossary.qmd#table-1){.term} : sur un long tableau, des différences dues au hasard apparaissent.
 
 Le second problème est qu'une valeur p mélange *la taille* d'une différence et *le nombre de patients*. Avec 6,000 patients, une différence négligeable (minime) donne p < 0.001. Avec 30, une grande différence ne le donne pas.
 
-La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'écart-type, quelle que soit la taille de l'échantillon. Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable.
+La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'[écart-type](../glossary.qmd#standard-deviation){.term}, quelle que soit la [taille de l'échantillon](../glossary.qmd#sample-size){.term}. Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -290,7 +290,7 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-En laissant les signes de côté pour l'instant (l'encadré ci-dessous les explique), le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables. Le tableau de R donne aussi un IC à 95 % (intervalle de confiance) pour chaque SMD ; tableone n'en calcule pas.
+En laissant les signes de côté pour l'instant (l'encadré ci-dessous les explique), le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables. Le tableau de R donne aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % (intervalle de confiance) pour chaque SMD ; tableone n'en calcule pas.
 
 Les deux packages concordent à trois décimales. Pour voir où ils se séparent, affichez la SMD de l'âge avec plus de chiffres :
 
@@ -322,18 +322,18 @@ check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), re
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : les SMD diffèrent légèrement
-- **Signe.** Pour les variables saisies comme des nombres (âge, IMC, durée de séjour), gtsummary soustrait la PTG de la PTH et tableone soustrait la PTH de la PTG : les signes sont donc opposés. Pour les catégories (sexe, classe ASA, tabagisme), la SMD n'a pas de direction et elle est positive dans les deux. Donnez la valeur absolue, ou dites quel groupe a été soustrait de quel autre.
-- **Quatrième décimale.** Pour les variables continues, le package `smd` de R divise les variances par *n*, alors que tableone les divise par *n − 1* (la formule usuelle des manuels). L'âge donne 0.1048 en R et 0.1046 en Python (les deux nombres affichés juste au-dessus de l'encadré). Les SMD des variables catégorielles concordent exactement.
+- **Signe.** Pour les [variables](../glossary.qmd#variable){.term} saisies comme des nombres (âge, IMC, durée de séjour), gtsummary soustrait la PTG de la PTH et tableone soustrait la PTH de la PTG : les signes sont donc opposés. Pour les [catégories](../glossary.qmd#categorical-variable){.term} (sexe, classe ASA, tabagisme), la SMD n'a pas de direction et elle est positive dans les deux. Donnez la valeur absolue, ou dites quel groupe a été soustrait de quel autre.
+- **Quatrième décimale.** Pour les [variables continues](../glossary.qmd#continuous-variable){.term}, le package `smd` de R divise les [variances](../glossary.qmd#variance){.term} par *n*, alors que tableone les divise par *n − 1* (la formule usuelle des manuels). L'âge donne 0.1048 en R et 0.1046 en Python (les deux nombres affichés juste au-dessus de l'encadré). Les SMD des variables catégorielles concordent exactement.
 :::
 
 **Laquelle faut-il rapporter ?**
 
-- **Cohortes appariées ou pondérées** (études avec score de propension, par exemple une étude appariée portant sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
+- **Cohortes appariées ou pondérées** (études avec [score de propension](../glossary.qmd#propensity-score){.term}, par exemple une étude [appariée](../glossary.qmd#matched){.term} portant sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
 - **Autres comparaisons observationnelles** : beaucoup de revues attendent encore des valeurs p. Ajoutez les SMD, et discutez les différences selon leur taille, pas selon leur valeur p.
 
 ## Données manquantes {#missing}
 
-La version ordonnée du classeur désordonné de la [page 1](01-tidy-data.qmd) contient quelques IMC, classes ASA et durées de séjour que la personne qui a dépouillé les dossiers n'a pas trouvés. Les valeurs manquantes doivent apparaître dans le tableau 1. Ne les supprimez jamais en silence.
+La version [ordonnée](../glossary.qmd#tidy-data){.term} du classeur désordonné de la [page 1](01-tidy-data.qmd) contient quelques IMC, classes ASA et durées de séjour que la personne qui a dépouillé les dossiers n'a pas trouvés. Les [valeurs manquantes](../glossary.qmd#missing-data){.term} doivent apparaître dans le [tableau 1](../glossary.qmd#table-1){.term}. Ne les supprimez jamais en silence.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -381,7 +381,7 @@ R ajoute une ligne « Missing » sous chaque variable qui a des valeurs manqua
 
 ## Exporter vers Word {#export}
 
-Les revues veulent le tableau 1 dans Word. Enregistrez-le dans votre dossier `scratch/` (git l'ignore), ouvrez-le et collez-le dans le manuscrit.
+Les revues veulent le [tableau 1](../glossary.qmd#table-1){.term} dans Word. Enregistrez-le dans votre dossier `scratch/` (git l'ignore), ouvrez-le et collez-le dans le manuscrit.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -411,7 +411,7 @@ doc.save("scratch/table1-python.docx")
 ```
 :::
 
-Dans Word, adaptez la mise en forme au style de la revue : en général sans lignes verticales, et avec une note de bas de tableau qui indique quelles statistiques sont montrées (« mean (SD); median (IQR); n (%) ») et quels tests ont produit les valeurs p.
+Dans Word, adaptez la mise en forme au style de la revue : en général sans lignes verticales, et avec une note de bas de tableau qui indique quelles statistiques sont montrées (« mean (SD); median (IQR); n (%) ») et quels tests ont produit les [valeurs p](../glossary.qmd#p-value){.term}.
 
 ```{r}
 #| include: false
@@ -469,7 +469,7 @@ assert by_procedure.tableone.loc[("Length of stay, days, median [Q1,Q3]", ""),
 
 ## Exercices {#exercises}
 
-**1.** Faites un tableau 1 qui compare le **site A au site B** au lieu de la PTH à la PTG. Quelle variable diffère le plus entre les sites, selon la SMD ?
+**1.** Faites un [tableau 1](../glossary.qmd#table-1){.term} qui compare le **site A au site B** au lieu de la PTH à la PTG. Quelle [variable](../glossary.qmd#variable){.term} diffère le plus entre les sites, selon la [SMD](../glossary.qmd#smd){.term} ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -497,21 +497,21 @@ print(by_site.smd_table)
 ```
 :::
 
-Le tabagisme (0.23) et la durée de séjour (0.22 ; Python affiche −0.22, voir l'encadré sur les signes) diffèrent le plus entre les sites. Dans le tableau de R, leurs intervalles de confiance (IC) à 95 % (0.07 à 0.39 et 0.06 à 0.39) excluent zéro ; tableone ne donne pas d'IC. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « significative ».
+Le tabagisme (0.23) et la durée de séjour (0.22 ; Python affiche −0.22, voir l'encadré sur les signes) diffèrent le plus entre les sites. Dans le tableau de R, leurs [intervalles de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % (0.07 à 0.39 et 0.06 à 0.39) excluent zéro ; tableone ne donne pas d'IC. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « [significative](../glossary.qmd#statistical-significance){.term} ».
 :::
 
-**2.** Un fellow compare des patients de 80 ans ou plus à des patients plus jeunes, appariés sur le sexe, l'IMC et la classe ASA. Le tableau de départ doit-il montrer des valeurs p ou des SMD ? Pourquoi ?
+**2.** Un fellow compare des patients de 80 ans ou plus à des patients plus jeunes, [appariés](../glossary.qmd#matched){.term} sur le sexe, l'IMC et la classe ASA. Le tableau [de départ](../glossary.qmd#baseline){.term} doit-il montrer des [valeurs p](../glossary.qmd#p-value){.term} ou des SMD ? Pourquoi ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Des SMD. L'appariement a été conçu pour rendre les groupes semblables, donc tester s'ils diffèrent répond à une question que personne n'a posée, et avec des données appariées la valeur p reflète surtout la taille de l'échantillon. Les SMD montrent la qualité de l'appariement : visez une |SMD| inférieure à 0.1 sur chaque variable d'appariement.
+Des SMD. L'appariement a été conçu pour rendre les groupes semblables, donc tester s'ils diffèrent répond à une question que personne n'a posée, et avec des données appariées la valeur p reflète surtout la [taille de l'échantillon](../glossary.qmd#sample-size){.term}. Les SMD montrent la qualité de l'appariement : visez une |SMD| inférieure à 0.1 sur chaque variable d'appariement.
 :::
 
-**3.** Écrivez la première phrase de Résultats qui décrit cette cohorte, avec les conventions de rédaction de [Comment utiliser ce site](../getting-started/using-this-site.qmd).
+**3.** Écrivez la première phrase de Résultats qui décrit cette [cohorte](../glossary.qmd#cohort){.term}, avec les conventions de rédaction de [Comment utiliser ce site](../getting-started/using-this-site.qmd).
 
 ::: {.callout-tip collapse="true"}
 ## Solution
 "We included 600 primary arthroplasties (270 THA and 330 TKA) in 520 patients. Mean age was 65.5 (SD 9.4) years and 343 procedures (57%) were in women. Median length of stay was 1 (IQR 0 to 1) day."
 
-Vérifiez chaque nombre avec votre propre tableau : moyenne et écart-type pour l'âge, n (%) pour le sexe, médiane (IIQ) pour la durée de séjour. Les 520 patients viennent du décompte de la [première étape](#setup).
+Vérifiez chaque nombre avec votre propre tableau : [moyenne](../glossary.qmd#mean){.term} et [écart-type](../glossary.qmd#standard-deviation){.term} pour l'âge, n (%) pour le sexe, [médiane](../glossary.qmd#median){.term} ([IIQ](../glossary.qmd#iqr){.term}) pour la durée de séjour. Les 520 patients viennent du décompte de la [première étape](#setup).
 :::

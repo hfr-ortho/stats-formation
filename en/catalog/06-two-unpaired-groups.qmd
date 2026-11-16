@@ -17,11 +17,11 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Two groups of **different** patients: a removable boot vs a cast in a trial, hamstring vs BPTB grafts, implant A vs implant C. This is the most common comparison in clinical research. If the same patients are measured twice, or patients were matched in pairs, use [page 7](07-two-paired-groups.qmd) instead.
+Two groups of **different** patients: a removable boot vs a cast in a trial, hamstring vs BPTB grafts, implant A vs implant C. This is the most common comparison in clinical research. If the same patients are measured twice, or patients were [matched](../glossary.qmd#matched){.term} in pairs, use [page 7](07-two-paired-groups.qmd) instead.
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
-Each section answers one question about one of the practice's datasets: a randomized trial of a cast vs a removable boot after a midfoot injury (the t and Mann-Whitney tests), ACL reconstructions (Fisher's test) and the joint replacement cohort (the log-rank test). The trial and its results are invented for teaching. Each section's first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
+Each section answers one question about one of the practice's datasets: a [randomized trial](../glossary.qmd#randomized-trial){.term} of a cast vs a removable boot after a midfoot injury (the t and [Mann-Whitney tests](../glossary.qmd#mann-whitney-test){.term}), ACL reconstructions ([Fisher's test](../glossary.qmd#fisher-exact-test){.term}) and the joint replacement [cohort](../glossary.qmd#cohort){.term} (the [log-rank test](../glossary.qmd#log-rank-test){.term}). The trial and its results are invented for teaching. Each section's first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
 
 To keep the code short, the joint replacement example uses every case, including both cases of patients who had both sides operated on (80 patients in the whole cohort; [page 2](../foundations/02-demographics.qmd#setup) counts them). In a real study, decide how to handle them ([page 3](../foundations/03-distributions.qmd#paired)) and say what you did.
 :::
@@ -32,26 +32,26 @@ To keep the code short, the joint replacement example uses every case, including
 
 ### When to use it
 
-- The outcome is a **measurement**, compared between **two independent groups**.
-- Within **each group** it's roughly normal, or each group is large (about 30 or more) and not badly skewed ([page 3](../foundations/03-distributions.qmd#within-groups)).
-- A score that adds up several questions, such as the EFAS score (six questions scored 0 to 4, so 0 to 24), can be treated as a measurement when few patients sit at its floor or ceiling.
-- Use **Welch's** version, which doesn't assume the two groups have the same spread. It's R's default, but not Python's (see the R vs Python box).
-- If the outcome is skewed, piles up at a floor or ceiling, or is ordinal → the [Mann-Whitney test](#mann-whitney).
+- The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}**, compared between **two [independent](../glossary.qmd#independence){.term} groups**.
+- Within **each group** it's [roughly normal](../glossary.qmd#normal-distribution){.term}, or each group is large (about 30 or more) and not badly [skewed](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#within-groups)).
+- A score that adds up several questions, such as the EFAS score (six questions scored 0 to 4, so 0 to 24), can be treated as a measurement when few patients sit at its [floor or ceiling](../glossary.qmd#ceiling-effect){.term}.
+- Use **Welch's** version, which doesn't assume the two groups have the same [spread](../glossary.qmd#spread){.term}. It's R's default, but not Python's (see the R vs Python box).
+- If the outcome is skewed, piles up at a floor or ceiling, or is [ordinal](../glossary.qmd#ordinal){.term} → the [Mann-Whitney test](#mann-whitney).
 
 ### What the test really does
 
-The t test asks one thing: is the difference between the two group [means](../glossary.qmd#mean){.term} big compared with how much that difference would wobble from one sample to the next?
+The t test asks one thing: is the difference between the two group [means](../glossary.qmd#mean){.term} big compared with how much that difference would wobble from one [sample](../glossary.qmd#sample){.term} to the next?
 
 1. Take the **difference** between the two means.
 2. Estimate the noise in that difference, its [standard error](../glossary.qmd#standard-error){.term}. It shrinks when the groups are larger and grows when the scores are more spread out.
 3. Divide: **t = difference ÷ standard error**. A t of 0 means no difference at all. A t beyond about ±2 means the difference is large compared with the noise.
-4. Turn t into a [p-value](../glossary.qmd#p-value){.term}: the chance of a t at least this far from 0 if the two groups really had the same mean.
+4. Turn t into a [p-value](../glossary.qmd#p-value){.term}: the [chance](../glossary.qmd#probability){.term} of a t at least this far from 0 if the two groups really had the same mean.
 
 Welch's version works out the standard error from each group's own spread, so it doesn't need the two spreads to be equal. Once the test has run, a box under "Read the output" rebuilds t by hand.
 
 ### Look at the data first
 
-The trial randomized 120 patients, 60 to each arm, and measured the EFAS score (European Foot and Ankle Society; 24 is the best) at 6 weeks, 3 months, 6 months and 12 months.
+The trial [randomized](../glossary.qmd#randomized-trial){.term} 120 patients, 60 to each arm, and measured the EFAS score (European Foot and Ankle Society; 24 is the best) at 6 weeks, 3 months, 6 months and 12 months.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -139,10 +139,10 @@ check_agree(list(t = unname(efas_test$statistic), df = unname(efas_test$paramete
 
 ### Read the output
 
-- **t = 6.00:** the difference between the means is 6 standard errors. Python calls it `statistic`.
-- **df = 106.05:** Welch's test adjusts the degrees of freedom for unequal spreads, so they aren't a whole number.
+- **t = 6.00:** the [difference between the means](../glossary.qmd#mean-difference){.term} is 6 standard errors. Python calls it `statistic`.
+- **df = 106.05:** Welch's test adjusts the [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} for unequal spreads, so they aren't a whole number.
 - **p < 0.001:** a difference this large would be very unlikely if the two arms had the same mean EFAS score. R prints it as `p-value = 2.738e-08`. The `e-08` means "move the decimal point 8 places to the left", so this is 0.000000027; Python prints the same number as `pvalue=`.
-- **95% CI 2.40 to 4.77:** the CI for the **difference in means**, boot minus cast.
+- **95% CI 2.40 to 4.77:** the [CI](../glossary.qmd#confidence-interval){.term} for the **difference in means**, boot minus cast.
 - **mean in group boot 17.4, mean in group cast 13.8:** the two means.
 
 ::: {.callout-note collapse="true"}
@@ -185,8 +185,8 @@ check_agree(list(difference = efas_difference, se = efas_se, t = efas_difference
 
 ### Effect size and 95% CI
 
-- The **mean difference** with its CI is the effect size readers understand best: 3.6 points (95% CI 2.4 to 4.8). R prints the two means and leaves the subtraction to you (17.40 − 13.82 = 3.58); Python's second line prints the difference, 3.585, and then the CI.
-- **Hedges' g** expresses the difference in standard deviations, which lets you compare effects measured on different scales. As a rough guide, 0.2 is small, 0.5 medium and 0.8 large.
+- The **mean difference** with its CI is the [effect size](../glossary.qmd#effect-size){.term} readers understand best: 3.6 points (95% CI 2.4 to 4.8). R prints the two means and leaves the subtraction to you (17.40 − 13.82 = 3.58); Python's second line prints the difference, 3.585, and then the CI.
+- **Hedges' g** expresses the difference in [standard deviations](../glossary.qmd#standard-deviation){.term}, which lets you compare effects measured on different scales. As a [rough guide](../glossary.qmd#cohen-benchmarks){.term}, 0.2 is small, 0.5 medium and 0.8 large.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -216,7 +216,7 @@ check_agree(list(g = efas_g$Hedges_g), reticulate::py$chk,
             tol = 1e-5)   # effectsize corrects g for small samples exactly, pingouin with the usual approximation
 ```
 
-Hedges' g is 1.13: the boot arm's mean is more than one standard deviation higher, a large effect. Whether 3.6 points on a 24-point score matters to patients is a clinical question, not a statistical one.
+[Hedges' g](../glossary.qmd#hedges-g){.term} is 1.13: the boot arm's mean is more than one standard deviation higher, a large effect. Whether 3.6 points on a 24-point score matters to patients is a clinical question, not a statistical one.
 
 ### How to report it
 
@@ -226,14 +226,14 @@ Hedges' g is 1.13: the boot arm's mean is more than one standard deviation highe
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: don't test the variances first
-An old habit is to run a test of equal variances (such as Levene's) and then choose Student's or Welch's t test depending on the result. Don't: the two-step procedure distorts the p-value. Use Welch's test from the start. When the variances really are equal, it gives almost the same answer as Student's.
+An old habit is to run a test of [equal variances](../glossary.qmd#equal-variances){.term} (such as [Levene's](../glossary.qmd#levene-test){.term}) and then choose Student's or Welch's t test depending on the result. Don't: the two-step procedure distorts the p-value. Use Welch's test from the start. When the [variances](../glossary.qmd#variance){.term} really are equal, it gives almost the same answer as Student's.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: Student's or Welch's?
 - **The default differs.** R's `t.test()` runs **Welch's** test unless you add `var.equal = TRUE`. scipy's `ttest_ind()` runs **Student's** test unless you add `equal_var=False`. Always set it explicitly in Python.
 - **The order of the groups.** R subtracts in the order of the factor levels (we put boot first); scipy subtracts the second argument from the first.
-- **The CI for Hedges' g.** effectsize uses an exact method and pingouin an approximation, so the CIs can differ slightly (0.73 to 1.52 in R, 0.73 to 1.53 in Python). The estimates agree to five decimals: both correct g for small samples, effectsize with the exact formula and pingouin with the usual approximation. R's table rounds g to 1.13; unrounded, R gives 1.130197 and Python 1.130200.
+- **The CI for Hedges' g.** effectsize uses an [exact method](../glossary.qmd#exact-test){.term} and pingouin an approximation, so the CIs can differ slightly (0.73 to 1.52 in R, 0.73 to 1.53 in Python). The [estimates](../glossary.qmd#estimate){.term} agree to five decimals: both correct g for small samples, effectsize with the exact formula and pingouin with the usual approximation. R's table rounds g to 1.13; unrounded, R gives 1.130197 and Python 1.130200.
 :::
 
 ## Mann-Whitney test {#mann-whitney}
@@ -242,20 +242,20 @@ An old habit is to run a test of equal variances (such as Levene's) and then cho
 
 ### When to use it
 
-- The outcome is **skewed**, has a **ceiling or floor**, or is **ordinal**, and you're comparing **two independent groups**.
+- The [outcome](../glossary.qmd#outcome){.term} is **[skewed](../glossary.qmd#skewed){.term}**, has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, or is **[ordinal](../glossary.qmd#ordinal){.term}**, and you're comparing **two [independent](../glossary.qmd#independence){.term} groups**.
 - It asks whether values in one group tend to be **larger** than in the other: if you picked one patient from each group at random, how likely is the first to score higher?
 - It's the same test as the **Wilcoxon rank-sum test**. R calls it `wilcox.test()`.
-- If the outcome is roughly normal within each group → the [unpaired t test](#unpaired-t).
+- If the outcome is [roughly normal](../glossary.qmd#normal-distribution){.term} within each group → the [unpaired t test](#unpaired-t).
 
 ### What the test really does
 
 The Mann-Whitney test ignores how far apart two scores are. It looks only at which one is higher.
 
 1. Pair every patient in one group with every patient in the other.
-2. In each pair, see who has the higher score. Count the pairs in which the first group's patient is higher; a tie counts as half a pair. That count is the [test statistic](../glossary.qmd#test-statistic){.term}, **U**.
+2. In each pair, see who has the higher score. Count the pairs in which the first group's patient is higher; a [tie](../glossary.qmd#ties){.term} counts as half a pair. That count is the [test statistic](../glossary.qmd#test-statistic){.term}, **U**.
 3. If the two groups were alike, the first group's patient would be the higher one in about half of the pairs. The further U is from half of all the pairs, the smaller the [p-value](../glossary.qmd#p-value){.term}.
 
-Software gets the same U faster. It sorts all the scores from both groups from lowest to highest and gives each one its position in that line, 1, 2, 3 and so on: its [rank](../glossary.qmd#rank){.term}. Tied scores share the average of their positions. U then follows by simple arithmetic from the sum of one group's ranks, which is why the test is also called a rank-sum test. The effect size step below counts the pairs for our data.
+Software gets the same U faster. It sorts all the scores from both groups from lowest to highest and gives each one its position in that line, 1, 2, 3 and so on: its [rank](../glossary.qmd#rank){.term}. Tied scores share the average of their positions. U then follows by simple arithmetic from the sum of one group's ranks, which is why the test is also called a rank-sum test. The [effect size](../glossary.qmd#effect-size){.term} step below counts the pairs for our data.
 
 ### Look at the data first
 
@@ -314,7 +314,7 @@ print(pain_6wk.groupby("arm")["pain_nrs"].describe()[["count", "25%", "50%", "75
 ```
 :::
 
-Four patients missed the 6-week visit (2 in each arm), so 116 of the 120 randomized patients are analyzed. Most scores sit between 2 and 6, and many patients share a score (ties). With whole numbers on an ordinal scale, medians are the fair summary: 4 points with a boot and 5 with a cast. (The table shows 58 patients in each arm, so 60 − 58 = 2 missed the visit in each.) The boot arm's upper quartile, 4.75, isn't a whole score: with its 58 scores in order, the quartile falls between the 43rd (a 4) and the 44th (a 5), and both programs place it three-quarters of the way between them.
+Four patients missed the 6-week visit (2 in each arm), so 116 of the 120 [randomized](../glossary.qmd#randomized-trial){.term} patients are analyzed. Most scores sit between 2 and 6, and many patients share a score (ties). With whole numbers on an ordinal scale, [medians](../glossary.qmd#median){.term} are the fair summary: 4 points with a boot and 5 with a cast. (The table shows 58 patients in each arm, so 60 − 58 = 2 missed the visit in each.) The boot arm's upper [quartile](../glossary.qmd#quartile){.term}, 4.75, isn't a whole score: with its 58 scores in order, the quartile falls between the 43rd (a 4) and the 44th (a 5), and both programs place it three-quarters of the way between them.
 
 ### Run it
 
@@ -351,9 +351,9 @@ check_agree(list(u = unname(pain_test$statistic), p = pain_test$p.value), reticu
 
 - **W = 1074.5** (R) or **U_val = 1074.5** (Python): the Mann-Whitney U statistic for the boot arm, the number of (boot, cast) pairs in which the boot patient reported more pain, counting ties as half. There are 58 × 58 = 3,364 pairs, so a U of 1,682 would mean no tendency either way. R calls it W.
 - **p < 0.001:** a difference like this would be unusual if pain had the same distribution in both arms.
-- **difference in location −1.00, 95% CI −2.00 to −1.00** (R only): the Hodges-Lehmann estimate, below. R finds it by a numerical search, so it prints −1.000041 and the like; the last digits are noise.
-- **RBC = −0.361** (Python): the rank-biserial effect size, below.
-- **CLES = 0.319** (Python): the "common language effect size", U divided by the number of pairs (1,074.5 ÷ 3,364). It is the chance that a randomly chosen boot patient reports more pain than a randomly chosen cast patient, counting a tie as half.
+- **difference in location −1.00, 95% CI −2.00 to −1.00** (R only): the [Hodges-Lehmann estimate](../glossary.qmd#hodges-lehmann){.term}, below. R finds it by a numerical search, so it prints −1.000041 and the like; the last digits are noise.
+- **RBC = −0.361** (Python): the [rank-biserial effect size](../glossary.qmd#rank-biserial){.term}, below.
+- **CLES = 0.319** (Python): the "[common language effect size](../glossary.qmd#cles){.term}", U divided by the number of pairs (1,074.5 ÷ 3,364). It is the [chance](../glossary.qmd#probability){.term} that a randomly chosen boot patient reports more pain than a randomly chosen cast patient, counting a tie as half.
 
 ### Effect size and 95% CI
 
@@ -421,12 +421,12 @@ check_agree(list(less = mean(pain_pairs < 0), more = mean(pain_pairs > 0), tied 
             reticulate::py$chk_pairs)
 ```
 
-With a boot, pain was typically 1 point lower (95% CI 2 points to 1 point lower), and r = −0.36. The last lines of the code show where r comes from. Of all 3,364 (boot, cast) pairs, the boot patient reported less pain in 61%, more in 25%, and 14% were tied. r is the difference between the "more" share and the "less" share: 0.25 − 0.61 = −0.36. U counts the same pairs, as the last line shows by hand: 1,074.5, the W (R) or U_val (Python) the test printed. And 1,074.5 ÷ 3,364 = 0.32, the "more" share plus half the tied share (0.25 + 0.07). With whole-number scores every difference between two patients is a whole number, so the Hodges-Lehmann estimate and its CI land on whole numbers too, and the estimate can sit on the edge of its own CI, as here.
+With a boot, pain was typically 1 point lower (95% [CI](../glossary.qmd#confidence-interval){.term} 2 points to 1 point lower), and r = −0.36. The last lines of the code show where r comes from. Of all 3,364 (boot, cast) pairs, the boot patient reported less pain in 61%, more in 25%, and 14% were tied. r is the difference between the "more" share and the "less" share: 0.25 − 0.61 = −0.36. U counts the same pairs, as the last line shows by hand: 1,074.5, the W (R) or U_val (Python) the test printed. And 1,074.5 ÷ 3,364 = 0.32, the "more" share plus half the tied share (0.25 + 0.07). With whole-number scores every difference between two patients is a whole number, so the Hodges-Lehmann estimate and its CI land on whole numbers too, and the [estimate](../glossary.qmd#estimate){.term} can sit on the edge of its own CI, as here.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: why scipy's default bootstrap gives `nan` here
 
-scipy's default bootstrap method (BCa) fine-tunes its interval by looking at how much the estimate changes when each patient is left out in turn. With whole-number scores, the Hodges-Lehmann estimate can only land on whole or half points, and here it doesn't change at all:
+scipy's default [bootstrap](../glossary.qmd#bootstrap){.term} method (BCa) fine-tunes its interval by looking at how much the estimate changes when each patient is left out in turn. With whole-number scores, the Hodges-Lehmann estimate can only land on whole or half points, and here it doesn't change at all:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -471,12 +471,12 @@ check_agree(list(n = length(leave_one_out), all_minus_one = as.numeric(all(leave
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: it isn't a test of medians
-The Mann-Whitney test asks whether one group's values **tend to be larger**, not whether the medians differ. Two groups can have the same median and a significant Mann-Whitney test (if their shapes differ), or different medians and a non-significant one. Report the medians to describe the groups, but don't write "the medians differed significantly".
+The Mann-Whitney test asks whether one group's values **tend to be larger**, not whether the medians differ. Two groups can have the same median and a [significant](../glossary.qmd#statistical-significance){.term} Mann-Whitney test (if their shapes differ), or different medians and a non-significant one. Report the medians to describe the groups, but don't write "the medians differed significantly".
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: Mann-Whitney defaults
-- **Exact or approximate.** With ties (as here) both programs use a normal approximation. Without ties, R computes an exact p-value for groups under 50, scipy only for very small groups. We set `exact = FALSE` in R and `method="asymptotic"` in Python so they always match.
+- **Exact or approximate.** With ties (as here) both programs use a [normal approximation](../glossary.qmd#exact-test){.term}. Without ties, R computes an exact p-value for groups under 50, scipy only for very small groups. We set `exact = FALSE` in R and `method="asymptotic"` in Python so they always match.
 - **Continuity correction.** Both programs apply it by default for the approximation; we set it explicitly anyway.
 - **The Hodges-Lehmann CI.** R computes it by inverting the test; the Python code uses a bootstrap, a different method. With whole-number scores the estimate barely moves: leaving out any one patient still gives −1 (the box under "Effect size and 95% CI" shows it). scipy's default bootstrap method (BCa) needs those leave-one-out estimates to vary, so here it returns `nan` with a warning. The percentile method (`method="percentile"`) doesn't need them. Here the two CIs agree (−2.00 to −1.00); on other data they can differ a little.
 - **The CI for r.** effectsize prints a 95% CI for the rank-biserial r. pingouin's `mwu()` gives r (the `RBC` column) without one, so the CI in the Results sentence comes from R.
@@ -488,9 +488,9 @@ The Mann-Whitney test asks whether one group's values **tend to be larger**, not
 
 ### When to use it
 
-- The outcome is **yes/no**, compared between **two independent groups**: a 2 × 2 table.
-- **Fisher's exact test** is valid for any sample size. The **chi-square test** is a large-sample approximation: use it only when every *expected* count is at least 5. When in doubt, use Fisher's test.
-- If patients were followed for different lengths of time and the event can happen at any time → the [log-rank test](#log-rank).
+- The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}**, compared between **two [independent](../glossary.qmd#independence){.term} groups**: a [2 × 2 table](../glossary.qmd#contingency-table){.term}.
+- **Fisher's exact test** is valid for any [sample size](../glossary.qmd#sample-size){.term}. The **chi-square test** is a [large-sample approximation](../glossary.qmd#exact-test){.term}: use it only when every *expected* count is at least 5. When in doubt, use Fisher's test.
+- If patients were [followed](../glossary.qmd#follow-up){.term} for different lengths of time and the [event](../glossary.qmd#event){.term} can happen at any time → the [log-rank test](#log-rank).
 
 ### What the test really does
 
@@ -499,14 +499,14 @@ Both tests compare the table you observed with the table you'd expect if failure
 **The chi-square test**
 
 1. Work out the [expected count](../glossary.qmd#expected-count){.term} for each of the four cells: row total × column total ÷ grand total. That is the count you'd see if both grafts failed at the same overall rate.
-2. For each cell, take (observed − expected)² ÷ expected, then add up the four results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **χ²**: 0 when the table matches the expected counts exactly, and larger the further it is from them.
+2. For each cell, take (observed − expected)² ÷ expected, then add up the four results. The sum is the [test statistic](../glossary.qmd#test-statistic){.term}, **[χ²](../glossary.qmd#chi-square-statistic){.term}**: 0 when the table matches the expected counts exactly, and larger the further it is from them.
 3. Turn χ² into a [p-value](../glossary.qmd#p-value){.term} with the chi-square distribution. This step is an approximation, and a poor one when expected counts are small. That is where the "at least 5" rule comes from.
 
-**Fisher's exact test** needs no approximation. It keeps the row and column totals fixed and lists every table that could have those totals. It works out the exact probability of each one, then adds up the probabilities of all the tables that are no more likely than yours. That sum is the p-value.
+**Fisher's exact test** needs no approximation. It keeps the row and column totals fixed and lists every table that could have those totals. It works out the exact [probability](../glossary.qmd#probability){.term} of each one, then adds up the probabilities of all the tables that are no more likely than yours. That sum is the p-value.
 
 ### Look at the data first
 
-The ACL data hold one row per primary reconstruction. Everyone was followed for at least 2 years unless the graft failed first, so failure within 2 years (`failure_2y`) is known for every reconstruction. For two yes/no variables, "looking" means the 2 × 2 table, with the percentage in each group.
+The ACL data hold one row per primary reconstruction. Everyone was followed for at least 2 years unless the graft failed first, so failure within 2 years (`failure_2y`) is known for every reconstruction. For two yes/no [variables](../glossary.qmd#variable){.term}, "looking" means the 2 × 2 table, with the percentage in each group.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -588,9 +588,9 @@ check_agree(list(fisher_p = failure_fisher$p.value, chisq = unname(failure_chisq
 ### Read the output
 
 - **Fisher's test, p-value = 0.7754:** a table like this would be common if failure were unrelated to the graft. We report it as p = 0.775.
-- **odds ratio 0.83, 95% CI 0.22 to 3.20** (R): the effect size, below.
+- **odds ratio 0.83, 95% CI 0.22 to 3.20** (R): the [effect size](../glossary.qmd#effect-size){.term}, below.
 - **Expected counts:** what each cell would hold if failure were unrelated to the graft. All are at least 5, but only just (the smallest is 5.5), so the chi-square test is valid too.
-- **X-squared = 0.0003, p-value = 0.986:** the chi-square test, with Yates' continuity correction, agrees.
+- **X-squared = 0.0003, p-value = 0.986:** the chi-square test, with [Yates' continuity correction](../glossary.qmd#continuity-correction){.term}, agrees.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: chi-square by hand
@@ -645,8 +645,8 @@ The chi-square test treats counts as if they could take any value, but counts ar
 
 Two effect sizes, and it's worth reporting both:
 
-- The **risk difference**: the difference between the two percentages, in percentage points. It's what patients and clinicians understand. Its CI here is the simple "estimate ± 1.96 standard errors" interval, called a Wald CI: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
-- The **odds ratio**: the odds of failure with a hamstring graft divided by the odds with a BPTB graft. It's what logistic regression reports ([page 11](11-predict-from-one.qmd#logistic-regression)), so it's useful for comparing with other studies.
+- The **[risk difference](../glossary.qmd#risk-difference){.term}**: the difference between the two percentages, in [percentage points](../glossary.qmd#percentage-point){.term}. It's what patients and clinicians understand. Its [CI](../glossary.qmd#confidence-interval){.term} here is the simple "[estimate](../glossary.qmd#estimate){.term} ± 1.96 [standard errors](../glossary.qmd#standard-error){.term}" interval, called a [Wald CI](../glossary.qmd#wald-interval){.term}: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
+- The **[odds ratio](../glossary.qmd#odds-ratio){.term}**: the [odds](../glossary.qmd#odds){.term} of failure with a hamstring graft divided by the odds with a BPTB graft. It's what [logistic regression](../glossary.qmd#logistic-regression){.term} reports ([page 11](11-predict-from-one.qmd#logistic-regression)), so it's useful for comparing with other studies.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -691,7 +691,7 @@ check_agree(list(or = unname(failure_fisher$estimate), or_low = failure_fisher$c
             tol = 1e-4)   # both programs find the odds ratio and its CI by root-finding, accurate to about 1e-5
 ```
 
-The failure rate with a hamstring graft was 0.8 percentage points lower (95% CI 5.5 points lower to 4.0 points higher), an odds ratio of 0.83 (95% CI 0.22 to 3.20). The two failure rates are 3.9% and 4.7%, so the risk difference is 3.9 − 4.7 = −0.8 percentage points. The CI is printed as proportions, −0.055 and 0.040; times 100, that is −5.5 to 4.0 points.
+The failure rate with a hamstring graft was 0.8 percentage points lower (95% CI 5.5 points lower to 4.0 points higher), an odds ratio of 0.83 (95% CI 0.22 to 3.20). The two failure rates are 3.9% and 4.7%, so the risk difference is 3.9 − 4.7 = −0.8 percentage points. The CI is printed as [proportions](../glossary.qmd#proportion){.term}, −0.055 and 0.040; times 100, that is −5.5 to 4.0 points.
 
 ### How to report it
 
@@ -701,32 +701,32 @@ The failure rate with a hamstring graft was 0.8 percentage points lower (95% CI 
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: "no difference" needs a narrow CI
-The odds ratio's CI runs from 0.22 to 3.20: the data are compatible with a hamstring graft having a fifth of the odds of failure of a BPTB graft, or three times the odds. With only 12 failures, this study can't tell. "No significant difference" is the honest wording; "hamstring and BPTB grafts fail equally often" isn't.
+The odds ratio's CI runs from 0.22 to 3.20: the data are compatible with a hamstring graft having a fifth of the odds of failure of a BPTB graft, or three times the odds. With only 12 failures, this study can't tell. "No [significant](../glossary.qmd#statistical-significance){.term} difference" is the honest wording; "hamstring and BPTB grafts fail equally often" isn't.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: two different odds ratios
-scipy's `fisher_exact()` reports the simple **sample** odds ratio (a × d) / (b × c), 0.8311 here. R's `fisher.test()` reports the **conditional maximum-likelihood** odds ratio, 0.8316, which goes with its exact CI. Use `scipy.stats.contingency.odds_ratio(..., kind="conditional")` to get R's number and CI. The two are always close; say which you report. In our table the sample odds ratio is (6 × 123) / (148 × 6) = 0.8311.
+scipy's `fisher_exact()` reports the simple **sample** odds ratio (a × d) / (b × c), 0.8311 here. R's `fisher.test()` reports the **conditional [maximum-likelihood](../glossary.qmd#maximum-likelihood){.term}** odds ratio, 0.8316, which goes with its exact CI. Use `scipy.stats.contingency.odds_ratio(..., kind="conditional")` to get R's number and CI. The two are always close; say which you report. In our table the sample odds ratio is (6 × 123) / (148 × 6) = 0.8311.
 :::
 
 ## Log-rank test {#log-rank}
 
-**The question:** Is revision-free survival different between implant A and implant C?
+**The question:** Is [revision-free survival](../glossary.qmd#survival){.term} different between implant A and implant C?
 
 ### When to use it
 
-- The outcome is **time until an event** (revision), patients were followed for different lengths of time, and you're comparing **two independent groups**.
+- The [outcome](../glossary.qmd#outcome){.term} is **[time until an event](../glossary.qmd#time-to-event){.term}** (revision), patients were [followed](../glossary.qmd#follow-up){.term} for different lengths of time, and you're comparing **two [independent](../glossary.qmd#independence){.term} groups**.
 - It compares the whole survival curves, not the survival at one time point.
 - The **Mantel-Haenszel test** (or Mantel-Cox test) in the decision table is the same test under another name.
-- It's most powerful when one group's hazard is a steady multiple of the other's over time (proportional hazards). If the curves cross, see [page 14](../survival/14-cox-regression.qmd#proportional-hazards).
-- To compare three or more groups, or to adjust for other variables → [Cox regression](08-three-plus-unmatched.qmd#cox).
+- It's most [powerful](../glossary.qmd#power){.term} when one group's [hazard](../glossary.qmd#hazard){.term} is a steady multiple of the other's over time ([proportional hazards](../glossary.qmd#proportional-hazards){.term}). If the curves cross, see [page 14](../survival/14-cox-regression.qmd#proportional-hazards).
+- To compare three or more groups, or to [adjust for](../glossary.qmd#adjustment){.term} other [variables](../glossary.qmd#variable){.term} → [Cox regression](08-three-plus-unmatched.qmd#cox).
 
 ### What the test really does
 
 The log-rank test compares the two groups over the whole follow-up, one revision at a time.
 
 1. Start at surgery and move forward in time. Each time a revision happens, look at who was still being followed just before it: the patients [at risk](../glossary.qmd#at-risk){.term}.
-2. If the two implants carried the same risk, that revision was equally likely to happen to any patient at risk. So each group's **expected** share of it is simply its share of the patients at risk.
+2. If the two implants carried the same [risk](../glossary.qmd#risk){.term}, that revision was equally likely to happen to any patient at risk. So each group's **expected** share of it is simply its share of the patients at risk.
 3. Add these shares up over all the revisions. Each group ends with an **observed** number of revisions and an **expected** number.
 4. The [test statistic](../glossary.qmd#test-statistic){.term} measures how far observed is from expected, compared with how far chance alone would put it. A large gap gives a small [p-value](../glossary.qmd#p-value){.term}.
 
@@ -864,7 +864,7 @@ check_agree(list(observed_a = sum(a_vs_c$revised[a_vs_c$implant == "A"]), expect
 
 ### Effect size and 95% CI
 
-The log-rank test has no effect size of its own. The usual one is the **hazard ratio** from a Cox model: how many times higher the hazard of revision is, at any moment, with implant C than with implant A. [Page 14](../survival/14-cox-regression.qmd) explains Cox regression in full.
+The log-rank test has no [effect size](../glossary.qmd#effect-size){.term} of its own. The usual one is the **[hazard ratio](../glossary.qmd#hazard-ratio){.term}** from a [Cox model](../glossary.qmd#cox-regression){.term}: how many times higher the hazard of revision is, at any moment, with implant C than with implant A. [Page 14](../survival/14-cox-regression.qmd) explains Cox regression in full.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -897,7 +897,7 @@ check_agree(list(hr = hr[1, "exp(coef)"], hr_low = hr[1, "lower .95"], hr_high =
             reticulate::py$chk)
 ```
 
-The hazard of revision was about three times higher with implant C (hazard ratio 3.04, 95% CI 1.83 to 5.04).
+The hazard of revision was about three times higher with implant C (hazard ratio 3.04, 95% [CI](../glossary.qmd#confidence-interval){.term} 1.83 to 5.04).
 
 The Results sentence also gives each implant's revision-free survival at 5 years, with its CI:
 
@@ -945,12 +945,12 @@ check_agree(list(surv_a = survival_5$surv[1], low_a = survival_5$lower[1], high_
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: overlapping CIs aren't a test
-Comparing the two curves' CIs at one time point ("the 5-year CIs overlap, so there's no difference") isn't a valid test, and neither is comparing the crude percentages revised. Use the log-rank test on the whole curves. And as on [page 4](04-describe-one-group.qmd#kaplan-meier), deaths here are treated as censored; [page 13](../survival/13-kaplan-meier.qmd#competing-risks) covers competing risks.
+Comparing the two curves' CIs at one time point ("the 5-year CIs overlap, so there's no difference") isn't a valid test, and neither is comparing the crude percentages revised. Use the log-rank test on the whole curves. And as on [page 4](04-describe-one-group.qmd#kaplan-meier), deaths here are treated as censored; [page 13](../survival/13-kaplan-meier.qmd#competing-risks) covers [competing risks](../glossary.qmd#competing-risk){.term}.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: one formula or two groups
-R's `survdiff()` takes a formula with a grouping variable. lifelines' `logrank_test()` takes each group's follow-up times and events separately (`multivariate_logrank_test()` takes a grouping column). They compute the same test. Both Cox models handle tied revision times with Efron's method, so the hazard ratios agree. The R code sets `conf.type = "log-log"` because that is the CI method lifelines uses ([page 4](04-describe-one-group.qmd#kaplan-meier)).
+R's `survdiff()` takes a formula with a grouping variable. lifelines' `logrank_test()` takes each group's follow-up times and [events](../glossary.qmd#event){.term} separately (`multivariate_logrank_test()` takes a grouping column). They compute the same test. Both Cox models handle [tied](../glossary.qmd#ties){.term} revision times with [Efron's method](../glossary.qmd#efron-method){.term}, so the hazard ratios agree. The R code sets `conf.type = "log-log"` because that is the CI method lifelines uses ([page 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
 ```{r}
@@ -1051,7 +1051,7 @@ stopifnot(
 
 The solutions use the packages and data loaded in the sections above, so run the page from the top first.
 
-**1.** Compare the **EFAS score at 6 weeks** between the boot and cast arms with Welch's t test. Report each arm's mean and SD, and the mean difference with its 95% CI.
+**1.** Compare the **EFAS score at 6 weeks** between the boot and cast [arms](../glossary.qmd#randomized-trial){.term} with [Welch's t test](../glossary.qmd#welch-test){.term}. Report each arm's [mean](../glossary.qmd#mean){.term} and [SD](../glossary.qmd#standard-deviation){.term}, and the [mean difference](../glossary.qmd#mean-difference){.term} with its 95% [CI](../glossary.qmd#confidence-interval){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -1088,7 +1088,7 @@ R's table shows three digits: the boot arm's SD of 2.75 is 2.747 rounded, so it 
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-By 12 months many patients are at or near the ceiling of 24 (13% with a boot and 17% with a cast scored 24), so the **Mann-Whitney test**.
+By 12 months many patients are at or near the [ceiling](../glossary.qmd#ceiling-effect){.term} of 24 (13% with a boot and 17% with a cast scored 24), so the **[Mann-Whitney test](../glossary.qmd#mann-whitney-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1121,14 +1121,14 @@ print(efas_12mo.groupby("arm")["efas"].agg(at_24=lambda s: (s == 24).sum(), perc
 
 > **Results:** At 12 months, the EFAS score was a median of 20 points (IQR 18 to 22; n = 55) with a boot and 21 (IQR 19 to 23; n = 47) with a cast (rank-biserial r = −0.12, 95% CI −0.33 to 0.10; p = 0.291).
 
-There's no clear evidence of a difference at 12 months, after the boot's lead of 3.6 points at 3 months. Notice too that 18 of the 120 patients missed the 12-month visit, 5 in the boot arm, 13 in the cast arm: when one arm loses more patients, the patients left in it may no longer be comparable with the other arm's. Whether the gap between the arms really changes over time is a question for one model of every visit: [page 16](../beyond/16-mixed-models.qmd#group-by-time) shows how. (The table shows 55 and 47 patients: 60 − 55 = 5 and 60 − 47 = 13.)
+There's no clear evidence of a difference at 12 months, after the boot's lead of 3.6 points at 3 months. Notice too that 18 of the 120 patients missed the 12-month visit, 5 in the boot arm, 13 in the cast arm: when one arm loses more patients, the patients left in it may no longer be comparable with the other arm's. Whether the gap between the arms really changes over time is a question for one [model](../glossary.qmd#model){.term} of every visit: [page 16](../beyond/16-mixed-models.qmd#group-by-time) shows how. (The table shows 55 and 47 patients: 60 − 55 = 5 and 60 − 47 = 13.)
 :::
 
-**3.** Is return to sport 12 months after ACL reconstruction different for women and men? Choose the test, run it, and write the Results sentence with the risk difference and odds ratio.
+**3.** Is return to sport 12 months after ACL reconstruction different for women and men? Choose the test, run it, and write the Results sentence with the [risk difference](../glossary.qmd#risk-difference){.term} and [odds ratio](../glossary.qmd#odds-ratio){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Yes/no outcome, two independent groups: **Fisher's exact test**.
+[Yes/no outcome](../glossary.qmd#binary){.term}, two [independent](../glossary.qmd#independence){.term} groups: **[Fisher's exact test](../glossary.qmd#fisher-exact-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -1160,5 +1160,5 @@ print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_y
 
 > **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
 
-The risk difference is 53.3 − 46.5 = 6.8 percentage points; the CI line prints proportions, so multiply by 100.
+The risk difference is 53.3 − 46.5 = 6.8 [percentage points](../glossary.qmd#percentage-point){.term}; the CI line prints [proportions](../glossary.qmd#proportion){.term}, so multiply by 100.
 :::

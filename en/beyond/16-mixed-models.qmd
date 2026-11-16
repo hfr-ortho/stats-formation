@@ -16,9 +16,9 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-PROMs are collected at several visits, and patients miss some of them. [Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) analyzed repeated scores with repeated-measures ANOVA, which only uses patients measured at every visit. A **linear mixed model** uses every score from every patient, and answers the questions a PROM study usually asks: how much do patients improve, by when, and does recovery differ between groups?
+[PROMs](../glossary.qmd#prom){.term} are collected at several visits, and patients miss some of them. [Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) analyzed [repeated scores](../glossary.qmd#repeated-measures){.term} with [repeated-measures ANOVA](../glossary.qmd#repeated-measures-anova){.term}, which only uses patients measured at every visit. A **linear mixed model** uses every score from every patient, and answers the questions a PROM study usually asks: how much do patients improve, by when, and does recovery differ between groups?
 
-The examples use KOOS JR, the knee score, in the 330 total knee replacements. Hips answer a different questionnaire (HOOS JR), and a point on one isn't guaranteed to equal a point on the other, so the two aren't mixed in one model. The last example, on whether recovery differs between groups, uses the EFAS score from the boot vs cast trial on [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), which also has four visits.
+The examples use KOOS JR, the knee score, in the 330 total knee replacements. Hips answer a different questionnaire (HOOS JR), and a point on one isn't guaranteed to equal a point on the other, so the two aren't mixed in one [model](../glossary.qmd#model){.term}. The last example, on whether recovery differs between groups, uses the EFAS score from the boot vs cast [trial](../glossary.qmd#randomized-trial){.term} on [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), which also has four visits.
 
 ::: {.callout-note}
 ## 💡 How this page works
@@ -83,16 +83,16 @@ per_knee <- count(knees, case_id)
 check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores = nrow(knees)), reticulate::py$chk)
 ```
 
-All 330 knees have at least one score (4 + 28 + 106 + 192 = 330), 1146 scores in all (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), but only 192 knees have all four. Repeated-measures ANOVA would drop the other 138 knees (138 / 330 = 42%) together with every score they did give. A mixed model keeps all 1146 scores.
+All 330 knees have at least one score (4 + 28 + 106 + 192 = 330), 1146 scores in all (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), but only 192 knees have all four. [Repeated-measures ANOVA](../glossary.qmd#repeated-measures-anova){.term} would drop the other 138 knees (138 / 330 = 42%) together with every score they did give. A [mixed model](../glossary.qmd#mixed-model){.term} keeps all 1146 scores.
 
-Dropping patients isn't only wasteful. It can bias the result, and that depends on why scores are missing:
-- **Missing completely at random:** a missed visit has nothing to do with the patient's recovery (the clinic rescheduled, the patient moved). Both methods are unbiased; the mixed model is more precise because it uses more data.
-- **Missing at random:** missing depends on things you measured, such as an earlier score. A patient who scored badly at 6 weeks is less likely to return at 3 months. Repeated-measures ANOVA is then biased, because the patients it keeps recovered better; a mixed model is still unbiased, as long as the model describes how a knee's scores are related, because it uses the earlier scores to fill the picture in.
+Dropping patients isn't only wasteful. It can [bias](../glossary.qmd#bias){.term} the result, and that depends on why scores are [missing](../glossary.qmd#missing-data){.term}:
+- **Missing completely at random:** a missed visit has nothing to do with the patient's recovery (the clinic rescheduled, the patient moved). Both methods are unbiased; the mixed model is more [precise](../glossary.qmd#precision){.term} because it uses more data.
+- **Missing at random:** missing depends on things you measured, such as an earlier score. A patient who scored badly at 6 weeks is less likely to return at 3 months. Repeated-measures ANOVA is then biased, because the patients it keeps recovered better; a mixed model is still unbiased, as long as the [model](../glossary.qmd#model){.term} describes how a knee's scores are related, because it uses the earlier scores to fill the picture in.
 - **Missing not at random:** missing depends on the score that wasn't collected (patients stay away *because* their knee is worse that week). Nothing fixes this from the data alone. Say so as a limitation.
 
 ## A random intercept for each knee {#random-intercept}
 
-Scores from the same knee are related: a knee that starts low tends to stay lower than average. A mixed model handles this with a **random intercept**: each knee gets its own baseline level, shifted up or down from the average. The **fixed effects** (here, the visits) describe the average patient; the random intercepts describe how much knees differ from that average.
+Scores from the same knee are related: a knee that starts low tends to stay lower than average. A [mixed model](../glossary.qmd#mixed-model){.term} handles this with a **random intercept**: each knee gets its own baseline level, shifted up or down from the average. The **fixed effects** (here, the visits) describe the average patient; the random intercepts describe how much knees differ from that average.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -133,10 +133,10 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 ```
 
 Reading the output:
-- **Fixed effects:** the average KOOS JR was 50.0 before surgery (the intercept), and higher by 12.5 points at 6 weeks, 24.2 at 3 months and 33.9 at 1 year. Each visit's coefficient is its difference from pre-op.
-- **Random effects:** knees' own baseline levels vary around the average with an [SD](../glossary.qmd#standard-deviation){.term} of 8.8 points (R's "case_id (Intercept)" row; Python's "case_id Var" row gives the [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). The scores also vary from visit to visit within a knee with a residual SD of 8.6 points (R's "Residual" row: variance 73.45, SD 8.570; Python prints only the variance, as "Scale: 73.4507" in the header, and √73.45 = 8.57).
-- **How much of the variation is between knees:** the knee variance divided by the knee variance plus the residual variance, 78.1 / (78.1 + 73.5) = 0.52, the intraclass correlation ([page 17](17-agreement.qmd#icc) uses the same idea for raters). About half of the spread in scores comes from knees differing from each other; that's why the scores can't be treated as independent.
-- **REML:** both programs fit the model by restricted maximum likelihood, the standard choice for estimating it.
+- **Fixed effects:** the average KOOS JR was 50.0 before surgery (the [intercept](../glossary.qmd#intercept){.term}), and higher by 12.5 points at 6 weeks, 24.2 at 3 months and 33.9 at 1 year. Each visit's [coefficient](../glossary.qmd#coefficient){.term} is its difference from pre-op.
+- **Random effects:** knees' own baseline levels vary around the average with an [SD](../glossary.qmd#standard-deviation){.term} of 8.8 points (R's "case_id (Intercept)" row; Python's "case_id Var" row gives the [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). The scores also vary from visit to visit within a knee with a [residual](../glossary.qmd#residual){.term} SD of 8.6 points (R's "Residual" row: variance 73.45, SD 8.570; Python prints only the variance, as "Scale: 73.4507" in the header, and √73.45 = 8.57).
+- **How much of the variation is between knees:** the knee variance divided by the knee variance plus the residual variance, 78.1 / (78.1 + 73.5) = 0.52, the [intraclass correlation](../glossary.qmd#icc){.term} ([page 17](17-agreement.qmd#icc) uses the same idea for raters). About half of the [spread](../glossary.qmd#spread){.term} in scores comes from knees differing from each other; that's why the scores can't be treated as [independent](../glossary.qmd#independence){.term}.
+- **REML:** both programs fit the [model](../glossary.qmd#model){.term} by [restricted maximum likelihood](../glossary.qmd#reml){.term}, the standard choice for estimating it.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the two variances by hand
@@ -173,9 +173,9 @@ print(side_by_side.corr().round(2))
 ```
 :::
 
-Around the visit means, the scores have a variance of 150.8. The model splits that spread into 78.1 between knees and 73.5 within a knee, which add up to 151.6, almost the same.
+Around the visit [means](../glossary.qmd#mean){.term}, the scores have a variance of 150.8. The model splits that spread into 78.1 between knees and 73.5 within a knee, which add up to 151.6, almost the same.
 
-The table gives the correlation between a knee's scores at two visits. The six correlations run from 0.43 to 0.57. A random intercept describes them with one number, the intraclass correlation of 0.52: two scores from the same knee are about that alike, whichever two visits you take.
+The table gives the [correlation](../glossary.qmd#correlation){.term} between a knee's scores at two visits. The six correlations run from 0.43 to 0.57. A random intercept describes them with one number, the intraclass correlation of 0.52: two scores from the same knee are about that alike, whichever two visits you take.
 :::
 
 ```{python}
@@ -194,12 +194,12 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: degrees of freedom
-The estimates agree. The standard errors agree to three or four significant figures: lme4 computes them with the knee and residual variances held at their estimates, statsmodels from the curvature of the whole likelihood. The p-values and CIs differ a little more. lmerTest gives each fixed effect a t test with **Satterthwaite** degrees of freedom, an approximation to how much information the estimate rests on. statsmodels uses a z test, as if the degrees of freedom were infinite. With 330 knees the difference is in the third decimal place; with a small study, trust R's.
+The [estimates](../glossary.qmd#estimate){.term} agree. The [standard errors](../glossary.qmd#standard-error){.term} agree to three or four significant figures: lme4 computes them with the knee and residual variances held at their estimates, statsmodels from the curvature of the whole [likelihood](../glossary.qmd#maximum-likelihood){.term}. The [p-values](../glossary.qmd#p-value){.term} and [CIs](../glossary.qmd#confidence-interval){.term} differ a little more. lmerTest gives each fixed effect a [t test](../glossary.qmd#t-test){.term} with **Satterthwaite** degrees of freedom, an approximation to how much information the estimate rests on. statsmodels uses a [z test](../glossary.qmd#z-statistic){.term}, as if the [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} were infinite. With 330 knees the difference is in the third decimal place; with a small study, trust R's.
 :::
 
 ## Estimated marginal means {#estimated-marginal-means}
 
-Report the model's estimate at each visit, with its 95% CI. These are the **estimated marginal means** (EMMs): the average score the model expects at each visit, using every knee, including those with missed visits.
+Report the [model](../glossary.qmd#model){.term}'s [estimate](../glossary.qmd#estimate){.term} at each visit, with its 95% [CI](../glossary.qmd#confidence-interval){.term}. These are the **estimated marginal means** (EMMs): the average score the model expects at each visit, using every knee, including those with missed visits.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -259,13 +259,13 @@ check_agree(list(knees = n_distinct(complete$case_id), preop = mean(complete$pro
 ```
 
 - **emmean, lower.CL / upper.CL:** KOOS JR averaged 50.0 (95% CI 48.6 to 51.3) before surgery, 62.5 at 6 weeks, 74.2 at 3 months and 83.9 (95% CI 82.5 to 85.3) at 1 year.
-- **The contrast:** the planned comparison, the improvement from pre-op to 1 year: 33.9 points (95% CI 32.5 to 35.3). Choose such comparisons in advance; comparing every pair of visits would need an adjustment ([page 15](15-post-hoc.qmd#planned-comparisons)). In R, the four weights go with the four visits in order: −1 for pre-op, 0 for 6 weeks and for 3 months, and +1 for 1 year, so the contrast is the 1-year mean minus the pre-op mean. In Python the same difference is the `visit[T.1yr]` coefficient, because pre-op is the reference.
+- **The contrast:** the [planned comparison](../glossary.qmd#planned-comparison){.term}, the improvement from pre-op to 1 year: 33.9 points (95% CI 32.5 to 35.3). Choose such comparisons in advance; comparing every pair of visits would need an adjustment ([page 15](15-post-hoc.qmd#planned-comparisons)). In R, the four weights go with the four visits in order: −1 for pre-op, 0 for 6 weeks and for 3 months, and +1 for 1 year, so the [contrast](../glossary.qmd#contrast){.term} is the 1-year [mean](../glossary.qmd#mean){.term} minus the pre-op mean. In Python the same difference is the `visit[T.1yr]` [coefficient](../glossary.qmd#coefficient){.term}, because pre-op is the [reference](../glossary.qmd#reference-group){.term}.
 
-The 192 knees with all four scores average 49.2 before surgery and 84.0 at 1 year (the last table of the output). That's close to the mixed model, as expected here: in this synthetic cohort, visits were missed almost entirely at random: by chance, or because follow-up had ended. With real patients you can't count on that, and the mixed model's answer, which uses all 330 knees, is the one to report.
+The 192 knees with all four scores average 49.2 before surgery and 84.0 at 1 year (the last table of the output). That's close to the [mixed model](../glossary.qmd#mixed-model){.term}, as expected here: in this synthetic [cohort](../glossary.qmd#cohort){.term}, visits were missed almost entirely at random: by chance, or because [follow-up](../glossary.qmd#follow-up){.term} had ended. With real patients you can't count on that, and the mixed model's answer, which uses all 330 knees, is the one to report.
 
 ## Time: categories or a curve? {#time}
 
-So far each visit has its own mean: **time as categories**. That fits when everyone is seen at the same few scheduled visits, and it makes no assumption about the shape of recovery. The alternative is **time as a number**, days since surgery, with a curve. That suits many or irregular visits, but the curve's shape must be right. Recovery isn't a straight line, so use a natural cubic spline ([page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explains splines):
+So far each visit has its own [mean](../glossary.qmd#mean){.term}: **time as categories**. That fits when everyone is seen at the same few scheduled visits, and it makes no [assumption](../glossary.qmd#assumption){.term} about the shape of recovery. The alternative is **time as a number**, days since surgery, with a curve. That suits many or irregular visits, but the curve's shape must be right. Recovery isn't a straight line, so use a [natural cubic spline](../glossary.qmd#spline){.term} ([page 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression) explains splines):
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -328,7 +328,7 @@ check_agree(list(day = curve$visit_days[which.max(curve$prom_score)]), reticulat
 check_agree(list(score = max(curve$prom_score)), reticulate::py$chk_peak_score, tol = 1e-4)
 ```
 
-The curve passes close to the visit means (the points): 62.7 at 6 weeks and 84.1 at 1 year (the second and fourth numbers printed), against 62.5 and 83.9. But look between 3 months and 1 year. No knee was scored there, and the curve invents a peak of 88.6 points on day 247, about 8 months after surgery, then falls. With a few fixed visits, a curve has nothing to follow between them. Categories are simpler, make no such claims, and are what the rest of this page uses.
+The curve passes close to the visit means (the points): 62.7 at 6 weeks and 84.1 at 1 year (the second and fourth numbers printed), against 62.5 and 83.9. But look between 3 months and 1 year. No knee was scored there, and the curve invents a peak of 88.6 points on day 247, about 8 months after surgery, then falls. With a few fixed visits, a curve has nothing to follow between them. [Categories](../glossary.qmd#categorical-variable){.term} are simpler, make no such claims, and are what the rest of this page uses.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a straight line for time
@@ -337,7 +337,7 @@ The curve passes close to the visit means (the points): 62.7 at 6 weeks and 84.1
 
 ## Does recovery differ between groups? {#group-by-time}
 
-To ask whether recovery with a boot differs from recovery with a cast, add arm and its **interaction** with visit. The interaction lets each arm have its own pattern of change. Its test asks whether the patterns differ, which is the question; the main effect of arm alone only compares the average levels. The model uses all 431 EFAS scores from the 120 randomized patients, although only 80 have all four (80 / 120 = 66.7%; the first line of the output counts them).
+To ask whether recovery with a boot differs from recovery with a cast, add [arm](../glossary.qmd#randomized-trial){.term} and its **interaction** with visit. The interaction lets each arm have its own pattern of change. Its test asks whether the patterns differ, which is the question; the [main effect](../glossary.qmd#main-effect){.term} of arm alone only compares the average levels. The [model](../glossary.qmd#model){.term} uses all 431 EFAS scores from the 120 randomized patients, although only 80 have all four (80 / 120 = 66.7%; the first line of the output counts them).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -438,10 +438,10 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. R prints the second df as `DenDF` 309.58 and the p-value as `6.924e-15`. Python's Wald test is a chi-square test on 3 degrees of freedom: 77.15, also p < 0.001. R's F is that statistic divided by its 3 degrees of freedom: 77.15 / 3 = 25.72, against R's 25.73, because the two programs' standard errors differ slightly (the first R vs Python box).
+- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. R prints the second [df](../glossary.qmd#degrees-of-freedom){.term} as `DenDF` 309.58 and the [p-value](../glossary.qmd#p-value){.term} as `6.924e-15`. Python's [Wald test](../glossary.qmd#wald-test){.term} is a [chi-square](../glossary.qmd#chi-square-statistic){.term} test on 3 degrees of freedom: 77.15, also p < 0.001. R's [F](../glossary.qmd#f-statistic){.term} is that [statistic](../glossary.qmd#test-statistic){.term} divided by its 3 degrees of freedom: 77.15 / 3 = 25.72, against R's 25.73, because the two programs' [standard errors](../glossary.qmd#standard-error){.term} differ slightly (the first R vs Python box).
 - **The EMMs and the differences (boot minus cast)** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.
 
-Two more looks at the data explain the paragraph that follows: the spread of the scores, and the 12-month visit.
+Two more looks at the data explain the paragraph that follows: the [spread](../glossary.qmd#spread){.term} of the scores, and the 12-month visit.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -494,21 +494,21 @@ check_agree(list(sd_3mo = sigma(lm(efas ~ arm, data = filter(trial, visit == "3m
 check_agree(list(sd_score = sqrt(sum(as.data.frame(VarCorr(arm_model))$vcov))), reticulate::py$chk_sd, tol = 1e-5)
 ```
 
-These numbers differ a little from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)'s, which used only the 3-month scores: there the 95% CI for the 3-month difference was 2.4 to 4.8, and here it's 2.5 to 4.6, mostly because the model assumes the same spread at all four visits (SD 2.9, the second output above), and the 3-month scores spread a little wider (SD 3.2 around the arm means, the third output; page 6 gives each arm's own SD, 2.9 with a boot and 3.4 with a cast). Two cautions. EFAS scores crowd toward their maximum by 12 months (24 points for 7 of 55 patients with a boot and 8 of 47 with a cast), so the model's means are approximate there. And the cast arm missed more 12-month visits (13 against 5, out of 60 patients in each arm; the table above counts them): the model keeps those patients' earlier scores, which helps as long as the missed visits are [missing at random](#why-mixed-models).
+These numbers differ a little from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t)'s, which used only the 3-month scores: there the 95% [CI](../glossary.qmd#confidence-interval){.term} for the 3-month difference was 2.4 to 4.8, and here it's 2.5 to 4.6, mostly because the model assumes the [same spread](../glossary.qmd#equal-variances){.term} at all four visits ([SD](../glossary.qmd#standard-deviation){.term} 2.9, the second output above), and the 3-month scores spread a little wider (SD 3.2 around the arm [means](../glossary.qmd#mean){.term}, the third output; page 6 gives each arm's own SD, 2.9 with a boot and 3.4 with a cast). Two cautions. EFAS scores [crowd toward their maximum](../glossary.qmd#ceiling-effect){.term} by 12 months (24 points for 7 of 55 patients with a boot and 8 of 47 with a cast), so the model's means are approximate there. And the cast arm missed more 12-month visits (13 against 5, out of 60 patients in each arm; the table above counts them): the model keeps those patients' earlier scores, which helps as long as the missed visits are [missing at random](#why-mixed-models).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: read an interaction through its means
-A clear interaction says the gap between the arms changes over time. It doesn't say the boot is better: it depends on when you look. At 12 months, Holm-adjusted p = 0.898 means the data can't show a difference; it doesn't show the arms are the same, and the CI still runs from 1.5 points in the cast's favor to 0.7 in the boot's. Report the EMMs and the difference with their CIs so readers can see both.
+A clear interaction says the gap between the arms changes over time. It doesn't say the boot is better: it depends on when you look. At 12 months, [Holm-adjusted](../glossary.qmd#holm){.term} p = 0.898 means the data can't show a difference; it doesn't show the arms are the same, and the CI still runs from 1.5 points in the cast's favor to 0.7 in the boot's. Report the [EMMs](../glossary.qmd#estimated-marginal-means){.term} and the difference with their CIs so readers can see both.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: the differences between arms
-Python computes the differences from the fixed effects with z tests, so its Holm-adjusted p-values differ in the third decimal (0.897 against 0.898).
+Python computes the differences from the [fixed effects](../glossary.qmd#fixed-effect){.term} with [z tests](../glossary.qmd#z-statistic){.term}, so its Holm-adjusted p-values differ in the third decimal (0.897 against 0.898).
 :::
 
 ## Bilateral patients {#bilateral}
 
-46 of the knee patients had both knees replaced, so 2 × 46 = 92 of the 330 knees come in pairs (the first output below). The two knees share the same person, so their scores may be related beyond what each knee's own intercept captures. The standard fix is a second random intercept, for the patient, with knees **nested** in patients: in lme4, `(1 | patient_id/case_id)`; in statsmodels, `groups="patient_id"` with a variance component for `case_id`.
+46 of the knee patients had both knees replaced, so 2 × 46 = 92 of the 330 knees come in pairs (the first output below). The two knees share the same person, so their scores may be related beyond what each knee's own intercept captures. The standard fix is a second [random intercept](../glossary.qmd#random-effect){.term}, for the patient, with knees **nested** in patients: in lme4, `(1 | patient_id/case_id)`; in statsmodels, `groups="patient_id"` with a variance component for `case_id`.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -551,7 +551,7 @@ check_agree(list(both_knees = sum(table(distinct(knees, patient_id, case_id)$pat
 check_agree(list(sd_knee_nested = nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"]), reticulate::py$chk_sd, tol = 1e-4)
 ```
 
-In this cohort the patient-level intercept comes out at almost exactly zero: an SD of less than 0.001 points between patients, against 8.8 between knees (Python prints the two variances, almost exactly 0 and 78.1). The data show no extra likeness between a patient's two knees, so the knee model above is enough. When you run this code, lme4 prints "boundary (singular) fit" and a convergence warning, and statsmodels warns that the estimate "may be on the boundary of the parameter space"; the page hides these messages. In your data, fit the nested model and report it unless it is singular. [Page 3](../foundations/03-distributions.qmd#paired) explains why bilateral patients need care, and [page 14](../survival/14-cox-regression.qmd#stratified-cox) shows the survival-analysis version.
+In this [cohort](../glossary.qmd#cohort){.term} the patient-level intercept comes out at almost exactly zero: an [SD](../glossary.qmd#standard-deviation){.term} of less than 0.001 points between patients, against 8.8 between knees (Python prints the two variances, almost exactly 0 and 78.1). The data show no extra likeness between a patient's two knees, so the knee [model](../glossary.qmd#model){.term} above is enough. When you run this code, lme4 prints "boundary (singular) fit" and a [convergence](../glossary.qmd#convergence){.term} warning, and statsmodels warns that the [estimate](../glossary.qmd#estimate){.term} "may be on the boundary of the parameter space"; the page hides these messages. In your data, fit the [nested](../glossary.qmd#clustered-data){.term} model and report it unless it is singular. [Page 3](../foundations/03-distributions.qmd#paired) explains why bilateral patients need care, and [page 14](../survival/14-cox-regression.qmd#stratified-cox) shows the [survival-analysis](../glossary.qmd#time-to-event){.term} version.
 
 ## How to report it {#reporting}
 
@@ -659,7 +659,7 @@ stopifnot(
 
 The solutions use the packages, data and functions loaded in the sections above, so run the page from the top first.
 
-**1.** Fit the same random-intercept model to HOOS JR in the total hip replacements and report the estimated mean at each visit.
+**1.** Fit the same [random-intercept](../glossary.qmd#random-effect){.term} [model](../glossary.qmd#model){.term} to HOOS JR in the total hip replacements and report the estimated [mean](../glossary.qmd#mean){.term} at each visit.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -692,7 +692,7 @@ print(marginal_means(hip_model, visit_grid).round(2))
 > **Results:** Of 270 hips, 136 had all four scores; all 906 scores were used. The estimated mean HOOS JR was 45.5 before surgery, 68.6 at 6 weeks, 80.1 at 3 months and 88.2 (95% CI 86.7 to 89.7) at 1 year.
 :::
 
-**2.** [Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) analyzed PROMIS physical function with repeated-measures ANOVA in the 328 joint replacements measured at all four visits. Fit a mixed model with every score instead. How many joint replacements does it use, and do the visit means change?
+**2.** [Page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) analyzed PROMIS physical function with [repeated-measures ANOVA](../glossary.qmd#repeated-measures-anova){.term} in the 328 joint replacements measured at all four visits. Fit a [mixed model](../glossary.qmd#mixed-model){.term} with every score instead. How many joint replacements does it use, and do the visit means change?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -727,7 +727,7 @@ print(pf_complete.groupby("visit", observed=True)["promis_pf"].agg(["size", "mea
 ```
 :::
 
-The mixed model uses all 600 joint replacements (2052 scores) instead of the 328 with all four scores. Its visit means, 36.1, 39.8, 44.9 and 48.2, are almost the same as [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova)'s means for those 328 (36.1, 39.4, 44.9 and 48.2, the last table of the output): in this synthetic cohort visits were missed almost entirely at random, so dropping incomplete cases cost precision rather than accuracy.
+The mixed model uses all 600 joint replacements (2052 scores) instead of the 328 with all four scores. Its visit means, 36.1, 39.8, 44.9 and 48.2, are almost the same as [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova)'s means for those 328 (36.1, 39.4, 44.9 and 48.2, the last table of the output): in this synthetic [cohort](../glossary.qmd#cohort){.term} visits were missed almost entirely at random, so [dropping incomplete cases](../glossary.qmd#complete-case-analysis){.term} cost [precision](../glossary.qmd#precision){.term} rather than accuracy.
 :::
 
 **3.** Does pain change differently with a boot and with a cast? Fit the visit × arm model for pain_nrs and write the Results sentence.
@@ -758,7 +758,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Python's Wald test gives 14.43 on 3 degrees of freedom, p = 0.002. It is the same statistic: 14.43 / 3 = 4.81. The p-values differ in the third decimal because R's F test uses Satterthwaite degrees of freedom (317) and Python's chi-square test treats them as infinite, as in the first R vs Python box. Report R's.
+Python's [Wald test](../glossary.qmd#wald-test){.term} gives 14.43 on 3 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. It is the same [statistic](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. The [p-values](../glossary.qmd#p-value){.term} differ in the third decimal because R's [F test](../glossary.qmd#f-statistic){.term} uses [Satterthwaite degrees of freedom](../glossary.qmd#satterthwaite){.term} (317) and Python's [chi-square](../glossary.qmd#chi-square-statistic){.term} test treats them as infinite, as in the first R vs Python box. Report R's.
 
 Pain is a whole-number score, so a linear model is an approximation here; with four visits and 120 patients it's a reasonable one.
 :::

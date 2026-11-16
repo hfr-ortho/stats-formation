@@ -16,18 +16,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Un test pour trois groupes ou plus pose une seule question : « y a-t-il une différence entre eux ? ». Quand la réponse est oui, la question suivante est de savoir quels groupes diffèrent de quels autres. Pour y répondre, il faut faire plusieurs tests à la fois, et chaque test de plus est une nouvelle chance de faux positif. Cette page montre comment comparer les groupes deux à deux en gardant cette chance sous contrôle. La plupart des sections « Après … » reprennent un exemple de la [page 8](../catalog/08-three-plus-unmatched.qmd), de la [page 9](../catalog/09-three-plus-matched.qmd) ou de la [page 13](../survival/13-kaplan-meier.qmd).
+Un test pour trois groupes ou plus pose une seule question : « y a-t-il une différence entre eux ? ». Quand la réponse est oui, la question suivante est de savoir quels groupes diffèrent de quels autres. Pour y répondre, il faut faire plusieurs tests à la fois, et chaque test de plus est une nouvelle chance de [faux positif](../glossary.qmd#false-positive){.term}. Cette page montre comment comparer les groupes deux à deux en gardant cette chance sous contrôle. La plupart des sections « Après … » reprennent un exemple de la [page 8](../catalog/08-three-plus-unmatched.qmd), de la [page 9](../catalog/09-three-plus-matched.qmd) ou de la [page 13](../survival/13-kaplan-meier.qmd).
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages et les données chargés dans le premier.
 
-Comme sur les pages d'où viennent ces exemples, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte).
+Comme sur les pages d'où viennent ces exemples, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la [cohorte](../glossary.qmd#cohort){.term} ; [page 2](../foundations/02-demographics.qmd#setup) les compte).
 :::
 
 ## Pourquoi les tests multiples trompent {#why-adjust}
 
-Un test au seuil de 5 % a 5 % de chances de donner un faux positif quand il n'y a vraiment aucune différence. Si vous faites plusieurs tests, ces chances s'accumulent. La probabilité d'**au moins un** faux positif sur un ensemble de tests est le **taux d'erreur par famille de tests** (*family-wise error rate*). Pour des tests indépendants au seuil de 5 %, il vaut 1 − 0.95^k^, où k est le nombre de tests :
+Un test au [seuil de 5 %](../glossary.qmd#statistical-significance){.term} a 5 % de chances de donner un [faux positif](../glossary.qmd#false-positive){.term} quand il n'y a vraiment aucune différence. Si vous faites plusieurs tests, ces chances s'accumulent. La probabilité d'**au moins un** faux positif sur un ensemble de tests est le **taux d'erreur par famille de tests** (*family-wise error rate*). Pour des tests indépendants au seuil de 5 %, il vaut 1 − 0.95^k^, où k est le nombre de tests :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -91,16 +91,16 @@ check_agree(list(six = chance[tests == 6], twenty = chance[tests == 20]), reticu
 check_agree(list(four_groups = 1 - ptukey(qnorm(0.975) * sqrt(2), nmeans = 4, df = Inf)), reticulate::py$chk_four)
 ```
 
-Quatre groupes font six paires. Six tests indépendants au seuil de 5 % donnent 26 % de chances d'au moins une fausse alerte, même s'il ne se passe rien ; vingt tests, 64 %. Les comparaisons deux à deux ne sont pas indépendantes, car chaque groupe figure dans trois des six paires ; pour quatre groupes de même taille, la probabilité est donc un peu plus basse : environ 20 % (la dernière ligne de la sortie, 0.203). C'est quand même quatre fois les 5 % que vous vouliez accepter. Comparer des paires exige donc un **ajustement** : une règle plus stricte qui maintient à 5 % la probabilité d'un faux positif quelque part dans l'ensemble des comparaisons.
+Quatre groupes font six paires. Six tests indépendants au seuil de 5 % donnent 26 % de chances d'au moins une fausse alerte, même s'il ne se passe rien ; vingt tests, 64 %. Les [comparaisons deux à deux](../glossary.qmd#pairwise-comparison){.term} ne sont pas indépendantes, car chaque groupe figure dans trois des six paires ; pour quatre groupes de même taille, la probabilité est donc un peu plus basse : environ 20 % (la dernière ligne de la sortie, 0.203). C'est quand même quatre fois les 5 % que vous vouliez accepter. Comparer des paires exige donc un **ajustement** : une règle plus stricte qui maintient à 5 % la probabilité d'un faux positif quelque part dans l'ensemble des comparaisons.
 
 ::: {.callout-note}
 ## 💡 En clair
-Achetez un billet de loterie : vous perdrez presque certainement. Achetez-en vingt : vos chances de gagner quelque chose augmentent. Chaque valeur p inférieure à 0.05 est un petit « gain », et avec assez de tests, il y en aura un par pur hasard. Ajuster les valeurs p rend chaque gain plus difficile à obtenir : la probabilité globale reste alors là où vous l'avez fixée.
+Achetez un billet de loterie : vous perdrez presque certainement. Achetez-en vingt : vos chances de gagner quelque chose augmentent. Chaque [valeur p](../glossary.qmd#p-value){.term} inférieure à 0.05 est un petit « gain », et avec assez de tests, il y en aura un par pur hasard. Ajuster les valeurs p rend chaque gain plus difficile à obtenir : la probabilité globale reste alors là où vous l'avez fixée.
 :::
 
 ## Ajuster les valeurs p : Bonferroni, Holm et Benjamini-Hochberg {#adjusting-p-values}
 
-La [page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova) a trouvé que l'âge diffère entre les quatre classes ASA. Voici les six comparaisons deux à deux, chacune un test t de Welch, avec les valeurs p telles quelles (**non ajustées**), puis ajustées de trois façons :
+La [page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova) a trouvé que l'âge diffère entre les quatre classes ASA. Voici les six [comparaisons deux à deux](../glossary.qmd#pairwise-comparison){.term}, chacune un [test t de Welch](../glossary.qmd#welch-test){.term}, avec les [valeurs p](../glossary.qmd#p-value){.term} telles quelles (**non ajustées**), puis ajustées de trois façons :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -153,10 +153,10 @@ check_agree(list(raw_12 = adjusted$unadjusted[1], raw_34 = adjusted$unadjusted[6
 ```
 
 Suivez la comparaison ASA 1 contre ASA 2 sur la ligne :
-- **Non ajustée, p = 0.022 :** « significative » à elle seule, mais c'est l'un de six tests.
+- **Non ajustée, p = 0.022 :** « [significative](../glossary.qmd#statistical-significance){.term} » à elle seule, mais c'est l'un de six tests.
 - **Bonferroni, p = 0.132 :** multiplie chaque valeur p par le nombre de tests (ici 6). Simple, mais le plus strict : il écarte souvent de vraies différences.
-- **Holm, p = 0.044 :** une version descendante de Bonferroni. Il multiplie la plus petite valeur p par 6, la suivante par 5, et ainsi de suite, mais une valeur p ajustée ne peut pas être plus petite que la précédente dans cet ordre. ASA 1 contre 2 a la cinquième plus petite des six valeurs p : elle est donc multipliée par 2, soit 0.022 × 2 = 0.044. ASA 3 contre 4 a la plus grande valeur p non ajustée (0.030) : elle est donc multipliée par 1, mais elle prend 0.044 à ASA 1 contre 2, celle qui la précède. Il contrôle le taux d'erreur par famille de tests aussi bien que Bonferroni et n'est jamais moins puissant : **utilisez Holm plutôt que Bonferroni**.
-- **Benjamini-Hochberg (BH), p = 0.026 :** contrôle autre chose, le **taux de fausses découvertes** : la part attendue de faux positifs parmi les résultats que vous déclarez significatifs. C'est le plus indulgent des trois. Il sert à passer au crible de nombreux critères à la recherche de pistes, pas à confirmer une affirmation. Pour l'obtenir, chaque valeur p est multipliée par le nombre de tests et divisée par son [rang](../glossary.qmd#rank){.term}, compté à partir de la plus petite : ici 0.022 × 6 / 5 = 0.026.
+- **Holm, p = 0.044 :** une version descendante de Bonferroni. Il multiplie la plus petite valeur p par 6, la suivante par 5, et ainsi de suite, mais une valeur p ajustée ne peut pas être plus petite que la précédente dans cet ordre. ASA 1 contre 2 a la cinquième plus petite des six valeurs p : elle est donc multipliée par 2, soit 0.022 × 2 = 0.044. ASA 3 contre 4 a la plus grande valeur p non ajustée (0.030) : elle est donc multipliée par 1, mais elle prend 0.044 à ASA 1 contre 2, celle qui la précède. Il contrôle le [taux d'erreur par famille de tests](../glossary.qmd#family-wise-error-rate){.term} aussi bien que Bonferroni et n'est jamais moins [puissant](../glossary.qmd#power){.term} : **utilisez Holm plutôt que Bonferroni**.
+- **Benjamini-Hochberg (BH), p = 0.026 :** contrôle autre chose, le **taux de fausses découvertes** : la part attendue de [faux positifs](../glossary.qmd#false-positive){.term} parmi les résultats que vous déclarez significatifs. C'est le plus indulgent des trois. Il sert à passer au crible de nombreux [critères](../glossary.qmd#outcome){.term} à la recherche de pistes, pas à confirmer une affirmation. Pour l'obtenir, chaque valeur p est multipliée par le nombre de tests et divisée par son [rang](../glossary.qmd#rank){.term}, compté à partir de la plus petite : ici 0.022 × 6 / 5 = 0.026.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : Holm et Benjamini-Hochberg à la main
@@ -206,12 +206,12 @@ check_agree(list(holm_5 = by_hand$holm[5], holm_6 = by_hand$holm[6], bh_2 = by_h
 
 ::: {.callout-warning}
 ## ⚠️ Attention : décidez de l'ajustement avant de voir les valeurs p
-Choisir l'ajustement qui garde significatif votre résultat préféré, c'est du *p-hacking* (la pêche à la valeur p). Choisissez à l'avance : Holm (ou une méthode conçue pour le test, comme celle de Tukey plus bas) pour les comparaisons que vous rapporterez comme des résultats, Benjamini-Hochberg seulement pour un criblage exploratoire. Dites dans les Méthodes lequel vous avez utilisé et combien de comparaisons il couvrait.
+Choisir l'ajustement qui garde significatif votre résultat préféré, c'est du *[p-hacking](../glossary.qmd#p-hacking){.term}* (la pêche à la valeur p). Choisissez à l'avance : Holm (ou une méthode conçue pour le test, comme celle de [Tukey](../glossary.qmd#tukey-hsd){.term} plus bas) pour les comparaisons que vous rapporterez comme des résultats, Benjamini-Hochberg seulement pour un criblage [exploratoire](../glossary.qmd#prespecified){.term}. Dites dans les Méthodes lequel vous avez utilisé et combien de comparaisons il couvrait.
 :::
 
 ## Après l'ANOVA : Tukey HSD et Games-Howell {#after-anova}
 
-Après une ANOVA à un facteur, le **test HSD de Tukey** (*honestly significant difference*) compare chaque paire de moyennes de groupes. Il tient compte de toutes les paires à la fois et donne à chaque différence un intervalle de confiance (IC) lui aussi ajusté. Il suppose que les groupes ont des dispersions semblables, comme l'ANOVA. Quand ce n'est pas le cas (le plus grand écart-type (ET) dépasse environ le double du plus petit), utilisez **Games-Howell**, la version de Welch du test de Tukey.
+Après une [ANOVA à un facteur](../glossary.qmd#anova){.term}, le **test HSD de Tukey** (*honestly significant difference*) compare chaque paire de [moyennes](../glossary.qmd#mean){.term} de groupes. Il tient compte de toutes les paires à la fois et donne à chaque différence un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) lui aussi ajusté. Il suppose que les groupes ont des [dispersions semblables](../glossary.qmd#equal-variances){.term}, comme l'ANOVA. Quand ce n'est pas le cas (le plus grand [écart-type](../glossary.qmd#standard-deviation){.term} (ET) dépasse environ le double du plus petit), utilisez **Games-Howell**, la version de [Welch](../glossary.qmd#welch-test){.term} du test de Tukey.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -263,12 +263,12 @@ check_agree(list(sd_1 = sd(cohort$age[cohort$asa == 1]), sd_4 = sd(cohort$age[co
 ```
 
 - **Le premier tableau :** la taille, l'âge moyen et l'écart-type (ET) de chaque classe ASA.
-- **Le tableau d'ANOVA :** le test global de la [page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova), F = 23.9 avec 3 et 596 degrés de liberté (`Df` dans R ; `ddof1` et `ddof2` dans Python).
+- **Le tableau d'ANOVA :** le [test global](../glossary.qmd#overall-test){.term} de la [page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova), [F](../glossary.qmd#f-statistic){.term} = 23.9 avec 3 et 596 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} (`Df` dans R ; `ddof1` et `ddof2` dans Python).
 - **diff / meandiff :** la différence d'âge moyen entre deux classes ASA, en années.
 - **lwr, upr / lower, upper :** l'IC à 95 % de cette différence, ajusté en tenant compte des six comparaisons.
-- **p adj / p-adj :** la valeur p ajustée.
+- **p adj / p-adj :** la [valeur p ajustée](../glossary.qmd#multiple-comparisons){.term}.
 - **reject** (Python) : True quand la valeur p ajustée est inférieure à 0.05.
-- **Games-Howell** montre les trois mêmes éléments sous d'autres noms : `estimate`, `conf.low`, `conf.high` et `p.adj` dans R ; `diff` et `pval` dans Python, qui affiche l'erreur standard (`se`) à la place d'un IC.
+- **Games-Howell** montre les trois mêmes éléments sous d'autres noms : `estimate`, `conf.low`, `conf.high` et `p.adj` dans R ; `diff` et `pval` dans Python, qui affiche l'[erreur standard](../glossary.qmd#standard-error){.term} (`se`) à la place d'un IC.
 
 Quatre des six paires diffèrent nettement (p < 0.001 ou, pour ASA 2 contre 4 au test de Games-Howell, p = 0.001). Deux ne diffèrent pas : les patients ASA 2 avaient 3.6 ans de plus que les patients ASA 1 (IC à 95 % de −0.4 à 7.7, p = 0.096), et les patients ASA 4 avaient 5.3 ans de plus que les patients ASA 3 (IC à 95 % de −0.3 à 10.9, p = 0.072). Les deux IC incluent 0, et les deux comparaisons impliquent l'une des deux petites classes (ASA 1 avec 36 patients et ASA 4 avec 18). Les ET sont semblables (8.7 à 9.3 ans ; `sd` dans le premier tableau de R, `std` dans celui de Python) : Games-Howell aboutit donc aux mêmes conclusions.
 
@@ -278,14 +278,14 @@ Quatre des six paires diffèrent nettement (p < 0.001 ou, pour ASA 2 contre 4 au
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : Tukey et Games-Howell
-`TukeyHSD()` de R et `pairwise_tukeyhsd()` de statsmodels donnent des résultats identiques ; R écrit les paires « 2-1 » (deuxième groupe moins premier), statsmodels écrit group1, group2 avec meandiff = group2 − group1. Pour Games-Howell, R a besoin du package rstatix ; en Python, `pairwise_gameshowell()` de pingouin donne `diff` comme A − B : ses signes sont donc l'inverse des estimations de R. Les valeurs p concordent.
+`TukeyHSD()` de R et `pairwise_tukeyhsd()` de statsmodels donnent des résultats identiques ; R écrit les paires « 2-1 » (deuxième groupe moins premier), statsmodels écrit group1, group2 avec meandiff = group2 − group1. Pour Games-Howell, R a besoin du package rstatix ; en Python, `pairwise_gameshowell()` de pingouin donne `diff` comme A − B : ses signes sont donc l'inverse des [estimations](../glossary.qmd#estimate){.term} de R. Les [valeurs p](../glossary.qmd#p-value){.term} concordent.
 :::
 
 ## Après Kruskal-Wallis : le test de Dunn {#after-kruskal-wallis}
 
-Le **test de Dunn** suit un test de Kruskal-Wallis. Il compare les rangs moyens des groupes issus du classement de Kruskal-Wallis : il mesure donc chaque paire sur la même échelle. Utilisez-le avec l'ajustement de Holm. Des tests de Mann-Whitney séparés recalculent plutôt les rangs pour chaque paire et demandent un ajustement à part.
+Le **test de Dunn** suit un [test de Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}. Il compare les [rangs](../glossary.qmd#rank){.term} moyens des groupes issus du classement de Kruskal-Wallis : il mesure donc chaque paire sur la même échelle. Utilisez-le avec l'[ajustement de Holm](../glossary.qmd#holm){.term}. Des [tests de Mann-Whitney](../glossary.qmd#mann-whitney-test){.term} séparés recalculent plutôt les rangs pour chaque paire et demandent un ajustement à part.
 
-La durée de séjour (LOS, de l'anglais *length of stay*) est asymétrique (la plupart des patients rentrent chez eux le jour 0 ou 1) : elle relève donc de la colonne des rangs. Diffère-t-elle entre les classes ASA ?
+La durée de séjour (LOS, de l'anglais *length of stay*) est [asymétrique](../glossary.qmd#skewed){.term} (la plupart des patients rentrent chez eux le jour 0 ou 1) : elle relève donc de la colonne des rangs. Diffère-t-elle entre les classes ASA ?
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -327,20 +327,20 @@ check_agree(list(h = unname(los_kw$statistic), p_12 = dunn$p.adj[1], p_23 = dunn
             reticulate::py$chk)
 ```
 
-- **Kruskal-Wallis chi-squared = 24.286** (R ; le premier nombre qu'affiche Python) : la statistique H, 24.3. **df = 3 :** quatre classes moins une (df = ddl, les degrés de liberté ; Python ne l'affiche pas). **p < 0.001 :** R affiche `2.177e-05` et Python le même nombre avec plus de chiffres, soit la [notation scientifique](../glossary.qmd#scientific-notation){.term} de 0.00002177. La LOS diffère quelque part entre les classes.
+- **Kruskal-Wallis chi-squared = 24.286** (R ; le premier nombre qu'affiche Python) : la [statistique H](../glossary.qmd#test-statistic){.term}, 24.3. **df = 3 :** quatre classes moins une (df = ddl, les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; Python ne l'affiche pas). **p < 0.001 :** R affiche `2.177e-05` et Python le même nombre avec plus de chiffres, soit la [notation scientifique](../glossary.qmd#scientific-notation){.term} de 0.00002177. La LOS diffère quelque part entre les classes.
 - **Test de Dunn :** ASA 1 diffère de chaque autre classe (valeur p ajustée = 0.011 contre ASA 2, p < 0.001 contre ASA 3 et 4), et ASA 2 diffère d'ASA 3 (p = 0.047) et d'ASA 4 (p = 0.022). Il n'y avait pas de preuve claire d'une différence entre ASA 3 et 4 (p = 0.061).
-- **statistic** dans le résultat de R est un score z : positif, il signifie que les rangs du deuxième groupe sont plus élevés (séjours plus longs).
+- **statistic** dans le résultat de R est un [score z](../glossary.qmd#z-statistic){.term} : positif, il signifie que les rangs du deuxième groupe sont plus élevés (séjours plus longs).
 
 > **Results:** The median length of stay was 0 days (IQR 0 to 0) in ASA 1 and 1 day (IQR 0.25 to 3.5) in ASA 4 (Kruskal-Wallis H = 24.3, df = 3, p < 0.001). In Dunn's tests with Holm's adjustment, p ≤ 0.011 for ASA 1 against each other class and p = 0.061 for ASA 3 against ASA 4.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : le test de Dunn
-Les deux corrigent les scores z pour les rangs ex æquo, qui comptent ici parce que beaucoup de patients ont une LOS de 0 ou 1 jour, et les deux donnent les mêmes valeurs p ajustées. Le package rstatix de R renvoie une ligne par paire ; `posthoc_dunn()` de scikit-posthocs renvoie un tableau carré de valeurs p avec les groupes des deux côtés.
+Les deux corrigent les scores z pour les [rangs ex æquo](../glossary.qmd#ties){.term}, qui comptent ici parce que beaucoup de patients ont une LOS de 0 ou 1 jour, et les deux donnent les mêmes [valeurs p ajustées](../glossary.qmd#multiple-comparisons){.term}. Le package rstatix de R renvoie une ligne par paire ; `posthoc_dunn()` de scikit-posthocs renvoie un tableau carré de valeurs p avec les groupes des deux côtés.
 :::
 
 ## Après le khi-deux : tests exacts de Fisher deux à deux {#after-chi-square}
 
-Après un test du khi-deux (ou de Fisher) sur un tableau à trois groupes ou plus, comparez les groupes deux à deux avec le **test exact de Fisher**, puis ajustez avec Holm. Prenons les complications à 90 jours entre les quatre classes ASA. Deux des [effectifs attendus](../glossary.qmd#expected-count){.term} sont inférieurs à 5 (3.06 en ASA 1 et 1.53 en ASA 4, dans le second tableau ci-dessous), trop peu pour le test du khi-deux ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)) : le test global est donc lui aussi le test exact de Fisher :
+Après un [test du khi-deux](../glossary.qmd#chi-square-test){.term} (ou de Fisher) sur un [tableau](../glossary.qmd#contingency-table){.term} à trois groupes ou plus, comparez les groupes deux à deux avec le **test exact de Fisher**, puis ajustez avec [Holm](../glossary.qmd#holm){.term}. Prenons les complications à 90 jours entre les quatre classes ASA. Deux des [effectifs attendus](../glossary.qmd#expected-count){.term} sont inférieurs à 5 (3.06 en ASA 1 et 1.53 en ASA 4, dans le second tableau ci-dessous), trop peu pour le test du khi-deux ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)) : le [test global](../glossary.qmd#overall-test){.term} est donc lui aussi le [test exact de Fisher](../glossary.qmd#fisher-exact-test){.term} :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -390,11 +390,11 @@ check_agree(list(smallest = min(suppressWarnings(chisq.test(complications))$expe
                  asa_1 = suppressWarnings(chisq.test(complications))$expected["1", "1"]), reticulate::py$chk_expected)
 ```
 
-Le test de Fisher global dit que le taux de complications diffère entre les classes ASA (p = 0.016 ; R affiche 0.01587). scipy ne peut qu'estimer cette valeur p pour un tableau plus grand que 2 × 2 ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)) : l'onglet Python n'exécute donc que les paires. Mais aucune paire ne diffère nettement après l'ajustement de Holm : la plus proche est ASA 1 contre ASA 4 (0 sur 36 contre 4 sur 18 patients ; p = 0.010 non ajusté, 0.058 ajusté). [Une section plus loin](#overall-test-first) explique pourquoi cela peut arriver.
+Le test de Fisher global dit que le taux de complications diffère entre les classes ASA (p = 0.016 ; R affiche 0.01587). scipy ne peut qu'estimer cette [valeur p](../glossary.qmd#p-value){.term} pour un tableau plus grand que 2 × 2 ([page 8](../catalog/08-three-plus-unmatched.qmd#chi-square)) : l'onglet Python n'exécute donc que les paires. Mais aucune paire ne diffère nettement après l'ajustement de Holm : la plus proche est ASA 1 contre ASA 4 (0 sur 36 contre 4 sur 18 patients ; p = 0.010 non ajusté, 0.058 ajusté). [Une section plus loin](#overall-test-first) explique pourquoi cela peut arriver.
 
 ## Après l'ANOVA à mesures répétées : tests t appariés {#after-repeated-measures-anova}
 
-La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a trouvé que la fonction physique PROMIS a changé au cours de la première année, pour 328 interventions mesurées aux quatre visites. Pour dire *quand* elle a changé, comparez chaque paire de visites avec un **test t apparié** et ajustez avec Holm :
+La [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) a trouvé que la fonction physique PROMIS a changé au cours de la première année, pour 328 interventions mesurées aux quatre visites. Pour dire *quand* elle a changé, comparez chaque paire de visites avec un **[test t apparié](../glossary.qmd#t-test){.term}** et ajustez avec [Holm](../glossary.qmd#holm){.term} :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -446,7 +446,7 @@ check_agree(list(preop = mean(pf$promis_pf[pf$visit == "preop"]), one_year = mea
             reticulate::py$chk_means)
 ```
 
-Le score T moyen était de 36.1 avant l'opération, de 39.4 à 6 semaines, de 44.9 à 3 mois et de 48.2 à 1 an (la première sortie). Chaque paire de visites diffère : toutes les valeurs p ajustées sont inférieures à 0.001, et la plus grande s'affiche comme `5.59e-13` dans R. Le `statistic` de R est négatif parce qu'il soustrait la visite la plus tardive de la plus précoce : la visite préopératoire moins celle à 6 semaines donne t = −7.98. Python soustrait dans l'autre sens et affiche 7.98. Avec 328 interventions et des changements aussi grands, l'ajustement ne change rien. Il compte surtout quand les résultats sont proches de p = 0.05.
+Le [score T](../glossary.qmd#t-score){.term} [moyen](../glossary.qmd#mean){.term} était de 36.1 avant l'opération, de 39.4 à 6 semaines, de 44.9 à 3 mois et de 48.2 à 1 an (la première sortie). Chaque paire de visites diffère : toutes les [valeurs p ajustées](../glossary.qmd#multiple-comparisons){.term} sont inférieures à 0.001, et la plus grande s'affiche comme `5.59e-13` dans R. Le `statistic` de R est négatif parce qu'il soustrait la visite la plus tardive de la plus précoce : la visite préopératoire moins celle à 6 semaines donne t = −7.98. Python soustrait dans l'autre sens et affiche 7.98. Avec 328 interventions et des changements aussi grands, l'ajustement ne change rien. Il compte surtout quand les résultats sont proches de p = 0.05.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : dans quel sens
@@ -455,7 +455,7 @@ pingouin trie les visites par ordre alphabétique et soustrait la deuxième de l
 
 ## Après Friedman : tests de Wilcoxon ou de Conover deux à deux {#after-friedman}
 
-Après un test de Friedman, comparez les visites deux à deux avec des **tests des rangs signés de Wilcoxon** et l'ajustement de Holm, ou avec le **test de Conover**, qui réutilise les rangs de Friedman (comme le test de Dunn après Kruskal-Wallis) et est souvent plus puissant. La [page 9](../catalog/09-three-plus-matched.qmd#friedman) a trouvé que le score EFAS (score de la Société européenne du pied et de la cheville) a changé entre 6 semaines, 3 mois et 12 mois chez 50 patients avec une orthèse :
+Après un [test de Friedman](../glossary.qmd#friedman-test){.term}, comparez les visites deux à deux avec des **[tests des rangs signés de Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}** et l'[ajustement de Holm](../glossary.qmd#holm){.term}, ou avec le **test de Conover**, qui réutilise les [rangs](../glossary.qmd#rank){.term} de Friedman (comme le [test de Dunn](../glossary.qmd#dunn-test){.term} après [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}) et est souvent plus [puissant](../glossary.qmd#power){.term}. La [page 9](../catalog/09-three-plus-matched.qmd#friedman) a trouvé que le score EFAS (score de la Société européenne du pied et de la cheville) a changé entre 6 semaines, 3 mois et 12 mois chez 50 patients avec une orthèse :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -522,16 +522,16 @@ check_agree(list(first = median(efas_boot$efas[efas_boot$visit == "6wk"]), last 
             reticulate::py$chk_medians)
 ```
 
-Le score EFAS médian était de 12.5 à 6 semaines, de 17 à 3 mois et de 20 à 12 mois, chez 50 patients (les premières lignes de la sortie). Les trois paires diffèrent (p ajustée < 0.001 avec l'une ou l'autre méthode).
+Le score EFAS [médian](../glossary.qmd#median){.term} était de 12.5 à 6 semaines, de 17 à 3 mois et de 20 à 12 mois, chez 50 patients (les premières lignes de la sortie). Les trois paires diffèrent (p ajustée < 0.001 avec l'une ou l'autre méthode).
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : la statistique
-`wilcox.test()` de R donne V, la somme des rangs positifs ; scipy donne la plus petite des deux sommes de rangs. Ici les deux sont le même nombre, parce que le score de la visite suivante est plus élevé chez la plupart des patients. Le test de Conover demande le package PMCMRplus en R et scikit-posthocs en Python ; ils donnent les mêmes valeurs p. PMCMRplus n'affiche une valeur p inférieure à 2 × 10⁻¹⁶ que sous la forme « <2e-16 » : affichez donc son tableau `$p.value` pour les voir.
+`wilcox.test()` de R donne V, la somme des rangs positifs ; scipy donne la plus petite des deux sommes de rangs. Ici les deux sont le même nombre, parce que le score de la visite suivante est plus élevé chez la plupart des patients. Le test de Conover demande le package PMCMRplus en R et scikit-posthocs en Python ; ils donnent les mêmes [valeurs p](../glossary.qmd#p-value){.term}. PMCMRplus n'affiche une valeur p inférieure à 2 × 10⁻¹⁶ que sous la forme « <2e-16 » : affichez donc son tableau `$p.value` pour les voir.
 :::
 
 ## Après le Q de Cochran : tests de McNemar deux à deux {#after-cochran-q}
 
-Après le test Q de Cochran, comparez les visites deux à deux avec le **test de McNemar** et ajustez avec Holm. La [page 9](../catalog/09-three-plus-matched.qmd#cochran-q) a trouvé que l'utilisation d'une aide à la marche a changé au cours de l'année pour 328 interventions évaluées aux quatre visites :
+Après le [test Q de Cochran](../glossary.qmd#cochran-q-test){.term}, comparez les visites deux à deux avec le **[test de McNemar](../glossary.qmd#mcnemar-test){.term}** et ajustez avec [Holm](../glossary.qmd#holm){.term}. La [page 9](../catalog/09-three-plus-matched.qmd#cochran-q) a trouvé que l'utilisation d'une aide à la marche a changé au cours de l'année pour 328 interventions évaluées aux quatre visites :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -586,11 +586,11 @@ check_agree(list(p_pre_3mo = mcnemar_results$p[2], holm_pre_3mo = mcnemar_result
 check_agree(list(preop = mean(aid$preop), six_weeks = mean(aid$`6wk`), one_year = mean(aid$`1yr`)), reticulate::py$chk_aid)
 ```
 
-Une aide à la marche était utilisée pour 34.8 % des 328 interventions avant l'opération, 59.1 % à 6 semaines, 24.4 % à 3 mois et 10.4 % à 1 an (les deux premières sorties). Chaque paire de visites diffère après ajustement (colonne `p_holm`). La plus grande valeur p ajustée est celle de la visite préopératoire contre 3 mois : 0.005, affichée en notation scientifique comme `4.66e- 3` dans R et `4.658779e-03` dans Python.
+Une aide à la marche était utilisée pour 34.8 % des 328 interventions avant l'opération, 59.1 % à 6 semaines, 24.4 % à 3 mois et 10.4 % à 1 an (les deux premières sorties). Chaque paire de visites diffère après ajustement (colonne `p_holm`). La plus grande [valeur p ajustée](../glossary.qmd#multiple-comparisons){.term} est celle de la visite préopératoire contre 3 mois : 0.005, affichée en [notation scientifique](../glossary.qmd#scientific-notation){.term} comme `4.66e- 3` dans R et `4.658779e-03` dans Python.
 
 ## Après un test du log-rank : comparaisons de survie deux à deux {#after-log-rank}
 
-La [page 13](../survival/13-kaplan-meier.qmd#log-rank) a trouvé que la survie sans révision diffère entre les implants A, B et C. Pour dire quels implants diffèrent, faites le **test du log-rank pour chaque paire** et ajustez avec Holm. Un modèle de Cox donne les tailles d'effet correspondantes : ajustez-le de nouveau avec un autre groupe de référence pour obtenir le hazard ratio (HR) de n'importe quelle paire.
+La [page 13](../survival/13-kaplan-meier.qmd#log-rank) a trouvé que la [survie sans révision](../glossary.qmd#survival){.term} diffère entre les implants A, B et C. Pour dire quels implants diffèrent, faites le **[test du log-rank](../glossary.qmd#log-rank-test){.term} pour chaque paire** et ajustez avec [Holm](../glossary.qmd#holm){.term}. Un [modèle de Cox](../glossary.qmd#cox-regression){.term} donne les [tailles d'effet](../glossary.qmd#effect-size){.term} correspondantes : ajustez-le de nouveau avec un autre [groupe de référence](../glossary.qmd#reference-group){.term} pour obtenir le [hazard ratio](../glossary.qmd#hazard-ratio){.term} (HR) de n'importe quelle paire.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -655,20 +655,20 @@ check_agree(list(chisq = survdiff(Surv(followup_years, revised) ~ implant, data 
                  hr_ab = implant_vs_b_hr["implant_vs_bA", "exp(coef)"]), reticulate::py$chk_overall)
 ```
 
-L'implant C diffère à la fois d'A et de B (p ajustée < 0.001 pour chacun). Il n'y avait pas de preuve claire d'une différence entre A et B (p = 0.520 ; hazard ratio de A par rapport à B 1.22, IC à 95 % de 0.67 à 2.24, la première ligne de la sortie de Cox). Par rapport à l'implant B, le hazard ratio de l'implant C était de 3.75 (IC à 95 % de 2.14 à 6.58, la deuxième ligne) ; par rapport à l'implant A, il était de 3.07 (IC à 95 % de 1.85 à 5.09 ; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)). La colonne `exp(-coef)` de R est le même rapport dans l'autre sens. La première sortie est le test global : χ² = 33.5 avec 2 degrés de liberté (Python n'affiche que la statistique et la valeur p).
+L'implant C diffère à la fois d'A et de B (p ajustée < 0.001 pour chacun). Il n'y avait pas de preuve claire d'une différence entre A et B (p = 0.520 ; hazard ratio de A par rapport à B 1.22, [IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.67 à 2.24, la première ligne de la sortie de Cox). Par rapport à l'implant B, le hazard ratio de l'implant C était de 3.75 (IC à 95 % de 2.14 à 6.58, la deuxième ligne) ; par rapport à l'implant A, il était de 3.07 (IC à 95 % de 1.85 à 5.09 ; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)). La colonne `exp(-coef)` de R est le même rapport dans l'autre sens. La première sortie est le [test global](../glossary.qmd#overall-test){.term} : [χ²](../glossary.qmd#chi-square-statistic){.term} = 33.5 avec 2 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} (Python n'affiche que la [statistique](../glossary.qmd#test-statistic){.term} et la [valeur p](../glossary.qmd#p-value){.term}).
 
 > **Results:** The log-rank test for revision-free survival across implants gave χ² = 33.5 (df = 2, p < 0.001). In pairwise log-rank tests with Holm's adjustment, p < 0.001 for implant C against implant A and against implant B, and p = 0.520 for implant A against implant B.
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : tests du log-rank deux à deux
-lifelines a `pairwise_logrank_test()`, qui fait toutes les paires d'un coup et vous laisse l'ajustement. Le modèle de Cox de lifelines s'arrête d'itérer un peu trop tôt par défaut ; comme à la [page 14](../survival/14-cox-regression.qmd), l'ajustement de Cox en Python passe donc `fit_options={"precision": 1e-12}` pour retrouver les hazard ratios de R. Le package survival de R n'a pas de fonction pour les paires : le code R boucle donc sur les paires ; `pairwise_survdiff()` du package survminer fait la même chose en un seul appel. Pour changer le groupe de référence, R utilise `relevel()` ; lifelines utilise la première catégorie d'un `Categorical` de pandas.
+lifelines a `pairwise_logrank_test()`, qui fait toutes les paires d'un coup et vous laisse l'ajustement. Le modèle de Cox de lifelines [s'arrête d'itérer](../glossary.qmd#convergence){.term} un peu trop tôt par défaut ; comme à la [page 14](../survival/14-cox-regression.qmd), l'ajustement de Cox en Python passe donc `fit_options={"precision": 1e-12}` pour retrouver les hazard ratios de R. Le package survival de R n'a pas de fonction pour les paires : le code R boucle donc sur les paires ; `pairwise_survdiff()` du package survminer fait la même chose en un seul appel. Pour changer le groupe de référence, R utilise `relevel()` ; lifelines utilise la première catégorie d'un `Categorical` de pandas.
 :::
 
 ## Faut-il d'abord un test global significatif ? {#overall-test-first}
 
-Une règle courante dit : ne faites des tests post hoc que si le test global (l'ANOVA, Kruskal-Wallis ou le khi-deux) est significatif. Elle vient de la méthode de la **différence minimale significative de Fisher** (*least significant difference*), qui fait des tests deux à deux non ajustés et s'appuie sur le test global comme filtre. Ce filtre ne protège pleinement qu'avec trois groupes.
+Une règle courante dit : ne faites des [tests post hoc](../glossary.qmd#post-hoc-test){.term} que si le [test global](../glossary.qmd#overall-test){.term} (l'[ANOVA](../glossary.qmd#anova){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term} ou le [khi-deux](../glossary.qmd#chi-square-test){.term}) est [significatif](../glossary.qmd#statistical-significance){.term}. Elle vient de la méthode de la **différence minimale significative de Fisher** (*least significant difference*), qui fait des tests [deux à deux](../glossary.qmd#pairwise-comparison){.term} non ajustés et s'appuie sur le test global comme filtre. Ce filtre ne protège pleinement qu'avec trois groupes.
 
-Les tests de cette page n'ont pas besoin du filtre. Le test HSD de Tukey et Games-Howell contrôlent le taux d'erreur par famille de tests tout seuls, et il en va de même du test de Dunn et de tout autre ensemble de tests deux à deux une fois l'ajustement de Holm appliqué. Exiger d'abord un test global significatif ne fait que les rendre plus stricts que nécessaire.
+Les tests de cette page n'ont pas besoin du filtre. Le [test HSD de Tukey](../glossary.qmd#tukey-hsd){.term} et [Games-Howell](../glossary.qmd#games-howell){.term} contrôlent le [taux d'erreur par famille de tests](../glossary.qmd#family-wise-error-rate){.term} tout seuls, et il en va de même du [test de Dunn](../glossary.qmd#dunn-test){.term} et de tout autre ensemble de tests deux à deux une fois l'[ajustement de Holm](../glossary.qmd#holm){.term} appliqué. Exiger d'abord un test global significatif ne fait que les rendre plus stricts que nécessaire.
 
 Les deux types de test peuvent aussi ne pas concorder, et ce n'est pas une contradiction :
 - **Un test global significatif sans paire significative**, comme pour les complications par classe ASA plus haut (p global = 0.016 ; aucune paire sous 0.05 après ajustement). Le test global rassemble les preuves des quatre classes, alors que chaque paire n'en utilise que deux, et les groupes ASA 1 et ASA 4 sont petits. Rapportez-le tel quel : les taux de complications différaient globalement entre les classes ASA, mais aucune paire de classes ne différait nettement.
@@ -684,7 +684,7 @@ Que faire :
 
 Toutes les comparaisons ne relèvent pas de la pêche aux résultats. Une étude qui compare un nouvel implant à l'implant standard a une comparaison **prédéfinie**, nommée dans le protocole avant toute collecte de données. Elle n'a besoin d'aucun ajustement, parce qu'elle n'est pas une comparaison parmi beaucoup d'autres. Si vous avez planifié trois comparaisons, comptez trois comparaisons dans l'ajustement, pas toutes les paires possibles.
 
-Tout le reste est **exploratoire** : des comparaisons choisies après avoir vu les données, ou un balayage de nombreux critères. Comptez dans l'ajustement chaque comparaison que vous avez examinée, pas seulement celles que vous rapportez, et qualifiez les résultats d'exploratoires : ils suggèrent des questions pour la prochaine étude, pas des conclusions.
+Tout le reste est **exploratoire** : des comparaisons choisies après avoir vu les données, ou un balayage de nombreux [critères](../glossary.qmd#outcome){.term}. Comptez dans l'ajustement chaque comparaison que vous avez examinée, pas seulement celles que vous rapportez, et qualifiez les résultats d'exploratoires : ils suggèrent des questions pour la prochaine étude, pas des conclusions.
 
 > **Methods:** Pairwise comparisons after the omnibus tests used Tukey's honestly significant difference test (after ANOVA), Dunn's test (after Kruskal-Wallis) and Fisher's exact tests (after chi-square), with Holm's adjustment for multiple comparisons where the method did not adjust itself. All pairwise comparisons were exploratory.
 >
@@ -692,7 +692,7 @@ Tout le reste est **exploratoire** : des comparaisons choisies après avoir vu 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : rapportez chaque comparaison que vous avez faite
-Faire dix comparaisons et ne rapporter que les deux significatives cache le nombre de chances que vous avez eues. Donnez le nombre de comparaisons et l'ajustement dans les Méthodes, et mettez l'ensemble des résultats deux à deux dans un tableau ou une annexe (matériel supplémentaire).
+Faire dix comparaisons et ne rapporter que les deux [significatives](../glossary.qmd#statistical-significance){.term} cache le nombre de chances que vous avez eues. Donnez le nombre de comparaisons et l'ajustement dans les Méthodes, et mettez l'ensemble des résultats [deux à deux](../glossary.qmd#pairwise-comparison){.term} dans un tableau ou une annexe (matériel supplémentaire).
 :::
 
 ```{r}
@@ -771,7 +771,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** À la [page 8, exercice 1](../catalog/08-three-plus-unmatched.qmd#exercises), l'IMC différait entre les classes ASA. Quelles paires de classes diffèrent ? Utilisez le test HSD de Tukey.
+**1.** À la [page 8, exercice 1](../catalog/08-three-plus-unmatched.qmd#exercises), l'IMC différait entre les classes ASA. Quelles paires de classes diffèrent ? Utilisez le [test HSD de Tukey](../glossary.qmd#tukey-hsd){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -792,14 +792,14 @@ print(pairwise_tukeyhsd(cohort["bmi"], cohort["asa"]).summary())
 
 > **Results:** In Tukey's HSD, all six pairwise differences in mean BMI had adjusted p < 0.01, including ASA 2 vs 1 (2.9 kg/m², 95% CI 0.6 to 5.2; p = 0.007) and ASA 4 vs 3 (4.1 kg/m², 95% CI 0.9 to 7.2; p = 0.006).
 
-Chaque paire diffère, et l'IMC moyen augmente à chaque échelon de la classe ASA. Les différences les moins certaines concernent les deux petites classes, ASA 1 et ASA 4.
+Chaque paire diffère, et l'IMC [moyen](../glossary.qmd#mean){.term} augmente à chaque échelon de la classe ASA. Les différences les moins certaines concernent les deux petites classes, ASA 1 et ASA 4.
 :::
 
-**2.** Un collègue compare les hommes et les femmes sur six caractéristiques oui/non (diabète, hypertension, apnée du sommeil, réhospitalisation, complications et sortie vers une clinique de réadaptation) avec le test exact de Fisher. Quel ajustement convient, et quelles différences y résistent ?
+**2.** Un collègue compare les hommes et les femmes sur six caractéristiques [oui/non](../glossary.qmd#binary){.term} (diabète, hypertension, apnée du sommeil, réhospitalisation, complications et sortie vers une clinique de réadaptation) avec le [test exact de Fisher](../glossary.qmd#fisher-exact-test){.term}. Quel ajustement convient, et quelles différences y résistent ?
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-C'est un criblage sur plusieurs critères, sans comparaison planifiée unique : les résultats sont donc exploratoires. L'ajustement de Holm maintient à 5 % la probabilité d'un faux positif quelque part ; Benjamini-Hochberg est acceptable pour un criblage, à condition d'étiqueter les résultats comme exploratoires.
+C'est un criblage sur plusieurs [critères](../glossary.qmd#outcome){.term}, sans [comparaison planifiée](../glossary.qmd#planned-comparison){.term} unique : les résultats sont donc [exploratoires](../glossary.qmd#prespecified){.term}. L'[ajustement de Holm](../glossary.qmd#holm){.term} maintient à 5 % la probabilité d'un [faux positif](../glossary.qmd#false-positive){.term} quelque part ; [Benjamini-Hochberg](../glossary.qmd#benjamini-hochberg){.term} est acceptable pour un criblage, à condition d'étiqueter les résultats comme exploratoires.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -822,7 +822,7 @@ print(pd.DataFrame({"unadjusted": by_sex_p, "holm": multipletests(by_sex_p, meth
 ```
 :::
 
-Seule l'apnée du sommeil diffère entre les hommes et les femmes après l'un ou l'autre ajustement (p ajustée < 0.001). La valeur p non ajustée de l'hypertension, 0.135, n'a jamais été proche, et la valeur p de Benjamini-Hochberg de chaque autre caractéristique est supérieure à 0.4.
+Seule l'apnée du sommeil diffère entre les hommes et les femmes après l'un ou l'autre ajustement (p ajustée < 0.001). La [valeur p](../glossary.qmd#p-value){.term} non ajustée de l'hypertension, 0.135, n'a jamais été proche, et la valeur p de Benjamini-Hochberg de chaque autre caractéristique est supérieure à 0.4.
 :::
 
 **3.** Sans la visite préopératoire, quelles paires de visites diffèrent pour l'utilisation d'une aide à la marche (6 semaines, 3 mois, 1 an) ? Rédigez la phrase de Résultats.

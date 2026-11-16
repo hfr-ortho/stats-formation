@@ -17,18 +17,18 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Les mêmes patients mesurés **trois fois ou plus** (avant l'opération, puis à 6 semaines, 3 mois et 1 an), ou des **ensembles appariés** de trois patients ou plus. C'est la [page 7](07-two-paired-groups.qmd) étendue à plus de deux mesures. Comme à la [page 8](08-three-plus-unmatched.qmd), chaque test pose d'abord une seule question : **le critère diffère-t-il quelque part entre les visites (ou les groupes) ?** [Quelles visites diffèrent ?](#which-groups-differ) explique la suite.
+Les mêmes patients mesurés **trois fois ou plus** (avant l'opération, puis à 6 semaines, 3 mois et 1 an), ou des **[ensembles appariés](../glossary.qmd#matched){.term}** de trois patients ou plus. C'est la [page 7](07-two-paired-groups.qmd) étendue à plus de deux mesures. Comme à la [page 8](08-three-plus-unmatched.qmd), chaque test pose d'abord une seule question : **le [critère](../glossary.qmd#outcome){.term} diffère-t-il quelque part entre les visites (ou les groupes) ?** [Quelles visites diffèrent ?](#which-groups-differ) explique la suite.
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
-Chaque section répond à une question sur l'un des jeux de données d'exercice : les PROM (mesures des résultats rapportés par le patient) et les ensembles appariés de la cohorte de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
+Chaque section répond à une question sur l'un des jeux de données d'exercice : les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient) et les ensembles appariés de la cohorte de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
 
-Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la cohorte ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
+Pour garder le code court, les exemples de prothèses articulaires utilisent tous les cas, y compris les deux cas des patients opérés des deux côtés (80 patients dans toute la [cohorte](../glossary.qmd#cohort){.term} ; [page 2](../foundations/02-demographics.qmd#setup) les compte). Dans une vraie étude, décidez comment les traiter ([page 3](../foundations/03-distributions.qmd#paired)) et dites ce que vous avez fait.
 :::
 
 ::: {.callout-warning}
 ## ⚠️ Attention : ces tests écartent tout patient qui a manqué une visite
-L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exigent que chaque patient soit mesuré à **chaque** visite. Un patient qui a manqué une visite est écarté complètement, avec ses autres mesures. Ci-dessous, 574 interventions avaient un score de fonction physique PROMIS préopératoire, mais seulement 328 en avaient quatre : l'analyse perd donc 574 − 328 = 246 interventions (246 ÷ 574 = 43 %) ; la première section les compte. Si les patients qui manquent des visites diffèrent des autres, le résultat est biaisé. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) utilisent toutes les données disponibles de chacun et sont en général le meilleur choix pour des PROM répétés.
+L'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term}, le [test de Friedman](../glossary.qmd#friedman-test){.term} et le [test Q de Cochran](../glossary.qmd#cochran-q-test){.term} exigent que chaque patient soit mesuré à **chaque** visite. Un patient qui a manqué une visite est écarté complètement, avec ses autres mesures. Ci-dessous, 574 interventions avaient un score de fonction physique PROMIS préopératoire, mais seulement 328 en avaient quatre : l'analyse perd donc 574 − 328 = 246 interventions (246 ÷ 574 = 43 %) ; la première section les compte. Si les patients qui manquent des visites diffèrent des autres, le résultat est [biaisé](../glossary.qmd#bias){.term}. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) utilisent toutes les données disponibles de chacun et sont en général le meilleur choix pour des PROM répétés.
 :::
 
 ## ANOVA à mesures répétées {#repeated-measures-anova}
@@ -37,13 +37,13 @@ L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exig
 
 ### Quand l'utiliser
 
-- Une **mesure** prise **trois fois ou plus** chez les mêmes patients (ou une fois chez chaque membre d'un ensemble apparié).
-- Les changements entre les visites sont à peu près normaux, ou les patients sont nombreux.
-- **Sphéricité :** la dispersion des changements est semblable pour chaque paire de visites. Le test de Mauchly la vérifie ; s'il échoue, la correction de **Greenhouse-Geisser** ajuste les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}. Les deux programmes ci-dessous donnent les deux.
+- Une **[mesure](../glossary.qmd#continuous-variable){.term}** prise **trois fois ou plus** chez les mêmes patients (ou une fois chez chaque membre d'un [ensemble apparié](../glossary.qmd#matched){.term}).
+- Les changements entre les visites sont [à peu près normaux](../glossary.qmd#normal-distribution){.term}, ou les patients sont nombreux.
+- **Sphéricité :** la [dispersion](../glossary.qmd#spread){.term} des changements est semblable pour chaque paire de visites. Le [test de Mauchly](../glossary.qmd#sphericity){.term} la vérifie ; s'il échoue, la correction de **[Greenhouse-Geisser](../glossary.qmd#greenhouse-geisser){.term}** ajuste les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}. Les deux programmes ci-dessous donnent les deux.
 - Seuls les patients mesurés à **chaque** visite sont inclus (voir l'avertissement ci-dessus).
-- Si le critère est [asymétrique](../glossary.qmd#skewed){.term}, borné ou ordinal → le [test de Friedman](#friedman).
+- Si le [critère](../glossary.qmd#outcome){.term} est [asymétrique](../glossary.qmd#skewed){.term}, [borné](../glossary.qmd#bounded-scale){.term} ou [ordinal](../glossary.qmd#ordinal){.term} → le [test de Friedman](#friedman).
 
-La fonction physique PROMIS est un score T : 50 est la moyenne de la population générale des États-Unis. La version à quatre questions de PROMIS-29+2 va de 22.5 à 57.0, et 57.0 est le meilleur score qu'elle puisse enregistrer.
+La fonction physique PROMIS est un [score T](../glossary.qmd#t-score){.term} : 50 est la moyenne de la population générale des États-Unis. La version à quatre questions de PROMIS-29+2 va de 22.5 à 57.0, et 57.0 est le meilleur score qu'elle puisse enregistrer.
 
 ### Ce que fait vraiment le test
 
@@ -52,7 +52,7 @@ L'ANOVA à mesures répétées est une [ANOVA à un facteur](08-three-plus-unmat
 1. Calculer la [moyenne](../glossary.qmd#mean){.term} de chaque visite, et la moyenne propre à chaque patient sur toutes les visites.
 2. Découper la variation des scores en trois parts. **Entre les visites :** l'écart entre les moyennes des visites et la moyenne générale. **Entre les patients :** l'écart entre la moyenne propre à chaque patient et la moyenne générale. **Le reste :** ce dont les scores de chaque patient varient encore une fois pris en compte les moyennes des visites et le niveau propre au patient.
 3. Mettre de côté la part entre les patients. Certains patients ont des scores élevés à chaque visite et d'autres des scores bas, et cela ne dit rien du changement au fil du temps.
-4. Diviser chacune des deux autres parts par ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}, puis diviser les résultats : **F = variation entre les visites ÷ variation restante**. Si les scores ne changeaient pas au fil du temps, F serait proche de 1. Plus F est grand, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
+4. Diviser chacune des deux autres parts par ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}, puis diviser les résultats : **F = variation entre les visites ÷ variation restante**. Si les scores ne changeaient pas au fil du temps, [F](../glossary.qmd#f-statistic){.term} serait proche de 1. Plus F est grand, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
 
 C'est parce qu'il met de côté les différences entre les patients que le test est sensible : chaque patient sert de comparaison à lui-même, comme dans le [test t pour échantillons appariés](07-two-paired-groups.qmd#paired-t). Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule F à la main.
 
@@ -165,7 +165,7 @@ check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_
 - **p** (R affiche `7.55e-147` ; le tableau de pingouin l'arrondit à `0.0` dans la ligne `p_unc`) : très inférieure à 0.001. `e-147` est la [notation scientifique](../glossary.qmd#scientific-notation){.term} : le point décimal recule de 147 rangs vers la gauche.
 - **Mauchly's Test for Sphericity** (R) : W = 0.995, p = 0.903 (`W_spher` et `p_spher` en Python, qui les résume par `sphericity True`). Aucune preuve que la sphéricité soit violée : le résultat non corrigé reste valable.
 - **Sphericity Corrections** (R) ou **eps** et **p_GG_corr** (Python) : l'epsilon de Greenhouse-Geisser vaut 0.997 (1 signifie une sphéricité parfaite), et la valeur p corrigée reste très inférieure à 0.001. `HFe` et les colonnes `[HF]` de R sont une seconde correction, celle de Huynh-Feldt ; vous pouvez les ignorer ici.
-- **pes = 0.499** (R) ou **np2** (Python) : l'êta carré partiel, ci-dessous.
+- **pes = 0.499** (R) ou **np2** (Python) : l'[êta carré partiel](../glossary.qmd#eta-squared){.term}, ci-dessous.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : F à la main
@@ -219,7 +219,7 @@ check_agree(list(ss_visits = ss_visits, ss_cases = ss_cases, ss_left = ss_left, 
 
 ### Taille d'effet et IC à 95 %
 
-Un intervalle de confiance (IC) accompagne la taille d'effet. L'**êta carré partiel (η²~p~)** est la part de la variation intra-patient qu'expliquent les visites. Comme repère approximatif, 0.01 est petit, 0.06 moyen et 0.14 grand. L'**êta carré généralisé** (ges = 0.417 en R) compte aussi les différences *entre* patients, ce qui le rend comparable avec des plans d'étude qui ne sont pas à mesures répétées ; rapportez-le quand les lecteurs compareront des études de plans différents.
+Un intervalle de confiance (IC) accompagne la taille d'effet. L'**êta carré partiel (η²~p~)** est la part de la variation intra-patient qu'expliquent les visites. Comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term}, 0.01 est petit, 0.06 moyen et 0.14 grand. L'**êta carré généralisé** (ges = 0.417 en R) compte aussi les différences *entre* patients, ce qui le rend comparable avec des plans d'étude qui ne sont pas à [mesures répétées](../glossary.qmd#repeated-measures){.term} ; rapportez-le quand les lecteurs compareront des études de plans différents.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -236,7 +236,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin n'en calcule pas l'IC
 ```
 :::
 
-η²~p~ = 0.50 : un effet très grand. Les visites expliquent environ la moitié de la variation des scores de chaque patient au cours de l'année. R affiche aussi un intervalle de confiance (IC) à 95 % unilatéral, de 0.47 à 1.00 : η²~p~ ne peut pas être négatif, donc R ne donne qu'une borne inférieure et fixe la borne supérieure à 1.00. pingouin ne calcule pas d'IC. Les titres des sorties de R mentionnent « type III » et « Type I » : ce sont des façons de répartir la variation quand un modèle a plusieurs prédicteurs ; avec un seul prédicteur, elles donnent le même résultat.
+η²~p~ = 0.50 : un effet très grand. Les visites expliquent environ la moitié de la variation des scores de chaque patient au cours de l'année. R affiche aussi un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % [unilatéral](../glossary.qmd#two-sided){.term}, de 0.47 à 1.00 : η²~p~ ne peut pas être négatif, donc R ne donne qu'une borne inférieure et fixe la borne supérieure à 1.00. pingouin ne calcule pas d'IC. Les titres des sorties de R mentionnent « type III » et « Type I » : ce sont des façons de répartir la variation quand un [modèle](../glossary.qmd#model){.term} a plusieurs [prédicteurs](../glossary.qmd#predictor){.term} ; avec un seul prédicteur, elles donnent le même résultat.
 
 ### Rédiger les résultats
 
@@ -246,7 +246,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin n'en calcule pas l'IC
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un F significatif ne dit pas quelles visites diffèrent
-L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *quand*, comparez les visites avec des tests appariés et une correction pour comparaisons multiples ([page 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Et rappelez-vous qui manque : les patients derrière les 246 interventions sans données complètes ont peut-être récupéré différemment.
+L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *quand*, comparez les visites avec des tests [appariés](../glossary.qmd#paired){.term} et une correction pour [comparaisons multiples](../glossary.qmd#multiple-comparisons){.term} ([page 15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova)). Et rappelez-vous qui manque : les patients derrière les 246 interventions sans données complètes ont peut-être récupéré différemment.
 :::
 
 ::: {.callout-tip}
@@ -262,16 +262,16 @@ L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *
 
 ### Quand l'utiliser
 
-- Un critère mesuré **trois fois ou plus** chez les mêmes patients, quand il est **[asymétrique](../glossary.qmd#skewed){.term}**, **ordinal** ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**. Le score EFAS additionne six questions, et à 12 mois les scores s'entassent près de son maximum, 24.
+- Un [critère](../glossary.qmd#outcome){.term} mesuré **trois fois ou plus** chez les mêmes patients, quand il est **[asymétrique](../glossary.qmd#skewed){.term}**, **[ordinal](../glossary.qmd#ordinal){.term}** ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**. Le score EFAS additionne six questions, et à 12 mois les scores s'entassent près de son maximum, 24.
 - Il classe les scores de chaque patient entre eux (1er, 2e, 3e) et demande si certaines visites ont tendance à être mieux classées que d'autres.
 - Seuls les patients mesurés à **chaque** visite sont inclus.
-- Si le critère est une mesure à peu près normale → l'[ANOVA à mesures répétées](#repeated-measures-anova).
+- Si le critère est une [mesure](../glossary.qmd#continuous-variable){.term} [à peu près normale](../glossary.qmd#normal-distribution){.term} → l'[ANOVA à mesures répétées](#repeated-measures-anova).
 
 ### Ce que fait vraiment le test
 
 Le test de Friedman compare les visites à l'intérieur de chaque patient, en n'utilisant que l'ordre de ses propres scores.
 
-1. Prendre un patient à la fois et donner à ses scores un [rang](../glossary.qmd#rank){.term} d'une visite à l'autre : 1 pour le plus bas, 2 pour le suivant et 3 pour le plus élevé. Les scores ex æquo partagent la moyenne de leurs rangs.
+1. Prendre un patient à la fois et donner à ses scores un [rang](../glossary.qmd#rank){.term} d'une visite à l'autre : 1 pour le plus bas, 2 pour le suivant et 3 pour le plus élevé. Les [scores ex æquo](../glossary.qmd#ties){.term} partagent la moyenne de leurs rangs.
 2. Calculer le **rang moyen** de chaque visite sur l'ensemble des patients.
 3. Si les scores ne changeaient pas d'une visite à l'autre, chaque visite aurait la même probabilité de recevoir n'importe quel rang, et le rang moyen de chaque visite serait proche de 2, le milieu de 1, 2 et 3.
 4. La [statistique de test](../glossary.qmd#test-statistic){.term} mesure l'écart entre les rangs moyens des visites et cette valeur du milieu. Plus l'écart est grand, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
@@ -280,7 +280,7 @@ Comme chaque patient est classé séparément, peu importe que certains patients
 
 ### Regarder d'abord les données
 
-Le bras orthèse de l'essai de la [page 6](06-two-unpaired-groups.qmd#unpaired-t) compte 60 patients randomisés, dont certains ont manqué des visites.
+Le bras orthèse de l'essai de la [page 6](06-two-unpaired-groups.qmd#unpaired-t) compte 60 patients [randomisés](../glossary.qmd#randomized-trial){.term}, dont certains ont manqué des visites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -378,7 +378,7 @@ check_agree(list(chisq = unname(efas_test$statistic), df = unname(efas_test$para
 - **Friedman chi-squared = 84.9** (R) ou **Q** (Python) : à quel point les visites se classent de façon cohérente dans le même ordre d'un patient à l'autre.
 - **df = 2** (`ddof1` en Python) : trois visites moins une.
 - **p < 0.001 :** des classements aussi cohérents seraient très improbables si les scores ne changeaient pas d'une visite à l'autre. R affiche `p-value < 2.2e-16`, la plus petite valeur qu'il montre ; le `p_unc` de Python vaut `3.589140e-19`. Les deux sont la [notation scientifique](../glossary.qmd#scientific-notation){.term} de nombres très inférieurs à 0.001.
-- **W = 0.849** (Python) : le W de Kendall, ci-dessous.
+- **W = 0.849** (Python) : le [W de Kendall](../glossary.qmd#kendalls-w){.term}, ci-dessous.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : la statistique de Friedman à la main
@@ -433,7 +433,7 @@ check_agree(list(q_no_ties = q_no_ties, tie_correction = tie_correction, q = q_n
 
 ### Taille d'effet et IC à 95 %
 
-Le **W de Kendall** mesure à quel point les scores des patients classent les visites dans le même ordre : 0 signifie aucun accord, 1 signifie que les scores de chaque patient classent les trois visites de la même façon. Comme repère approximatif, 0.1 est petit, 0.3 modéré et 0.5 grand. W est la statistique de Friedman divisée par la plus grande valeur qu'elle puisse prendre, n × (k − 1) pour n patients et k visites : 84.94 ÷ (50 × 2) = 0.85.
+Le **W de Kendall** mesure à quel point les scores des patients classent les visites dans le même ordre : 0 signifie aucun accord, 1 signifie que les scores de chaque patient classent les trois visites de la même façon. Comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term}, 0.1 est petit, 0.3 modéré et 0.5 grand. W est la statistique de Friedman divisée par la plus grande valeur qu'elle puisse prendre, n × (k − 1) pour [n](../glossary.qmd#sample-size){.term} patients et k visites : 84.94 ÷ (50 × 2) = 0.85.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -470,7 +470,7 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi un intervalle de confiance (IC) à 95 % unilatéral, de 0.78 à 1.00 : W ne peut pas être négatif, donc R ne donne qu'une borne inférieure. L'IC vient d'un bootstrap, ce qui explique la graine dans le code ; pingouin n'en calcule pas.
+W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % [unilatéral](../glossary.qmd#two-sided){.term}, de 0.78 à 1.00 : W ne peut pas être négatif, donc R ne donne qu'une borne inférieure. L'IC vient d'un [bootstrap](../glossary.qmd#bootstrap){.term}, ce qui explique la graine dans le code ; pingouin n'en calcule pas.
 
 ### Rédiger les résultats
 
@@ -480,12 +480,12 @@ W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le test de Friedman ignore l'ampleur des changements
-Il n'utilise que le classement des visites de chaque patient. Un patient qui a gagné 1 point et un autre qui en a gagné 10 comptent pareil. Rapportez les médianes (ou les changements) pour que les lecteurs voient l'ampleur de l'amélioration, et jugez-la par rapport à la différence minimale cliniquement importante (DMCI) ([page 3](../foundations/03-distributions.qmd#effect-sizes)).
+Il n'utilise que le classement des visites de chaque patient. Un patient qui a gagné 1 point et un autre qui en a gagné 10 comptent pareil. Rapportez les [médianes](../glossary.qmd#median){.term} (ou les changements) pour que les lecteurs voient l'ampleur de l'amélioration, et jugez-la par rapport à la [différence minimale cliniquement importante](../glossary.qmd#mcid){.term} (DMCI) ([page 3](../foundations/03-distributions.qmd#effect-sizes)).
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : formats de données
-`friedman.test()` de R prend une formule, `outcome ~ visit | patient`, sur des données en format long. `friedman()` de pingouin prend aussi des données en format long ; `friedmanchisquare()` de scipy veut au contraire des données en format large, une colonne par visite. Tous trois corrigent pour les scores ex æquo chez un même patient : ils concordent donc.
+`friedman.test()` de R prend une formule, `outcome ~ visit | patient`, sur des données en [format long](../glossary.qmd#long-format){.term}. `friedman()` de pingouin prend aussi des données en format long ; `friedmanchisquare()` de scipy veut au contraire des données en format large, une colonne par visite. Tous trois corrigent pour les scores ex æquo chez un même patient : ils concordent donc.
 :::
 
 ## Test Q de Cochran {#cochran-q}
@@ -494,7 +494,7 @@ Il n'utilise que le classement des visites de chaque patient. Un patient qui a g
 
 ### Quand l'utiliser
 
-- Un critère **oui/non** mesuré **trois fois ou plus** chez les mêmes patients (ou une fois chez chaque membre d'un ensemble apparié).
+- Un [critère **oui/non**](../glossary.qmd#binary){.term} mesuré **trois fois ou plus** chez les mêmes patients (ou une fois chez chaque membre d'un [ensemble apparié](../glossary.qmd#matched){.term}).
 - Il étend le [test de McNemar](07-two-paired-groups.qmd#mcnemar) à plus de deux visites et, comme lui, il n'apprend que des patients dont la réponse a changé.
 - Seuls les patients mesurés à **chaque** visite sont inclus.
 
@@ -507,7 +507,7 @@ Le test Q de Cochran compare le nombre de patients qui répondent oui à chaque 
 3. Si rien ne changeait au fil du temps, chaque réponse oui d'un patient aurait la même probabilité de tomber sur n'importe quelle visite : les totaux des visites seraient donc à peu près égaux.
 4. La [statistique de test](../glossary.qmd#test-statistic){.term}, **Q**, mesure à quel point les totaux des visites sont inégaux, par rapport à ce que le hasard seul produirait. Plus Q est grand, plus la [valeur p](../glossary.qmd#p-value){.term} est petite.
 
-Avec seulement deux visites, Q est la statistique du [test de McNemar](07-two-paired-groups.qmd#mcnemar) sans sa correction de continuité. Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule Q à la main.
+Avec seulement deux visites, Q est la statistique du [test de McNemar](07-two-paired-groups.qmd#mcnemar) sans sa [correction de continuité](../glossary.qmd#continuity-correction){.term}. Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule Q à la main.
 
 ### Regarder d'abord les données
 
@@ -582,7 +582,7 @@ check_agree(list(q = unname(aid_test$statistic), df = unname(aid_test$parameter)
 
 ### Lire le résultat
 
-- **Q = 186.8, df = 3 :** la statistique Q de Cochran, avec quatre visites moins une comme degrés de liberté.
+- **Q = 186.8, df = 3 :** la statistique Q de Cochran, avec quatre visites moins une comme [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}.
 - **p < 0.001** (R affiche `p-value < 2.2e-16`, la plus petite valeur qu'il montre ; le `p_unc` de Python vaut `3.008880e-40`) : une utilisation d'aide à la marche aussi différente d'une visite à l'autre serait très improbable si elle n'avait pas changé.
 
 ::: {.callout-note collapse="true"}
@@ -639,7 +639,7 @@ check_agree(list(q = cochran_q(answers), q_changed = cochran_q(answers[case_tota
 
 ### Taille d'effet et IC à 95 %
 
-Le test Q de Cochran n'a pas de taille d'effet unique et standard. Décrivez la **proportion à chaque visite**, avec son IC à 95 % (l'intervalle de Wilson de la [page 4](04-describe-one-group.qmd#proportion)), et les changements entre visites en points de pourcentage.
+Le test Q de Cochran n'a pas de [taille d'effet](../glossary.qmd#effect-size){.term} unique et standard. Décrivez la **[proportion](../glossary.qmd#proportion){.term} à chaque visite**, avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 % (l'[intervalle de Wilson](../glossary.qmd#wilson-interval){.term} de la [page 4](04-describe-one-group.qmd#proportion)), et les changements entre visites en [points de pourcentage](../glossary.qmd#percentage-point){.term}.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -688,31 +688,31 @@ L'utilisation est passée de 114 à 194 des 328 interventions entre la visite pr
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le test Q ne donne pas la direction
-L'utilisation a **augmenté** puis **diminué**. Le test Q de Cochran dit seulement qu'elle n'était pas la même à chaque visite. Pour dire quels changements sont réels, comparez des paires de visites avec le test de McNemar et une correction pour comparaisons multiples ([page 15](../beyond/15-post-hoc.qmd#after-cochran-q)).
+L'utilisation a **augmenté** puis **diminué**. Le test Q de Cochran dit seulement qu'elle n'était pas la même à chaque visite. Pour dire quels changements sont réels, comparez des paires de visites avec le [test de McNemar](../glossary.qmd#mcnemar-test){.term} et une correction pour [comparaisons multiples](../glossary.qmd#multiple-comparisons){.term} ([page 15](../beyond/15-post-hoc.qmd#after-cochran-q)).
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : où trouver le test Q de Cochran
-R de base n'a pas de test Q de Cochran ; `DescTools::CochranQTest()` (ou `rstatix::cochran_qtest()`) le fait. En Python, `cochran()` de pingouin prend des données en format long ; `cochrans_q()` de statsmodels prend un tableau large avec une colonne par visite. Tous donnent le même Q.
+R de base n'a pas de test Q de Cochran ; `DescTools::CochranQTest()` (ou `rstatix::cochran_qtest()`) le fait. En Python, `cochran()` de pingouin prend des données en [format long](../glossary.qmd#long-format){.term} ; `cochrans_q()` de statsmodels prend un tableau large avec une colonne par visite. Tous donnent le même Q.
 :::
 
 ## Régression de Cox stratifiée {#stratified-cox}
 
-**La question :** dans des ensembles de trois patients appariés selon l'intervention, l'âge, le sexe, l'IMC et la classe ASA, le risque de révision diffère-t-il entre les implants A, B et C ?
+**La question :** dans des ensembles de trois patients [appariés](../glossary.qmd#matched){.term} selon l'intervention, l'âge, le sexe, l'IMC et la classe ASA, le [risque](../glossary.qmd#risk){.term} de révision diffère-t-il entre les implants A, B et C ?
 
 ### Quand l'utiliser
 
-- Le critère est un **délai jusqu'à un événement**, et les patients viennent en **ensembles appariés** de trois ou plus.
-- Un modèle de Cox **stratifié** par ensemble apparié compare les implants seulement **à l'intérieur** des ensembles, comme à la [page 7](07-two-paired-groups.qmd#stratified-cox), qui n'utilisait que les patients A et C des mêmes ensembles.
-- Avec peu d'événements, attendez-vous à des IC larges. La [page 14](../survival/14-cox-regression.qmd) traite la régression de Cox en entier.
+- Le [critère](../glossary.qmd#outcome){.term} est un **[délai jusqu'à un événement](../glossary.qmd#time-to-event){.term}**, et les patients viennent en **ensembles appariés** de trois ou plus.
+- Un [modèle de Cox](../glossary.qmd#cox-regression){.term} **[stratifié](../glossary.qmd#stratification){.term}** par ensemble apparié compare les implants seulement **à l'intérieur** des ensembles, comme à la [page 7](07-two-paired-groups.qmd#stratified-cox), qui n'utilisait que les patients A et C des mêmes ensembles.
+- Avec peu d'[événements](../glossary.qmd#event){.term}, attendez-vous à des [IC](../glossary.qmd#confidence-interval){.term} larges. La [page 14](../survival/14-cox-regression.qmd) traite la régression de Cox en entier.
 
 ### Ce que fait vraiment le test
 
 Un modèle de Cox stratifié fonctionne comme le modèle de Cox de la [page 8](08-three-plus-unmatched.qmd#cox), à une différence près : chaque comparaison reste à l'intérieur d'un ensemble apparié.
 
 1. Prendre un ensemble apparié à la fois et suivre ses trois patients à partir de l'opération.
-2. À chaque révision, regarder quels membres de l'ensemble étaient encore suivis juste avant : les patients [à risque](../glossary.qmd#at-risk){.term} de cet ensemble.
-3. Si les implants comportaient le même risque, la révision pouvait toucher n'importe lequel de ces membres avec la même probabilité. Le modèle essaie des valeurs pour le [hazard ratio](../glossary.qmd#hazard-ratio){.term} de chaque implant et garde celles avec lesquelles les révisions réellement survenues, prises ensemble, étaient les plus probables.
+2. À chaque révision, regarder quels membres de l'ensemble étaient encore [suivis](../glossary.qmd#follow-up){.term} juste avant : les patients [à risque](../glossary.qmd#at-risk){.term} de cet ensemble.
+3. Si les implants comportaient le même risque, la révision pouvait toucher n'importe lequel de ces membres avec la même probabilité. Le [modèle](../glossary.qmd#model){.term} essaie des valeurs pour le [hazard ratio](../glossary.qmd#hazard-ratio){.term} de chaque implant et garde celles avec lesquelles les révisions réellement survenues, prises ensemble, étaient les plus probables.
 4. Une révision n'apprend rien au modèle si aucun autre membre de l'ensemble n'était encore suivi, et un ensemble sans aucune révision non plus.
 
 Les patients d'un ensemble se ressemblent pour les facteurs d'appariement : ces facteurs ne peuvent donc pas expliquer une différence entre les implants. Une fois le modèle exécuté, un encadré sous « Lire le résultat » calcule à la main les révisions observées et attendues à l'intérieur des ensembles.
@@ -797,8 +797,8 @@ check_agree(list(hr_b = set_hr["implantB", "exp(coef)"], hr_c = set_hr["implantC
 - **n = 156, number of events = 24 :** 52 ensembles de trois patients, 24 révisions.
 - **exp(coef) :** le hazard ratio de chaque implant par rapport à l'implant A, à l'intérieur des ensembles appariés. Implant B : 0.43 ; implant C : 3.91.
 - **lower .95 / upper .95 :** l'IC de l'implant B (de 0.08 à 2.25) est très large et contient 1 ; celui de l'implant C (de 1.28 à 11.95) ne le contient pas.
-- **Pr(>|z|)** (`p` en Python) : la valeur p de chaque implant par rapport à A, p = 0.320 pour B et p = 0.017 pour C.
-- **Likelihood ratio test = 13.48 on 2 df, p = 0.001 :** le test global qui demande si l'implant compte du tout ; nous le rapportons comme 13.5. Python l'affiche sur la ligne sous son tableau : la statistique, ses degrés de liberté et la valeur p (0.00118). Ne le confondez pas avec le « Score (logrank) test » de R, deux lignes plus bas, qui affiche par hasard 13.5.
+- **Pr(>|z|)** (`p` en Python) : la [valeur p](../glossary.qmd#p-value){.term} de chaque implant par rapport à A, p = 0.320 pour B et p = 0.017 pour C.
+- **Likelihood ratio test = 13.48 on 2 df, p = 0.001 :** le [test global](../glossary.qmd#overall-test){.term} qui demande si l'implant compte du tout ; nous le rapportons comme 13.5. Python l'affiche sur la ligne sous son tableau : la statistique, ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} et la valeur p (0.00118). Ne le confondez pas avec le « [Score (logrank) test](../glossary.qmd#score-test){.term} » de R, deux lignes plus bas, qui affiche par hasard 13.5.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : révisions observées et attendues à l'intérieur des ensembles, à la main
@@ -854,7 +854,7 @@ check_agree(list(expected_a = expected[["A"]], expected_b = expected[["B"]], exp
 
 ### Taille d'effet et IC à 95 %
 
-Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles appariés, l'implant C avait un hazard (risque instantané) de révision environ quatre fois plus élevé que celui de l'implant A (3.91, IC à 95 % de 1.28 à 11.95). L'estimation pour l'implant B (0.43, IC à 95 % de 0.08 à 2.25) est trop imprécise pour être interprétée.
+Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles appariés, l'implant C avait un [hazard](../glossary.qmd#hazard){.term} (risque instantané) de révision environ quatre fois plus élevé que celui de l'implant A (3.91, IC à 95 % de 1.28 à 11.95). L'[estimation](../glossary.qmd#estimate){.term} pour l'implant B (0.43, IC à 95 % de 0.08 à 2.25) est trop [imprécise](../glossary.qmd#precision){.term} pour être interprétée.
 
 ### Rédiger les résultats
 
@@ -864,26 +864,26 @@ Les **hazard ratios** avec leur IC à 95 % : à l'intérieur des ensembles app
 
 ::: {.callout-warning}
 ## ⚠️ Attention : seulement 24 événements
-Un modèle de Cox a besoin d'événements, pas seulement de patients. Avec 24 révisions réparties sur trois implants, les IC sont larges et le modèle ne permet pas d'ajuster sur quoi que ce soit d'autre. La [page 14](../survival/14-cox-regression.qmd#choosing-covariates) explique combien d'événements un modèle demande.
+Un modèle de Cox a besoin d'événements, pas seulement de patients. Avec 24 révisions réparties sur trois implants, les IC sont larges et le modèle ne permet pas d'[ajuster sur](../glossary.qmd#adjustment){.term} quoi que ce soit d'autre. La [page 14](../survival/14-cox-regression.qmd#choosing-covariates) explique combien d'événements un modèle demande.
 :::
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : strates et convergence
-Comme à la [page 7](07-two-paired-groups.qmd#stratified-cox), R met `strata(set_id)` dans la formule alors que lifelines prend `strata=["set_id"]`. Ici la convergence par défaut de lifelines concorde exactement avec R ; avec les paires de la page 7, elle s'arrêtait un peu trop tôt et demandait `fit_options={"precision": 1e-9}`. Si les deux programmes diffèrent à la quatrième décimale, resserrez-la.
+Comme à la [page 7](07-two-paired-groups.qmd#stratified-cox), R met `strata(set_id)` dans la formule alors que lifelines prend `strata=["set_id"]`. Ici la [convergence](../glossary.qmd#convergence){.term} par défaut de lifelines concorde exactement avec R ; avec les paires de la page 7, elle s'arrêtait un peu trop tôt et demandait `fit_options={"precision": 1e-9}`. Si les deux programmes diffèrent à la quatrième décimale, resserrez-la.
 :::
 
 ## Quelles visites diffèrent ? {#which-groups-differ}
 
-Chaque test ci-dessus répond à « existe-t-il une différence entre les visites (ou les implants) ? ». Quand la réponse est oui, la question suivante est de savoir quelles paires diffèrent. Comparer chaque paire avec un test apparié ordinaire augmente le risque de faux positif : quatre visites font six paires.
+Chaque test ci-dessus répond à « existe-t-il une différence entre les visites (ou les implants) ? ». Quand la réponse est oui, la question suivante est de savoir quelles paires diffèrent. Comparer chaque paire avec un test [apparié](../glossary.qmd#paired){.term} ordinaire augmente le risque de [faux positif](../glossary.qmd#false-positive){.term} : quatre visites font six paires.
 
 | Après | À utiliser | Page |
 |---|---|---|
-| ANOVA à mesures répétées | Tests t appariés avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova) |
-| Friedman | Tests des rangs signés de Wilcoxon (ou de Conover) deux à deux avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-friedman) |
-| Q de Cochran | Tests de McNemar deux à deux avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-cochran-q) |
-| Cox stratifiée | Hazard ratios par rapport à une référence choisie | [14](../survival/14-cox-regression.qmd) |
+| [ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term} | [Tests t appariés](../glossary.qmd#t-test){.term} avec [ajustement de Holm](../glossary.qmd#holm){.term} | [15](../beyond/15-post-hoc.qmd#after-repeated-measures-anova) |
+| [Friedman](../glossary.qmd#friedman-test){.term} | [Tests des rangs signés de Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term} (ou de [Conover](../glossary.qmd#conover-test){.term}) [deux à deux](../glossary.qmd#pairwise-comparison){.term} avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-friedman) |
+| [Q de Cochran](../glossary.qmd#cochran-q-test){.term} | [Tests de McNemar](../glossary.qmd#mcnemar-test){.term} deux à deux avec ajustement de Holm | [15](../beyond/15-post-hoc.qmd#after-cochran-q) |
+| [Cox stratifiée](../glossary.qmd#stratification){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} par rapport à une [référence](../glossary.qmd#reference-group){.term} choisie | [14](../survival/14-cox-regression.qmd) |
 
-Pour des PROM répétés, un [modèle mixte](../beyond/16-mixed-models.qmd#why-mixed-models) répond aux deux questions à la fois (le score change-t-il, et à quelles visites ?) tout en gardant les patients qui ont manqué une visite.
+Pour des [PROM](../glossary.qmd#prom){.term} répétés, un [modèle mixte](../beyond/16-mixed-models.qmd#why-mixed-models) répond aux deux questions à la fois (le score change-t-il, et à quelles visites ?) tout en gardant les patients qui ont manqué une visite.
 
 ```{r}
 #| include: false
@@ -985,7 +985,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Refaites l'ANOVA à mesures répétées pour la fonction physique PROMIS chez les patients avec une prothèse de hanche seulement (HOOS JR, score de la hanche pour prothèse articulaire ; `instrument == "HOOS JR"`).
+**1.** Refaites l'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term} pour la fonction physique PROMIS chez les patients avec une prothèse de hanche seulement (HOOS JR, score de la hanche pour prothèse articulaire ; `instrument == "HOOS JR"`).
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -1026,7 +1026,7 @@ print(pf_hips.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[["preop", "
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-La douleur est un score ordinal de 0 à 10, et les mêmes patients sont mesurés trois fois : le **test de Friedman**.
+La douleur est un score [ordinal](../glossary.qmd#ordinal){.term} de 0 à 10, et les mêmes patients sont mesurés trois fois : le **[test de Friedman](../glossary.qmd#friedman-test){.term}**.
 
 ::: {.panel-tabset group="language"}
 ## R

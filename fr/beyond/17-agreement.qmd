@@ -16,7 +16,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Avant d'intégrer une mesure dans une étude, il faut se demander : si on la refaisait, obtiendrait-on la même réponse ? Les angles d'alignement sur les radiographies des longs axes (*long-leg radiographs*) en sont un bon exemple. Avant une ostéotomie autour du genou, le chirurgien calcule la correction à partir de l'angle hanche-genou-cheville (HKA), de l'angle tibial proximal médial (MPTA) et de l'angle fémoral distal latéral (LDFA) : une erreur de lecture devient donc une erreur de correction. Deux chirurgiens peuvent placer les mêmes repères un peu différemment, et un même chirurgien peut les placer autrement un autre jour. Cette page montre comment mesurer cela, avec l'étude de fiabilité des données d'exercice : 60 genoux, chacun mesuré par deux évaluateurs (R1 et R2), deux fois, à au moins deux semaines d'intervalle.
+Avant d'intégrer une mesure dans une étude, il faut se demander : si on la refaisait, obtiendrait-on la même réponse ? Les angles d'alignement sur les radiographies des longs axes (*long-leg radiographs*) en sont un bon exemple. Avant une ostéotomie autour du genou, le chirurgien calcule la correction à partir de l'angle hanche-genou-cheville (HKA), de l'angle tibial proximal médial (MPTA) et de l'angle fémoral distal latéral (LDFA) : une erreur de lecture devient donc une erreur de correction. Deux chirurgiens peuvent placer les mêmes repères un peu différemment, et un même chirurgien peut les placer autrement un autre jour. Cette page montre comment mesurer cela, avec l'étude de [fiabilité](../glossary.qmd#reliability){.term} des données d'exercice : 60 genoux, chacun mesuré par deux évaluateurs (R1 et R2), deux fois, à au moins deux semaines d'intervalle.
 
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
@@ -26,10 +26,10 @@ Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants u
 ## Fiabilité ou concordance ? {#reliability-vs-agreement}
 
 On emploie souvent ces deux mots comme s'ils voulaient dire la même chose. Ce n'est pas le cas :
-- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), un nombre de 0 à 1. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une cohorte où les déformations sont plus variées.
-- **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 mesure chaque genou 3° de plus que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **limites de concordance de Bland-Altman**, en degrés.
+- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), un nombre de 0 à 1. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une [cohorte](../glossary.qmd#cohort){.term} où les déformations sont plus variées.
+- **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 mesure chaque genou 3° de plus que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **[limites de concordance de Bland-Altman](../glossary.qmd#bland-altman){.term}**, en degrés.
 
-Rapportez les deux. Un chirurgien qui planifie une ostéotomie doit connaître la concordance en degrés, pas seulement savoir que le CCI valait 0.9.
+Rapportez les deux. Un chirurgien qui planifie une ostéotomie doit connaître la concordance en degrés, pas seulement savoir que le [CCI](../glossary.qmd#icc){.term} valait 0.9.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -69,7 +69,7 @@ chk = {"knees": float(readings["knee_id"].nunique()), "rows": float(len(readings
 check_agree(list(knees = n_distinct(readings$knee_id), rows = nrow(readings)), reticulate::py$chk)
 ```
 
-Les données sont en format long : une ligne par genou, évaluateur et session, avec l'angle hanche-genou-cheville (HKA, 180° est neutre, en dessous de 180° c'est un varus), l'angle tibial proximal médial (MPTA), l'angle fémoral distal latéral (LDFA) et la classe CPAK que donnent ces angles.
+Les données sont en [format long](../glossary.qmd#long-format){.term} : une ligne par genou, évaluateur et session, avec l'angle hanche-genou-cheville (HKA, 180° est neutre, en dessous de 180° c'est un varus), l'angle tibial proximal médial (MPTA), l'angle fémoral distal latéral (LDFA) et la classe CPAK que donnent ces angles.
 
 ## Le coefficient de corrélation intraclasse {#icc}
 
@@ -78,9 +78,9 @@ Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le déf
 - **Le type :** un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
 - **L'unité :** l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
 
-En termes simples, le CCI répartit la dispersion de toutes les lectures en trois parts : les vraies différences entre les genoux, une différence systématique entre les évaluateurs, et ce qui reste, l'erreur de mesure. Chaque part est une [variance](../glossary.qmd#variance){.term}. Le CCI de concordance absolue est la part des genoux dans le total des trois ; le CCI de cohérence laisse de côté la différence entre les évaluateurs. Un encadré sous la sortie ci-dessous calcule les deux à la main.
+En termes simples, le CCI répartit la [dispersion](../glossary.qmd#spread){.term} de toutes les lectures en trois parts : les vraies différences entre les genoux, une différence systématique entre les évaluateurs, et ce qui reste, l'[erreur de mesure](../glossary.qmd#measurement-error){.term}. Chaque part est une [variance](../glossary.qmd#variance){.term}. Le CCI de concordance absolue est la part des genoux dans le total des trois ; le CCI de cohérence laisse de côté la différence entre les évaluateurs. Un encadré sous la sortie ci-dessous calcule les deux à la main.
 
-Pour la fiabilité inter-observateur de l'HKA, cela donne un CCI à deux facteurs, à effets aléatoires, de concordance absolue, pour un seul évaluateur, noté ICC(A,1) (ou ICC(2,1) dans l'ancienne notation de Shrout et Fleiss). Avec les lectures de la première session de chaque évaluateur :
+Pour la [fiabilité inter-observateur](../glossary.qmd#reliability){.term} de l'HKA, cela donne un CCI à deux facteurs, à effets aléatoires, de concordance absolue, pour un seul évaluateur, noté ICC(A,1) (ou ICC(2,1) dans l'ancienne notation de Shrout et Fleiss). Avec les lectures de la première session de chaque évaluateur :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -118,7 +118,7 @@ check_agree(list(icc = inter_icc$value, low = round(inter_icc$lbound, 2), high =
 ```
 
 - **ICC(A,1) = 0.889** (la ligne `ICC(A,1)` de Python ; R affiche 0.889).
-- **IC à 95 % de 0.82 à 0.93.** Le guide de Koo et Li : en dessous de 0.5, faible ; de 0.5 à 0.75, modérée ; de 0.75 à 0.9, bonne ; au-dessus de 0.9, excellente. Jugez d'après l'[intervalle de confiance (IC)](../glossary.qmd#confidence-interval){.term}, pas d'après l'estimation seule : celui-ci va de bonne à excellente.
+- **IC à 95 % de 0.82 à 0.93.** Le guide de Koo et Li : en dessous de 0.5, faible ; de 0.5 à 0.75, modérée ; de 0.75 à 0.9, bonne ; au-dessus de 0.9, excellente. Jugez d'après l'[intervalle de confiance (IC)](../glossary.qmd#confidence-interval){.term}, pas d'après l'[estimation](../glossary.qmd#estimate){.term} seule : celui-ci va de bonne à excellente.
 - **Le test F** (R) teste si le CCI est supérieur à 0. Il l'est presque toujours : cela vaut rarement la peine de le rapporter.
 
 ::: {.callout-note collapse="true"}
@@ -162,7 +162,7 @@ print(parts["knees"] / (parts["knees"] + parts["error"]))                       
 ```
 :::
 
-La dispersion des 120 lectures se répartit en trois variances : 11.83 pour les vraies différences entre les genoux, 0.10 parce que l'évaluateur 2 lit un peu plus haut que l'évaluateur 1, et 1.37 d'erreur de mesure. La part des genoux est de 11.83 / (11.83 + 0.10 + 1.37) = 0.889, l'ICC(A,1) que le logiciel a donné. Sans la différence entre les évaluateurs, la part est de 11.83 / (11.83 + 1.37) = 0.896, le CCI de cohérence. Les trois premières lignes du code sont les carrés moyens d'une ANOVA avec les genoux et les évaluateurs ; la [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) construit de telles sommes étape par étape.
+La dispersion des 120 lectures se répartit en trois variances : 11.83 pour les vraies différences entre les genoux, 0.10 parce que l'évaluateur 2 lit un peu plus haut que l'évaluateur 1, et 1.37 d'erreur de mesure. La part des genoux est de 11.83 / (11.83 + 0.10 + 1.37) = 0.889, l'ICC(A,1) que le logiciel a donné. Sans la différence entre les évaluateurs, la part est de 11.83 / (11.83 + 1.37) = 0.896, le CCI de cohérence. Les trois premières lignes du code sont les [carrés moyens](../glossary.qmd#sum-of-squares){.term} d'une [ANOVA](../glossary.qmd#anova){.term} avec les genoux et les évaluateurs ; la [page 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) construit de telles sommes étape par étape.
 :::
 
 ```{python}
@@ -195,7 +195,7 @@ Les mêmes données donnent un CCI différent pour chaque modèle, type et unit�
 
 ## Fiabilité inter-observateur et intra-observateur {#inter-intra-rater}
 
-Le CCI ci-dessus mesure la fiabilité **inter-observateur** : deux évaluateurs, les mêmes radiographies. La fiabilité **intra-observateur** (test-retest) fait lire les mêmes radiographies deux fois par un seul évaluateur, à un intervalle assez long pour qu'il ne se souvienne pas de ses premières réponses. La même forme de CCI s'applique, avec les deux sessions à la place des deux évaluateurs :
+Le [CCI](../glossary.qmd#icc){.term} ci-dessus mesure la fiabilité **inter-observateur** : deux évaluateurs, les mêmes radiographies. La fiabilité **intra-observateur** (test-retest) fait lire les mêmes radiographies deux fois par un seul évaluateur, à un intervalle assez long pour qu'il ne se souvienne pas de ses premières réponses. La même forme de CCI s'applique, avec les deux sessions à la place des deux évaluateurs :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -232,13 +232,13 @@ check_agree(list(icc = intra_icc$value, low = round(intra_icc$lbound, 2), high =
             reticulate::py$chk)
 ```
 
-L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : CCI intra-observateur ICC(A,1) = 0.915 (IC à 95 % de 0.86 à 0.95), excellent selon l'estimation seule et bon à excellent sur l'ensemble de l'IC. R affiche le CCI déjà arrondi à trois décimales. Avant arrondi, il vaut 0.9148 (sortie de Python) : à deux décimales, cela fait 0.91, et non 0.92.
+L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : CCI intra-observateur ICC(A,1) = 0.915 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.86 à 0.95), excellent selon l'[estimation](../glossary.qmd#estimate){.term} seule et bon à excellent sur l'ensemble de l'IC. R affiche le CCI déjà arrondi à trois décimales. Avant arrondi, il vaut 0.9148 (sortie de Python) : à deux décimales, cela fait 0.91, et non 0.92.
 
 ## Bland-Altman : quel écart entre les lectures ? {#bland-altman}
 
-Le CCI est un rapport et n'a pas d'unité. Pour voir à quelle distance peuvent se trouver deux lectures, en degrés, tracez la **différence** entre elles en fonction de leur **moyenne**, un point par genou. Ajoutez ensuite trois lignes :
-- **Le biais :** la différence moyenne, qui montre si un évaluateur mesure systématiquement des angles plus grands.
-- **Les limites de concordance à 95 % :** biais ± 1.96 × écart-type (ET) des différences. Pour 95 % des genoux, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
+Le [CCI](../glossary.qmd#icc){.term} est un rapport et n'a pas d'unité. Pour voir à quelle distance peuvent se trouver deux lectures, en degrés, tracez la **différence** entre elles en fonction de leur **moyenne**, un point par genou. Ajoutez ensuite trois lignes :
+- **Le biais :** la différence [moyenne](../glossary.qmd#mean){.term}, qui montre si un évaluateur mesure systématiquement des angles plus grands.
+- **Les limites de concordance à 95 % :** biais ± 1.96 × [écart-type](../glossary.qmd#standard-deviation){.term} (ET) des différences. Pour 95 % des genoux, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -309,16 +309,16 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
             reticulate::py$chk)
 ```
 
-- **Bias = 0.50°** (IC à 95 % de 0.08° à 0.93°) : l'évaluateur 2 mesure en moyenne un demi-degré de plus que l'évaluateur 1, la même différence que celle trouvée avec un test t pour échantillons appariés à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
+- **Bias = 0.50°** ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.08° à 0.93°) : l'évaluateur 2 mesure en moyenne un demi-degré de plus que l'évaluateur 1, la même différence que celle trouvée avec un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
 - **Limites de concordance, −2.74° à 3.74° :** pour 95 % des genoux, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1.
-- **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; le dernier tableau de R, et les deux dernières lignes de Python, où chaque limite est suivie de son IC) montrent avec quelle précision 60 genoux fixent les limites.
+- **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; le dernier tableau de R, et les deux dernières lignes de Python, où chaque limite est suivie de son IC) montrent avec quelle [précision](../glossary.qmd#precision){.term} 60 genoux fixent les limites.
 - **Le graphique :** les points se répartissent régulièrement autour de la ligne du biais, sans tendance à la hausse ni à la baisse quand l'angle moyen change. Une tendance voudrait dire que les évaluateurs sont plus en désaccord pour certains genoux (plus en varus, par exemple) que pour d'autres, et une seule paire de limites ne les décrirait pas.
 
-Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de fiabilité, puis comparez-y les limites (et leurs IC).
+Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de [fiabilité](../glossary.qmd#reliability){.term}, puis comparez-y les limites (et leurs IC).
 
 ## Le kappa pour les catégories {#kappa}
 
-Pour une catégorie, comme la classe CPAK, utilisez le **kappa de Cohen** : la concordance entre deux évaluateurs au-delà de ce que le hasard seul produirait. Le kappa vaut 1 pour une concordance parfaite et 0 pour une concordance qui n'est pas meilleure que le hasard.
+Pour une [catégorie](../glossary.qmd#categorical-variable){.term}, comme la classe CPAK, utilisez le **kappa de Cohen** : la [concordance](../glossary.qmd#agreement){.term} entre deux évaluateurs au-delà de ce que le hasard seul produirait. Le kappa vaut 1 pour une concordance parfaite et 0 pour une concordance qui n'est pas meilleure que le hasard.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -363,7 +363,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; la sortie affiche 0.667, et 0.667 × 60 = 40). Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 (IC à 95 % de 0.44 à 0.73) : concordance modérée selon l'estimation seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le CCI, jugez-la d'après l'IC : modérée à substantielle.
+Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; la sortie affiche 0.667, et 0.667 × 60 = 40). Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.44 à 0.73) : concordance modérée selon l'[estimation](../glossary.qmd#estimate){.term} seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le [CCI](../glossary.qmd#icc){.term}, jugez-la d'après l'IC : modérée à substantielle.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : le kappa à la main
@@ -534,7 +534,7 @@ stopifnot(
 
 Les solutions utilisent les packages et les données chargés dans les sections ci-dessus : exécutez donc d'abord la page depuis le début.
 
-**1.** Calculez le CCI inter-observateur du MPTA, avec les lectures de la première session de chaque évaluateur, et décrivez-le avec le guide de Koo et Li.
+**1.** Calculez le [CCI](../glossary.qmd#icc){.term} [inter-observateur](../glossary.qmd#reliability){.term} du MPTA, avec les lectures de la première session de chaque évaluateur, et décrivez-le avec le guide de Koo et Li.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -560,10 +560,10 @@ print(mpta_icc.set_index("Type").loc["ICC(A,1)", ["ICC", "CI95"]])
 
 > **Results:** The inter-rater ICC(A,1) for the MPTA was 0.93 (95% CI 0.89 to 0.96).
 
-Selon le guide de Koo et Li, c'est excellent d'après l'estimation seule, et l'IC va de bon à excellent. R affiche le CCI comme 0.935. Avant arrondi, il vaut 0.9348 (sortie de Python) : à deux décimales, cela fait 0.93.
+Selon le guide de Koo et Li, c'est excellent d'après l'[estimation](../glossary.qmd#estimate){.term} seule, et l'[IC](../glossary.qmd#confidence-interval){.term} va de bon à excellent. R affiche le CCI comme 0.935. Avant arrondi, il vaut 0.9348 (sortie de Python) : à deux décimales, cela fait 0.93.
 :::
 
-**2.** Avec les deux sessions de l'évaluateur 1, calculez le biais de Bland-Altman et les limites de concordance à 95 % pour l'HKA, puis écrivez la phrase de Résultats.
+**2.** Avec les deux sessions de l'évaluateur 1, calculez le [biais de Bland-Altman](../glossary.qmd#bland-altman){.term} et les limites de concordance à 95 % pour l'HKA, puis écrivez la phrase de Résultats.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
@@ -591,11 +591,11 @@ print(retest.mean(), retest_ci.low, retest_ci.high, retest.mean() + np.array([-1
 R affiche le biais comme −0.2650000 et Python comme −0.2649999999999987. À deux décimales, les deux programmes l'arrondissent à −0.26, la valeur de la phrase de Résultats.
 :::
 
-**3.** Un collègue rapporte que les lectures de l'HKA des deux évaluateurs sont bien corrélées (r de Pearson = 0.90, IC à 95 % de 0.83 à 0.94) et y voit la preuve qu'ils concordent. Qu'est-ce qui ne va pas ? Montrez-le en ajoutant 5° à chacune des lectures de l'évaluateur 2, puis en recalculant r et le CCI.
+**3.** Un collègue rapporte que les lectures de l'HKA des deux évaluateurs sont bien corrélées ([r de Pearson](../glossary.qmd#pearson-correlation){.term} = 0.90, IC à 95 % de 0.83 à 0.94) et y voit la preuve qu'ils concordent. Qu'est-ce qui ne va pas ? Montrez-le en ajoutant 5° à chacune des lectures de l'évaluateur 2, puis en recalculant r et le CCI.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-La corrélation mesure si deux lectures montent et descendent ensemble, pas si elles sont égales. Un évaluateur qui lit chaque genou 5° trop haut est tout aussi bien corrélé avec un évaluateur exact.
+La [corrélation](../glossary.qmd#correlation){.term} mesure si deux lectures montent et descendent ensemble, pas si elles sont égales. Un évaluateur qui lit chaque genou 5° trop haut est tout aussi bien corrélé avec un évaluateur exact.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -624,5 +624,5 @@ print(shifted_icc.set_index("Type").loc["ICC(A,1)", ["ICC", "CI95"]])
 ```
 :::
 
-Le r de Pearson vaut 0.90 (IC à 95 % de 0.83 à 0.94) avant et après le décalage : il ne voit pas une différence systématique. Le CCI de concordance absolue passe de 0.89 à 0.42 (IC à 95 % de −0.04 à 0.78), parce qu'un désaccord de 5° sur chaque genou est une mauvaise concordance. Rapportez le CCI et les limites de Bland-Altman, pas r.
+Le r de Pearson vaut 0.90 (IC à 95 % de 0.83 à 0.94) avant et après le décalage : il ne voit pas une différence systématique. Le CCI de concordance absolue passe de 0.89 à 0.42 (IC à 95 % de −0.04 à 0.78), parce qu'un désaccord de 5° sur chaque genou est une mauvaise [concordance](../glossary.qmd#agreement){.term}. Rapportez le CCI et les limites de Bland-Altman, pas r.
 :::
