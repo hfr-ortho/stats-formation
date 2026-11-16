@@ -4,8 +4,9 @@ each one. These tests read the .qmd sources, so they need no built site."""
 
 import functools
 import re
+import typing
 
-from sitelib import PAGES, ROOT
+from sitelib import LANGS, PAGES, ROOT
 from test_translations import fences, is_hidden, split_options, strip_comments
 
 # Python packages whose install name (the one PyPI and the table use) differs from the import name.
@@ -106,3 +107,87 @@ def test_scanner_finds_the_pages_that_use_a_package():
     assert used()["r"]["readxl"] == ["getting-started/setup.qmd", "foundations/01-tidy-data.qmd",
                                      "report/18-example-report.qmd"]
     assert "tools" not in used()["r"] and "reticulate" not in used()["r"] and "rms" not in used()["r"]
+
+
+# ---------------------------------------------------------------- the page
+
+SECTIONS = ["r", "python"]
+PACKAGE_PAGE = {"r": "https://cran.r-project.org/package={}", "python": "https://pypi.org/project/{}/"}
+# Packages that come with R or Python: no package page, and a link to the official manual instead.
+BUILT_IN = {"r": {"splines"}, "python": {"itertools", "re", "sys"}}
+HEADING = {"r": "## R", "python": "## Python"}
+LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+
+
+class Row(typing.NamedTuple):
+    name: str
+    package_page: str | None
+    documentation: str | None
+    used_on: list[tuple[str, str]]     # (link text, href)
+
+
+def rows(lang: str, section: str) -> list[Row]:
+    """The rows of one language's R or Python table: `| name | package page | documentation | used on |`."""
+    lines = (ROOT / lang / "packages.qmd").read_text(encoding="utf-8").split("\n")
+    start = lines.index(HEADING[section]) + 1
+    end = next((i for i in range(start, len(lines)) if lines[i].startswith("## ")), len(lines))
+    found = []
+    for line in [l for l in lines[start:end] if l.startswith("|")][2:]:      # without header and separator
+        name, package_page, documentation, used_on = [c.strip() for c in line.strip().strip("|").split("|")]
+
+        def url(cell):
+            links = LINK.findall(cell)
+            return links[0][1] if links else None
+        found.append(Row(name.split(" (")[0], url(package_page), url(documentation), LINK.findall(used_on)))
+    return found
+
+
+def page_label(lang: str, page: str) -> str:
+    """What "Used on" calls a page: its number for pages 1 to 18, else its title in that language."""
+    numbered = re.match(r"(\d+)-", page.split("/")[-1])
+    if numbered:
+        return str(int(numbered.group(1)))
+    return re.search(r'^title:\s*"(.*)"\s*$', (ROOT / lang / page).read_text(encoding="utf-8"), re.MULTILINE).group(1)
+
+
+def test_tables_list_exactly_the_packages_in_visible_code():
+    for s in SECTIONS:
+        assert {r.name for r in rows("en", s)} == set(used()[s]), s
+
+
+def test_tables_are_alphabetical():
+    for lang in LANGS:
+        for s in SECTIONS:
+            names = [r.name for r in rows(lang, s)]
+            assert names == sorted(names, key=str.lower), f"{lang} {s}"
+
+
+def test_used_on_links_the_pages_that_use_each_package():
+    for lang in LANGS:
+        for s in SECTIONS:
+            for r in rows(lang, s):
+                assert [href for _, href in r.used_on] == used()[s][r.name], f"{lang} {r.name}"
+                assert [text for text, _ in r.used_on] == [page_label(lang, p) for p in used()[s][r.name]], f"{lang} {r.name}"
+
+
+def test_package_page_links():
+    for s in SECTIONS:
+        for r in rows("en", s):
+            if r.name in BUILT_IN[s]:
+                assert r.package_page is None and r.documentation is not None, r.name
+            else:
+                assert r.package_page == PACKAGE_PAGE[s].format(r.name), r.name
+
+
+def test_python_rows_show_a_differing_import_name():
+    text = (ROOT / "en" / "packages.qmd").read_text(encoding="utf-8")
+    for import_name, install_name in IMPORT_NAMES.items():
+        assert f"| {install_name} (`import {import_name}`) |" in text
+
+
+def test_three_languages_carry_the_same_rows():
+    def signature(lang, s):
+        return [(r.name, r.package_page, r.documentation, [h for _, h in r.used_on]) for r in rows(lang, s)]
+    for s in SECTIONS:
+        for lang in ["de", "fr"]:
+            assert signature(lang, s) == signature("en", s), f"{lang} {s}"

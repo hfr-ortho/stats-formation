@@ -22,6 +22,7 @@ PAGES = [
     "choose-a-test.html",
     "tests-a-z.html",
     "glossary.html",
+    "packages.html",
     "getting-started/setup.html",
     "getting-started/using-this-site.html",
     "getting-started/real-data.html",
