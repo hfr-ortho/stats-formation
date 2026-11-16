@@ -191,3 +191,44 @@ def test_three_languages_carry_the_same_rows():
     for s in SECTIONS:
         for lang in ["de", "fr"]:
             assert signature(lang, s) == signature("en", s), f"{lang} {s}"
+
+
+# ---------------------------------------------------------------- the prose around the tables
+
+# The packages `library(tidyverse)` attaches: `tidyverse:::core` of the locked tidyverse 2.0.0.
+TIDYVERSE_CORE = ["dplyr", "forcats", "ggplot2", "lubridate", "purrr", "readr", "stringr", "tibble", "tidyr"]
+# "Used on" links stay in the page's language, so only these two kinds of link lead to English pages.
+ENGLISH_NOTE = {
+    "de": "Die Package-Seiten und die Dokumentationen sind auf Englisch.",
+    "fr": "Les pages des packages et leur documentation sont en anglais.",
+}
+# A row lists the pages that name the package. Pages that only use it through `library(tidyverse)` aren't listed.
+USED_ON = {
+    "en": "- **Used on** links to the pages whose code names the package.",
+    "de": "- **Verwendet auf** führt zu den Seiten, deren Code das Package nennt.",
+    "fr": "- **Utilisé sur** renvoie aux pages dont le code nomme le package.",
+}
+
+
+def page_lines(lang: str) -> list[str]:
+    return (ROOT / lang / "packages.qmd").read_text(encoding="utf-8").split("\n")
+
+
+def test_translations_say_which_links_are_in_english():
+    for lang, note in ENGLISH_NOTE.items():
+        assert any(line.endswith(note) for line in page_lines(lang)), lang
+
+
+def test_used_on_is_described_as_naming_the_package():
+    for lang, bullet in USED_ON.items():
+        assert bullet in page_lines(lang), lang
+
+
+def test_tidyverse_sentence_links_the_core_packages_and_explains_the_readr_row():
+    assert set(TIDYVERSE_CORE) & set(used()["r"]) == {"readr"}       # the one core package a page names
+    assert used()["r"]["readr"] == ["getting-started/setup.qmd"]
+    for lang in LANGS:
+        sentence = next(line for line in page_lines(lang) if line.startswith("`library(tidyverse)`"))
+        links = LINK.findall(sentence)
+        assert links[:9] == [(p, PACKAGE_PAGE["r"].format(p)) for p in TIDYVERSE_CORE], lang
+        assert links[9:] == [(page_label(lang, "getting-started/setup.qmd"), "getting-started/setup.qmd")], lang
