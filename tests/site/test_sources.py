@@ -479,3 +479,31 @@ def test_no_page_reads_or_names_vr12():
     """Phase 2c dropped vr12_pcs and vr12_mcs (SP2 spec §6); PROMIS-29+2 physical function replaced them."""
     offenders = [str(f.relative_to(ROOT)) for f in qmd_files() if re.search(r"vr12|VR-12", f.read_text(encoding="utf-8"))]
     assert offenders == [], "Still on VR-12: " + ", ".join(offenders)
+
+
+FENCED = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
+XLSX_IN_PROSE = re.compile(r"(\[)?`((?:data|templates)/[\w./-]+\.xlsx)`(\]\(([^)]*)\))?")
+DOWNLOAD = "https://github.com/hfr-ortho/stats-formation/raw/main/"
+
+
+def unlinked_workbooks(text):
+    """Excel files named in prose that aren't a link to the file's download address."""
+    return [m.group(2) for m in XLSX_IN_PROSE.finditer(FENCED.sub("", text))
+            if not (m.group(1) and m.group(4) == DOWNLOAD + m.group(2))]
+
+
+def test_rule_catches_a_workbook_named_without_a_link():
+    assert unlinked_workbooks("Open `data/a.xlsx` in Excel.") == ["data/a.xlsx"]
+    assert unlinked_workbooks("Open [`data/a.xlsx`](https://example.org/a.xlsx).") == ["data/a.xlsx"]
+    assert unlinked_workbooks(f"Open [`data/a.xlsx`]({DOWNLOAD}data/a.xlsx).") == []
+    assert unlinked_workbooks('```r\npath <- "data/a.xlsx"  # `data/a.xlsx`\n```\n') == []
+
+
+def test_every_workbook_named_in_prose_links_to_its_download():
+    """A reader of the website has no data/ folder: a workbook they are told to open must be a link."""
+    for lang in LANGS:
+        for path in sorted((ROOT / lang).rglob("*.qmd")):
+            text = path.read_text(encoding="utf-8")
+            assert unlinked_workbooks(text) == [], f"{path.relative_to(ROOT)}: Excel file named without a download link"
+            for name in XLSX_IN_PROSE.finditer(FENCED.sub("", text)):
+                assert (ROOT / name.group(2)).is_file(), f"{path.relative_to(ROOT)}: {name.group(2)} doesn't exist"
