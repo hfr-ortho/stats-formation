@@ -224,7 +224,7 @@ still never runs R or Python.
 | Light theme | `[flatly, theme/hfr-light.scss]`: `$primary` and links `#006DB5`; top bar and headings `#103379` |
 | Dark theme | `[darkly, theme/hfr-dark.scss]`: top bar `#103379`; links `#5AA9E6`, a lighter tint of `#006DB5` that reaches 4.5 : 1 contrast on Darkly's background |
 | Fonts | Bootstrap defaults |
-| Footer (shared) | left: "Synthetic data only · Nur synthetische Daten · Données synthétiques uniquement"; right: "Adapted from the TJS Statistics Tutorials · Text CC BY 4.0 · Code MIT" |
+| Footer | left: "Synthetic data only"; center: "Last updated" and the build time; right: "Adapted from the TJS Statistics Tutorials · Text CC BY 4.0 · Code MIT". Each page shows them in its own language (since 16.11.2026: `2026-11-16-footer-per-language-design.md`) |
 
 Every text/background color pair meets WCAG AA (4.5 : 1); the plan checks each
 pair. TJS's `styles.css` (decision table, welcome cards) is kept.
