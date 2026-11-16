@@ -610,7 +610,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 <!-- data-checksum: f354a6da47f62ead35825a3d2b8ef6d9 -->
-<p><a href="../../de/survival/13-kaplan-meier.html">Seite 13</a> verglich Überlebenskurven. Die <strong>Cox-Regression</strong> geht weiter: Sie gibt jeder Gruppe oder jedem Prädiktor ein <strong>Hazard Ratio</strong> mit einem 95%-KI (Konfidenzintervall) und kann für mehrere Prädiktoren gleichzeitig adjustieren. Die Seiten <a href="../../de/catalog/08-three-plus-unmatched.html#cox">8</a>, <a href="../../de/catalog/11-predict-from-one.html#cox">11</a> und <a href="../../de/catalog/12-predict-from-several.html#cox">12</a> haben je ein Cox-Modell in wenigen Schritten angepasst. Diese Seite behandelt die ganze Aufgabe: - was ein Hazard Ratio bedeutet - wie Sie Kovariaten auswählen - wie Sie die Voraussetzungen des Modells prüfen und was zu tun ist, wenn eine verletzt ist - wie Sie gematchte Gruppen und beidseitig operierte Patientinnen und Patienten (<em>bilateral patients</em>) behandeln - wie Sie konkurrierende Risiken modellieren - wie Sie das Resultat berichten</p>
+<p><a href="../../de/survival/13-kaplan-meier.html">Seite 13</a> verglich <a href="../../de/glossary.html#survival" class="term">Überlebenskurven</a>. Die <strong><a href="../../de/glossary.html#cox-regression" class="term">Cox-Regression</a></strong> geht weiter: Sie gibt jeder Gruppe oder jedem <a href="../../de/glossary.html#predictor" class="term">Prädiktor</a> ein <strong><a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a></strong> mit einem <a href="../../de/glossary.html#confidence-interval" class="term">95%-KI</a> (Konfidenzintervall) und kann für <a href="../../de/glossary.html#multivariable" class="term">mehrere Prädiktoren gleichzeitig</a> <a href="../../de/glossary.html#adjustment" class="term">adjustieren</a>. Die Seiten <a href="../../de/catalog/08-three-plus-unmatched.html#cox">8</a>, <a href="../../de/catalog/11-predict-from-one.html#cox">11</a> und <a href="../../de/catalog/12-predict-from-several.html#cox">12</a> haben je ein Cox-Modell in wenigen Schritten angepasst. Diese Seite behandelt die ganze Aufgabe: - was ein Hazard Ratio bedeutet - wie Sie Kovariaten auswählen - wie Sie die <a href="../../de/glossary.html#assumption" class="term">Voraussetzungen</a> des <a href="../../de/glossary.html#model" class="term">Modells</a> prüfen und was zu tun ist, wenn eine verletzt ist - wie Sie <a href="../../de/glossary.html#matched" class="term">gematchte</a> Gruppen und beidseitig operierte Patientinnen und Patienten (<em>bilateral patients</em>) behandeln - wie Sie <a href="../../de/glossary.html#competing-risk" class="term">konkurrierende Risiken</a> modellieren - wie Sie das Resultat berichten</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -622,14 +622,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="callout-body-container callout-body">
 <p>Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages, Daten und Modelle, die weiter oben erstellt wurden.</p>
-<p>Bis zum Abschnitt über <a href="#stratified-cox">beidseitig operierte Patientinnen und Patienten</a> behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen Kohorte; <a href="../../de/foundations/02-demographics.html#setup">Seite 2</a> zählt sie). Im Code heisst die Hüft-TP THA, die Knie-TP TKA.</p>
+<p>Bis zum Abschnitt über <a href="#stratified-cox">beidseitig operierte Patientinnen und Patienten</a> behandeln die Beispiele jeden Fall so, als wäre er eine eigene Person, auch beide Fälle von Patientinnen und Patienten, die auf beiden Seiten operiert wurden (80 Personen in der ganzen <a href="../../de/glossary.html#cohort" class="term">Kohorte</a>; <a href="../../de/foundations/02-demographics.html#setup">Seite 2</a> zählt sie). Im Code heisst die Hüft-TP THA, die Knie-TP TKA.</p>
 </div>
 </div>
 <section id="hazard-ratio" class="level2">
 <h2 class="anchored" data-anchor-id="hazard-ratio">Das Hazard Ratio</h2>
-<p>Der <strong>Hazard</strong> (momentane Ereignisrate) ist die Revisionsrate zu einem bestimmten Zeitpunkt unter den Implantaten, die noch eingesetzt sind: die Wahrscheinlichkeit pro Zeiteinheit, dass ein nicht revidiertes Implantat in diesem Moment revidiert wird. Er kann im Lauf der Zeit steigen oder sinken. Das <strong><a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a></strong> (HR) teilt den Hazard der einen Gruppe durch den der anderen. Ein Cox-Modell setzt voraus, dass dieses Verhältnis über die gesamte Nachbeobachtung gleich bleibt, auch wenn sich die Hazards selbst verändern: Die Hazards sind <strong>proportional</strong>.</p>
-<p>Wie findet das Modell das Hazard Ratio? Bei jeder Revision vergleicht es das revidierte Implantat mit allen Implantaten, die in diesem Moment noch unter Risiko stehen. Dann behält es die Hazard Ratios, unter denen die Revisionen, die tatsächlich eingetreten sind, zusammen am wahrscheinlichsten waren. <a href="../../de/catalog/08-three-plus-unmatched.html#cox">Seite 8</a> geht das Schritt für Schritt durch. Ein Kasten unter der Ausgabe unten prüft das Ergebnis mit einem einfachen Verhältnis von Revisionsraten.</p>
-<p>Hier ist das Cox-Modell nur für das Implantat, mit Implantat A als Referenz:</p>
+<p>Der <strong>Hazard</strong> (momentane Ereignisrate) ist die Revisionsrate zu einem bestimmten Zeitpunkt unter den Implantaten, die noch eingesetzt sind: die <a href="../../de/glossary.html#probability" class="term">Wahrscheinlichkeit</a> pro Zeiteinheit, dass ein nicht revidiertes Implantat in diesem Moment revidiert wird. Er kann im Lauf der Zeit steigen oder sinken. Das <strong><a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a></strong> (HR) teilt den Hazard der einen Gruppe durch den der anderen. Ein Cox-Modell setzt voraus, dass dieses Verhältnis über die gesamte <a href="../../de/glossary.html#follow-up" class="term">Nachbeobachtung</a> gleich bleibt, auch wenn sich die Hazards selbst verändern: Die Hazards sind <strong>proportional</strong>.</p>
+<p>Wie findet das <a href="../../de/glossary.html#model" class="term">Modell</a> das Hazard Ratio? Bei jeder Revision vergleicht es das revidierte Implantat mit allen Implantaten, die in diesem Moment noch <a href="../../de/glossary.html#at-risk" class="term">unter Risiko</a> stehen. Dann behält es die Hazard Ratios, unter denen die Revisionen, die tatsächlich eingetreten sind, zusammen am wahrscheinlichsten waren. <a href="../../de/catalog/08-three-plus-unmatched.html#cox">Seite 8</a> geht das Schritt für Schritt durch. Ein Kasten unter der Ausgabe unten prüft das Ergebnis mit einem einfachen Verhältnis von Revisionsraten.</p>
+<p>Hier ist das Cox-Modell nur für das Implantat, mit Implantat A als <a href="../../de/glossary.html#reference-group" class="term">Referenz</a>:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -709,7 +709,7 @@ implant[T.C]  1.121      3.067     0.258                1.850                5.0
 </div>
 </div>
 </div>
-<p>So lesen Sie die Ausgabe, Zeile für Zeile: - <strong>n = 600, number of events = 81</strong> (Python: die Zeile <code>600 81</code> unter der Tabelle): die Eingriffe und die Revisionen. Die Revisionen, nicht die Eingriffe, bestimmen, wie viel ein Cox-Modell lernen kann. - <strong>coef:</strong> das logarithmierte Hazard Ratio. Niemand berichtet es; es ist das, was das Modell schätzt. - <strong>exp(coef):</strong> das <strong>Hazard Ratio</strong>. Implantat C: 3.07. In jedem Moment der Nachbeobachtung wurde ein nicht revidiertes Implantat C mit etwa der dreifachen Rate revidiert wie ein nicht revidiertes Implantat A. Implantat B: 0.82. - <strong>se(coef), z, Pr(&gt;|z|)</strong> (Python: <strong>p</strong>): der <a href="../../de/glossary.html#standard-error" class="term">Standardfehler</a> des Koeffizienten und der Wald-Test, ob sich das Hazard Ratio von 1 unterscheidet (p &lt; 0.001 für C, p = 0.514 für B). R gibt den p-Wert von Implantat C als <code>1.39e-05</code> aus; das ist die <a href="../../de/glossary.html#scientific-notation" class="term">wissenschaftliche Schreibweise</a> für 0.0000139. Python rundet ihn auf 0.000. - <strong>lower .95 / upper .95</strong> (Python: <code>exp(coef) lower 95%</code> und <code>exp(coef) upper 95%</code>): das 95%-<a href="../../de/glossary.html#confidence-interval" class="term">KI</a> jedes Hazard Ratio: 1.85 bis 5.09 für C, 0.45 bis 1.50 für B. - <strong>exp(-coef)</strong> (nur R): dasselbe Hazard Ratio in umgekehrter Richtung. Für Implantat A gegenüber Implantat C beträgt es 1 / 3.07 = 0.33. - <strong>Concordance = 0.659:</strong> wie oft in Paaren von Patientinnen und Patienten diejenige Person, die früher revidiert wurde, das höhere vorhergesagte Risiko hatte. 0.5 entspricht einem Münzwurf und 1 ist perfekt. - <strong>Likelihood ratio, Wald and score tests:</strong> drei Versionen des Gesamttests, ob das Implantat überhaupt eine Rolle spielt. Bei genügend Ereignissen stimmen sie überein; der Likelihood-Quotienten-Test (27.6 bei 2 Freiheitsgraden (df), p &lt; 0.001) ist der zuverlässigste. R gibt seinen p-Wert als <code>1e-06</code> aus, das ist 0.000001. Python gibt unter der Tabelle die Konkordanz und dann die Statistik, die Freiheitsgrade und den p-Wert dieses Tests aus.</p>
+<p>So lesen Sie die Ausgabe, Zeile für Zeile: - <strong>n = 600, number of events = 81</strong> (Python: die Zeile <code>600 81</code> unter der Tabelle): die Eingriffe und die Revisionen. Die Revisionen, nicht die Eingriffe, bestimmen, wie viel ein Cox-Modell lernen kann. - <strong>coef:</strong> das <a href="../../de/glossary.html#logarithm" class="term">logarithmierte</a> Hazard Ratio. Niemand berichtet es; es ist das, was das Modell schätzt. - <strong>exp(coef):</strong> das <strong>Hazard Ratio</strong>. Implantat C: 3.07. In jedem Moment der Nachbeobachtung wurde ein nicht revidiertes Implantat C mit etwa der dreifachen Rate revidiert wie ein nicht revidiertes Implantat A. Implantat B: 0.82. - <strong>se(coef), z, Pr(&gt;|z|)</strong> (Python: <strong>p</strong>): der <a href="../../de/glossary.html#standard-error" class="term">Standardfehler</a> des <a href="../../de/glossary.html#coefficient" class="term">Koeffizienten</a> und der <a href="../../de/glossary.html#wald-test" class="term">Wald-Test</a>, ob sich das Hazard Ratio von 1 unterscheidet (p &lt; 0.001 für C, p = 0.514 für B). R gibt den <a href="../../de/glossary.html#p-value" class="term">p-Wert</a> von Implantat C als <code>1.39e-05</code> aus; das ist die <a href="../../de/glossary.html#scientific-notation" class="term">wissenschaftliche Schreibweise</a> für 0.0000139. Python rundet ihn auf 0.000. - <strong>lower .95 / upper .95</strong> (Python: <code>exp(coef) lower 95%</code> und <code>exp(coef) upper 95%</code>): das 95%-<a href="../../de/glossary.html#confidence-interval" class="term">KI</a> jedes Hazard Ratio: 1.85 bis 5.09 für C, 0.45 bis 1.50 für B. - <strong>exp(-coef)</strong> (nur R): dasselbe Hazard Ratio in umgekehrter Richtung. Für Implantat A gegenüber Implantat C beträgt es 1 / 3.07 = 0.33. - <strong>Concordance = 0.659:</strong> wie oft in Paaren von Patientinnen und Patienten diejenige Person, die früher revidiert wurde, das höhere vorhergesagte Risiko hatte. 0.5 entspricht einem Münzwurf und 1 ist perfekt. - <strong>Likelihood ratio, Wald and score tests:</strong> drei Versionen des <a href="../../de/glossary.html#overall-test" class="term">Gesamttests</a>, ob das Implantat überhaupt eine Rolle spielt. Bei genügend <a href="../../de/glossary.html#event" class="term">Ereignissen</a> stimmen sie überein; der <a href="../../de/glossary.html#likelihood-ratio-test" class="term">Likelihood-Quotienten-Test</a> (27.6 bei 2 <a href="../../de/glossary.html#degrees-of-freedom" class="term">Freiheitsgraden</a> (df), p &lt; 0.001) ist der zuverlässigste. R gibt seinen p-Wert als <code>1e-06</code> aus, das ist 0.000001. Python gibt unter der Tabelle die <a href="../../de/glossary.html#concordance" class="term">Konkordanz</a> und dann die <a href="../../de/glossary.html#test-statistic" class="term">Statistik</a>, die Freiheitsgrade und den p-Wert dieses Tests aus.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -787,7 +787,7 @@ Name: per_100_years, dtype: float64</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Beide Programme behandeln gebundene Revisionszeitpunkte (<em>ties</em>) mit der Methode von Efron und verwenden die alphabetisch erste Gruppe (A) als Referenz. Die Standardregel von lifelines, wann die Iteration aufhört, bricht etwas zu früh ab, sodass sich ihre Hazard Ratios von denen von R in der fünften oder sechsten Stelle unterscheiden können. Jedes Python-Modell auf dieser Seite verschärft sie mit <code>fit_options={"precision": 1e-12}</code>. Die <code>summary()</code> von R gibt die Konkordanz und drei Gesamttests aus; lifelines legt sie in <code>concordance_index_</code> und <code>log_likelihood_ratio_test()</code> ab. (<code>print_summary()</code> von lifelines zeigt alles auf einmal an, einschliesslich des Zeitpunkts, zu dem das Modell angepasst wurde.)</p>
+<p>Beide Programme behandeln <a href="../../de/glossary.html#ties" class="term">gebundene</a> Revisionszeitpunkte (<em>ties</em>) mit der <a href="../../de/glossary.html#efron-method" class="term">Methode von Efron</a> und verwenden die alphabetisch erste Gruppe (A) als Referenz. Die Standardregel von lifelines, wann die <a href="../../de/glossary.html#convergence" class="term">Iteration</a> aufhört, bricht etwas zu früh ab, sodass sich ihre Hazard Ratios von denen von R in der fünften oder sechsten Stelle unterscheiden können. Jedes Python-Modell auf dieser Seite verschärft sie mit <code>fit_options={"precision": 1e-12}</code>. Die <code>summary()</code> von R gibt die Konkordanz und drei Gesamttests aus; lifelines legt sie in <code>concordance_index_</code> und <code>log_likelihood_ratio_test()</code> ab. (<code>print_summary()</code> von lifelines zeigt alles auf einmal an, einschliesslich des Zeitpunkts, zu dem das Modell angepasst wurde.)</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-warning callout-titled">
@@ -800,7 +800,7 @@ Name: per_100_years, dtype: float64</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>«Dreifacher Hazard» bedeutet nicht, dass nach 5 Jahren dreimal so viele Revisionen aufgetreten sind. Nach 5 Jahren waren 28.9&nbsp;% der Knie- und Hüftgelenke mit Implantat C revidiert worden (1 − Kaplan-Meier), gegenüber 10.1&nbsp;% mit Implantat A: 2.85-mal so viele, nicht 3.07 (der Code unten gibt die drei Risiken und dieses Verhältnis aus). Die beiden Verhältnisse liegen nahe beieinander, wenn Revisionen selten sind, und driften auseinander, wenn sie häufig werden. Berichten Sie das Hazard Ratio als Verhältnis von Raten und geben Sie die kumulativen Risiken getrennt an.</p>
+<p>«Dreifacher Hazard» bedeutet nicht, dass nach 5 Jahren dreimal so viele Revisionen aufgetreten sind. Nach 5 Jahren waren 28.9&nbsp;% der Knie- und Hüftgelenke mit Implantat C revidiert worden (1 − <a href="../../de/glossary.html#kaplan-meier" class="term">Kaplan-Meier</a>), gegenüber 10.1&nbsp;% mit Implantat A: 2.85-mal so viele, nicht 3.07 (der Code unten gibt die drei <a href="../../de/glossary.html#risk" class="term">Risiken</a> und dieses Verhältnis aus). Die beiden Verhältnisse liegen nahe beieinander, wenn Revisionen selten sind, und driften auseinander, wenn sie häufig werden. Berichten Sie das Hazard Ratio als Verhältnis von Raten und geben Sie die kumulativen Risiken getrennt an.</p>
 </div>
 </div>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
@@ -843,17 +843,17 @@ C 0.289</code></pre>
 </section>
 <section id="choosing-covariates" class="level2">
 <h2 class="anchored" data-anchor-id="choosing-covariates">Kovariaten auswählen</h2>
-<p>Bei einer Studie, die Implantate vergleicht, gibt es eine Frage: Ist das Revisionsrisiko mit Implantat C höher als mit Implantat A? Die übrigen Prädiktoren im Modell sollen diesen Vergleich fair machen. Diese <strong>Kovariaten</strong> werden festgelegt, bevor Sie die Resultate ansehen, aus einem Grund, den Sie aufschreiben können:</p>
+<p>Bei einer Studie, die Implantate vergleicht, gibt es eine Frage: Ist das Revisionsrisiko mit Implantat C höher als mit Implantat A? Die übrigen <a href="../../de/glossary.html#predictor" class="term">Prädiktoren</a> im <a href="../../de/glossary.html#model" class="term">Modell</a> sollen diesen Vergleich fair machen. Diese <strong>Kovariaten</strong> werden festgelegt, bevor Sie die Resultate ansehen, aus einem Grund, den Sie aufschreiben können:</p>
 <ul>
 <li><strong>Für Störfaktoren (Confounder) adjustieren:</strong> Faktoren, die sowohl beeinflussen, welches Implantat jemand erhält, als auch das Revisionsrisiko. Alter, Geschlecht und BMI (Body-Mass-Index) sind beim Gelenkersatz die üblichen: Chirurginnen und Chirurgen wählen Implantate möglicherweise bei älteren, schwereren oder weiblichen Personen anders aus, und diese Faktoren können das Revisionsrisiko verändern.</li>
-<li><strong>Adjustieren Sie nicht für das, was das Implantat verursacht.</strong> Eine Luxation oder eine Reoperation, die auf die Implantatwahl folgt, gehört zum Effekt des Implantats und ist kein Grund für ihn. Wenn Sie dafür adjustieren, verdecken Sie den Effekt, den Sie messen wollen.</li>
-<li><strong>Wählen Sie Kovariaten nicht anhand der Daten aus.</strong> Wenn Sie nur die Prädiktoren mit p &lt; 0.2 in univariablen Modellen behalten oder ein schrittweises Verfahren (Stepwise) auswählen lassen, wirken p-Werte und KI sicherer, als sie sind, und in jeder Stichprobe ergeben sich andere Antworten.</li>
+<li><strong>Adjustieren Sie nicht für das, was das Implantat verursacht.</strong> Eine Luxation oder eine Reoperation, die auf die Implantatwahl folgt, gehört zum Effekt des Implantats und ist kein Grund für ihn. Wenn Sie dafür <a href="../../de/glossary.html#adjustment" class="term">adjustieren</a>, verdecken Sie den Effekt, den Sie messen wollen.</li>
+<li><strong>Wählen Sie Kovariaten nicht anhand der Daten aus.</strong> Wenn Sie nur die Prädiktoren mit p &lt; 0.2 in <a href="../../de/glossary.html#multivariable" class="term">univariablen</a> Modellen behalten oder ein <a href="../../de/glossary.html#stepwise-selection" class="term">schrittweises</a> Verfahren (Stepwise) auswählen lassen, wirken <a href="../../de/glossary.html#p-value" class="term">p-Werte</a> und <a href="../../de/glossary.html#confidence-interval" class="term">KI</a> sicherer, als sie sind, und in jeder <a href="../../de/glossary.html#sample" class="term">Stichprobe</a> ergeben sich andere Antworten.</li>
 </ul>
-<p><strong>Ereignisse begrenzen das Modell.</strong> Ein Cox-Modell braucht etwa <strong>10 Ereignisse pro Term</strong>, wobei ein Term ein Koeffizient ist: Ein Prädiktor mit zwei Stufen wie das Geschlecht ist ein Term, das Implantat (B und C gegenüber A) sind zwei, und ein Spline mit 3 Freiheitsgraden sind drei. Die Übungskohorte hat 81 Revisionen, genug für etwa acht Terme. Implantat, Alter, Geschlecht und BMI brauchen fünf, etwa 16 Ereignisse pro Term. Bei weniger Ereignissen adjustieren Sie für weniger Faktoren und geben das an.</p>
+<p><strong>Ereignisse begrenzen das Modell.</strong> Ein <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> braucht etwa <strong>10 Ereignisse pro Term</strong>, wobei ein Term ein <a href="../../de/glossary.html#coefficient" class="term">Koeffizient</a> ist: Ein Prädiktor mit zwei Stufen wie das Geschlecht ist ein Term, das Implantat (B und C gegenüber A) sind zwei, und ein <a href="../../de/glossary.html#spline" class="term">Spline</a> mit 3 Freiheitsgraden sind drei. Die <a href="../../de/glossary.html#cohort" class="term">Übungskohorte</a> hat 81 Revisionen, genug für etwa acht Terme. Implantat, Alter, Geschlecht und BMI brauchen fünf, etwa 16 <a href="../../de/glossary.html#event" class="term">Ereignisse</a> pro Term. Bei weniger Ereignissen adjustieren Sie für weniger Faktoren und geben das an.</p>
 </section>
 <section id="univariable-multivariable" class="level2">
 <h2 class="anchored" data-anchor-id="univariable-multivariable">Von univariabel zu multivariabel</h2>
-<p>Ein <strong>univariables</strong> (oder unadjustiertes) Modell hat einen Prädiktor, wie das Implantat-Modell oben. Ein <strong>multivariables</strong> (oder adjustiertes) Modell hat mehrere; jedes Hazard Ratio ist dann der Effekt dieses Prädiktors, wenn die übrigen Prädiktoren konstant gehalten werden.</p>
+<p>Ein <strong>univariables</strong> (oder unadjustiertes) <a href="../../de/glossary.html#model" class="term">Modell</a> hat einen <a href="../../de/glossary.html#predictor" class="term">Prädiktor</a>, wie das Implantat-Modell oben. Ein <strong>multivariables</strong> (oder <a href="../../de/glossary.html#adjustment" class="term">adjustiertes</a>) Modell hat mehrere; jedes <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a> ist dann der Effekt dieses Prädiktors, wenn die übrigen Prädiktoren konstant gehalten werden.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -890,7 +890,7 @@ bmi_5          1.030844             0.838625             1.267121</code></pre>
 </div>
 </div>
 </div>
-<p>Das Hazard Ratio von Implantat C verschob sich von 3.07 unadjustiert auf <strong>3.19 adjustiert</strong> (95%-KI 1.92 bis 5.29). Alter, Geschlecht und BMI erklären den Unterschied zwischen den Implantaten nicht. Wenn sich ein adjustierter Schätzwert stark verschiebt, haben die Kovariaten den unadjustierten wahrscheinlich verzerrt (Confounding); sagen Sie das in der Diskussion. Kleine Verschiebungen bedeuten wenig: Ein Hazard Ratio verändert sich ein wenig, sobald ein starker Prädiktor hinzukommt, auch ohne Confounding.</p>
+<p>Das Hazard Ratio von Implantat C verschob sich von 3.07 unadjustiert auf <strong>3.19 adjustiert</strong> (<a href="../../de/glossary.html#confidence-interval" class="term">95%-KI</a> 1.92 bis 5.29). Alter, Geschlecht und BMI erklären den Unterschied zwischen den Implantaten nicht. Wenn sich ein adjustierter <a href="../../de/glossary.html#estimate" class="term">Schätzwert</a> stark verschiebt, haben die Kovariaten den unadjustierten wahrscheinlich verzerrt (<a href="../../de/glossary.html#confounding" class="term">Confounding</a>); sagen Sie das in der Diskussion. Kleine Verschiebungen bedeuten wenig: Ein Hazard Ratio verändert sich ein wenig, sobald ein starker Prädiktor hinzukommt, auch ohne Confounding.</p>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -901,13 +901,13 @@ bmi_5          1.030844             0.838625             1.267121</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Das Modell gibt auch Hazard Ratios für Alter, Geschlecht und BMI aus. Der Hazard einer Revision war bei Männern etwa halb so hoch wie bei Frauen (0.51, 95%-KI 0.32 bis 0.81). Man ist versucht, das als zweites Resultat zu berichten, aber das Modell wurde nicht gebaut, um diese Frage zu beantworten: Niemand hat Kovariaten gewählt, die den Vergleich von Männern und Frauen fair machen würden. Berichten Sie die Schätzwerte der Kovariaten in der Tabelle und beschreiben Sie jene, die Sie diskutieren, als explorativ, wie es <a href="../../de/catalog/12-predict-from-several.html#cox">Seite 12</a> tut.</p>
+<p>Das Modell gibt auch Hazard Ratios für Alter, Geschlecht und BMI aus. Der <a href="../../de/glossary.html#hazard" class="term">Hazard</a> einer Revision war bei Männern etwa halb so hoch wie bei Frauen (0.51, 95%-KI 0.32 bis 0.81). Man ist versucht, das als zweites Resultat zu berichten, aber das Modell wurde nicht gebaut, um diese Frage zu beantworten: Niemand hat Kovariaten gewählt, die den Vergleich von Männern und Frauen fair machen würden. Berichten Sie die Schätzwerte der Kovariaten in der Tabelle und beschreiben Sie jene, die Sie diskutieren, als <a href="../../de/glossary.html#prespecified" class="term">explorativ</a>, wie es <a href="../../de/catalog/12-predict-from-several.html#cox">Seite 12</a> tut.</p>
 </div>
 </div>
 </section>
 <section id="linearity" class="level2">
 <h2 class="anchored" data-anchor-id="linearity">Ist der Effekt eine gerade Linie?</h2>
-<p>Ein gemessener Prädiktor wie das Alter geht als gerade Linie ins Modell ein: Pro zusätzliche 10 Jahre multipliziert sich der Hazard mit demselben Faktor, ob von 50 auf 60 oder von 75 auf 85. Zur Prüfung lassen Sie den Effekt sich mit einem <strong>natürlichen kubischen Spline</strong> krümmen (<a href="../../de/catalog/12-predict-from-several.html#multiple-nonlinear-regression">Seite 12</a> erklärt Splines) und vergleichen die beiden Modelle mit einem Likelihood-Quotienten-Test:</p>
+<p>Ein gemessener <a href="../../de/glossary.html#predictor" class="term">Prädiktor</a> wie das Alter geht als gerade Linie ins <a href="../../de/glossary.html#model" class="term">Modell</a> ein: Pro zusätzliche 10 Jahre multipliziert sich der <a href="../../de/glossary.html#hazard" class="term">Hazard</a> mit demselben Faktor, ob von 50 auf 60 oder von 75 auf 85. Zur Prüfung lassen Sie den Effekt sich mit einem <strong><a href="../../de/glossary.html#spline" class="term">natürlichen kubischen Spline</a></strong> krümmen (<a href="../../de/catalog/12-predict-from-several.html#multiple-nonlinear-regression">Seite 12</a> erklärt Splines) und vergleichen die beiden Modelle mit einem <a href="../../de/glossary.html#likelihood-ratio-test" class="term">Likelihood-Quotienten-Test</a>:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -954,11 +954,11 @@ bmi_5          1.030844             0.838625             1.267121</code></pre>
 </div>
 </div>
 </div>
-<p>Der Spline verbesserte die Anpassung nicht eindeutig (χ² = 0.29, df = 2, p = 0.864), also bleibt die gerade Linie für das Alter bestehen. Berichten Sie die Prüfung im Methodenteil. (Übung 2 prüft den BMI.)</p>
+<p>Der Spline verbesserte die Anpassung nicht eindeutig (<a href="../../de/glossary.html#chi-square-statistic" class="term">χ²</a> = 0.29, <a href="../../de/glossary.html#degrees-of-freedom" class="term">df</a> = 2, p = 0.864), also bleibt die gerade Linie für das Alter bestehen. Berichten Sie die Prüfung im Methodenteil. (Übung 2 prüft den BMI.)</p>
 </section>
 <section id="proportional-hazards" class="level2">
 <h2 class="anchored" data-anchor-id="proportional-hazards">Proportionale Hazards prüfen</h2>
-<p>Das Cox-Modell setzt voraus, dass jedes Hazard Ratio über die gesamte Nachbeobachtung gleich bleibt. Die Standardprüfung verwendet <strong>Schoenfeld-Residuen</strong>. Bei jeder Revision vergleicht das Modell die Prädiktoren der revidierten Person mit denen aller Personen, die noch unter Risiko sind. Jedes Residuum, reskaliert und zum Koeffizienten des Modells addiert, schätzt das logarithmierte Hazard Ratio in diesem Moment. Ist das Hazard Ratio konstant, streuen diese Schätzwerte um eine horizontale Linie; driften sie mit der Zeit, ist die Voraussetzung verletzt.</p>
+<p>Das <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> setzt voraus, dass jedes <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a> über die gesamte <a href="../../de/glossary.html#follow-up" class="term">Nachbeobachtung</a> gleich bleibt. Die Standardprüfung verwendet <strong>Schoenfeld-Residuen</strong>. Bei jeder Revision vergleicht das <a href="../../de/glossary.html#model" class="term">Modell</a> die <a href="../../de/glossary.html#predictor" class="term">Prädiktoren</a> der revidierten Person mit denen aller Personen, die noch <a href="../../de/glossary.html#at-risk" class="term">unter Risiko</a> sind. Jedes Residuum, reskaliert und zum <a href="../../de/glossary.html#coefficient" class="term">Koeffizienten</a> des Modells addiert, schätzt das logarithmierte Hazard Ratio in diesem Moment. Ist das Hazard Ratio konstant, streuen diese <a href="../../de/glossary.html#estimate" class="term">Schätzwerte</a> um eine horizontale Linie; driften sie mit der Zeit, ist die <a href="../../de/glossary.html#assumption" class="term">Voraussetzung</a> verletzt.</p>
 <p><strong>Zuerst das adjustierte Modell.</strong></p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">Python</a></li></ul>
@@ -1003,7 +1003,7 @@ sex[T.Male]         0.127087  0.721472</code></pre>
 </div>
 </div>
 </div>
-<p>Bei keinem Prädiktor änderte sich das Hazard Ratio klar über die Zeit (Zeile <code>GLOBAL</code> in R: p = 0.359; der BMI hatte den kleinsten p-Wert, 0.106; die zweite Tabelle von R zeigt diese Stellen). lifelines hat keinen globalen Test, testet Implantat B und Implantat C einzeln und verwendet eine leicht andere Formel; sein p-Wert für den BMI beträgt daher 0.100. Der Kasten «R oder Python» unten erklärt das. Das ist kein klarer Hinweis gegen proportionale Hazards, was nicht dasselbe ist wie ein Beweis, dass sie gelten: Bei 81 Revisionen kann der Test eine mässige Veränderung übersehen.</p>
+<p>Bei keinem Prädiktor änderte sich das Hazard Ratio klar über die Zeit (Zeile <code>GLOBAL</code> in R: p = 0.359; der BMI hatte den kleinsten <a href="../../de/glossary.html#p-value" class="term">p-Wert</a>, 0.106; die zweite Tabelle von R zeigt diese Stellen). lifelines hat keinen <a href="../../de/glossary.html#overall-test" class="term">globalen Test</a>, testet Implantat B und Implantat C einzeln und verwendet eine leicht andere Formel; sein p-Wert für den BMI beträgt daher 0.100. Der Kasten «R oder Python» unten erklärt das. Das ist kein klarer Hinweis gegen proportionale Hazards, was nicht dasselbe ist wie ein Beweis, dass sie gelten: Bei 81 Revisionen kann der Test eine mässige Veränderung übersehen.</p>
 <p><strong>Nun eine echte Verletzung.</strong> Die Übungsdaten enthalten eine: Bei Hüft-TP hat der posteriore Zugang in den ersten Monaten nach der Operation eine deutlich höhere Revisionsrate (frühe Luxation) und danach keine höhere. <a href="../../de/survival/13-kaplan-meier.html#log-rank">Seite 13</a> zeigte die sich kreuzenden Kurven.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
@@ -1088,8 +1088,8 @@ approach[T.posterior]       11.183262  0.000825</code></pre>
 </div>
 </div>
 <ul>
-<li><strong>Das Modell:</strong> ein Hazard Ratio für die gesamte Nachbeobachtung, 1.37 (95%-KI 0.72 bis 2.61). <code>coef</code>, 0.31, ist sein Logarithmus. Beide stehen in den ersten Zeilen der Ausgabe.</li>
-<li><strong>Der Test:</strong> p &lt; 0.001 (χ² = 11.3 bei 1 df in R). Das Hazard Ratio des posterioren Zugangs ist nicht konstant.</li>
+<li><strong>Das Modell:</strong> ein Hazard Ratio für die gesamte Nachbeobachtung, 1.37 (<a href="../../de/glossary.html#confidence-interval" class="term">95%-KI</a> 0.72 bis 2.61). <code>coef</code>, 0.31, ist sein <a href="../../de/glossary.html#logarithm" class="term">Logarithmus</a>. Beide stehen in den ersten Zeilen der Ausgabe.</li>
+<li><strong>Der Test:</strong> p &lt; 0.001 (<a href="../../de/glossary.html#chi-square-statistic" class="term">χ²</a> = 11.3 bei 1 <a href="../../de/glossary.html#degrees-of-freedom" class="term">df</a> in R). Das Hazard Ratio des posterioren Zugangs ist nicht konstant.</li>
 <li><strong>Die Punkte:</strong> einer pro Revision. Punkte bei etwa +2 sind Hüften mit posteriorem Zugang und Punkte bei etwa −2 sind Hüften mit anteriorem Zugang, sodass zu Beginn fast jeder Punkt hoch liegt.</li>
 <li><strong>Die durchgezogene Linie</strong> glättet die Punkte zu einem Schätzwert des logarithmierten Hazard Ratio zu jedem Zeitpunkt. Sie beginnt in den ersten Monaten hoch, als Hüften mit posteriorem Zugang weit häufiger revidiert wurden, und fällt dann unter die gestrichelte Linie, die das einzelne Hazard Ratio des Modells von 1.37 markiert (logarithmiertes Hazard Ratio 0.31).</li>
 </ul>
@@ -1104,7 +1104,7 @@ approach[T.posterior]       11.183262  0.000825</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Bei vielen Ereignissen erkennt der Test Veränderungen, die zu klein sind, um eine Rolle zu spielen; bei wenigen übersieht er reale. Schauen Sie deshalb immer auch die Abbildung an. Und berichten Sie einen nicht signifikanten Test als «kein klarer Hinweis, dass sich die Hazard Ratios im Lauf der Zeit verändert haben», nie als Beweis, dass die Voraussetzung gilt.</p>
+<p>Bei vielen <a href="../../de/glossary.html#event" class="term">Ereignissen</a> erkennt der Test Veränderungen, die zu klein sind, um eine Rolle zu spielen; bei wenigen übersieht er reale. Schauen Sie deshalb immer auch die Abbildung an. Und berichten Sie einen <a href="../../de/glossary.html#statistical-significance" class="term">nicht signifikanten</a> Test als «kein klarer Hinweis, dass sich die Hazard Ratios im Lauf der Zeit verändert haben», nie als Beweis, dass die Voraussetzung gilt.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled">
@@ -1117,14 +1117,14 @@ approach[T.posterior]       11.183262  0.000825</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><code>cox.zph()</code> von R (survival 3.0 und neuer) berechnet den vollständigen Score-Test, einen pro Prädiktor, wobei die beiden Terme des Implantats gemeinsam getestet werden. <code>proportional_hazard_test()</code> von lifelines verwendet die einfachere ursprüngliche Näherung von Grambsch und Therneau und testet jede Spalte einzeln (Implantat B und Implantat C erhalten je eine eigene Zeile); einen globalen Test hat es nicht. Die Statistiken unterscheiden sich leicht (11.3 in R, 11.2 in Python für den Zugang) und führen hier zu denselben Schlussfolgerungen. Die skalierten Schoenfeld-Residuen von lifelines lassen den Koeffizienten weg, den R addiert, daher addiert der Python-Code ihn wieder dazu. Die Abbildung von R verteilt die Revisionen gleichmässig entlang der Zeitachse (ihre «km»-Skala); die Python-Abbildung verwendet aus demselben Grund eine logarithmische Skala: damit sich die vielen frühen Revisionen nicht bei null stauen.</p>
+<p><code>cox.zph()</code> von R (survival 3.0 und neuer) berechnet den vollständigen <a href="../../de/glossary.html#score-test" class="term">Score-Test</a>, einen pro Prädiktor, wobei die beiden Terme des Implantats gemeinsam getestet werden. <code>proportional_hazard_test()</code> von lifelines verwendet die einfachere ursprüngliche <a href="../../de/glossary.html#exact-test" class="term">Näherung</a> von Grambsch und Therneau und testet jede Spalte einzeln (Implantat B und Implantat C erhalten je eine eigene Zeile); einen globalen Test hat es nicht. Die <a href="../../de/glossary.html#test-statistic" class="term">Statistiken</a> unterscheiden sich leicht (11.3 in R, 11.2 in Python für den Zugang) und führen hier zu denselben Schlussfolgerungen. Die skalierten Schoenfeld-Residuen von lifelines lassen den Koeffizienten weg, den R addiert, daher addiert der Python-Code ihn wieder dazu. Die Abbildung von R verteilt die Revisionen gleichmässig entlang der Zeitachse (ihre «km»-Skala); die Python-Abbildung verwendet aus demselben Grund eine logarithmische Skala: damit sich die vielen frühen Revisionen nicht bei null stauen.</p>
 </div>
 </div>
 </section>
 <section id="remedies" class="level2">
 <h2 class="anchored" data-anchor-id="remedies">Wenn die Hazards nicht proportional sind</h2>
-<p>Es gibt zwei übliche Lösungen. Welche passt, hängt davon ab, ob Sie das Hazard Ratio des Prädiktors brauchen, der die Voraussetzung verletzt.</p>
-<p><strong>1. Stratifizieren, wenn es nur eine Adjustierung ist.</strong> Angenommen, die Frage betrifft das Implantat bei Hüft-TP, und der Zugang ist nur eine Kovariate. Ein nach Zugang <strong>stratifiziertes</strong> Cox-Modell gibt jedem Zugang seinen eigenen Baseline-Hazard beliebiger Form und schätzt die Hazard Ratios der Implantate innerhalb der Zugänge. Der Zugang erhält kein eigenes Hazard Ratio, sodass sein nicht proportionaler Effekt keine Rolle mehr spielt.</p>
+<p>Es gibt zwei übliche Lösungen. Welche passt, hängt davon ab, ob Sie das <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a> des <a href="../../de/glossary.html#predictor" class="term">Prädiktors</a> brauchen, der die <a href="../../de/glossary.html#assumption" class="term">Voraussetzung</a> verletzt.</p>
+<p><strong>1. Stratifizieren, wenn es nur eine Adjustierung ist.</strong> Angenommen, die Frage betrifft das Implantat bei Hüft-TP, und der Zugang ist nur eine Kovariate. Ein nach Zugang <strong><a href="../../de/glossary.html#stratification" class="term">stratifiziertes</a></strong> <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> gibt jedem Zugang seinen eigenen <a href="../../de/glossary.html#hazard" class="term">Baseline-Hazard</a> beliebiger Form und schätzt die Hazard Ratios der Implantate innerhalb der Zugänge. Der Zugang erhält kein eigenes Hazard Ratio, sodass sein nicht proportionaler Effekt keine Rolle mehr spielt.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-8-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-1" role="tab" aria-controls="tabset-8-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-8-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-8-2" role="tab" aria-controls="tabset-8-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1155,8 +1155,8 @@ implant[T.C]   2.113907             1.016376             4.396606</code></pre>
 </div>
 </div>
 </div>
-<p>Bei Hüft-TP mit dem Zugang als Stratum betrug das Hazard Ratio von Implantat C 2.11 (95%-KI 1.02 bis 4.40) gegenüber Implantat A.</p>
-<p><strong>2. Die Nachbeobachtung aufteilen, wenn Sie den Effekt brauchen.</strong> Wenn der Zugang <em>die</em> Frage ist, geben Sie ihm ein Hazard Ratio für die ersten 6 Monate und ein anderes für die Zeit danach. Jede Person, die über 6 Monate hinaus nachbeobachtet wird, erhält zwei Zeilen, eine pro Zeitraum; das Modell schätzt dann den Effekt des Zugangs in jedem getrennt:</p>
+<p>Bei Hüft-TP mit dem Zugang als Stratum betrug das Hazard Ratio von Implantat C 2.11 (<a href="../../de/glossary.html#confidence-interval" class="term">95%-KI</a> 1.02 bis 4.40) gegenüber Implantat A.</p>
+<p><strong>2. Die Nachbeobachtung aufteilen, wenn Sie den Effekt brauchen.</strong> Wenn der Zugang <em>die</em> Frage ist, geben Sie ihm ein Hazard Ratio für die ersten 6 Monate und ein anderes für die Zeit danach. Jede Person, die über 6 Monate hinaus <a href="../../de/glossary.html#follow-up" class="term">nachbeobachtet</a> wird, erhält zwei Zeilen, eine pro Zeitraum; das <a href="../../de/glossary.html#model" class="term">Modell</a> schätzt dann den Effekt des Zugangs in jedem getrennt:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-9-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-1" role="tab" aria-controls="tabset-9-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-9-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-2" role="tab" aria-controls="tabset-9-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1229,8 +1229,8 @@ posterior_late    0.426285             0.156127             1.163921</code></pre
 </div>
 </div>
 </div>
-<p>In den ersten 6 Monaten war der Hazard einer Revision nach dem posterioren Zugang 8.47-mal so hoch (95%-KI 1.93 bis 37.3). Nach 6 Monaten betrug der Schätzwert 0.43 (95%-KI 0.16 bis 1.16), was wenig präzise ist. Das KI für den frühen Effekt ist breit, weil es auf 16 frühen Revisionen beruht: 14 nach dem posterioren Zugang und nur 2 nach dem anterioren Zugang (die erste Ausgabe).</p>
-<p>Wählen Sie den Zeitpunkt der Aufteilung vorab, aus klinischen Überlegungen: hier das Ende des Zeitraums mit dem höchsten Luxationsrisiko nach Hüftgelenkersatz. Mehrere Zeitpunkte auszuprobieren, bis einer ein auffälliges Resultat liefert, ist Data Dredging (Datenfischen). R kann ein Hazard Ratio auch stetig mit der Zeit verändern lassen (das Argument <code>tt()</code> von <code>coxph()</code>), was die Wahl eines Zeitpunkts vermeidet.</p>
+<p>In den ersten 6 Monaten war der Hazard einer Revision nach dem posterioren Zugang 8.47-mal so hoch (95%-KI 1.93 bis 37.3). Nach 6 Monaten betrug der <a href="../../de/glossary.html#estimate" class="term">Schätzwert</a> 0.43 (95%-KI 0.16 bis 1.16), was <a href="../../de/glossary.html#precision" class="term">wenig präzise</a> ist. Das KI für den frühen Effekt ist breit, weil es auf 16 frühen Revisionen beruht: 14 nach dem posterioren Zugang und nur 2 nach dem anterioren Zugang (die erste Ausgabe).</p>
+<p>Wählen Sie den Zeitpunkt der Aufteilung vorab, aus klinischen Überlegungen: hier das Ende des Zeitraums mit dem höchsten Luxationsrisiko nach Hüftgelenkersatz. Mehrere Zeitpunkte auszuprobieren, bis einer ein auffälliges Resultat liefert, ist <a href="../../de/glossary.html#p-hacking" class="term">Data Dredging</a> (Datenfischen). R kann ein Hazard Ratio auch stetig mit der Zeit verändern lassen (das Argument <code>tt()</code> von <code>coxph()</code>), was die Wahl eines Zeitpunkts vermeidet.</p>
 <blockquote class="blockquote">
 <p><strong>Methods:</strong> Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.</p>
 <p><strong>Results:</strong> The hazard ratio for revision with the posterior approach compared with the anterior approach was 8.47 (95% CI 1.93 to 37.3) in the first 6 months and 0.43 (95% CI 0.16 to 1.16) after 6 months.</p>
@@ -1238,12 +1238,12 @@ posterior_late    0.426285             0.156127             1.163921</code></pre
 </section>
 <section id="stratified-cox" class="level2">
 <h2 class="anchored" data-anchor-id="stratified-cox">Stratifizierte Cox-Regression: gematchte Gruppen und beidseitig operierte Patientinnen und Patienten</h2>
-<p>Ein Cox-Modell setzt voraus, dass jede Zeile eine unabhängige Person ist. Zwei häufige Studiendesigns verletzen das.</p>
-<p><strong>Gematchte Gruppen.</strong> Wenn jede Person mit Implantat C mit ähnlichen Personen gematcht wird, die andere Implantate erhielten, gehören die gematchten Personen zusammen. Ein <strong>nach gematchter Gruppe stratifiziertes</strong> Cox-Modell, <code>strata(set_id)</code>, vergleicht die Implantate nur innerhalb der Gruppen. Die Entscheidungstabelle nennt das <em>bedingte Regression mit proportionalen Hazards</em>. <a href="../../de/catalog/07-two-paired-groups.html#stratified-cox">Seite 7</a> behandelt gematchte Paare und <a href="../../de/catalog/09-three-plus-matched.html#stratified-cox">Seite 9</a> gematchte Gruppen von je drei Personen.</p>
-<p><strong>Beidseitig operierte Patientinnen und Patienten.</strong> In der Kohorte hatten 80 Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz. Ihre beiden Gelenke gehören zur selben Person: dieselbe Knochenqualität, dieselbe Aktivität, dieselbe Chirurgin oder derselbe Chirurg. Ihre Zielgrössen sind also nicht unabhängig, und wenn man sie als unabhängig behandelt, werden die KI zu schmal. Es gibt drei übliche Möglichkeiten:</p>
+<p>Ein <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> setzt voraus, dass jede Zeile eine <a href="../../de/glossary.html#independence" class="term">unabhängige</a> Person ist. Zwei häufige Studiendesigns verletzen das.</p>
+<p><strong>Gematchte Gruppen.</strong> Wenn jede Person mit Implantat C mit ähnlichen Personen <a href="../../de/glossary.html#matched" class="term">gematcht</a> wird, die andere Implantate erhielten, gehören die gematchten Personen zusammen. Ein <strong>nach gematchter Gruppe stratifiziertes</strong> Cox-Modell, <code>strata(set_id)</code>, vergleicht die Implantate nur innerhalb der Gruppen. Die Entscheidungstabelle nennt das <em>bedingte Regression mit proportionalen Hazards</em>. <a href="../../de/catalog/07-two-paired-groups.html#stratified-cox">Seite 7</a> behandelt gematchte Paare und <a href="../../de/catalog/09-three-plus-matched.html#stratified-cox">Seite 9</a> gematchte Gruppen von je drei Personen.</p>
+<p><strong>Beidseitig operierte Patientinnen und Patienten.</strong> In der <a href="../../de/glossary.html#cohort" class="term">Kohorte</a> hatten 80 Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz. Ihre beiden Gelenke gehören zur selben Person: dieselbe Knochenqualität, dieselbe Aktivität, dieselbe Chirurgin oder derselbe Chirurg. Ihre Zielgrössen sind also nicht unabhängig, und wenn man sie als unabhängig behandelt, werden die <a href="../../de/glossary.html#confidence-interval" class="term">KI</a> zu schmal. Es gibt drei übliche Möglichkeiten:</p>
 <ul>
-<li><strong>Beide Gelenke behalten und robuste Standardfehler verwenden</strong>, die nach Person geclustert sind (<em>clustered on patient</em>). Die Hazard Ratios ändern sich nicht; die KI berücksichtigen die Paarung der beiden Gelenke. Das ist die übliche Wahl.</li>
-<li><strong>Nach Person stratifizieren</strong>, <code>strata(patient_id)</code>, um die beiden Seiten jeder Person zu vergleichen. Nur Personen, deren beide Gelenke sich im Prädiktor unterscheiden und die eine Revision hatten, tragen etwas bei, sodass das Resultat selten präzise genug ist.</li>
+<li><strong>Beide Gelenke behalten und robuste Standardfehler verwenden</strong>, die nach Person <a href="../../de/glossary.html#clustered-data" class="term">geclustert</a> sind (<em>clustered on patient</em>). Die <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratios</a> ändern sich nicht; die KI berücksichtigen die <a href="../../de/glossary.html#paired" class="term">Paarung</a> der beiden Gelenke. Das ist die übliche Wahl.</li>
+<li><strong>Nach Person stratifizieren</strong>, <code>strata(patient_id)</code>, um die beiden Seiten jeder Person zu vergleichen. Nur Personen, deren beide Gelenke sich im Prädiktor unterscheiden und die eine Revision hatten, tragen etwas bei, sodass das Resultat selten <a href="../../de/glossary.html#precision" class="term">präzise</a> genug ist.</li>
 <li><strong>Ein Gelenk pro Person behalten</strong>, etwa das zuerst operierte. Einfach, aber es wirft Daten weg.</li>
 </ul>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
@@ -1314,7 +1314,7 @@ bmi_5          1.030844  0.104463             0.839988             1.265063</cod
 <ul>
 <li><strong>exp(coef):</strong> unverändert: Das Hazard Ratio von Implantat C ist weiterhin 3.19.</li>
 <li><strong>se(coef) / robust se:</strong> R gibt beide aus; lifelines gibt beim Clustern nur den robusten aus. Hier sind sie fast gleich (0.259 und 0.258 für Implantat C), sodass sich das KI kaum verändert (1.92 bis 5.28). Nur 20 der 80 beidseitig operierten Personen hatten eine Revision (die beiden Zahlen, die der Code zuerst ausgibt), die Paarung spielt in dieser Kohorte also wenig Rolle. In Ihren Daten kann sie viel mehr ausmachen: Prüfen Sie das und sagen Sie im Methodenteil, was Sie getan haben.</li>
-<li><strong>Pr(&gt;|z|)</strong> (Tabelle von R): die p-Werte, jetzt aus den robusten Standardfehlern. R gibt sie in <a href="../../de/glossary.html#scientific-notation" class="term">wissenschaftlicher Schreibweise</a> aus: <code>5.463870e-01</code> ist 0.546, und <code>6.743766e-06</code> ist 0.00000674, berichtet als p &lt; 0.001. Die Tabelle unter <a href="#reporting">Ein Cox-Modell berichten</a> zeigt sie gerundet.</li>
+<li><strong>Pr(&gt;|z|)</strong> (Tabelle von R): die <a href="../../de/glossary.html#p-value" class="term">p-Werte</a>, jetzt aus den robusten <a href="../../de/glossary.html#standard-error" class="term">Standardfehlern</a>. R gibt sie in <a href="../../de/glossary.html#scientific-notation" class="term">wissenschaftlicher Schreibweise</a> aus: <code>5.463870e-01</code> ist 0.546, und <code>6.743766e-06</code> ist 0.00000674, berichtet als p &lt; 0.001. Die Tabelle unter <a href="#reporting">Ein Cox-Modell berichten</a> zeigt sie gerundet.</li>
 </ul>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -1326,13 +1326,13 @@ bmi_5          1.030844  0.104463             0.839988             1.265063</cod
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Beide Programme berechnen dieselben robusten («Sandwich»-)Standardfehler. Bei gebundenen Nachbeobachtungszeiten wendet R innerhalb der robusten Varianz auch die Efron-Korrektur für Bindungen an, lifelines nicht, sodass sich die beiden in der vierten gültigen Ziffer unterscheiden.</p>
+<p>Beide Programme berechnen dieselben <a href="../../de/glossary.html#robust-standard-error" class="term">robusten («Sandwich»-)Standardfehler</a>. Bei <a href="../../de/glossary.html#ties" class="term">gebundenen</a> <a href="../../de/glossary.html#follow-up" class="term">Nachbeobachtungszeiten</a> wendet R innerhalb der robusten <a href="../../de/glossary.html#variance" class="term">Varianz</a> auch die <a href="../../de/glossary.html#efron-method" class="term">Efron-Korrektur</a> für Bindungen an, lifelines nicht, sodass sich die beiden in der vierten gültigen Ziffer unterscheiden.</p>
 </div>
 </div>
 </section>
 <section id="fine-gray" class="level2">
 <h2 class="anchored" data-anchor-id="fine-gray">Regression bei konkurrierenden Risiken: Fine-Gray (nur R)</h2>
-<p>Jedes Cox-Modell oben behandelte den Tod als Zensierung. Das ist ein <strong>ursachenspezifisches</strong> Cox-Modell: Seine Hazard Ratios beschreiben die Revisionsrate unter den Personen, die noch leben, was die richtige Frage ist, wenn es darum geht, ob ein Implantat schlechter abschneidet. Aber wie <a href="../../de/survival/13-kaplan-meier.html#competing-risks">Seite 13</a> zeigte, verhindern Todesfälle auch, dass Revisionen überhaupt stattfinden. Für «Welche Personen werden tatsächlich revidiert?» verwenden Sie das <strong>Fine-Gray</strong>-Modell, das die kumulative Inzidenz der Revision direkt modelliert. Seine Effektstärken sind <strong>Subdistribution Hazard Ratios</strong> (SHR).</p>
+<p>Jedes <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> oben behandelte den Tod als <a href="../../de/glossary.html#censored" class="term">Zensierung</a>. Das ist ein <strong>ursachenspezifisches</strong> Cox-Modell: Seine <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratios</a> beschreiben die Revisionsrate unter den Personen, die noch leben, was die richtige Frage ist, wenn es darum geht, ob ein Implantat schlechter abschneidet. Aber wie <a href="../../de/survival/13-kaplan-meier.html#competing-risks">Seite 13</a> zeigte, verhindern Todesfälle auch, dass Revisionen überhaupt stattfinden. Für «Welche Personen werden tatsächlich revidiert?» verwenden Sie das <strong>Fine-Gray</strong>-Modell, das die <a href="../../de/glossary.html#cumulative-incidence" class="term">kumulative Inzidenz</a> der Revision direkt modelliert. Seine <a href="../../de/glossary.html#effect-size" class="term">Effektstärken</a> sind <strong>Subdistribution Hazard Ratios</strong> (SHR).</p>
 <p>Für die Fine-Gray-Regression gibt es keine ausgereifte Python-Implementierung, deshalb gilt dieser Abschnitt nur für R. <code>crr()</code> von tidycmprsk verwendet denselben Status mit drei Stufen wie die kumulative Inzidenz von Seite 13:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycmprsk)</span>
@@ -1354,7 +1354,7 @@ sexMale    -0.630   0.240   0.53   0.33, 0.85   0.009
 bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
 </div>
 </div>
-<p><code>crr()</code> überschreibt die Spalte mit <code>HR</code>, es sind aber Subdistribution Hazard Ratios. Vergleichen Sie sie mit dem ursachenspezifischen Modell (<code>adjusted_model</code>, <a href="#univariable-multivariable">oben</a>): - <strong>Implantat C:</strong> SHR 3.09 (95%-KI 1.86 bis 5.14), nahe beim ursachenspezifischen HR von 3.19. Die kumulative Inzidenz des Todes unterschied sich zwischen den Implantaten nicht klar (Gray-Test auf <a href="../../de/survival/13-kaplan-meier.html#competing-risks">Seite 13</a>), die Berücksichtigung des Todes ändert also wenig. - <strong>Alter:</strong> SHR 1.07 pro 10 Jahre (95%-KI 0.86 bis 1.33), gegenüber einem ursachenspezifischen HR von 1.22. Ältere Personen werden möglicherweise, solange sie leben, mit einer etwas höheren Rate revidiert, aber mehr von ihnen sterben, bevor sie revidiert werden können, sodass der Subdistribution-Schätzwert näher bei 1 liegt: Es gibt keinen klaren Hinweis, dass das Alter ändert, wie viele Personen tatsächlich revidiert werden.</p>
+<p><code>crr()</code> überschreibt die Spalte mit <code>HR</code>, es sind aber Subdistribution Hazard Ratios. Vergleichen Sie sie mit dem ursachenspezifischen <a href="../../de/glossary.html#model" class="term">Modell</a> (<code>adjusted_model</code>, <a href="#univariable-multivariable">oben</a>): - <strong>Implantat C:</strong> SHR 3.09 (<a href="../../de/glossary.html#confidence-interval" class="term">95%-KI</a> 1.86 bis 5.14), nahe beim ursachenspezifischen HR von 3.19. Die kumulative Inzidenz des Todes unterschied sich zwischen den Implantaten nicht klar (<a href="../../de/glossary.html#gray-test" class="term">Gray-Test</a> auf <a href="../../de/survival/13-kaplan-meier.html#competing-risks">Seite 13</a>), die Berücksichtigung des Todes ändert also wenig. - <strong>Alter:</strong> SHR 1.07 pro 10 Jahre (95%-KI 0.86 bis 1.33), gegenüber einem ursachenspezifischen HR von 1.22. Ältere Personen werden möglicherweise, solange sie leben, mit einer etwas höheren Rate revidiert, aber mehr von ihnen sterben, bevor sie revidiert werden können, sodass der <a href="../../de/glossary.html#estimate" class="term">Subdistribution-Schätzwert</a> näher bei 1 liegt: Es gibt keinen klaren Hinweis, dass das Alter ändert, wie viele Personen tatsächlich revidiert werden.</p>
 <p>Berichten Sie das ursachenspezifische Modell, um Implantate zu vergleichen, und das Fine-Gray-Modell, wenn die Frage lautet, wie viele Personen revidiert werden. Viele Publikationen berichten beide und sagen, welches welches ist.</p>
 <p><code>crr()</code> kann beidseitig operierte Patientinnen und Patienten nicht berücksichtigen. Wenn viele Ihrer Patientinnen und Patienten auf beiden Seiten einen Gelenkersatz hatten, bereitet die Funktion <code>finegray()</code> des Packages survival die Daten für ein Fine-Gray-Modell vor, das <code>coxph()</code> mit <code>cluster = patient_id</code> anpassen kann.</p>
 <div class="callout callout-style-default callout-warning callout-titled">
@@ -1367,13 +1367,13 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Das SHR hat keine einfache Bedeutung als Rate: Personen, die verstorben sind, bleiben in seiner Gruppe «unter Risiko». Lesen Sie es nur als «höhere oder niedrigere kumulative Inzidenz» und nennen Sie es im Text und in den Tabellen Subdistribution Hazard Ratio.</p>
+<p>Das SHR hat keine einfache Bedeutung als Rate: Personen, die verstorben sind, bleiben in seiner Gruppe «<a href="../../de/glossary.html#at-risk" class="term">unter Risiko</a>». Lesen Sie es nur als «höhere oder niedrigere kumulative Inzidenz» und nennen Sie es im Text und in den Tabellen Subdistribution Hazard Ratio.</p>
 </div>
 </div>
 </section>
 <section id="reporting" class="level2">
 <h2 class="anchored" data-anchor-id="reporting">Ein Cox-Modell berichten</h2>
-<p>Die meisten Publikationen stellen Cox-Modelle als Tabelle dar: eine Zeile pro Prädiktor, mit den univariablen und den multivariablen Hazard Ratios nebeneinander. Beide Spalten verwenden robuste Standardfehler, nach Person geclustert (<a href="#stratified-cox">oben</a>), sodass ihre KI die beidseitig operierten Patientinnen und Patienten berücksichtigen. Deshalb weicht die univariable Spalte leicht vom ersten Modell auf dieser Seite ab: Das KI von Implantat C ist hier 1.87 bis 5.04 und war dort 1.85 bis 5.09, und der p-Wert von Implantat B ist hier 0.511 und war dort 0.514.</p>
+<p>Die meisten Publikationen stellen <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modelle</a> als Tabelle dar: eine Zeile pro <a href="../../de/glossary.html#predictor" class="term">Prädiktor</a>, mit den <a href="../../de/glossary.html#multivariable" class="term">univariablen</a> und den multivariablen <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratios</a> nebeneinander. Beide Spalten verwenden robuste <a href="../../de/glossary.html#standard-error" class="term">Standardfehler</a>, nach Person <a href="../../de/glossary.html#clustered-data" class="term">geclustert</a> (<a href="#stratified-cox">oben</a>), sodass ihre <a href="../../de/glossary.html#confidence-interval" class="term">KI</a> die beidseitig operierten Patientinnen und Patienten berücksichtigen. Deshalb weicht die univariable Spalte leicht vom ersten <a href="../../de/glossary.html#model" class="term">Modell</a> auf dieser Seite ab: Das KI von Implantat C ist hier 1.87 bis 5.04 und war dort 1.85 bis 5.09, und der <a href="../../de/glossary.html#p-value" class="term">p-Wert</a> von Implantat B ist hier 0.511 und war dort 0.514.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-11-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-1" role="tab" aria-controls="tabset-11-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-11-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-11-2" role="tab" aria-controls="tabset-11-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1396,23 +1396,23 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
 <span id="cb79-15"><a href="#cb79-15" aria-hidden="true" tabindex="-1"></a><span class="fu">tbl_merge</span>(<span class="fu">list</span>(univariable_table, multivariable_table),</span>
 <span id="cb79-16"><a href="#cb79-16" aria-hidden="true" tabindex="-1"></a>          <span class="at">tab_spanner =</span> <span class="fu">c</span>(<span class="st">"**Univariable**"</span>, <span class="st">"**Multivariable**"</span>))</span></code></pre></div><button title="In die Zwischenablage kopieren" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
-<div id="sslwyzzdlv" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
-<style>#sslwyzzdlv table {
+<div id="juebipwnhr" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#juebipwnhr table {
   font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-#sslwyzzdlv thead, #sslwyzzdlv tbody, #sslwyzzdlv tfoot, #sslwyzzdlv tr, #sslwyzzdlv td, #sslwyzzdlv th {
+#juebipwnhr thead, #juebipwnhr tbody, #juebipwnhr tfoot, #juebipwnhr tr, #juebipwnhr td, #juebipwnhr th {
   border-style: none;
 }
 
-#sslwyzzdlv p {
+#juebipwnhr p {
   margin: 0;
   padding: 0;
 }
 
-#sslwyzzdlv .gt_table {
+#juebipwnhr .gt_table {
   display: table;
   border-collapse: collapse;
   line-height: normal;
@@ -1438,12 +1438,12 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-left-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_caption {
+#juebipwnhr .gt_caption {
   padding-top: 4px;
   padding-bottom: 4px;
 }
 
-#sslwyzzdlv .gt_title {
+#juebipwnhr .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1455,7 +1455,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-bottom-width: 0;
 }
 
-#sslwyzzdlv .gt_subtitle {
+#juebipwnhr .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1467,7 +1467,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-top-width: 0;
 }
 
-#sslwyzzdlv .gt_heading {
+#juebipwnhr .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1479,13 +1479,13 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-right-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_bottom_border {
+#juebipwnhr .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_col_headings {
+#juebipwnhr .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1500,7 +1500,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-right-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_col_heading {
+#juebipwnhr .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1520,7 +1520,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   overflow-x: hidden;
 }
 
-#sslwyzzdlv .gt_column_spanner_outer {
+#juebipwnhr .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1532,15 +1532,15 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 4px;
 }
 
-#sslwyzzdlv .gt_column_spanner_outer:first-child {
+#juebipwnhr .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#sslwyzzdlv .gt_column_spanner_outer:last-child {
+#juebipwnhr .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#sslwyzzdlv .gt_column_spanner {
+#juebipwnhr .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1552,11 +1552,11 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   width: 100%;
 }
 
-#sslwyzzdlv .gt_spanner_row {
+#juebipwnhr .gt_spanner_row {
   border-bottom-style: hidden;
 }
 
-#sslwyzzdlv .gt_group_heading {
+#juebipwnhr .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1582,7 +1582,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   text-align: left;
 }
 
-#sslwyzzdlv .gt_empty_group_heading {
+#juebipwnhr .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1597,15 +1597,15 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   vertical-align: middle;
 }
 
-#sslwyzzdlv .gt_from_md > :first-child {
+#juebipwnhr .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#sslwyzzdlv .gt_from_md > :last-child {
+#juebipwnhr .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#sslwyzzdlv .gt_row {
+#juebipwnhr .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1624,7 +1624,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   overflow-x: hidden;
 }
 
-#sslwyzzdlv .gt_stub {
+#juebipwnhr .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1637,7 +1637,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 5px;
 }
 
-#sslwyzzdlv .gt_stub_row_group {
+#juebipwnhr .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1651,15 +1651,15 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   vertical-align: top;
 }
 
-#sslwyzzdlv .gt_row_group_first td {
+#juebipwnhr .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#sslwyzzdlv .gt_row_group_first th {
+#juebipwnhr .gt_row_group_first th {
   border-top-width: 2px;
 }
 
-#sslwyzzdlv .gt_summary_row {
+#juebipwnhr .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1669,16 +1669,16 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 5px;
 }
 
-#sslwyzzdlv .gt_first_summary_row {
+#juebipwnhr .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_first_summary_row.thick {
+#juebipwnhr .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#sslwyzzdlv .gt_last_summary_row {
+#juebipwnhr .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1688,7 +1688,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_grand_summary_row {
+#juebipwnhr .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1698,7 +1698,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 5px;
 }
 
-#sslwyzzdlv .gt_first_grand_summary_row {
+#juebipwnhr .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1708,7 +1708,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-top-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_last_grand_summary_row_top {
+#juebipwnhr .gt_last_grand_summary_row_top {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1718,11 +1718,11 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_striped {
+#juebipwnhr .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#sslwyzzdlv .gt_table_body {
+#juebipwnhr .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1731,7 +1731,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-bottom-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_footnotes {
+#juebipwnhr .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1745,7 +1745,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-right-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_footnote {
+#juebipwnhr .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-top: 4px;
@@ -1754,7 +1754,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 5px;
 }
 
-#sslwyzzdlv .gt_sourcenotes {
+#juebipwnhr .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1768,7 +1768,7 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   border-right-color: #D3D3D3;
 }
 
-#sslwyzzdlv .gt_sourcenote {
+#juebipwnhr .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1776,72 +1776,72 @@ bmi_5      0.023    0.103   1.02   0.84, 1.25   0.82       </code></pre>
   padding-right: 5px;
 }
 
-#sslwyzzdlv .gt_left {
+#juebipwnhr .gt_left {
   text-align: left;
 }
 
-#sslwyzzdlv .gt_center {
+#juebipwnhr .gt_center {
   text-align: center;
 }
 
-#sslwyzzdlv .gt_right {
+#juebipwnhr .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#sslwyzzdlv .gt_font_normal {
+#juebipwnhr .gt_font_normal {
   font-weight: normal;
 }
 
-#sslwyzzdlv .gt_font_bold {
+#juebipwnhr .gt_font_bold {
   font-weight: bold;
 }
 
-#sslwyzzdlv .gt_font_italic {
+#juebipwnhr .gt_font_italic {
   font-style: italic;
 }
 
-#sslwyzzdlv .gt_super {
+#juebipwnhr .gt_super {
   font-size: 65%;
 }
 
-#sslwyzzdlv .gt_footnote_marks {
+#juebipwnhr .gt_footnote_marks {
   font-size: 75%;
   vertical-align: 0.4em;
   position: initial;
 }
 
-#sslwyzzdlv .gt_asterisk {
+#juebipwnhr .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#sslwyzzdlv .gt_indent_1 {
+#juebipwnhr .gt_indent_1 {
   text-indent: 5px;
 }
 
-#sslwyzzdlv .gt_indent_2 {
+#juebipwnhr .gt_indent_2 {
   text-indent: 10px;
 }
 
-#sslwyzzdlv .gt_indent_3 {
+#juebipwnhr .gt_indent_3 {
   text-indent: 15px;
 }
 
-#sslwyzzdlv .gt_indent_4 {
+#juebipwnhr .gt_indent_4 {
   text-indent: 20px;
 }
 
-#sslwyzzdlv .gt_indent_5 {
+#juebipwnhr .gt_indent_5 {
   text-indent: 25px;
 }
 
-#sslwyzzdlv .katex-display {
+#juebipwnhr .katex-display {
   display: inline-flex !important;
   margin-bottom: 0.75em !important;
 }
 
-#sslwyzzdlv div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
+#juebipwnhr div.Reactable > div.rt-table > div.rt-thead > div.rt-tr.rt-tr-group-header > div.rt-th-group:after {
   height: 0px !important;
 }
 </style>
@@ -2033,17 +2033,17 @@ bmi_5            1.05 (0.87 to 1.28)       1.03 (0.84 to 1.27)</code></pre>
 </div>
 </div>
 </div>
-<p>Der Results-Teil beginnt mit den Ereignissen: 81 Revisionen bei 600 Eingriffen (die erste Zeile der Ausgabe des Implantatmodells), und 81 / 600 = 0.135, also 13.5&nbsp;%.</p>
+<p>Der Results-Teil beginnt mit den <a href="../../de/glossary.html#event" class="term">Ereignissen</a>: 81 Revisionen bei 600 Eingriffen (die erste Zeile der Ausgabe des Implantatmodells), und 81 / 600 = 0.135, also 13.5&nbsp;%.</p>
 <blockquote class="blockquote">
 <p><strong>Methods:</strong> The association between implant and revision for any reason was estimated with Cox proportional hazards regression, with time from surgery as the time scale and implant A as the reference. Age, sex and body mass index were chosen in advance as covariates. Age entered the model as a linear term after a natural cubic spline showed no clear evidence of non-linearity. Proportional hazards were checked with scaled Schoenfeld residuals. In the Cox models, robust standard errors clustered on patient accounted for patients who had both sides replaced. A Fine-Gray model, treating death as a competing risk, was fitted as a sensitivity analysis.</p>
 <p><strong>Results:</strong> During follow-up, 81 of 600 procedures (13.5%) were revised. After adjustment for age, sex and body mass index, the hazard ratio for revision compared with implant A was 3.19 (95% CI 1.92 to 5.28) for implant C and 0.83 (95% CI 0.45 to 1.52) for implant B (test of proportional hazards, global p = 0.359). With death treated as a competing risk, the subdistribution hazard ratio for implant C was 3.09 (95% CI 1.86 to 5.14).</p>
 </blockquote>
-<p>Bevor Sie einreichen, prüfen Sie, ob das Manuskript Folgendes angibt: - die Anzahl der Patientinnen und Patienten, Eingriffe und Ereignisse - Zeitpunkt null und die Definition des Ereignisses (<a href="../../de/survival/13-kaplan-meier.html#time-zero">Seite 13</a>) - für welche Kovariaten adjustiert wurde und warum - wie kontinuierliche Prädiktoren modelliert wurden und wie proportionale Hazards geprüft wurden - wie beidseitig operierte Patientinnen und Patienten und Todesfälle behandelt wurden</p>
+<p>Bevor Sie einreichen, prüfen Sie, ob das Manuskript Folgendes angibt: - die Anzahl der Patientinnen und Patienten, Eingriffe und Ereignisse - Zeitpunkt null und die Definition des Ereignisses (<a href="../../de/survival/13-kaplan-meier.html#time-zero">Seite 13</a>) - für welche Kovariaten <a href="../../de/glossary.html#adjustment" class="term">adjustiert</a> wurde und warum - wie <a href="../../de/glossary.html#continuous-variable" class="term">kontinuierliche</a> Prädiktoren modelliert wurden und wie <a href="../../de/glossary.html#proportional-hazards" class="term">proportionale Hazards</a> geprüft wurden - wie beidseitig operierte Patientinnen und Patienten und Todesfälle behandelt wurden</p>
 </section>
 <section id="exercises" class="level2">
 <h2 class="anchored" data-anchor-id="exercises">Übungen</h2>
 <p>Die Lösungen verwenden die Packages, Daten und Modelle, die in den obigen Abschnitten erstellt wurden. Führen Sie die Seite daher zuerst von oben nach unten aus.</p>
-<p><strong>1.</strong> Passen Sie ein univariables Cox-Modell für die ASA-Klasse an (als Zahl, 1 bis 4) und schreiben Sie den Results-Satz.</p>
+<p><strong>1.</strong> Passen Sie ein <a href="../../de/glossary.html#multivariable" class="term">univariables</a> <a href="../../de/glossary.html#cox-regression" class="term">Cox-Modell</a> für die ASA-Klasse an (als Zahl, 1 bis 4) und schreiben Sie den Results-Satz.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -2090,11 +2090,11 @@ asa         1.379391             0.986966             1.927847  0.05968</code></
 <blockquote class="blockquote">
 <p><strong>Results:</strong> The hazard ratio for revision per ASA class was 1.38 (95% CI 0.99 to 1.93; p = 0.060).</p>
 </blockquote>
-<p>Der Schätzwert ist wenig präzise: Die Daten sind sowohl mit keinem Zusammenhang als auch mit einem Hazard vereinbar, der sich pro Klasse fast verdoppelt.</p>
+<p>Der <a href="../../de/glossary.html#estimate" class="term">Schätzwert</a> ist <a href="../../de/glossary.html#precision" class="term">wenig präzise</a>: Die Daten sind sowohl mit keinem <a href="../../de/glossary.html#association" class="term">Zusammenhang</a> als auch mit einem <a href="../../de/glossary.html#hazard" class="term">Hazard</a> vereinbar, der sich pro Klasse fast verdoppelt.</p>
 </div>
 </div>
 </div>
-<p><strong>2.</strong> Prüfen Sie mit einem natürlichen kubischen Spline mit 3 Freiheitsgraden, ob der Effekt des BMI im adjustierten Modell eine gerade Linie ist.</p>
+<p><strong>2.</strong> Prüfen Sie mit einem <a href="../../de/glossary.html#spline" class="term">natürlichen kubischen Spline</a> mit 3 Freiheitsgraden, ob der Effekt des BMI im <a href="../../de/glossary.html#adjustment" class="term">adjustierten</a> <a href="../../de/glossary.html#model" class="term">Modell</a> eine <a href="../../de/glossary.html#linear-relationship" class="term">gerade Linie</a> ist.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-11-contents" aria-controls="callout-11" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -2154,7 +2154,7 @@ asa         1.379391             0.986966             1.927847  0.05968</code></
 </div>
 </div>
 </div>
-<p><strong>3.</strong> Hüft-TP und Knie-TP können unterschiedliche Baseline-Hazards für eine Revision haben. Passen Sie das adjustierte Modell erneut an, stratifiziert nach Eingriff. Ändert sich das Hazard Ratio von Implantat C? Schreiben Sie den Results-Satz.</p>
+<p><strong>3.</strong> Hüft-TP und Knie-TP können unterschiedliche Baseline-Hazards für eine Revision haben. Passen Sie das adjustierte Modell erneut an, <a href="../../de/glossary.html#stratification" class="term">stratifiziert</a> nach Eingriff. Ändert sich das <a href="../../de/glossary.html#hazard-ratio" class="term">Hazard Ratio</a> von Implantat C? Schreiben Sie den Results-Satz.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-12-contents" aria-controls="callout-12" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -2919,8 +2919,8 @@ if (typeof document !== "undefined") {
 <p>Synthetic data only · Nur synthetische Daten · Données synthétiques uniquement</p>
 </div>   
     <div class="nav-footer-center">
-      &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Problem melden</a></li></ul></div></div>
+<p>Last updated · Zuletzt aktualisiert · Dernière mise à jour: 16.11.2026, 10:48</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Problem melden</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p>Adapted from the <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</p>
 </div>

@@ -637,9 +637,9 @@ window.Quarto = {
 
 
 <!-- data-checksum: f354a6da47f62ead35825a3d2b8ef6d9 -->
-<p>“How long do the implants last?” is the central question of arthroplasty research, and it needs its own methods. Patients join the study over several years and are followed for different lengths of time, and most of them are never revised. <strong>Survival analysis</strong> uses every patient’s follow-up for as long as it lasts.</p>
-<p>Pages <a href="../../en/catalog/04-describe-one-group.html#kaplan-meier">4</a>, <a href="../../en/catalog/06-two-unpaired-groups.html#log-rank">6</a> and <a href="../../en/catalog/08-three-plus-unmatched.html#cox">8</a> each showed one survival method in a few steps. This page covers the whole method: - what censoring is - how to set up the data - how to read and report a Kaplan-Meier curve - how long the patients were followed - how to compare groups - what to do when patients die before they can be revised</p>
-<p><a href="../../en/survival/14-cox-regression.html">Page 14</a> covers Cox regression.</p>
+<p>“How long do the implants last?” is the central question of arthroplasty research, and it needs its own methods. Patients join the study over several years and are followed for different lengths of time, and most of them are never revised. <strong><a href="../../en/glossary.html#time-to-event" class="term">Survival analysis</a></strong> uses every patient’s <a href="../../en/glossary.html#follow-up" class="term">follow-up</a> for as long as it lasts.</p>
+<p>Pages <a href="../../en/catalog/04-describe-one-group.html#kaplan-meier">4</a>, <a href="../../en/catalog/06-two-unpaired-groups.html#log-rank">6</a> and <a href="../../en/catalog/08-three-plus-unmatched.html#cox">8</a> each showed one survival method in a few steps. This page covers the whole method: - what <a href="../../en/glossary.html#censored" class="term">censoring</a> is - how to set up the data - how to read and report a <a href="../../en/glossary.html#kaplan-meier" class="term">Kaplan-Meier curve</a> - how long the patients were followed - how to compare groups - what to do when patients die before they can be revised</p>
+<p><a href="../../en/survival/14-cox-regression.html">Page 14</a> covers <a href="../../en/glossary.html#cox-regression" class="term">Cox regression</a>.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -651,12 +651,12 @@ window.Quarto = {
 </div>
 <div class="callout-body-container callout-body">
 <p>Run the code blocks in order, from the top: later blocks use the packages and data loaded earlier.</p>
-<p>To keep the code short, the examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole cohort; <a href="../../en/foundations/02-demographics.html#setup">page 2</a> counts them). In a real study, decide how to handle them (<a href="../../en/survival/14-cox-regression.html#stratified-cox">page 14</a>) and say what you did.</p>
+<p>To keep the code short, the examples use every case, including both cases of patients who had both sides operated on (80 patients in the whole <a href="../../en/glossary.html#cohort" class="term">cohort</a>; <a href="../../en/foundations/02-demographics.html#setup">page 2</a> counts them). In a real study, decide how to handle them (<a href="../../en/survival/14-cox-regression.html#stratified-cox">page 14</a>) and say what you did.</p>
 </div>
 </div>
 <section id="censoring" class="level2">
 <h2 class="anchored" data-anchor-id="censoring">What censoring means</h2>
-<p>Picture six patients, each followed from surgery until either a revision or the end of their follow-up:</p>
+<p>Picture six patients, each followed from surgery until either a revision or the end of their <a href="../../en/glossary.html#follow-up" class="term">follow-up</a>:</p>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -698,7 +698,7 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
-<p>Patients B, D and F are <strong><a href="../../en/glossary.html#censored" class="term">censored</a></strong>. We know they went <em>at least</em> that long without a revision, but not what happened afterwards. Censoring isn’t missing data: it’s partial information, and survival methods use all of it.</p>
+<p>Patients B, D and F are <strong><a href="../../en/glossary.html#censored" class="term">censored</a></strong>. We know they went <em>at least</em> that long without a revision, but not what happened afterwards. Censoring isn’t <a href="../../en/glossary.html#missing-data" class="term">missing data</a>: it’s partial information, and survival methods use all of it.</p>
 <p>Two simple summaries both get this wrong: - <strong>“3 of 6 (50%) were revised”</strong> ignores time. Patient B was followed for only 2 years, so B’s implant never had the chance to fail at 4 or 5 years. - <strong>Dropping the censored patients</strong> (“3 of 3 were revised”) throws away the years B, D and F spent without a revision.</p>
 <p>The <strong>Kaplan-Meier</strong> method gets it right. It moves through time and recalculates at each revision, using only the patients still being followed (<strong><a href="../../en/glossary.html#at-risk" class="term">at risk</a></strong>) at that moment:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
@@ -771,8 +771,8 @@ timeline
 </div>
 </div>
 <p>R’s table has a row only for the times when a revision happens. Python’s has a row for every time, with the patients at risk just before it.</p>
-<p>Reading the output, one revision at a time: - <strong>Year 1:</strong> 6 patients at risk, 1 revised. Survival = 5/6 = 0.833. - <strong>Year 2:</strong> B is censored. Nothing happens to the curve, but the at-risk group shrinks from 5 to 4 before the next revision. - <strong>Year 3:</strong> 4 at risk, 1 revised. Survival = 0.833 × 3/4 = 0.625. - <strong>Year 5:</strong> 2 at risk (D was censored at year 4), 1 revised. Survival = 0.625 × 1/2 = 0.3125.</p>
-<p>So the estimated chance of a revision by 5 years is 1 − 0.3125 = 69%, not 50%. Each censored patient counts fully while they’re followed and then leaves the at-risk group. The CIs R prints are very wide (the upper limit is 1 in every row) because there are only six patients.</p>
+<p>Reading the output, one revision at a time: - <strong>Year 1:</strong> 6 patients at risk, 1 revised. <a href="../../en/glossary.html#survival" class="term">Survival</a> = 5/6 = 0.833. - <strong>Year 2:</strong> B is censored. Nothing happens to the curve, but the at-risk group shrinks from 5 to 4 before the next revision. - <strong>Year 3:</strong> 4 at risk, 1 revised. Survival = 0.833 × 3/4 = 0.625. - <strong>Year 5:</strong> 2 at risk (D was censored at year 4), 1 revised. Survival = 0.625 × 1/2 = 0.3125.</p>
+<p>So the estimated <a href="../../en/glossary.html#probability" class="term">chance</a> of a revision by 5 years is 1 − 0.3125 = 69%, not 50%. Each censored patient counts fully while they’re followed and then leaves the at-risk group. The <a href="../../en/glossary.html#confidence-interval" class="term">CIs</a> R prints are very wide (the upper limit is 1 in every row) because there are only six patients.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -807,12 +807,12 @@ timeline
 </section>
 <section id="time-zero" class="level2">
 <h2 class="anchored" data-anchor-id="time-zero">Time zero and the event</h2>
-<p>Every survival analysis needs two definitions, fixed before you look at the results:</p>
+<p>Every <a href="../../en/glossary.html#time-to-event" class="term">survival analysis</a> needs two definitions, fixed before you look at the results:</p>
 <ul>
 <li><strong>Time zero</strong>, when the clock starts. For implant survival it’s the <strong>date of surgery</strong>: every patient starts at the same clinical moment. Starting at the first clinic visit instead would ignore revisions that happened before that visit.</li>
 <li><strong>The event</strong>, what stops the clock. Here it’s <strong>revision for any reason</strong>: any reoperation that removes or exchanges a component. Other studies use aseptic revision, or any reoperation. Choose one in advance and define it in the Methods.</li>
 </ul>
-<p>Real data rarely arrive as “years followed” and “revised: yes/no”. You build those columns from dates. The practice cohort already has them: <code>followup_years</code> and <code>event_status</code>, where 0 means censored, 1 means revised and 2 means died without a revision. Here’s how to make them from a table of dates, for four made-up patients:</p>
+<p>Real data rarely arrive as “years followed” and “revised: yes/no”. You build those columns from dates. The practice <a href="../../en/glossary.html#cohort" class="term">cohort</a> already has them: <code>followup_years</code> and <code>event_status</code>, where 0 means <a href="../../en/glossary.html#censored" class="term">censored</a>, 1 means revised and 2 means died without a revision. Here’s how to make them from a table of dates, for four made-up patients:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -881,7 +881,7 @@ timeline
 </div>
 </div>
 <ul>
-<li><strong>P1</strong> was revised in 2019 and died in 2023. The revision came first, so P1’s follow-up ends at the revision, 3.30 years after surgery.</li>
+<li><strong>P1</strong> was revised in 2019 and died in 2023. The revision came first, so P1’s <a href="../../en/glossary.html#follow-up" class="term">follow-up</a> ends at the revision, 3.30 years after surgery.</li>
 <li><strong>P2</strong> died 3.21 years after surgery without a revision. Death ends the follow-up: P2 can never be revised. (The section on <a href="#competing-risks">competing risks</a> explains why that matters.)</li>
 <li><strong>P3</strong> was alive and unrevised at the last visit: censored at 5.38 years.</li>
 <li><strong>P4</strong> was revised at 0.27 years: 0.271 × 365.25 = 99 days after surgery.</li>
@@ -902,7 +902,7 @@ timeline
 </section>
 <section id="kaplan-meier" class="level2">
 <h2 class="anchored" data-anchor-id="kaplan-meier">The Kaplan-Meier curve</h2>
-<p>Now the practice cohort: 600 procedures, each followed from surgery to revision, death or the last visit.</p>
+<p>Now the practice <a href="../../en/glossary.html#cohort" class="term">cohort</a>: 600 procedures, each <a href="../../en/glossary.html#follow-up" class="term">followed</a> from surgery to revision, death or the last visit.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -956,7 +956,7 @@ timeline
 </div>
 </div>
 </div>
-<p>How to read it: - <strong>The steps:</strong> the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still at risk. - <strong>The ticks</strong> mark censored patients. They don’t move the curve; they leave the at-risk group. - <strong>The shaded band</strong> is the 95% <a href="../../en/glossary.html#confidence-interval" class="term">CI</a>. It widens as patients leave. - <strong>The table below the plot</strong> gives the number of procedures still being followed (<strong>at risk</strong>) at each time, 600 at surgery, 332 at 4 years and 84 at 8 years in R (lifelines shows 331 and 83; the R vs Python box below explains why), and the revisions so far. Always publish the numbers at risk with the curve: they tell the reader how much to trust each part of it.</p>
+<p>How to read it: - <strong>The steps:</strong> the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still <a href="../../en/glossary.html#at-risk" class="term">at risk</a>. - <strong>The ticks</strong> mark <a href="../../en/glossary.html#censored" class="term">censored</a> patients. They don’t move the curve; they leave the at-risk group. - <strong>The shaded band</strong> is the 95% <a href="../../en/glossary.html#confidence-interval" class="term">CI</a>. It widens as patients leave. - <strong>The table below the plot</strong> gives the number of procedures still being followed (<strong>at risk</strong>) at each time, 600 at surgery, 332 at 4 years and 84 at 8 years in R (lifelines shows 331 and 83; the R vs Python box below explains why), and the revisions so far. Always publish the numbers at risk with the curve: they tell the reader how much to trust each part of it.</p>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -980,7 +980,7 @@ timeline
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>R’s <code>survfit()</code> uses a “log” CI by default; lifelines uses “log-log”. We set <code>conf.type = "log-log"</code> in R so the two match, as on <a href="../../en/catalog/04-describe-one-group.html#kaplan-meier">page 4</a>. The numbers at risk can differ by one or two: R counts the patients followed for <em>at least</em> 4 years, lifelines those followed for <em>more than</em> 4 years, so a patient censored at exactly 4.00 years is in R’s count only. Here that is one case at 4 years and one at 8 years. lifelines’ <code>add_at_risk_counts()</code> also adds a row of censored patients unless you choose rows with <code>rows_to_show</code>.</p>
+<p>R’s <code>survfit()</code> uses a “log” CI by default; lifelines uses “<a href="../../en/glossary.html#log-log-interval" class="term">log-log</a>”. We set <code>conf.type = "log-log"</code> in R so the two match, as on <a href="../../en/catalog/04-describe-one-group.html#kaplan-meier">page 4</a>. The numbers at risk can differ by one or two: R counts the patients followed for <em>at least</em> 4 years, lifelines those followed for <em>more than</em> 4 years, so a patient censored at exactly 4.00 years is in R’s count only. Here that is one case at 4 years and one at 8 years. lifelines’ <code>add_at_risk_counts()</code> also adds a row of censored patients unless you choose rows with <code>rows_to_show</code>.</p>
 </div>
 </div>
 </section>
@@ -1022,8 +1022,8 @@ timeline
 </div>
 <ul>
 <li><strong>survival:</strong> 0.939 at 2 years, 0.863 at 5 years and 0.780 at 10 years.</li>
-<li><strong>lower 95% CI / upper 95% CI:</strong> the CI around each one. The 10-year CI (0.725 to 0.826) is the widest.</li>
-<li><strong>n.risk:</strong> 496 procedures still followed at 2 years, 263 at 5 years and only 21 at 10 years.</li>
+<li><strong>lower 95% CI / upper 95% CI:</strong> the <a href="../../en/glossary.html#confidence-interval" class="term">CI</a> around each one. The 10-year CI (0.725 to 0.826) is the widest.</li>
+<li><strong>n.risk:</strong> 496 procedures still <a href="../../en/glossary.html#follow-up" class="term">followed</a> at 2 years, 263 at 5 years and only 21 at 10 years.</li>
 <li><strong>n.event:</strong> the revisions <em>since the previous time shown</em>, not the running total.</li>
 <li><strong>Python</strong> prints the same numbers in one row per time: years, survival, [lower, upper] and the number at risk. It has no n.event.</li>
 </ul>
@@ -1041,13 +1041,13 @@ timeline
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>A survivorship figure means nothing without the time it refers to. Give the 95% CI, and the number still at risk at the time you quote, so readers can see how much data the estimate rests on.</p>
+<p>A survivorship figure means nothing without the time it refers to. Give the 95% CI, and the number still <a href="../../en/glossary.html#at-risk" class="term">at risk</a> at the time you quote, so readers can see how much data the <a href="../../en/glossary.html#estimate" class="term">estimate</a> rests on.</p>
 </div>
 </div>
 </section>
 <section id="follow-up" class="level2">
 <h2 class="anchored" data-anchor-id="follow-up">How long were patients followed?</h2>
-<p>Every survival paper reports the <strong>median follow-up</strong>. The obvious way to calculate it is wrong:</p>
+<p>Every survival paper reports the <strong><a href="../../en/glossary.html#median" class="term">median</a> follow-up</strong>. The obvious way to calculate it is wrong:</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1089,7 +1089,7 @@ timeline
 </div>
 </div>
 <p>The plain median, 4.4 years, mixes two things: how long the study watched patients, and how soon they were revised or died. A patient revised at 1 year wasn’t “followed for 1 year” in the sense readers care about. The study would have kept watching them.</p>
-<p>The <strong>reverse Kaplan-Meier</strong> method answers the real question: how long would patients have been followed if nothing had happened to them? It swaps the roles: being censored at the end of follow-up becomes the “event”, and revisions and deaths become the censored observations. The median follow-up is <strong>5.62 years</strong> (<a href="../../en/glossary.html#iqr" class="term">IQR</a> 3.52 to 7.93).</p>
+<p>The <strong>reverse Kaplan-Meier</strong> method answers the real question: how long would patients have been followed if nothing had happened to them? It swaps the roles: being <a href="../../en/glossary.html#censored" class="term">censored</a> at the end of follow-up becomes the “<a href="../../en/glossary.html#event" class="term">event</a>”, and revisions and deaths become the censored observations. The median follow-up is <strong>5.62 years</strong> (<a href="../../en/glossary.html#iqr" class="term">IQR</a> 3.52 to 7.93).</p>
 <blockquote class="blockquote">
 <p><strong>Methods:</strong> Median follow-up was estimated with the reverse Kaplan-Meier method.</p>
 <p><strong>Results:</strong> The median follow-up was 5.62 years (IQR 3.52 to 7.93).</p>
@@ -1097,7 +1097,7 @@ timeline
 </section>
 <section id="log-rank" class="level2">
 <h2 class="anchored" data-anchor-id="log-rank">Comparing groups: the log-rank test</h2>
-<p>The <strong>log-rank test</strong> asks whether two or more survival curves differ. At every revision time it compares each group’s observed revisions with the <a href="../../en/glossary.html#expected-count" class="term">number expected</a> if all groups had the same risk, then adds up the differences across the whole follow-up. <a href="../../en/catalog/06-two-unpaired-groups.html#log-rank">Page 6</a> rebuilds the observed and expected counts by hand. It’s the same test as the <strong>Mantel-Haenszel</strong> (or Mantel-Cox) test in the decision table.</p>
+<p>The <strong>log-rank test</strong> asks whether two or more <a href="../../en/glossary.html#survival" class="term">survival curves</a> differ. At every revision time it compares each group’s observed revisions with the <a href="../../en/glossary.html#expected-count" class="term">number expected</a> if all groups had the same risk, then adds up the differences across the whole <a href="../../en/glossary.html#follow-up" class="term">follow-up</a>. <a href="../../en/catalog/06-two-unpaired-groups.html#log-rank">Page 6</a> rebuilds the observed and expected counts by hand. It’s the same test as the <strong>Mantel-Haenszel</strong> (or Mantel-Cox) test in the decision table.</p>
 <p><strong>Two groups.</strong> In total hips, does the surgical approach (anterior or posterior) affect revision?</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-6-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-1" role="tab" aria-controls="tabset-6-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-6-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-6-2" role="tab" aria-controls="tabset-6-2" aria-selected="false" href="">Python</a></li></ul>
@@ -1174,11 +1174,11 @@ approach=posterior 125       19     16.1     0.513     0.912
 </div>
 </div>
 <ul>
-<li><strong>N:</strong> the number of hips in each group, 145 anterior and 125 posterior. N, Observed and Expected are in R’s table only: lifelines prints the test statistic and the p-value.</li>
+<li><strong>N:</strong> the number of hips in each group, 145 anterior and 125 posterior. N, Observed and Expected are in R’s table only: lifelines prints the <a href="../../en/glossary.html#test-statistic" class="term">test statistic</a> and the <a href="../../en/glossary.html#p-value" class="term">p-value</a>.</li>
 <li><strong>Observed / Expected:</strong> the posterior hips had 19 revisions where 16.1 were expected; the anterior hips had 18 where 20.9 were expected.</li>
 <li><strong>Chisq = 0.9 on 1 degree of freedom, p = 0.340:</strong> R’s printout rounds p to 0.3, and the line under it gives 0.33968. Python prints the test statistic and then p.&nbsp;No clear evidence that the curves differ over the whole follow-up.</li>
 </ul>
-<p>But look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the CIs overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.</p>
+<p>But look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the <a href="../../en/glossary.html#confidence-interval" class="term">CIs</a> overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1253,7 +1253,7 @@ implant=C 137       38     16.9     26.17     33.18
 </div>
 <ul>
 <li><strong>Observed / Expected</strong> (R’s table only): implant C had 38 revisions where 16.9 were expected. Implants A (25 vs 34.0) and B (18 vs 30.0) had fewer than expected.</li>
-<li><strong>Chisq = 33.5 on 2 degrees of freedom, p &lt; 0.001:</strong> R prints <code>p= 5e-08</code>, which is <a href="../../en/glossary.html#scientific-notation" class="term">scientific notation</a> for 0.00000005. Python prints the test statistic, the degrees of freedom and p.&nbsp;At least one implant’s curve differs from the others. The test doesn’t say which; <a href="../../en/beyond/15-post-hoc.html#after-log-rank">page 15</a> covers comparing pairs of groups. <a href="../../en/catalog/08-three-plus-unmatched.html#cox">Page 8</a> gives each implant’s <a href="../../en/glossary.html#hazard-ratio" class="term">hazard ratio</a>.</li>
+<li><strong>Chisq = 33.5 on 2 degrees of freedom, p &lt; 0.001:</strong> R prints <code>p= 5e-08</code>, which is <a href="../../en/glossary.html#scientific-notation" class="term">scientific notation</a> for 0.00000005. Python prints the test statistic, the <a href="../../en/glossary.html#degrees-of-freedom" class="term">degrees of freedom</a> and p.&nbsp;At least one implant’s curve differs from the others. The test doesn’t say which; <a href="../../en/beyond/15-post-hoc.html#after-log-rank">page 15</a> covers comparing pairs of groups. <a href="../../en/catalog/08-three-plus-unmatched.html#cox">Page 8</a> gives each implant’s <a href="../../en/glossary.html#hazard-ratio" class="term">hazard ratio</a>.</li>
 </ul>
 <blockquote class="blockquote">
 <p><strong>Methods:</strong> Revision-free survival was compared between groups with the log-rank test.</p>
@@ -1269,7 +1269,7 @@ implant=C 137       38     16.9     26.17     33.18
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>The log-rank test is most powerful when one group’s hazard is a steady multiple of the other’s over time (proportional hazards). When the curves cross, as with the surgical approach here, a non-significant test can hide a real difference. And don’t compare groups at one hand-picked time point to get a significant result: decide your time points before you look.</p>
+<p>The log-rank test is most <a href="../../en/glossary.html#power" class="term">powerful</a> when one group’s <a href="../../en/glossary.html#hazard" class="term">hazard</a> is a steady multiple of the other’s over time (<a href="../../en/glossary.html#proportional-hazards" class="term">proportional hazards</a>). When the curves cross, as with the surgical approach here, a <a href="../../en/glossary.html#statistical-significance" class="term">non-significant</a> test can hide a real difference. And don’t compare groups at one hand-picked time point to get a significant result: decide your time points before you look.</p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip callout-titled">
@@ -1288,10 +1288,10 @@ implant=C 137       38     16.9     26.17     33.18
 </section>
 <section id="competing-risks" class="level2">
 <h2 class="anchored" data-anchor-id="competing-risks">Competing risks: when patients die first</h2>
-<p>So far, patients who died were treated as censored. That assumes they would have gone on to be revised at the same rate as everyone else. They can’t: a patient who has died can never be revised. Death is a <strong>competing risk</strong>.</p>
-<p>With death treated as censored, 1 − Kaplan-Meier estimates the risk of revision in an imaginary world where nobody dies. In an older population, where many patients die during follow-up, it <strong>overstates</strong> the real proportion who will be revised. The <strong>cumulative incidence function</strong> (CIF), estimated with the <strong>Aalen-Johansen</strong> method, gives the real proportion: the chance of being revised by a given time, allowing for the chance of dying first.</p>
-<p>Here is how the cumulative incidence is calculated. At each moment when a revision happens, take the share of cases that are still alive and unrevised just before it, and multiply it by the fraction of the cases at risk that are revised at that moment. Add these small pieces up to the time you are interested in. 1 − Kaplan-Meier is the same sum with one difference: its “still unrevised” share ignores the deaths, so it is too big, and so is every piece. A box under “Reading it” does both sums by hand.</p>
-<p>The data need one status column with three values. In the cohort, <code>event_status</code> is 0 for censored, 1 for revised and 2 for died.</p>
+<p>So far, patients who died were treated as <a href="../../en/glossary.html#censored" class="term">censored</a>. That assumes they would have gone on to be revised at the same rate as everyone else. They can’t: a patient who has died can never be revised. Death is a <strong>competing risk</strong>.</p>
+<p>With death treated as censored, 1 − <a href="../../en/glossary.html#kaplan-meier" class="term">Kaplan-Meier</a> estimates the <a href="../../en/glossary.html#risk" class="term">risk</a> of revision in an imaginary world where nobody dies. In an older population, where many patients die during <a href="../../en/glossary.html#follow-up" class="term">follow-up</a>, it <strong>overstates</strong> the real <a href="../../en/glossary.html#proportion" class="term">proportion</a> who will be revised. The <strong>cumulative incidence function</strong> (CIF), estimated with the <strong><a href="../../en/glossary.html#aalen-johansen" class="term">Aalen-Johansen</a></strong> method, gives the real proportion: the <a href="../../en/glossary.html#probability" class="term">chance</a> of being revised by a given time, allowing for the chance of dying first.</p>
+<p>Here is how the cumulative incidence is calculated. At each moment when a revision happens, take the share of cases that are still alive and unrevised just before it, and multiply it by the fraction of the cases <a href="../../en/glossary.html#at-risk" class="term">at risk</a> that are revised at that moment. Add these small pieces up to the time you are interested in. 1 − Kaplan-Meier is the same sum with one difference: its “still unrevised” share ignores the deaths, so it is too big, and so is every piece. A box under “Reading it” does both sums by hand.</p>
+<p>The data need one status column with three values. In the <a href="../../en/glossary.html#cohort" class="term">cohort</a>, <code>event_status</code> is 0 for censored, 1 for revised and 2 for died.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-9-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-1" role="tab" aria-controls="tabset-9-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-9-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-9-2" role="tab" aria-controls="tabset-9-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1385,7 +1385,7 @@ death 10 0.24 0.193 0.29</code></pre>
 </div>
 </div>
 </div>
-<p>Reading it: - <strong>The revision curve</strong> is the cumulative incidence of revision: 5.9% at 2 years (R prints 0.0595, which is 0.05949 before rounding), 12.8% at 5 years and 19.3% at 10 years. - <strong>The death curve</strong> ends higher: 24.0% of patients had died without a revision by 10 years (the <code>death</code> row at 10 years). - <strong>1 − Kaplan-Meier</strong> says 22.0% by 10 years, against a cumulative incidence of 19.3%. That is 22.0 − 19.3 = 2.7 percentage points too many, because it pretends the patients who died could still have been revised. - <strong>Python’s rows</strong> read: outcome, years, cumulative incidence, lower and upper CI limit. Its last three rows are the years and 1 − Kaplan-Meier.</p>
+<p>Reading it: - <strong>The revision curve</strong> is the cumulative incidence of revision: 5.9% at 2 years (R prints 0.0595, which is 0.05949 before rounding), 12.8% at 5 years and 19.3% at 10 years. - <strong>The death curve</strong> ends higher: 24.0% of patients had died without a revision by 10 years (the <code>death</code> row at 10 years). - <strong>1 − Kaplan-Meier</strong> says 22.0% by 10 years, against a cumulative incidence of 19.3%. That is 22.0 − 19.3 = 2.7 <a href="../../en/glossary.html#percentage-point" class="term">percentage points</a> too many, because it pretends the patients who died could still have been revised. - <strong>Python’s rows</strong> read: outcome, years, cumulative incidence, lower and upper <a href="../../en/glossary.html#confidence-interval" class="term">CI</a> limit. Its last three rows are the years and 1 − Kaplan-Meier.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-10-contents" aria-controls="callout-10" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1470,7 +1470,7 @@ death 10 0.24 0.193 0.29</code></pre>
 </div>
 </div>
 <p>The gap grows with the number of deaths. It’s small at 2 years, when few patients have died, and largest in older patients (see exercise 2).</p>
-<p><strong>Comparing groups: Gray’s test (R only).</strong> Gray’s test is the competing-risks counterpart of the log-rank test: it compares cumulative incidence curves between groups. The tidycmprsk package runs it:</p>
+<p><strong>Comparing groups: Gray’s test (R only).</strong> Gray’s test is the competing-risks counterpart of the <a href="../../en/glossary.html#log-rank-test" class="term">log-rank test</a>: it compares cumulative incidence curves between groups. The tidycmprsk package runs it:</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycmprsk)</span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
@@ -1484,7 +1484,7 @@ death 10 0.24 0.193 0.29</code></pre>
 1 revision         31.5     2 0.000000142 death           0.969     2     0.616</code></pre>
 </div>
 </div>
-<p>The cumulative incidence of revision differed between implants (Gray’s test: <code>statistic_1</code> is χ² = 31.5, with df = 2 and p &lt; 0.001; the output prints p as 0.000000142); there was no clear evidence that the cumulative incidence of death differed (<code>statistic_2</code>: χ² = 0.97, p = 0.616).</p>
+<p>The cumulative incidence of revision differed between implants (Gray’s test: <code>statistic_1</code> is <a href="../../en/glossary.html#chi-square-statistic" class="term">χ²</a> = 31.5, with <a href="../../en/glossary.html#degrees-of-freedom" class="term">df</a> = 2 and p &lt; 0.001; the output prints p as 0.000000142); there was no clear evidence that the cumulative incidence of death differed (<code>statistic_2</code>: χ² = 0.97, p = 0.616).</p>
 <blockquote class="blockquote">
 <p><strong>Methods:</strong> The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk, and compared between implants with Gray’s test.</p>
 <p><strong>Results:</strong> The cumulative incidence of revision was 12.8% (95% CI 10.0% to 15.9%) at 5 years and 19.3% (95% CI 15.3% to 23.7%) at 10 years, when the cumulative incidence of death was 24.0% (95% CI 19.3% to 29.0%). Gray’s test for the cumulative incidence of revision across implants gave χ² = 31.5 (df = 2, p &lt; 0.001).</p>
@@ -1499,7 +1499,7 @@ death 10 0.24 0.193 0.29</code></pre>
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Both estimates are useful, but they answer different questions: - <strong>1 − Kaplan-Meier</strong> answers “how well does the implant perform while patients are alive?” It’s the usual measure for comparing implants, and registries report it. - <strong>The cumulative incidence</strong> answers “what proportion of patients will actually be revised?” Use it to counsel patients or plan services, especially for older patients.</p>
+<p>Both <a href="../../en/glossary.html#estimate" class="term">estimates</a> are useful, but they answer different questions: - <strong>1 − Kaplan-Meier</strong> answers “how well does the implant perform while patients are alive?” It’s the usual measure for comparing implants, and <a href="../../en/glossary.html#registry" class="term">registries</a> report it. - <strong>The cumulative incidence</strong> answers “what proportion of patients will actually be revised?” Use it to counsel patients or plan services, especially for older patients.</p>
 <p>Say which one you report. Never call 1 − Kaplan-Meier “the proportion of patients revised” when many patients died.</p>
 </div>
 </div>
@@ -1514,9 +1514,9 @@ death 10 0.24 0.193 0.29</code></pre>
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li><strong>The cumulative incidence:</strong> R’s <code>survfit()</code> estimates it whenever the status has more than two levels. In Python, use statsmodels’ <code>CumIncidenceRight()</code>: it gives the estimates and their standard errors but no CI, so the code builds the same log-log CI as R. lifelines also has an <code>AalenJohansenFitter</code>, but it moves tied follow-up times by a small random amount, which can shift an estimate read at exactly 5 or 10 years, so we don’t use it.</li>
+<li><strong>The cumulative incidence:</strong> R’s <code>survfit()</code> estimates it whenever the status has more than two <a href="../../en/glossary.html#categorical-variable" class="term">levels</a>. In Python, use statsmodels’ <code>CumIncidenceRight()</code>: it gives the estimates and their <a href="../../en/glossary.html#standard-error" class="term">standard errors</a> but no CI, so the code builds the same <a href="../../en/glossary.html#log-log-interval" class="term">log-log CI</a> as R. lifelines also has an <code>AalenJohansenFitter</code>, but it moves <a href="../../en/glossary.html#ties" class="term">tied</a> follow-up times by a small random amount, which can shift an estimate read at exactly 5 or 10 years, so we don’t use it.</li>
 <li><strong>Gray’s test:</strong> Python has no mature implementation of Gray’s test. Plot the curves in Python, but run the test in R. tidycmprsk’s <code>cuminc()</code> also gives the cumulative incidences, with a slightly different CI method.</li>
-<li><strong>Fine-Gray regression</strong> models the cumulative incidence with several predictors at once; it’s R only too (<a href="../../en/survival/14-cox-regression.html#fine-gray">page 14</a>).</li>
+<li><strong>Fine-Gray regression</strong> models the cumulative incidence with <a href="../../en/glossary.html#multivariable" class="term">several predictors at once</a>; it’s R only too (<a href="../../en/survival/14-cox-regression.html#fine-gray">page 14</a>).</li>
 </ul>
 </div>
 </div>
@@ -1524,7 +1524,7 @@ death 10 0.24 0.193 0.29</code></pre>
 <section id="exercises" class="level2">
 <h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
 <p>The solutions use the packages and data loaded in the sections above, so run the page from the top first.</p>
-<p><strong>1.</strong> Compare revision-free survival between total hips (THA) and total knees (TKA). Give each procedure’s survivorship at 5 years with its 95% CI, and the log-rank test.</p>
+<p><strong>1.</strong> Compare <a href="../../en/glossary.html#survival" class="term">revision-free survival</a> between total hips (THA) and total knees (TKA). Give each procedure’s survivorship at 5 years with its 95% <a href="../../en/glossary.html#confidence-interval" class="term">CI</a>, and the <a href="../../en/glossary.html#log-rank-test" class="term">log-rank test</a>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1607,7 +1607,7 @@ TKA 0.859 [0.809, 0.896]</code></pre>
 </div>
 </div>
 </div>
-<p><strong>2.</strong> A surgeon asks: “Of my patients aged 75 and over, what proportion will need a revision within 5 years?” Which estimate answers that question? Calculate it, and compare it with 1 − Kaplan-Meier.</p>
+<p><strong>2.</strong> A surgeon asks: “Of my patients aged 75 and over, what <a href="../../en/glossary.html#proportion" class="term">proportion</a> will need a revision within 5 years?” Which <a href="../../en/glossary.html#estimate" class="term">estimate</a> answers that question? Calculate it, and compare it with 1 − <a href="../../en/glossary.html#kaplan-meier" class="term">Kaplan-Meier</a>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1620,7 +1620,7 @@ TKA 0.859 [0.809, 0.896]</code></pre>
 </div>
 <div id="callout-14" class="callout-14-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
-<p>The surgeon wants the real proportion of patients revised, and many patients over 75 die during follow-up. That’s the <strong>cumulative incidence</strong>, with death as a competing risk.</p>
+<p>The surgeon wants the real proportion of patients revised, and many patients over 75 die during <a href="../../en/glossary.html#follow-up" class="term">follow-up</a>. That’s the <strong><a href="../../en/glossary.html#cumulative-incidence" class="term">cumulative incidence</a></strong>, with death as a <a href="../../en/glossary.html#competing-risk" class="term">competing risk</a>.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-12-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-12-1" role="tab" aria-controls="tabset-12-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-12-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-12-2" role="tab" aria-controls="tabset-12-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -1680,7 +1680,7 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<p>The three counts add up to the 100 procedures: 46 censored, 13 revised and 41 who died.</p>
+<p>The three counts add up to the 100 procedures: 46 <a href="../../en/glossary.html#censored" class="term">censored</a>, 13 revised and 41 who died.</p>
 <blockquote class="blockquote">
 <p><strong>Results:</strong> Of the 100 procedures in patients aged 75 and over, 41 ended in death and 13 in revision. The cumulative incidence of revision at 5 years was 13.9% (95% CI 7.8% to 21.8%); 1 − Kaplan-Meier at 5 years was 16.5%.</p>
 </blockquote>
@@ -1688,7 +1688,7 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<p><strong>3.</strong> Estimate the cumulative incidence of revision at 5 years for each implant, with death as a competing risk, and write the Results sentence, including Gray’s test.</p>
+<p><strong>3.</strong> Estimate the cumulative incidence of revision at 5 years for each implant, with death as a competing risk, and write the Results sentence, including <a href="../../en/glossary.html#gray-test" class="term">Gray’s test</a>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
@@ -1737,7 +1737,7 @@ C 0.273 0.195 0.356</code></pre>
 </div>
 </div>
 </div>
-<p>Gray’s test by implant is the one run in the section above (<code>glance(cif_by_implant)</code>): χ² = 31.5, df = 2, p &lt; 0.001. Python has no Gray’s test.</p>
+<p>Gray’s test by implant is the one run in the section above (<code>glance(cif_by_implant)</code>): <a href="../../en/glossary.html#chi-square-statistic" class="term">χ²</a> = 31.5, <a href="../../en/glossary.html#degrees-of-freedom" class="term">df</a> = 2, p &lt; 0.001. Python has no Gray’s test.</p>
 <blockquote class="blockquote">
 <p><strong>Results:</strong> The cumulative incidence of revision at 5 years, with death as a competing risk, was 9.7% (95% CI 6.2% to 14.1%) with implant A, 6.8% (95% CI 3.7% to 11.2%) with implant B and 27.3% (95% CI 19.5% to 35.6%) with implant C (Gray’s test χ² = 31.5, df = 2, p &lt; 0.001).</p>
 </blockquote>
@@ -2458,8 +2458,8 @@ if (typeof document !== "undefined") {
 <p>Synthetic data only · Nur synthetische Daten · Données synthétiques uniquement</p>
 </div>   
     <div class="nav-footer-center">
-      &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
+<p>Last updated · Zuletzt aktualisiert · Dernière mise à jour: 16.11.2026, 10:48</p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p>Adapted from the <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</p>
 </div>
