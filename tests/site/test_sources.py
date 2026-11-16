@@ -482,28 +482,53 @@ def test_no_page_reads_or_names_vr12():
 
 
 FENCED = re.compile(r"^```.*?^```", re.DOTALL | re.MULTILINE)
-XLSX_IN_PROSE = re.compile(r"(\[)?`((?:data|templates)/[\w./-]+\.xlsx)`(\]\(([^)]*)\))?")
 DOWNLOAD = "https://github.com/hfr-ortho/stats-formation/raw/main/"
+VIEW = "https://github.com/hfr-ortho/stats-formation/blob/main/"
+DATA_FILE_NAMES = sorted(f.name for d in ["data", "data/answer-keys", "templates"]
+                         for f in (ROOT / d).glob("*") if f.suffix in {".csv", ".xlsx"})
+DATA_FILE_IN_PROSE = re.compile(
+    r"(\[)?`((?:[\w.-]+/)*(?:" + "|".join(map(re.escape, DATA_FILE_NAMES)) + r"))`(\]\(([^)]*)\))?")
+# using-this-site.qmd explains what a data path is; that mention is an example, not a file to fetch.
+PATH_EXAMPLES = {("getting-started/using-this-site.qmd", "data/cohort.csv")}
 
 
-def unlinked_workbooks(text):
-    """Excel files named in prose that aren't a link to the file's download address."""
-    return [m.group(2) for m in XLSX_IN_PROSE.finditer(FENCED.sub("", text))
-            if not (m.group(1) and m.group(4) == DOWNLOAD + m.group(2))]
+def unlinked_data_files(text):
+    """Data files named in prose that aren't a link to the file's download address.
+
+    The name must be the file's whole path from the repository's top folder, so `cohort.csv` fails too.
+    """
+    return [m.group(2) for m in DATA_FILE_IN_PROSE.finditer(FENCED.sub("", text))
+            if not (m.group(1) and m.group(4) == DOWNLOAD + m.group(2) and (ROOT / m.group(2)).is_file())]
 
 
-def test_rule_catches_a_workbook_named_without_a_link():
-    assert unlinked_workbooks("Open `data/a.xlsx` in Excel.") == ["data/a.xlsx"]
-    assert unlinked_workbooks("Open [`data/a.xlsx`](https://example.org/a.xlsx).") == ["data/a.xlsx"]
-    assert unlinked_workbooks(f"Open [`data/a.xlsx`]({DOWNLOAD}data/a.xlsx).") == []
-    assert unlinked_workbooks('```r\npath <- "data/a.xlsx"  # `data/a.xlsx`\n```\n') == []
+def test_rule_catches_a_data_file_named_without_a_link():
+    assert unlinked_data_files("Open `data/cohort.csv` in Excel.") == ["data/cohort.csv"]
+    assert unlinked_data_files("Use `cohort.csv`.") == ["cohort.csv"]
+    assert unlinked_data_files(f"Use [`cohort.csv`]({DOWNLOAD}cohort.csv).") == ["cohort.csv"]
+    assert unlinked_data_files("Open [`data/cohort.csv`](https://example.org/cohort.csv).") == ["data/cohort.csv"]
+    assert unlinked_data_files(f"Open [`data/cohort.csv`]({DOWNLOAD}data/cohort.csv).") == []
+    assert unlinked_data_files(f"Open [`data/messy_abstraction_workbook.xlsx`]({DOWNLOAD}data/messy_abstraction_workbook.xlsx).") == []
+    assert unlinked_data_files('```r\npath <- "data/cohort.csv"  # `data/cohort.csv`\n```\n') == []
 
 
-def test_every_workbook_named_in_prose_links_to_its_download():
-    """A reader of the website has no data/ folder: a workbook they are told to open must be a link."""
+def test_every_data_file_named_in_prose_links_to_its_download():
+    """A reader of the website has no data/ folder: a data file the text names must be a link to it."""
     for lang in LANGS:
         for path in sorted((ROOT / lang).rglob("*.qmd")):
-            text = path.read_text(encoding="utf-8")
-            assert unlinked_workbooks(text) == [], f"{path.relative_to(ROOT)}: Excel file named without a download link"
-            for name in XLSX_IN_PROSE.finditer(FENCED.sub("", text)):
-                assert (ROOT / name.group(2)).is_file(), f"{path.relative_to(ROOT)}: {name.group(2)} doesn't exist"
+            page = path.relative_to(ROOT / lang).as_posix()
+            found = [name for name in unlinked_data_files(path.read_text(encoding="utf-8"))
+                     if (page, name) not in PATH_EXAMPLES]
+            assert found == [], f"{lang}/{page}: data file named without a download link"
+
+
+def test_setup_page_links_every_data_file_and_codebook():
+    """The setup page is the one place that lists all the practice data, in every language."""
+    files = [f.relative_to(ROOT).as_posix() for d in ["data", "data/answer-keys", "templates"]
+             for f in sorted((ROOT / d).glob("*")) if f.suffix in {".csv", ".xlsx"}]
+    codebooks = [f.relative_to(ROOT).as_posix() for f in sorted((ROOT / "data" / "codebooks").glob("*.csv"))]
+    assert len(files) == 14 and len(codebooks) == 11
+    for lang in LANGS:
+        text = (ROOT / lang / "getting-started" / "setup.qmd").read_text(encoding="utf-8")
+        missing = [f for f in files if f"[`{f}`]({DOWNLOAD}{f})" not in text]
+        missing += [c for c in codebooks if f"]({VIEW}{c})" not in text]
+        assert missing == [], f"{lang}/getting-started/setup.qmd doesn't link: {missing}"
