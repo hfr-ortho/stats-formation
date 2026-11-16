@@ -30,3 +30,12 @@ def test_action_ref_resolves(repo, ref):
     if out.returncode != 0:
         pytest.skip(f"GitHub unreachable: {out.stderr.strip()[:80]}")
     assert out.stdout.strip(), f"{repo}@{ref} does not resolve to a tag or branch"
+
+
+def test_publish_workflow_stamps_the_build_time_the_footer_shows():
+    """_quarto.yml's page-footer prints SITE_UPDATED; the publish workflow has to set it before it renders."""
+    quarto = (ROOT / "_quarto.yml").read_text(encoding="utf-8")
+    publish = (ROOT / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
+    assert "{{< env SITE_UPDATED" in quarto
+    assert 'SITE_UPDATED=$(TZ=Europe/Zurich date' in publish
+    assert publish.index("SITE_UPDATED=") < publish.index("quarto-actions/publish")

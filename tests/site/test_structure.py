@@ -1,3 +1,6 @@
+import re
+
+from bs4 import BeautifulSoup
 from sitelib import CELL_ANCHORS, PAGES, SITE_ROOT, load, target, text_of
 
 
@@ -54,3 +57,12 @@ def test_footer_says_synthetic_in_three_languages_and_credits_tjs(site):
     footer = text_of(load("index.html").select_one("footer"))
     assert "Synthetic data only · Nur synthetische Daten · Données synthétiques uniquement" in footer
     assert "Adapted from the TJS Statistics Tutorials" in footer
+
+
+def test_footer_says_when_the_site_was_built(site):
+    """The publish workflow puts the date and time in SITE_UPDATED; a build without it says "local build"."""
+    stamp = re.compile(r"Last updated · Zuletzt aktualisiert · Dernière mise à jour: "
+                       r"(\d\d\.\d\d\.\d{4}, \d\d:\d\d|local build, not published)")
+    for page in ["index.html", "en/index.html", "de/glossary.html", "fr/catalog/06-two-unpaired-groups.html"]:
+        soup = BeautifulSoup((SITE_ROOT / page).read_text(encoding="utf-8"), "html.parser")
+        assert stamp.search(text_of(soup.select_one("footer"))), page
