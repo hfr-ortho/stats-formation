@@ -263,9 +263,14 @@ def test_describe_page_counts_procedures_not_patients(site):
     text = text_of(found)
     assert "263 procedures" in text and "263 patients" not in text
     assert "263 procedures at risk" in " ".join(text_of(q) for q in found.select("blockquote"))
-    assert "how many cases were still being followed" in text
-    assert "patients = n()" not in code_of(found)   # the count of rows is labeled cases in the output too
-    assert "how precisely 600 cases pin down" in text_of(section(page, "mean-sd"))
+    assert "how many procedures were still being followed" in text   # one word for the rows through the section
+    assert "procedures = n()" in code_of(found)   # the count of rows is labeled procedures in the output too
+    assert "median_followup" not in code_of(found)   # the column's middle value is not the median follow-up (A1)
+    assert "as fewer patients remain" not in text   # review A7: the band widens at revisions, not as patients leave
+    assert "widens at each revision" in text
+    mean_sd = text_of(section(page, "mean-sd"))
+    assert "how precisely 600 cases pin down" in mean_sd
+    assert "600 patients" not in mean_sd and "95% of cases lie within 2 SDs" in mean_sd
 
 
 def test_binomial_box_describes_the_set_it_adds_up(site):

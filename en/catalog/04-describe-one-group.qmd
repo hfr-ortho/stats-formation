@@ -131,7 +131,7 @@ check_agree(list(n = age_summary$n, mean = age_summary$mean, sd = age_summary$sd
 
 - **n = 600:** the number of cases with an age recorded.
 - **Mean = 65.5 years:** the average age.
-- **SD = 9.4 years:** the standard deviation, the typical distance of a patient's age from the mean. In a [bell-shaped distribution](../glossary.qmd#normal-distribution){.term} about 95% of patients lie within 2 SDs of the mean, here 65.5 ± 2 × 9.4, roughly 47 to 84 years.
+- **SD = 9.4 years:** the standard deviation, the typical distance of a patient's age from the mean. In a [bell-shaped distribution](../glossary.qmd#normal-distribution){.term} about 95% of cases lie within 2 SDs of the mean, here 65.5 ± 2 × 9.4, roughly 47 to 84 years.
 - **95% CI 64.8 to 66.3:** the confidence interval for the **mean**. It tells you how precisely 600 cases pin down the average age of [patients like ours](../glossary.qmd#population){.term}. It says nothing about how [spread](../glossary.qmd#spread){.term} out individual patients are; that's the SD's job.
 
 ::: {.callout-note collapse="true"}
@@ -204,7 +204,7 @@ The **standard error of the mean (SEM)** is the SD divided by √n: 9.44 / √60
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: dividing by n or n − 1
-R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is what you want. **NumPy's `np.std()` divides by n** unless you write `np.std(x, ddof=1)`. With 600 patients the difference is tiny; with 10 it isn't.
+R's `sd()` and pandas' `.std()` divide by n − 1 (the "sample" SD), which is what you want. **NumPy's `np.std()` divides by n** unless you write `np.std(x, ddof=1)`. With 600 cases the difference is tiny; with 10 it isn't.
 :::
 
 ## Median and interquartile range {#median-iqr}
@@ -585,7 +585,7 @@ R's `prop.test()` gives the Wilson interval, but adds a [continuity correction](
 
 - The [outcome](../glossary.qmd#outcome){.term} is **[time until an event](../glossary.qmd#time-to-event){.term}** (revision, death), and patients were [followed](../glossary.qmd#follow-up){.term} for **different lengths of time**.
 - Some patients are **[censored](../glossary.qmd#censored){.term}**: their follow-up ended (the study closed, they moved away, they died) before any revision. We know they went *at least* that long without one.
-- A plain percentage (81 of our 600 cases were revised, 13.5%; the next step counts them) ignores follow-up time: a patient operated on last year hasn't had time to need a revision. The Kaplan-Meier method uses each patient's follow-up for as long as it lasts.
+- A plain percentage (81 of our 600 procedures were revised, 13.5%; the next step counts them) ignores follow-up time: a patient operated on last year hasn't had time to need a revision. The Kaplan-Meier method uses each patient's follow-up for as long as it lasts.
 
 [Page 13](../survival/13-kaplan-meier.qmd) covers survival analysis in depth. This section shows the basic curve.
 
@@ -593,10 +593,10 @@ R's `prop.test()` gives the Wilson interval, but adds a [continuity correction](
 
 The Kaplan-Meier method builds the curve one revision at a time.
 
-1. Put the cases in order of follow-up time. At any moment, the cases still being followed and not yet revised are [at risk](../glossary.qmd#at-risk){.term}.
-2. Each time a revision happens, work out the fraction of the cases at risk that **got past** that moment without one: 1 − revisions ÷ cases at risk.
+1. Put the procedures in order of follow-up time. At any moment, the procedures still being followed and not yet revised are [at risk](../glossary.qmd#at-risk){.term}.
+2. Each time a revision happens, work out the fraction of the procedures at risk that **got past** that moment without one: 1 − revisions ÷ procedures at risk.
 3. **Multiply** these fractions together, from the day of surgery up to the time you are interested in. The product is the estimated proportion still unrevised at that time. Plotted against time, it is the curve.
-4. A censored case counts among those at risk until its follow-up ends, and then leaves the count. It never makes the curve step down. But every later revision is divided by fewer cases at risk, so each later step is a little bigger.
+4. A censored procedure counts among those at risk until its follow-up ends, and then leaves the count. It never makes the curve step down. But every later revision is divided by fewer procedures at risk, so each later step is a little bigger.
 
 Once the curve is drawn, a box under "Read the output" rebuilds the 5-year [estimate](../glossary.qmd#estimate){.term} by hand.
 
@@ -615,8 +615,8 @@ cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 # followup_years: time from surgery to revision or censoring; revised: 1 = revised, 0 = censored
 cohort |> select(case_id, followup_years, revised) |> head(5)
-cohort |> summarise(cases = n(), revisions = sum(revised),
-                    median_followup = median(followup_years))
+cohort |> summarise(procedures = n(), revisions = sum(revised),
+                    column_median = median(followup_years))
 ```
 
 ## Python
@@ -635,7 +635,7 @@ print(len(cohort), cohort["revised"].sum(), cohort["followup_years"].median())
 ```
 :::
 
-Each row needs exactly two things: **how long** the patient was followed and **whether** the follow-up ended with the [event](../glossary.qmd#event){.term} (1) or was censored (0). The first case was followed for 6.2 years without a revision; the fifth was revised at 5.8 years. The second output counts 600 cases and 81 revisions, the 81 / 600 = 0.135 above, then gives the [median](../glossary.qmd#median){.term} of the `followup_years` column, its middle value: 4.365 years (R shows it as 4.36). Python prints the three numbers without labels. That middle value is not the study's median follow-up, because revisions and deaths cut the column short. [Page 13](../survival/13-kaplan-meier.qmd#follow-up) explains why and calculates the median follow-up with the reverse Kaplan-Meier method: 5.62 years.
+Each row needs exactly two things: **how long** the patient was followed and **whether** the follow-up ended with the [event](../glossary.qmd#event){.term} (1) or was censored (0). The first procedure was followed for 6.2 years without a revision; the fifth was revised at 5.8 years. The second output counts 600 procedures and 81 revisions, the 81 / 600 = 0.135 above, then gives the [median](../glossary.qmd#median){.term} of the `followup_years` column, its middle value: 4.365 years (R shows it as 4.36, under `column_median`). Python prints the three numbers without labels. That middle value is not the study's median follow-up, because revisions and deaths cut some of its times short. [Page 13](../survival/13-kaplan-meier.qmd#follow-up) explains why and calculates the median follow-up with the reverse Kaplan-Meier method: 5.62 years.
 
 ### Run it
 
@@ -675,7 +675,7 @@ plt.show()
 at_5 = km.survival_function_at_times(5).iloc[0]
 ci_5 = km.confidence_interval_survival_function_.loc[:5].iloc[-1]   # last step at or before 5 years
 print(at_5, ci_5.to_list())
-print((cohort["followup_years"] >= 5).sum())   # cases still being followed at 5 years (n.risk in R)
+print((cohort["followup_years"] >= 5).sum())   # procedures still being followed at 5 years (n.risk in R)
 ```
 :::
 
@@ -693,10 +693,10 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 ### Read the output
 
 - **The curve** starts at 100% and steps down at each revision. Censored patients don't make it step; they just leave the group "at risk".
-- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens to the right as fewer patients remain under follow-up.
-- **The numbers at risk** under the plot show how many cases were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only 21 of the 600 cases remain (the last number in the first row under the plot).
+- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens at each revision, and widens more when few procedures remain at risk; between revisions its width doesn't change.
+- **The numbers at risk** under the plot show how many procedures were still being followed at each time. Trust the right-hand end of the curve less: by 10 years only 21 of the 600 procedures remain (the last number in the first row under the plot).
 - **At 5 years:** [survival](../glossary.qmd#survival){.term} 0.863 (95% CI 0.828 to 0.892), with 263 procedures still at risk (`n.risk` in R, the last number Python prints).
-- **The rest of what is printed:** in R's line, `n.event` 66 is the number of revisions up to 5 years (81 over the whole follow-up) and `std.err` is the [standard error](../glossary.qmd#standard-error){.term} of the estimate. Python's first line, "600 total observations, 519 right-censored observations", restates the data: 600 cases − 81 revisions = 519 censored.
+- **The rest of what is printed:** in R's line, `n.event` 66 is the number of revisions up to 5 years (81 over the whole follow-up) and `std.err` is the [standard error](../glossary.qmd#standard-error){.term} of the estimate. Python's first line, "600 total observations, 519 right-censored observations", restates the data: 600 procedures − 81 revisions = 519 censored.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the 5-year estimate by hand
@@ -708,7 +708,7 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 km_steps <- cohort |>
   filter(revised == 1, followup_years <= 5) |>                # the revisions in the first 5 years
   count(followup_years, name = "revisions") |>                # one row per moment at which a revision happened
-  mutate(at_risk = map_int(followup_years, \(t) sum(cohort$followup_years >= t)),   # step 1: the cases still at risk at that moment
+  mutate(at_risk = map_int(followup_years, \(t) sum(cohort$followup_years >= t)),   # step 1: the procedures still at risk at that moment
          got_past = 1 - revisions / at_risk)                  # step 2: the fraction that got past it
 head(km_steps, 4)
 c(moments = nrow(km_steps), revisions = sum(km_steps$revisions))
@@ -720,7 +720,7 @@ prod(km_steps$got_past)                                       # step 3: multiply
 ```{python}
 early = cohort[(cohort["revised"] == 1) & (cohort["followup_years"] <= 5)]   # the revisions in the first 5 years
 km_steps = early.groupby("followup_years").size().rename("revisions").reset_index()   # one row per moment at which a revision happened
-km_steps["at_risk"] = [(cohort["followup_years"] >= t).sum() for t in km_steps["followup_years"]]   # step 1: the cases still at risk at that moment
+km_steps["at_risk"] = [(cohort["followup_years"] >= t).sum() for t in km_steps["followup_years"]]   # step 1: the procedures still at risk at that moment
 km_steps["got_past"] = 1 - km_steps["revisions"] / km_steps["at_risk"]       # step 2: the fraction that got past it
 print(km_steps.head(4))
 print(len(km_steps), km_steps["revisions"].sum())
@@ -728,7 +728,7 @@ print(km_steps["got_past"].prod())                                           # s
 ```
 :::
 
-The first revisions came 0.03 years after surgery: 2 among the 599 cases still at risk, so a fraction of 0.997 got past that moment. The first 5 years hold 59 such moments, with 66 revisions between them. The 59 fractions multiplied together give 0.863, the estimate at 5 years.
+The first revisions came 0.03 years after surgery: 2 among the 599 procedures still at risk, so a fraction of 0.997 got past that moment. The first 5 years hold 59 such moments, with 66 revisions between them. The 59 fractions multiplied together give 0.863, the estimate at 5 years.
 :::
 
 ```{python}
@@ -759,7 +759,7 @@ Treating deaths as censored, as here, assumes the patients who died would have g
 ## 🔀 R vs Python: the confidence band
 R's `survfit()` uses a "log" CI by default; lifelines uses "[log-log](../glossary.qmd#log-log-interval){.term}". The estimates are identical but the CIs differ slightly. We set `conf.type = "log-log"` in R so the two match. Log-log keeps the CI between 0% and 100%; say which you used.
 
-The tables under the two plots differ by one case at 4 years and at 8 years (332 and 84 in R, 331 and 83 in Python). R counts a case whose follow-up ends exactly at that time as still at risk; lifelines doesn't. For the same reason lifelines' own count at 5 years would be 258, not 263: the follow-up of 5 cases ends at exactly 5 years. The Python code above counts the way R does. lifelines also adds a row for the cases censored so far.
+The tables under the two plots differ by one procedure at 4 years and at 8 years (332 and 84 in R, 331 and 83 in Python). R counts a procedure whose follow-up ends exactly at that time as still at risk; lifelines doesn't. For the same reason lifelines' own count at 5 years would be 258, not 263: the follow-up of 5 procedures ends at exactly 5 years. The Python code above counts the way R does. lifelines also adds a row for the procedures censored so far.
 :::
 
 ```{r}

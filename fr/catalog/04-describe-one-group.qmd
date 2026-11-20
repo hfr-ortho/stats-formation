@@ -131,7 +131,7 @@ check_agree(list(n = age_summary$n, mean = age_summary$mean, sd = age_summary$sd
 
 - **n = 600 :** le nombre de cas dont l'âge est noté.
 - **mean = 65.5 ans :** la moyenne, l'âge moyen.
-- **sd = 9.4 ans :** l'écart-type (ET), la distance typique entre l'âge d'un patient et la moyenne. Dans une [distribution en cloche](../glossary.qmd#normal-distribution){.term}, environ 95 % des patients se trouvent à moins de 2 ET de la moyenne, ici 65.5 ± 2 × 9.4, soit à peu près de 47 à 84 ans.
+- **sd = 9.4 ans :** l'écart-type (ET), la distance typique entre l'âge d'un patient et la moyenne. Dans une [distribution en cloche](../glossary.qmd#normal-distribution){.term}, environ 95 % des cas se trouvent à moins de 2 ET de la moyenne, ici 65.5 ± 2 × 9.4, soit à peu près de 47 à 84 ans.
 - **95% CI de 64.8 à 66.3 :** l'intervalle de confiance (IC) de la **moyenne**. Il dit avec quelle précision 600 cas permettent de situer l'âge moyen de [patients comme les nôtres](../glossary.qmd#population){.term}. Il ne dit rien de la [dispersion](../glossary.qmd#spread){.term} des patients pris un à un : c'est le rôle de l'ET.
 
 ::: {.callout-note collapse="true"}
@@ -204,7 +204,7 @@ L'**erreur standard de la moyenne (ESM)** est l'ET divisé par √n : ici 9.44 
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : diviser par n ou par n − 1
-`sd()` de R et `.std()` de pandas divisent par n − 1 (l'ET « d'échantillon »), ce que vous voulez. **`np.std()` de NumPy divise par n**, sauf si vous écrivez `np.std(x, ddof=1)`. Avec 600 patients, la différence est minime ; avec 10, elle ne l'est pas.
+`sd()` de R et `.std()` de pandas divisent par n − 1 (l'ET « d'échantillon »), ce que vous voulez. **`np.std()` de NumPy divise par n**, sauf si vous écrivez `np.std(x, ddof=1)`. Avec 600 cas, la différence est minime ; avec 10, elle ne l'est pas.
 :::
 
 ## Médiane et intervalle interquartile {#median-iqr}
@@ -585,7 +585,7 @@ check_agree(list(z = z, wald_low = p_hat - z * wald_se, wald_high = p_hat + z * 
 
 - Le [critère](../glossary.qmd#outcome){.term} est le **[délai jusqu'à un événement](../glossary.qmd#time-to-event){.term}** (révision, décès), et les patients ont été [suivis](../glossary.qmd#follow-up){.term} **pendant des durées différentes**.
 - Certains patients sont **[censurés](../glossary.qmd#censored){.term}** : leur suivi s'est arrêté (l'étude a pris fin, ils ont déménagé, ils sont décédés) avant toute révision. Nous savons qu'ils sont restés *au moins* aussi longtemps sans révision.
-- Un simple pourcentage (81 de nos 600 cas ont été révisés, 13.5 % ; l'étape suivante les compte) ignore la durée de suivi : un patient opéré l'an dernier n'a pas eu le temps d'avoir besoin d'une révision. La méthode de Kaplan-Meier utilise le suivi de chaque patient aussi longtemps qu'il dure.
+- Un simple pourcentage (81 de nos 600 interventions ont été révisées, 13.5 % ; l'étape suivante les compte) ignore la durée de suivi : un patient opéré l'an dernier n'a pas eu le temps d'avoir besoin d'une révision. La méthode de Kaplan-Meier utilise le suivi de chaque patient aussi longtemps qu'il dure.
 
 La [page 13](../survival/13-kaplan-meier.qmd) traite l'analyse de survie en détail. Cette section montre la courbe de base.
 
@@ -593,10 +593,10 @@ La [page 13](../survival/13-kaplan-meier.qmd) traite l'analyse de survie en dét
 
 La méthode de Kaplan-Meier construit la courbe une révision à la fois.
 
-1. Ranger les cas par durée de suivi. À tout moment, les cas encore suivis et pas encore révisés sont [à risque](../glossary.qmd#at-risk){.term}.
-2. À chaque révision, calculer la fraction des cas à risque qui ont **passé** ce moment sans révision : 1 − révisions ÷ cas à risque.
-3. **Multiplier** ces fractions entre elles, du jour de l'opération jusqu'au moment qui vous intéresse. Le produit est la proportion estimée de cas encore non révisés à ce moment. Tracé en fonction du temps, c'est la courbe.
-4. Un cas censuré compte parmi les cas à risque jusqu'à la fin de son suivi, puis quitte le comptage. Il ne fait jamais descendre la courbe. Mais chaque révision ultérieure est divisée par moins de cas à risque : chaque palier ultérieur est donc un peu plus grand.
+1. Ranger les interventions par durée de suivi. À tout moment, les interventions encore suivies et pas encore révisées sont [à risque](../glossary.qmd#at-risk){.term}.
+2. À chaque révision, calculer la fraction des interventions à risque qui ont **passé** ce moment sans révision : 1 − révisions ÷ interventions à risque.
+3. **Multiplier** ces fractions entre elles, du jour de l'opération jusqu'au moment qui vous intéresse. Le produit est la proportion estimée d'interventions encore non révisées à ce moment. Tracé en fonction du temps, c'est la courbe.
+4. Une intervention censurée compte parmi les interventions à risque jusqu'à la fin de son suivi, puis quitte le comptage. Elle ne fait jamais descendre la courbe. Mais chaque révision ultérieure est divisée par moins d'interventions à risque : chaque palier ultérieur est donc un peu plus grand.
 
 Une fois la courbe tracée, un encadré sous « Lire le résultat » recalcule l'[estimation](../glossary.qmd#estimate){.term} à 5 ans à la main.
 
@@ -615,8 +615,8 @@ cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 # followup_years : délai entre l'opération et la révision ou la censure ; revised : 1 = révisé, 0 = censuré
 cohort |> select(case_id, followup_years, revised) |> head(5)
-cohort |> summarise(cases = n(), revisions = sum(revised),
-                    median_followup = median(followup_years))
+cohort |> summarise(procedures = n(), revisions = sum(revised),
+                    column_median = median(followup_years))
 ```
 
 ## Python
@@ -635,7 +635,7 @@ print(len(cohort), cohort["revised"].sum(), cohort["followup_years"].median())
 ```
 :::
 
-Chaque ligne a besoin d'exactement deux informations : **combien de temps** le patient a été suivi et **si** le suivi s'est terminé par l'[événement](../glossary.qmd#event){.term} (1) ou par une censure (0). Le premier cas a été suivi pendant 6.2 ans sans révision ; le cinquième a été révisé à 5.8 ans. La seconde sortie compte 600 cas et 81 révisions, le 81 / 600 = 0.135 ci-dessus, puis donne la [médiane](../glossary.qmd#median){.term} de la colonne `followup_years`, sa valeur du milieu : 4.365 ans (R affiche 4.36). Python affiche les trois nombres sans étiquette. Cette valeur du milieu n'est pas le suivi médian de l'étude, car les révisions et les décès raccourcissent les durées de la colonne. La [page 13](../survival/13-kaplan-meier.qmd#follow-up) explique pourquoi et calcule le suivi médian par la méthode de Kaplan-Meier inversé : 5.62 ans.
+Chaque ligne a besoin d'exactement deux informations : **combien de temps** le patient a été suivi et **si** le suivi s'est terminé par l'[événement](../glossary.qmd#event){.term} (1) ou par une censure (0). La première intervention a été suivie pendant 6.2 ans sans révision ; la cinquième a été révisée à 5.8 ans. La seconde sortie compte 600 interventions et 81 révisions, le 81 / 600 = 0.135 ci-dessus, puis donne la [médiane](../glossary.qmd#median){.term} de la colonne `followup_years`, sa valeur du milieu : 4.365 ans (R affiche 4.36, sous `column_median`). Python affiche les trois nombres sans étiquette. Cette valeur du milieu n'est pas le suivi médian de l'étude, car les révisions et les décès raccourcissent certaines de ses durées. La [page 13](../survival/13-kaplan-meier.qmd#follow-up) explique pourquoi et calcule le suivi médian par la méthode de Kaplan-Meier inversé : 5.62 ans.
 
 ### Exécuter l'analyse
 
@@ -675,7 +675,7 @@ plt.show()
 at_5 = km.survival_function_at_times(5).iloc[0]
 ci_5 = km.confidence_interval_survival_function_.loc[:5].iloc[-1]   # dernier palier à 5 ans ou avant
 print(at_5, ci_5.to_list())
-print((cohort["followup_years"] >= 5).sum())   # cas encore suivis à 5 ans (n.risk dans R)
+print((cohort["followup_years"] >= 5).sum())   # interventions encore suivies à 5 ans (n.risk dans R)
 ```
 :::
 
@@ -693,10 +693,10 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 ### Lire le résultat
 
 - **La courbe** commence à 100 % et descend d'un palier à chaque révision. Les patients censurés ne la font pas descendre ; ils quittent simplement le groupe « à risque ».
-- **La bande ombrée** est l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %. Elle s'élargit vers la droite, car il reste de moins en moins de patients suivis.
-- **Les effectifs à risque** (*Number at risk* sur le graphique) sous le graphique indiquent combien de cas étaient encore suivis à chaque moment. Faites moins confiance à l'extrémité droite de la courbe : à 10 ans, il ne reste que 21 des 600 cas (le dernier nombre de la première ligne sous le graphique).
+- **La bande ombrée** est l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %. Elle s'élargit à chaque révision, et d'autant plus que peu d'interventions restent à risque ; entre deux révisions, sa largeur ne change pas.
+- **Les effectifs à risque** (*Number at risk* sur le graphique) sous le graphique indiquent combien d'interventions étaient encore suivies à chaque moment. Faites moins confiance à l'extrémité droite de la courbe : à 10 ans, il ne reste que 21 des 600 interventions (le dernier nombre de la première ligne sous le graphique).
 - **À 5 ans :** [survie](../glossary.qmd#survival){.term} de 0.863 (IC à 95 % de 0.828 à 0.892), avec 263 interventions encore à risque (`n.risk` dans R, le dernier nombre qu'affiche Python).
-- **Le reste de ce qui s'affiche :** dans la ligne de R, `n.event` 66 est le nombre de révisions jusqu'à 5 ans (81 sur tout le suivi) et `std.err` est l'[erreur standard](../glossary.qmd#standard-error){.term} de l'estimation. La première ligne de Python, « 600 total observations, 519 right-censored observations », résume les données : 600 cas − 81 révisions = 519 censurés.
+- **Le reste de ce qui s'affiche :** dans la ligne de R, `n.event` 66 est le nombre de révisions jusqu'à 5 ans (81 sur tout le suivi) et `std.err` est l'[erreur standard](../glossary.qmd#standard-error){.term} de l'estimation. La première ligne de Python, « 600 total observations, 519 right-censored observations », résume les données : 600 interventions − 81 révisions = 519 censurées.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : l'estimation à 5 ans à la main
@@ -708,7 +708,7 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 km_steps <- cohort |>
   filter(revised == 1, followup_years <= 5) |>                # les révisions des 5 premières années
   count(followup_years, name = "revisions") |>                # une ligne par moment où une révision a eu lieu
-  mutate(at_risk = map_int(followup_years, \(t) sum(cohort$followup_years >= t)),   # étape 1 : les cas encore à risque à ce moment
+  mutate(at_risk = map_int(followup_years, \(t) sum(cohort$followup_years >= t)),   # étape 1 : les interventions encore à risque à ce moment
          got_past = 1 - revisions / at_risk)                  # étape 2 : la fraction qui l'a passé
 head(km_steps, 4)
 c(moments = nrow(km_steps), revisions = sum(km_steps$revisions))
@@ -720,7 +720,7 @@ prod(km_steps$got_past)                                       # étape 3 : multi
 ```{python}
 early = cohort[(cohort["revised"] == 1) & (cohort["followup_years"] <= 5)]   # les révisions des 5 premières années
 km_steps = early.groupby("followup_years").size().rename("revisions").reset_index()   # une ligne par moment où une révision a eu lieu
-km_steps["at_risk"] = [(cohort["followup_years"] >= t).sum() for t in km_steps["followup_years"]]   # étape 1 : les cas encore à risque à ce moment
+km_steps["at_risk"] = [(cohort["followup_years"] >= t).sum() for t in km_steps["followup_years"]]   # étape 1 : les interventions encore à risque à ce moment
 km_steps["got_past"] = 1 - km_steps["revisions"] / km_steps["at_risk"]       # étape 2 : la fraction qui l'a passé
 print(km_steps.head(4))
 print(len(km_steps), km_steps["revisions"].sum())
@@ -728,7 +728,7 @@ print(km_steps["got_past"].prod())                                           # �
 ```
 :::
 
-Les premières révisions ont eu lieu 0.03 an après l'opération : 2 parmi les 599 cas encore à risque, donc une fraction de 0.997 a passé ce moment. Les 5 premières années comptent 59 moments de ce genre, avec 66 révisions en tout. Les 59 fractions multipliées entre elles donnent 0.863, l'estimation à 5 ans.
+Les premières révisions ont eu lieu 0.03 an après l'opération : 2 parmi les 599 interventions encore à risque, donc une fraction de 0.997 a passé ce moment. Les 5 premières années comptent 59 moments de ce genre, avec 66 révisions en tout. Les 59 fractions multipliées entre elles donnent 0.863, l'estimation à 5 ans.
 :::
 
 ```{python}
@@ -759,7 +759,7 @@ Traiter les décès comme des censures, comme ici, suppose que les patients déc
 ## 🔀 R ou Python : la bande de confiance
 `survfit()` de R utilise par défaut un IC « log » ; lifelines utilise « [log-log](../glossary.qmd#log-log-interval){.term} ». Les estimations sont identiques, mais les IC diffèrent légèrement. Nous écrivons `conf.type = "log-log"` dans R pour que les deux concordent. Le log-log garde l'IC entre 0 % et 100 % ; dites lequel vous avez utilisé.
 
-Les tableaux sous les deux graphiques diffèrent d'un cas à 4 ans et à 8 ans (332 et 84 dans R, 331 et 83 dans Python). R compte un cas dont le suivi se termine exactement à ce moment comme encore à risque ; lifelines, non. Pour la même raison, le propre comptage de lifelines à 5 ans serait 258, et non 263 : le suivi de 5 cas se termine à exactement 5 ans. Le code Python ci-dessus compte comme R. lifelines ajoute aussi une ligne pour les cas censurés jusque-là.
+Les tableaux sous les deux graphiques diffèrent d'une intervention à 4 ans et à 8 ans (332 et 84 dans R, 331 et 83 dans Python). R compte une intervention dont le suivi se termine exactement à ce moment comme encore à risque ; lifelines, non. Pour la même raison, le propre comptage de lifelines à 5 ans serait 258, et non 263 : le suivi de 5 interventions se termine à exactement 5 ans. Le code Python ci-dessus compte comme R. lifelines ajoute aussi une ligne pour les interventions censurées jusque-là.
 :::
 
 ```{r}
