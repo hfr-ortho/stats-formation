@@ -252,6 +252,7 @@ In R we call `janitor::clean_names()` with the package name in front instead of 
 ## 🔀 R vs Python: the same Excel file, read differently
 - **Repeated headers.** R (with `.name_repair = "minimal"`) keeps both `Date` columns as `Date`. pandas renames the second to `Date.1`.
 - **Real Excel dates.** Read as text, R gives the Excel serial number and pandas a date-time text. Compare the first date in the two outputs: `42026` in R (22 Jan 2015), `2015-01-22 00:00:00` in pandas. Step 5 handles both.
+- **Cells that say `None`.** The two readers treat these differently too: the 🔀 box under check 3 below explains how.
 :::
 
 ### Step 2: drop rows and columns that aren't data {#step-2-drop-rows-and-columns-that-arent-data}
@@ -427,7 +428,7 @@ The red fill marks 18 revised cases. The `Notes` column mentions a revision ("re
 Now convert each text column into what it really is. One small function handles the mixed date formats. The recodes don't all treat a surprise the same way, so know which is which:
 
 - **Sex, procedure and side** look for the values they expect and turn anything else into a missing value. Sex is matched on the whole spellings the sheet uses, listed first in the code below, so a surprise like `Mme` shows up as missing instead of silently becoming "Male", as it would if we matched only the first letter.
-- **ASA** turns text it can't read as a number (Arabic or Roman) into a missing value in R, with a warning. In Python, such text stops `pd.to_numeric()` with an error instead. A wrong number gets through in both: a typo such as `12` stays 12, so cross-tab ASA, as [exercise 1](#exercises) does.
+- **ASA** turns text it can't read as a number (Arabic or Roman) into a missing value in R, with a warning. In Python, such text stops `pd.to_numeric()` with an error instead. A wrong whole number written in digits, such as `12`, gets through in both: it stays 12 (`0`, though, becomes a missing value in R, without a warning). So cross-tab ASA, as [exercise 1](#exercises) does.
 - **The three comorbidity flags** are 1 when the cell names the abbreviation and 0 when it names anything else, so an unknown spelling such as `T2DM` counts as "no", not as missing. Check 3 below cross-tabulates them for that reason.
 
 ::: {.panel-tabset group="language"}
@@ -485,7 +486,7 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
-print(step3["sex"].value_counts().sort_index())   # every spelling of sex in the sheet: the recode below lists exactly these, lower-cased
+print(step3["sex"].value_counts(dropna=False).sort_index())   # every spelling of sex in the sheet: the recode below lists exactly these, lower-cased
 
 def number(text):
     # The first number in each cell: "67 yo" -> 67, "BMI 31.2" -> 31.2
@@ -566,6 +567,48 @@ Check the output against what you expect: 120 rows and 18 columns, dates are dat
 ## 🔀 R vs Python: dates
 R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_date()`). pandas already turned those cells into date-time text (`2015-01-22 00:00:00`), which its `parse_messy_date()` reads with the other ISO dates. Both read `"14.05.15"` day-first: Swiss style, which is what HFR sheets use. Both read ISO dates on their own, because pandas' `dayfirst=True` would also flip them (`2015-11-02` would become 11 February). pandas also stores a whole-number column that has missing values as decimals, so ASA class 2 prints as `2.0`. The value is the same.
 :::
+
+::: {.callout-warning}
+## ⚠️ Watch out: decimal commas and two-digit years
+The number helpers above expect a decimal point. On a sheet typed with decimal commas they go wrong without a warning, and differently in each language: `"31,2"` becomes 312 in R and 31 in Python. Replace the comma with a point before converting, in both languages: cells typed with a point stay as they are, so this works on a column that mixes the two, as long as no number has a thousands separator (`"1,234.5"` would become 1.234; this workbook has none).
+
+Dates have a similar trap: a two-digit year is a guess about the century. Both languages read `"13.01.45"` as 13 January 2045, which is wrong for a date of birth, and they don't draw the line between the centuries at the same year: `"13.01.70"` is 1970 in R and 2070 in Python. Collect four-digit years.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+parse_number("31,2")                                     # the comma is read as a thousands separator
+parse_number(str_replace(c("31,2", "31.2"), ",", "."))   # the comma replaced by a point
+dmy(c("13.01.45", "13.01.70"))                           # the century is a guess
+```
+
+## Python
+
+```{python}
+print(number(pd.Series(["31,2"])).iloc[0])         # the helper stops at the comma
+both = pd.Series(["31,2", "31.2"])
+print(number(both.str.replace(",", ".")).tolist())   # the comma replaced by a point
+two_digit = parse_messy_date(pd.Series(["13.01.45", "13.01.70"]))
+print(two_digit.dt.strftime("%Y-%m-%d").tolist())    # the century is a guess
+```
+:::
+:::
+
+```{python}
+#| include: false
+chk = {"comma": float(number(both.str.replace(",", ".")).iloc[0]),
+       "point": float(number(both.str.replace(",", ".")).iloc[1]),
+       "year_45": float(two_digit.iloc[0].year)}
+```
+
+```{r}
+#| include: false
+# "13.01.70" differs by design (1970 in R, 2070 in pandas); the Prose guard pins both.
+check_agree(list(comma = parse_number(str_replace("31,2", ",", ".")),
+                 point = parse_number(str_replace("31.2", ",", ".")),
+                 year_45 = year(dmy("13.01.45"))), reticulate::py$chk)
+```
 
 ## Reshaping a survey export {#reshaping}
 
@@ -988,7 +1031,19 @@ stopifnot(
   is.na(as.integer(str_detect(NA_character_, regex("\\bDM\\b", ignore_case = TRUE)))),  # an empty cell: NA in R
   inherits(tryCatch(as.integer(as.roman(str_remove("U", "^ASA "))), warning = identity), "warning"),
   is.na(suppressWarnings(as.integer(as.roman(str_remove("U", "^ASA "))))),
-  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12
+  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12,
+  # numbers and claims added with the content-review fixes (B22, and step 5's list)
+  is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
+  parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
+  parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  parse_number(str_replace("1,234.5", ",", ".")) == 1.234,             # the remedy's limit: a thousands separator
+  reticulate::py_eval("float(number(pd.Series(['1,234.5']).str.replace(',', '.')).iloc[0])") == 1.234,
+  max(select(tidy, where(is.numeric)), na.rm = TRUE) < 1000,           # "this workbook has none"
+  dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
+  reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
+  reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),
+  reticulate::py_eval("two_digit.dt.strftime('%Y-%m-%d').tolist()") == c("2045-01-13", "2070-01-13"),
+  reticulate::py_eval("float(asa_recode(['0']).iloc[0])") == 0
 )
 ```
 

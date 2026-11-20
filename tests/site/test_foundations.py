@@ -96,6 +96,10 @@ def test_distributions_page_states_statistics_correctly(site):
     assert "within-patient" in text                       # MCID caveat
     assert "p = 0.173" in text                            # three-decimal p-values
     assert "bilateral" in text and "independent" in text
+    # Review B8: p is not the probability of no difference; what the 95% refers to.
+    assert "p = 0.03, so there's a 3% chance that there's no difference" in text
+    assert "A small p-value means" not in text            # read as the chance of normality
+    assert "95 of every 100" in text
 
 
 def test_flowchart_covers_hypothetical_values_and_matches_the_guidance(site):
@@ -121,9 +125,11 @@ def test_tidy_page_states_what_guessing_and_recoding_really_do(site):
     assert "Forcing a number type is what loses values" in text
     assert "Each recode lists the values it expects" not in text   # the old blanket claim
     assert "so an unknown spelling such as T2DM counts as" in text
-    # as.roman() reads any Arabic or Roman numeral, so a wrong number passes; only non-numbers go missing.
+    # as.roman() reads Arabic and Roman numerals, so a wrong number such as 12 passes (only 0 goes missing);
+    # pandas' recode knows only the Roman numerals I to IV, so a wrong one stops it.
     assert "text it can't read as a class" not in text
-    assert "a typo such as 12 stays 12" in text
+    assert "A wrong whole number written in digits" in text and "gets through in both" in text
+    assert "A wrong number gets through in both" not in text   # a wrong Roman numeral stops pandas
     assert "564 blank rows: 473 from 72 missed visits and 91 items skipped" in text
 
 
@@ -151,3 +157,71 @@ def test_worked_examples_match_the_sections_they_point_to(site):
                    "Is pain 6 weeks after the injury different with a boot than with a cast?",
                    "Does graft failure within 2 years differ between hamstring and BPTB grafts?"]:
         assert phrase in text, phrase
+
+
+# ---- content review of 20.11.2026, task 3.2 --------------------------------
+
+def test_tidy_page_warns_about_decimal_commas_and_two_digit_years(site):
+    """Review B22: the number helpers assume a decimal point; a two-digit year is a guess."""
+    soup = load("foundations/01-tidy-data.html")
+    text = text_of("foundations/01-tidy-data.html")
+    assert "decimal commas" in text
+    assert "Replace the comma with a point before converting" in text
+    assert "decimal_mark" not in text                    # a comma locale turns "31.2" into 312
+    assert "as long as no number has a thousands separator" in text   # the remedy's limit
+    assert 'is 1970 in R and 2070 in Python' in text     # the two century rules differ
+    assert "a two-digit year is a guess about the century" in text
+    code = "".join(c.get_text() for c in soup.select("div.sourceCode code"))
+    assert 'value_counts(dropna=False).sort_index()' in code   # step 5: both tabs would show a missing sex
+    assert 'parse_number(str_replace(c("31,2", "31.2"), ",", "."))' in code   # the remedy on both spellings
+    box = [c.get_text(" ") for c in soup.select("div.callout") if "read differently" in c.get_text()]
+    assert box and "check 3" in box[0]                   # step 1's box points to the None box
+
+
+def test_demographics_page_keeps_length_of_stay_out_of_balance(site):
+    """Review C11: length of stay is an outcome, in the tables only as the skewed example."""
+    text = text_of("foundations/02-demographics.html")
+    assert "Length of stay is an outcome" in text
+    assert "the sections on balance leave it out" not in text   # its row is printed, just not read
+    assert "The length-of-stay row is not read here" in text
+    assert "Length of stay also has a large SMD" not in text    # the page defines no "large"
+    assert "Diabetes and length of stay are negligible" not in text
+    assert "Smoking status (0.23) and length of stay (0.22" not in text
+
+
+def test_demographics_page_qualifies_baseline_p_values_and_smds(site):
+    """Review B23, B18, C14: trials, how an SMD is computed, chance SMDs above 0.1,
+    the sex example per patient, rows against patients, the chi-square test and order."""
+    text = text_of("foundations/02-demographics.html")
+    assert "Randomized trials" in text and "CONSORT" in text
+    assert "always positive" in text                         # SMD for several categories
+    assert "proportions" in text and "p(1 − p)" in text      # SMD for a two-category variable
+    assert "yes/no variable such as sex" not in text
+    assert "177 of the 270 THA procedures and 166 of the 330 TKA procedures" in text
+    assert "Smoking status (0.23) is the baseline characteristic that differs most" in text
+    # Randomized trials are not observational: their bullet comes before "Other observational comparisons".
+    assert text.index("Randomized trials") < text.index("Matched or weighted cohorts")
+    assert "would give 0.33" not in text                  # rounded percentages: R's table only, and BMI's SMD
+    assert "not from the rounded percentages" in text
+    assert "chance alone can produce SMDs above it" in text
+    assert "p = 0.002 for the 520 patients" in text
+    assert "The difference is pure chance." not in text
+    assert "both procedures of the 80 bilateral patients" in text
+    assert "ignores the order" in text
+
+
+def test_distributions_page_qualifies_pairs_matching_and_rows(site):
+    """Review C12, B10, B18, B5: differences for paired data, individual matching,
+    p-values on 600 rows, and a Results-style sentence without a comparison word."""
+    text = text_of("foundations/03-distributions.html")
+    assert "for paired data, the differences between the two measurements of each pair" in text
+    assert "for a paired t test, the differences" in text   # the summary in the first section
+    chart = load("foundations/03-distributions.html").select_one(".mermaid, pre.mermaid-js").get_text()
+    assert "for paired data, the differences" in chart
+    assert "Treat matched sets like pairs" not in text
+    assert "individually matched" in text
+    assert "both procedures of the 80 bilateral patients" in text
+    assert "had a higher BMI" not in text
+    assert ("Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients "
+            "(mean difference 1.8 kg/m²") in text
+    assert "here we need only the difference, its CI and p" not in text
