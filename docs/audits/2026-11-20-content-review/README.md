@@ -43,11 +43,11 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | U5 | 2.2 | open |  |
 | U6 | 2.2 | open |  |
 | U7 | 4.1 to 4.6 | open |  |
-| B1 | 3.8 | open |  |
+| B1 | 3.8 | done | pending |
 | B2 | 3.5 | open |  |
-| B3 | 3.8 | open |  |
-| B4 | 3.8 | open |  |
-| B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | open |  |
+| B3 | 3.8 | done | pending |
+| B4 | 3.8 | done | pending |
+| B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | partly (3.8 done) | pending |
 | B6 | 3.3 | open |  |
 | B7 | 3.3 | open |  |
 | B8 | 3.2 | open |  |
