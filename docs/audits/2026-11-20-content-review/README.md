@@ -47,34 +47,34 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | B2 | 3.5 | open |  |
 | B3 | 3.8 | open |  |
 | B4 | 3.8 | open |  |
-| B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | open |  |
+| B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | partly (3.6 done) | pending |
 | B6 | 3.3 | open |  |
 | B7 | 3.3 | open |  |
 | B8 | 3.2 | open |  |
 | B9 | 3.5 | open |  |
 | B10 | 3.2, 3.3 | open |  |
 | B11 | 3.7 | open |  |
-| B12 | 3.3, 3.4, 3.6 | open |  |
+| B12 | 3.3, 3.4, 3.6 | partly (3.6 done) | pending |
 | B13 | 3.3, 3.5 | open |  |
 | B14 | 3.5 | open |  |
 | B15 | 3.5, 3.7 | open |  |
 | B16 | 3.7 | open |  |
-| B17 | 3.6 | open |  |
-| B18 | 3.2, 3.6 | open |  |
+| B17 | 3.6 | done | pending |
+| B18 | 3.2, 3.6 | partly (3.6 done) | pending |
 | B19 | 3.7 | open |  |
 | B20 | 3.7 | open |  |
 | B21 | 3.4 | open |  |
 | B22 | 3.2 | open |  |
 | B23 | 3.2 | open |  |
-| B24 | 3.4, 3.5, 3.6 | open |  |
+| B24 | 3.4, 3.5, 3.6 | partly (3.6 done) | pending |
 | B25 | 3.9 | open |  |
 | C1 | 3.4, 3.7 | open |  |
 | C2 | 3.3 | open |  |
 | C3 | 3.5 | open |  |
 | C4 | 3.5 | open |  |
 | C5 | 3.5 | open |  |
-| C6 | 3.6 | open |  |
-| C7 | 3.6 | open |  |
+| C6 | 3.6 | done | pending |
+| C7 | 3.6 | done | pending |
 | C8 | 3.9 | open |  |
 | C9 | 3.9 | open |  |
 | C10 | 3.9 | open |  |
