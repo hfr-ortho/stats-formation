@@ -178,7 +178,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 ## ⚠️ Watch out: r only sees straight lines, depends on the range, isn't cause, and isn't agreement
 A relationship that rises and then falls can have r close to 0, and one outlier can create or hide a correlation, so always look at the scatter plot first. And a correlation doesn't say which causes which, or whether something else (age, sex) drives both. To adjust for other variables, use [multiple regression](12-predict-from-several.qmd#multiple-linear-regression).
 
-**r depends on the range of the patients sampled.** Over all 80 hips r = 0.86; in the 30 hips with 10° to 20° on CT it is 0.53, with the same two methods. So when you read a paper, look at the range of its patients before you compare its r with another: the same two methods give a lower r in a sample with a narrow range.
+**r depends on the range of the patients sampled.** Over all 80 hips r = 0.86; in the 30 hips with 10° to 20° on CT it is 0.53, with the same two methods (the first lines of the code below). So when you read a paper, look at the range of its patients before you compare its r with another: the same two methods give a lower r in a sample with a narrow range.
 
 **A high r isn't agreement.** Two methods can rise and fall together and still read different angles. Here r = 0.86, yet the Budin reading was up to 12.9° away from CT, and 95% of the differences would be expected from −10.2° to 7.8° (the [mean difference](../glossary.qmd#mean-difference){.term} ± 1.96 standard deviations). Even those limits hide a trend. Grouped by the average of the two readings (not by CT alone, because grouping by one method's own reading can create or distort a trend), the Budin reading averaged 0.9° higher than CT in the 9 hips under 5°, 1.3° lower in the 65 hips from 5° to 25°, and 3.5° lower in the 6 hips over 25°. The code below computes these numbers. To ask whether one method can replace the other, use [Bland-Altman limits](../beyond/17-agreement.qmd#bland-altman).
 
@@ -213,7 +213,7 @@ difference = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]   # Budin 
 print(difference.abs().max())                         # the largest gap between the two methods
 print(difference.mean() - 1.96 * difference.std(), difference.mean() + 1.96 * difference.std())   # where 95% of the differences are expected
 average = (imaging["torsion_ct_deg"] + imaging["torsion_budin_deg"]) / 2   # the average of the two methods, one value per hip
-torsion_band = pd.cut(average, [-np.inf, 5, 25, np.inf], labels=["under 5°", "5° to 25°", "over 25°"])
+torsion_band = pd.cut(average, [-float("inf"), 5, 25, float("inf")], labels=["under 5°", "5° to 25°", "over 25°"])
 print(difference.groupby(torsion_band, observed=True).agg(["count", "mean"]))   # Budin minus CT, by the average of the two
 ```
 :::

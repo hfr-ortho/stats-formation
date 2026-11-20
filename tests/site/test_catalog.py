@@ -456,6 +456,8 @@ def test_pearson_warning_gives_the_trend_at_high_torsion(site):
     assert "averaged 7.0° lower" not in warning
     assert "Grouped by the average of the two readings" in warning
     assert "1.3° lower in the 65 hips from 5° to 25°, and 3.5° lower in the 6 hips over 25°" in warning
+    box = section("catalog/10-association.html", "pearson").select_one("div.callout-warning")
+    assert "np." not in code_of(box)   # numpy is imported only in the collapsed box, which readers may skip
 
 
 def test_cox_events_rule_matches_page_14(site):
@@ -470,6 +472,7 @@ def test_pearson_warning_says_r_depends_on_the_range(site):
     """Review B13 (Bland and Altman 1986): the same two methods give a lower r in a narrow sample."""
     warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
     assert "Over all 80 hips r = 0.86; in the 30 hips with 10° to 20° on CT it is 0.53" in warning
+    assert "(the first lines of the code below)" in warning   # golden rule 22: the numbers point to their code
     assert "a lower r in a sample with a narrow range" in warning
 
 
@@ -486,6 +489,7 @@ def test_linear_regression_shows_the_two_intervals_at_one_bmi(site):
     text, code = text_of(found), code_of(found)
     assert 'interval = "confidence"' in code and 'interval = "prediction"' in code and "get_prediction" in code
     assert "82.7 to 85.1 minutes" in text and "55.0 to 112.7 minutes" in text and "prediction interval" in text
+    assert "is estimated to lie" in text   # an interval estimate, not a certainty
     warning = text_of(found.select_one("div.callout-warning"))
     assert "by about 15 minutes either way" not in warning
     assert "the standard deviation of the residuals" in warning and "67.2%" in warning
@@ -534,6 +538,10 @@ def test_multiple_regression_says_which_coefficients_are_findings(site):
     results = [text_of(p) for p in linear.select("blockquote p") if text_of(p).startswith("Results:")]
     assert results and "1.27 minutes" in results[0] and "6.74" not in results[0] and "per year" not in results[0]
     assert "describe prediction, not each factor's own effect" in text_of(section(page, "multiple-logistic-regression"))
+    # "When to use it" must not promise each predictor's own effect, which the effect-size step then takes back.
+    assert "the effect of each of several predictors" not in text_of(load(page))
+    assert "you want the effect of one predictor with the others taken into account" in text_of(linear)
+    assert "you want one predictor's hazard ratio" in text_of(section(page, "cox"))
 
 
 def test_multiple_linear_regression_names_the_equal_slopes_assumption(site):
@@ -542,6 +550,8 @@ def test_multiple_linear_regression_names_the_equal_slopes_assumption(site):
     found = section(page, "multiple-linear-regression")
     assert "the same BMI slope for hips and knees" in text_of(found)
     assert "glossary.html#interaction" in [target(page, a["href"]) for a in found.select("a[href]")]
+    # Review B9: the sentence carries page 14's two rules, not just a link to them.
+    assert "and not for anything that predictor itself causes" in text_of(found)
 
 
 def test_adjusted_cox_shift_is_not_read_as_confounding(site):

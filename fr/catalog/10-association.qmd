@@ -178,7 +178,7 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 ## ⚠️ Attention : r ne voit que les droites, dépend de l'étendue des valeurs, n'est pas une cause et n'est pas une concordance
 Une relation qui monte puis redescend peut avoir un r proche de 0, et une seule valeur atypique peut créer ou masquer une corrélation : regardez donc toujours d'abord le nuage de points. De plus, une corrélation ne dit pas laquelle des deux variables cause l'autre, ni si un troisième facteur (âge, sexe) influence les deux. Pour ajuster sur d'autres variables, utilisez la [régression multiple](12-predict-from-several.qmd#multiple-linear-regression).
 
-**r dépend de l'étendue des valeurs chez les patients étudiés.** Sur l'ensemble des 80 hanches, r = 0.86 ; pour les 30 hanches avec 10° à 20° au scanner, il vaut 0.53, avec les deux mêmes méthodes. Quand vous lisez un article, regardez donc l'étendue des valeurs chez ses patients avant de comparer son r à un autre : les deux mêmes méthodes donnent un r plus bas dans un échantillon dont l'étendue est étroite.
+**r dépend de l'étendue des valeurs chez les patients étudiés.** Sur l'ensemble des 80 hanches, r = 0.86 ; pour les 30 hanches avec 10° à 20° au scanner, il vaut 0.53, avec les deux mêmes méthodes (les premières lignes du code ci-dessous). Quand vous lisez un article, regardez donc l'étendue des valeurs chez ses patients avant de comparer son r à un autre : les deux mêmes méthodes donnent un r plus bas dans un échantillon dont l'étendue est étroite.
 
 **Un r élevé n'est pas une concordance.** Deux méthodes peuvent monter et descendre ensemble tout en lisant des angles différents. Ici r = 0.86, et pourtant la lecture sur Budin s'écartait de celle du scanner jusqu'à 12.9°, et l'on s'attend à ce que 95 % des différences se situent de −10.2° à 7.8° (la [différence moyenne](../glossary.qmd#mean-difference){.term} ± 1.96 écart-type). Même ces limites cachent une tendance. Classées selon la moyenne des deux lectures (et non selon le scanner seul, car classer les hanches selon la lecture d'une seule méthode peut créer ou déformer une tendance), les lectures sur Budin étaient en moyenne supérieures de 0.9° à celles du scanner pour les 9 hanches sous 5°, inférieures de 1.3° pour les 65 hanches de 5° à 25°, et inférieures de 3.5° pour les 6 hanches au-delà de 25°. Le code ci-dessous calcule ces nombres. Pour savoir si une méthode peut remplacer l'autre, utilisez les [limites de Bland-Altman](../beyond/17-agreement.qmd#bland-altman).
 
@@ -213,7 +213,7 @@ difference = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]   # Budin 
 print(difference.abs().max())                         # le plus grand écart entre les deux méthodes
 print(difference.mean() - 1.96 * difference.std(), difference.mean() + 1.96 * difference.std())   # où l'on attend 95 % des différences
 average = (imaging["torsion_ct_deg"] + imaging["torsion_budin_deg"]) / 2   # la moyenne des deux méthodes, une valeur par hanche
-torsion_band = pd.cut(average, [-np.inf, 5, 25, np.inf], labels=["under 5°", "5° to 25°", "over 25°"])
+torsion_band = pd.cut(average, [-float("inf"), 5, 25, float("inf")], labels=["under 5°", "5° to 25°", "over 25°"])
 print(difference.groupby(torsion_band, observed=True).agg(["count", "mean"]))   # Budin moins scanner, selon la moyenne des deux
 ```
 :::
