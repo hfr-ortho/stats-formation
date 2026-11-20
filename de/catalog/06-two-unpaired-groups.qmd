@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Zwei Gruppen **verschiedener** Patientinnen und Patienten: ein Walker gegen einen Gips in einer Studie, Hamstring- gegen BPTB-Transplantate, Implantat A gegen Implantat C. Das ist der häufigste Vergleich in der klinischen Forschung. Wenn dieselben Patientinnen und Patienten zweimal gemessen wurden oder wenn die Patientinnen und Patienten paarweise [gematcht](../glossary.qmd#matched){.term} wurden, verwenden Sie stattdessen [Seite 7](07-two-paired-groups.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- zwischen dem t-Test nach Welch, dem Mann-Whitney-Test und dem exakten Test nach Fisher wählen, je nach Art der Zielgrösse und der Form ihrer Verteilung in jeder Gruppe.
+- den Test in R oder Python durchführen und einen Results-Satz schreiben, mit den Zahlen jeder Gruppe, der Effektstärke und ihrem 95%-KI sowie dem p-Wert.
+- erkennen, wenn ein Odds Ratio als relatives Risiko gelesen wird, was bei einem häufigen Ereignis den Effekt überschätzt.
+
+**Zeitbedarf:** etwa 50 Minuten zum Lesen, etwa 2.5 bis 3 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [Seite 3](../foundations/03-distributions.qmd) zur Beurteilung einer Verteilung innerhalb jeder Gruppe, [den Abschnitt zu Kaplan-Meier auf Seite 4](04-describe-one-group.qmd#kaplan-meier) zu Überlebenskurven und [Wie Resultate berichtet werden](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zu einer [randomisierten Studie](../glossary.qmd#randomized-trial){.term} zu Gips und Walker nach einer Mittelfussverletzung (t-Test und [Mann-Whitney-Test](../glossary.qmd#mann-whitney-test){.term}), zu VKB-Rekonstruktionen (vorderes Kreuzband; [Test nach Fisher](../glossary.qmd#fisher-exact-test){.term}) und zur [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term} ([Log-Rank-Test](../glossary.qmd#log-rank-test){.term}). Die Studie und ihre Resultate sind für den Unterricht erfunden. Der erste Codeblock jedes Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
@@ -59,6 +72,7 @@ In der Studie wurden 120 Patientinnen und Patienten [randomisiert](../glossary.q
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Histogramme des EFAS-Scores nach 3 Monaten, oben der Walker-Arm («boot»), unten der Gips-Arm («cast»), auf denselben Skalen: Beide sind ungefähr glockenförmig, keine Person liegt bei 0 oder 24, und der Walker-Arm (Mittelwert 17.4) liegt rechts vom Gips-Arm (Mittelwert 13.8)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # eine Zeile pro Person und Studienvisite
@@ -80,6 +94,7 @@ efas_3mo |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des EFAS-Scores nach 3 Monaten, oben der Walker-Arm («boot»), unten der Gips-Arm («cast»), jedes Feld mit eigener Skala für die Anzahl: Beide sind ungefähr glockenförmig, keine Person liegt bei 0 oder 24, und der Walker-Arm (Mittelwert 17.4) liegt rechts vom Gips-Arm (Mittelwert 13.8)."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -267,6 +282,7 @@ Die Studie erfasste den Schmerz auf einer numerischen Ratingskala (NRS) von 0 (k
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Balkendiagramme der Schmerzen nach 6 Wochen auf der Skala von 0 bis 10, ein Balken pro ganzem Score, oben der Walker-Arm («boot»), unten der Gips-Arm («cast»): Die meisten Scores liegen zwischen 2 und 6, und die Scores im Walker-Arm liegen tiefer (Median 4) als im Gips-Arm (Median 5)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # eine Zeile pro Person und Studienvisite
@@ -290,6 +306,7 @@ pain_6wk |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme der Schmerzen nach 6 Wochen auf der Skala von 0 bis 10, ein Balken pro ganzem Score, oben der Walker-Arm («boot»), unten der Gips-Arm («cast»): Die meisten Scores liegen zwischen 2 und 6, und die Scores im Walker-Arm liegen tiefer (Median 4) als im Gips-Arm (Median 5)."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -759,6 +776,7 @@ Wer die Studie früh verlässt, ist [zensiert](../glossary.qmd#censored){.term}:
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens in Prozent gegen die Jahre seit der Operation für Implantat A und C, mit schattierten 95%-Konfidenzbändern und darunter einer Tabelle der Personen unter Risiko und der Revisionen (zu Beginn 246 mit Implantat A und 137 mit C): Die Kurve von Implantat C fällt von Anfang an schneller ab, und der Abstand wächst weiter."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -777,6 +795,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = a_vs_c, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens als Anteil gegen die Jahre seit der Operation für Implantat A und C, mit schattierten 95%-Konfidenzbändern und darunter einer Tabelle der Personen unter Risiko, der zensierten und der revidierten (zu Beginn 246 mit Implantat A und 137 mit C): Die Kurve von Implantat C fällt von Anfang an schneller ab, und der Abstand wächst weiter."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -973,6 +992,16 @@ Die KI der beiden Kurven zu einem Zeitpunkt zu vergleichen («die KI nach 5 Jahr
 `survdiff()` in R nimmt eine Formel mit einer Gruppierungsvariable. `logrank_test()` in lifelines nimmt die Nachbeobachtungszeiten und [Ereignisse](../glossary.qmd#event){.term} jeder Gruppe getrennt (`multivariate_logrank_test()` nimmt eine Gruppierungsspalte). Sie berechnen denselben Test. Beide Cox-Modelle behandeln [gebundene](../glossary.qmd#ties){.term} Revisionszeiten mit der [Methode von Efron](../glossary.qmd#efron-method){.term}, daher stimmen die Hazard Ratios überein. Der R-Code setzt `conf.type = "log-log"`, weil lifelines diese KI-Methode verwendet ([Seite 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Verwenden Sie von Anfang an den t-Test nach Welch; testen Sie nicht zuerst die Varianzen, um zwischen dem Test nach Student und dem nach Welch zu wählen.
+- Wenn die Zielgrösse schief ist, sich am Boden oder an der Decke häuft oder ordinal ist, verwenden Sie statt des t-Tests den Mann-Whitney-Test.
+- Der Mann-Whitney-Test fragt, ob die Werte der einen Gruppe tendenziell grösser sind, nicht, ob sich die Mediane unterscheiden: Berichten Sie die Mediane, schreiben Sie aber nicht, sie hätten sich signifikant unterschieden.
+- Bei einer Ja/Nein-Zielgrösse gilt der exakte Test nach Fisher für jede Stichprobengrösse; der Chi-Quadrat-Test setzt voraus, dass jede erwartete Häufigkeit mindestens 5 beträgt.
+- «Kein Unterschied» braucht ein schmales KI: Ist das KI breit, kann die Studie es nicht entscheiden; schreiben Sie dann «kein signifikanter Unterschied», nicht, dass die Gruppen gleich gut abschneiden.
+- Bei der Zeit bis zu einem Ereignis vergleichen Sie die ganzen Überlebenskurven mit dem Log-Rank-Test; überlappende KI zu einem einzelnen Zeitpunkt sind kein Test.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -1127,6 +1156,7 @@ Nach 12 Monaten liegen viele Personen an oder nahe an der [Decke](../glossary.qm
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Balkendiagramme des EFAS-Scores nach 12 Monaten, ein Balken pro ganzem Score, oben der Walker-Arm («boot»), unten der Gips-Arm («cast»): In beiden Armen liegen viele Personen an oder nahe an der Decke von 24, die 13 % mit Walker und 17 % mit Gips erreichten."
 efas_12mo <- trial |>
   filter(visit == "12mo", !is.na(efas)) |>
   mutate(arm = factor(arm, levels = c("boot", "cast")))

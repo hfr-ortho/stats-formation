@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Two groups of **different** patients: a removable boot vs a cast in a trial, hamstring vs BPTB grafts, implant A vs implant C. This is the most common comparison in clinical research. If the same patients are measured twice, or patients were [matched](../glossary.qmd#matched){.term} in pairs, use [page 7](07-two-paired-groups.qmd) instead.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between Welch's t test, the Mann-Whitney test and Fisher's exact test from the kind of outcome and the shape of its distribution in each group.
+- Run the test in R or Python and write a Results sentence with each group's numbers, the effect size and its 95% CI, and the p-value.
+- Spot an odds ratio that is read as a risk ratio, which overstates the effect when the outcome is common.
+
+**Time:** about 50 minutes to read, about 2.5 to 3 hours with the exercises (an estimate).
+
+**Read first:** [page 3](../foundations/03-distributions.qmd) on judging a distribution within each group, [page 4's Kaplan-Meier section](04-describe-one-group.qmd#kaplan-meier) on survival curves, and [How results are reported](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: a [randomized trial](../glossary.qmd#randomized-trial){.term} of a cast vs a removable boot after a midfoot injury (the t and [Mann-Whitney tests](../glossary.qmd#mann-whitney-test){.term}), ACL reconstructions ([Fisher's test](../glossary.qmd#fisher-exact-test){.term}) and the joint replacement [cohort](../glossary.qmd#cohort){.term} (the [log-rank test](../glossary.qmd#log-rank-test){.term}). The trial and its results are invented for teaching. Each section's first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -59,6 +72,7 @@ The trial [randomized](../glossary.qmd#randomized-trial){.term} 120 patients, 60
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Histograms of the EFAS score at 3 months, boot arm above and cast arm below on the same scales: both are roughly bell-shaped, no patient is at 0 or 24, and the boot arm (mean 17.4) sits to the right of the cast arm (mean 13.8)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # one row per patient and visit
@@ -80,6 +94,7 @@ efas_3mo |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histograms of the EFAS score at 3 months, boot arm above and cast arm below, each panel with its own count scale: both are roughly bell-shaped, no patient is at 0 or 24, and the boot arm (mean 17.4) sits to the right of the cast arm (mean 13.8)."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -267,6 +282,7 @@ The trial measured pain on a numeric rating scale (NRS) from 0 (no pain) to 10 (
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Bar charts of pain at 6 weeks on the 0 to 10 scale, one bar per whole score, boot arm above and cast arm below: most scores lie between 2 and 6, and the boot arm's scores sit lower (median 4) than the cast arm's (median 5)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # one row per patient and visit
@@ -290,6 +306,7 @@ pain_6wk |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histograms of pain at 6 weeks on the 0 to 10 scale, one bar per whole score, boot arm above and cast arm below: most scores lie between 2 and 6, and the boot arm's scores sit lower (median 4) than the cast arm's (median 5)."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -759,6 +776,7 @@ A patient who leaves the study early is [censored](../glossary.qmd#censored){.te
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curves of revision-free survival, in percent, against years since surgery for implants A and C, with shaded 95% confidence bands and a table below of the patients at risk and the revisions (246 with implant A and 137 with C at the start): implant C's curve falls faster from the start, and the gap keeps growing."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -777,6 +795,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = a_vs_c, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curves of revision-free survival, as a proportion, against years since surgery for implants A and C, with shaded 95% confidence bands and a table below of the patients at risk, censored and revised (246 with implant A and 137 with C at the start): implant C's curve falls faster from the start, and the gap keeps growing."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -973,6 +992,16 @@ Comparing the two curves' CIs at one time point ("the 5-year CIs overlap, so the
 R's `survdiff()` takes a formula with a grouping variable. lifelines' `logrank_test()` takes each group's follow-up times and [events](../glossary.qmd#event){.term} separately (`multivariate_logrank_test()` takes a grouping column). They compute the same test. Both Cox models handle [tied](../glossary.qmd#ties){.term} revision times with [Efron's method](../glossary.qmd#efron-method){.term}, so the hazard ratios agree. The R code sets `conf.type = "log-log"` because that is the CI method lifelines uses ([page 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
+::: {.callout-note .key-points}
+## 📌 Key points
+- Use Welch's t test from the start; don't test the variances first to choose between Student's and Welch's.
+- If the outcome is skewed, piles up at a floor or ceiling, or is ordinal, use the Mann-Whitney test instead of the t test.
+- The Mann-Whitney test asks whether one group's values tend to be larger, not whether the medians differ: report the medians, but don't write that they differed significantly.
+- For a yes/no outcome, Fisher's exact test is valid for any sample size; the chi-square test needs every expected count to be at least 5.
+- "No difference" needs a narrow CI: when the CI is wide, the study can't tell, so write "no significant difference", not that the groups do equally well.
+- For time to an event, compare the whole survival curves with the log-rank test; overlapping CIs at one time point aren't a test.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -1127,6 +1156,7 @@ By 12 months many patients are at or near the [ceiling](../glossary.qmd#ceiling-
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Bar charts of the EFAS score at 12 months, one bar per whole score, boot arm above and cast arm below: many patients in both arms score at or near the ceiling of 24, which 13% of boot patients and 17% of cast patients reached."
 efas_12mo <- trial |>
   filter(visit == "12mo", !is.na(efas)) |>
   mutate(arm = factor(arm, levels = c("boot", "cast")))

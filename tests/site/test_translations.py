@@ -135,6 +135,15 @@ def fences(text: str) -> list[tuple[str, str]]:
     return found
 
 
+FIG_ALT = re.compile(r"^#\| fig-alt:\s*(.*)$")
+
+
+def alt_as_numbers(options):
+    """A chunk's options with each `#| fig-alt:` sentence reduced to its numbers: the alt text is prose and
+    is translated, but its numbers and its place among the options stay as in English."""
+    return [f"#| fig-alt: {number_tokens(m.group(1))}" if (m := FIG_ALT.match(o)) else o for o in options]
+
+
 def is_hidden(options):
     return "#| include: false" in options or "#| echo: false" in options
 
@@ -161,7 +170,7 @@ def code_problems(en: str, tr: str) -> list[str]:
             problems.append(f"block {i}: ```{i2} vs English ```{i1}")
         elif EXEC_INFO.match(i1):
             (o1, c1), (o2, c2) = split_options(b1), split_options(b2)
-            if o1 != o2:
+            if alt_as_numbers(o1) != alt_as_numbers(o2):
                 problems.append(f"block {i}: options differ: {o2} vs {o1}")
             elif is_hidden(o1):
                 if c1 != c2:
@@ -932,6 +941,16 @@ def test_rule_checks_display_fences_inline_code_and_comment_numbers():
     assert code_problems(PAGE_EN, PAGE_FR.replace("prend 2 minutes", "prend 3 minutes"))
     assert code_problems(PAGE_EN, PAGE_FR.replace("# un commentaire, 95 % de 3", "# un commentaire"))
     assert not code_problems(PAGE_EN, PAGE_FR.replace("prend 2 minutes", "prend 2 minutes de plus"))
+
+
+def test_fig_alt_is_prose_but_every_other_option_is_code():
+    """A figure's alt text is translated; its numbers, its place among the options and the rest of the chunk aren't."""
+    en = '```{r}\n#| fig-height: 4\n#| fig-alt: "Bar chart of pain: medians 4 and 5."\nplot(x)\n```\n'
+    assert not code_problems(en, en.replace("Bar chart of pain: medians", "Diagramme en barres de la douleur : médianes"))
+    assert code_problems(en, en.replace("medians 4 and 5", "medians 4 and 6"))
+    assert code_problems(en, en.replace("#| fig-height: 4", "#| fig-height: 5").replace("Bar chart", "Diagramme"))
+    assert code_problems(en, en.replace('#| fig-alt: "Bar chart of pain: medians 4 and 5."\n', ""))
+    assert code_problems(en, en.replace("plot(x)", "plot(y)").replace("Bar chart", "Diagramme"))
 
 
 def test_mermaid_labels_translate_but_its_structure_does_not():

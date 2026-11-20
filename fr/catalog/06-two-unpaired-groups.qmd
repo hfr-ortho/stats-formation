@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Deux groupes de patients **différents** : une orthèse amovible contre un plâtre dans un essai, un greffon aux ischio-jambiers contre un greffon os-tendon rotulien-os (BPTB), l'implant A contre l'implant C. C'est la comparaison la plus fréquente en recherche clinique. Si les mêmes patients sont mesurés deux fois, ou si les patients ont été [appariés](../glossary.qmd#matched){.term} deux à deux, utilisez plutôt la [page 7](07-two-paired-groups.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir entre le test t de Welch, le test de Mann-Whitney et le test exact de Fisher selon le type de critère et la forme de sa distribution dans chaque groupe.
+- exécuter le test en R ou en Python et rédiger une phrase de Résultats avec les chiffres de chaque groupe, la taille d'effet et son IC à 95 %, et la valeur p.
+- repérer un odds ratio lu comme un risque relatif, ce qui surestime l'effet quand l'événement est fréquent.
+
+**Durée :** environ 50 minutes de lecture, environ 2.5 à 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 3](../foundations/03-distributions.qmd) pour juger une distribution dans chaque groupe, la [section Kaplan-Meier de la page 4](04-describe-one-group.qmd#kaplan-meier) pour les courbes de survie, et [Comment rapporter les résultats](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : un [essai randomisé](../glossary.qmd#randomized-trial){.term} qui compare une orthèse amovible à un plâtre après une lésion du médio-pied (les tests t et de [Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}), les reconstructions du LCA ([test de Fisher](../glossary.qmd#fisher-exact-test){.term}) et la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires ([test du log-rank](../glossary.qmd#log-rank-test){.term}). L'essai et ses résultats sont inventés pour l'enseignement. Dans les données et dans le code, l'orthèse amovible s'appelle « boot » et le plâtre « cast » ; dans le texte, nous disons orthèse et plâtre. Le premier bloc de code de chaque section charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -59,6 +72,7 @@ L'essai a [randomisé](../glossary.qmd#randomized-trial){.term} 120 patients, 60
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Histogrammes du score EFAS à 3 mois, le bras orthèse (« boot ») en haut et le bras plâtre (« cast ») en bas, sur les mêmes échelles : les deux ont à peu près une forme de cloche, aucun patient n'est à 0 ni à 24, et le bras orthèse (moyenne 17.4) se situe à droite du bras plâtre (moyenne 13.8)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # une ligne par patient et par visite
@@ -80,6 +94,7 @@ efas_3mo |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histogrammes du score EFAS à 3 mois, le bras orthèse (« boot ») en haut et le bras plâtre (« cast ») en bas, chaque panneau avec sa propre échelle d'effectifs : les deux ont à peu près une forme de cloche, aucun patient n'est à 0 ni à 24, et le bras orthèse (moyenne 17.4) se situe à droite du bras plâtre (moyenne 13.8)."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -267,6 +282,7 @@ L'essai a mesuré la douleur sur une échelle numérique de la douleur (NRS) all
 ```{r}
 #| warning: false
 #| fig-height: 4
+#| fig-alt: "Diagrammes en barres de la douleur à 6 semaines sur l'échelle de 0 à 10, une barre par score entier, le bras orthèse (« boot ») en haut et le bras plâtre (« cast ») en bas : la plupart des scores se situent entre 2 et 6, et ceux du bras orthèse sont plus bas (médiane 4) que ceux du bras plâtre (médiane 5)."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # une ligne par patient et par visite
@@ -290,6 +306,7 @@ pain_6wk |>
 ## Python
 
 ```{python}
+#| fig-alt: "Histogrammes de la douleur à 6 semaines sur l'échelle de 0 à 10, une barre par score entier, le bras orthèse (« boot ») en haut et le bras plâtre (« cast ») en bas : la plupart des scores se situent entre 2 et 6, et ceux du bras orthèse sont plus bas (médiane 4) que ceux du bras plâtre (médiane 5)."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -759,6 +776,7 @@ Un patient qui quitte l'étude tôt est [censuré](../glossary.qmd#censored){.te
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision, en pourcentage, en fonction des années depuis l'opération pour les implants A et C, avec des bandes de confiance à 95 % ombrées et, en dessous, un tableau des patients à risque et des révisions (246 avec l'implant A et 137 avec le C au départ) : la courbe de l'implant C descend plus vite dès le début, et l'écart ne cesse de grandir."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -777,6 +795,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = a_vs_c, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision, en proportion, en fonction des années depuis l'opération pour les implants A et C, avec des bandes de confiance à 95 % ombrées et, en dessous, un tableau des patients à risque, censurés et révisés (246 avec l'implant A et 137 avec le C au départ) : la courbe de l'implant C descend plus vite dès le début, et l'écart ne cesse de grandir."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -973,6 +992,16 @@ Comparer les IC des deux courbes à un moment donné (« les IC à 5 ans se che
 `survdiff()` de R prend une formule avec une variable de regroupement. `logrank_test()` de lifelines prend séparément les délais de suivi et les [événements](../glossary.qmd#event){.term} de chaque groupe (`multivariate_logrank_test()` prend une colonne de regroupement). Ils calculent le même test. Les deux modèles de Cox traitent les délais de révision [ex æquo](../glossary.qmd#ties){.term} avec la [méthode d'Efron](../glossary.qmd#efron-method){.term}, donc les hazard ratios concordent. Le code R fixe `conf.type = "log-log"` parce que c'est la méthode d'IC qu'utilise lifelines ([page 4](04-describe-one-group.qmd#kaplan-meier)).
 :::
 
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Utilisez le test t de Welch d'emblée ; ne testez pas d'abord les variances pour choisir entre le test de Student et celui de Welch.
+- Si le critère est asymétrique, se concentre à un plancher ou à un plafond, ou est ordinal, utilisez le test de Mann-Whitney plutôt que le test t.
+- Le test de Mann-Whitney demande si les valeurs d'un groupe ont tendance à être plus grandes, pas si les médianes diffèrent : indiquez les médianes, mais n'écrivez pas qu'elles différaient de manière significative.
+- Pour un critère oui/non, le test exact de Fisher est valide quelle que soit la taille de l'échantillon ; le test du khi-deux exige que chaque effectif attendu soit d'au moins 5.
+- « Pas de différence » exige un IC étroit : quand l'IC est large, l'étude ne peut pas trancher ; écrivez alors « pas de différence significative », et non que les groupes s'en sortent aussi bien l'un que l'autre.
+- Pour un délai jusqu'à un événement, comparez les courbes de survie entières avec le test du log-rank ; des IC qui se chevauchent à un moment donné ne sont pas un test.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -1127,6 +1156,7 @@ Le tableau de R montre trois chiffres : l'ET de 2.75 du bras orthèse est 2.747
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Diagrammes en barres du score EFAS à 12 mois, une barre par score entier, le bras orthèse (« boot ») en haut et le bras plâtre (« cast ») en bas : dans les deux bras, beaucoup de patients sont au plafond de 24 ou près de celui-ci, atteint par 13 % des patients avec orthèse et 17 % des patients avec plâtre."
 efas_12mo <- trial |>
   filter(visit == "12mo", !is.na(efas)) |>
   mutate(arm = factor(arm, levels = c("boot", "cast")))

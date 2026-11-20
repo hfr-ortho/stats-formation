@@ -60,10 +60,14 @@ def test_using_this_site_runs_both_languages(site):
     assert (FREEZE / "getting-started" / "using-this-site").is_dir()
 
 
-def test_callout_legend_shows_all_four_kinds(site):
-    text = load("getting-started/using-this-site.html").get_text(" ")
-    for title in ["In plain language", "Watch out", "R vs Python", "Under the hood"]:
+def test_callout_legend_shows_all_six_kinds(site):
+    legend = load("getting-started/using-this-site.html").select_one("section#the-boxes-youll-see")
+    text = legend.get_text(" ")
+    for title in ["Goals and time", "In plain language", "Watch out", "R vs Python", "Under the hood", "Key points"]:
         assert title in text, title
+    assert legend.select("div.callout.page-brief") and legend.select("div.callout.key-points")
+    # how the times are worked out (spec docs/superpowers/specs/2026-11-20-page-brief-design.md)
+    assert "100 words a minute" in text_of(legend) and "an estimate" in text_of(legend)
 
 
 def test_every_python_print_shows_its_output(site):
