@@ -80,7 +80,7 @@ Es gibt mehrere ICC, und welcher der richtige ist, hängt vom Studiendesign ab. 
 - **Typ** (`unit`): Verwendet die Studie die Messung einer einzelnen beurteilenden Person (**einzeln**, *single*) oder den Mittelwert mehrerer (**Mittelwert**, *average*)? Meist einzeln.
 - **Definition** (`type`): Soll es gegen die Messung zählen, wenn eine beurteilende Person immer höher misst (**absolute Übereinstimmung**, *absolute agreement*), oder nicht (**Konsistenz**, *consistency*)? Bei Winkeln, die in klinische Entscheidungen einfliessen, soll es zählen: Wählen Sie die absolute Übereinstimmung.
 
-Koo und Li beschreiben auch ein Modell **einfaktoriell, zufällige Effekte** (*one-way random*; `model = "oneway"`) für Studien, in denen jedes Knie von anderen Beurteilenden gemessen wird, zum Beispiel von anderen Personen an jedem Zentrum einer multizentrischen Studie. Es ist selten das richtige Modell, wenn dieselben Beurteilenden alle Knie messen, wie hier; die Zeile `ICC(1,1)` von pingouin ist dieser ICC.
+Koo und Li beschreiben auch ein Modell **einfaktoriell, zufällige Effekte** (*one-way random*; `model = "oneway"`) für Studien, in denen jedes Knie von jeweils anderen Beurteilenden gemessen wird, zum Beispiel von anderen Personen an jedem Zentrum einer multizentrischen Studie. Es passt nicht zu einer Studie, in der dieselben Beurteilenden alle Knie messen, wie hier; für dieses Design braucht es ein zweifaktorielles Modell. In der Ausgabe von pingouin ist die Zeile `ICC(1,1)` dieser ICC.
 
 In einfachen Worten teilt der ICC die [Streuung](../glossary.qmd#spread){.term} aller Messungen in drei Teile: echte Unterschiede zwischen den Knien, einen systematischen Unterschied zwischen den Beurteilenden und den Rest, den [Messfehler](../glossary.qmd#measurement-error){.term}. Jeder Teil ist eine [Varianz](../glossary.qmd#variance){.term}. Der ICC für die absolute Übereinstimmung ist der Anteil der Knie an allen drei zusammen; der ICC für die Konsistenz lässt den Unterschied zwischen den Beurteilenden weg. Ein Kasten unter der Ausgabe unten berechnet beide von Hand.
 
@@ -245,7 +245,7 @@ Person 1 stimmte mit sich selbst etwas besser überein als mit Person 2: Intra-R
 Der [ICC](../glossary.qmd#icc){.term} ist ein Verhältnis und hat keine Einheit. Um zu sehen, wie weit zwei Messungen in Grad auseinanderliegen können, tragen Sie die **Differenz** der beiden gegen ihren **Mittelwert** auf, ein Punkt pro Knie. Zeichnen Sie dann drei Linien ein:
 
 - **Die systematische Abweichung (Bias):** die [mittlere](../glossary.qmd#mean){.term} Differenz. Sie zeigt, ob eine Person systematisch höher misst.
-- **Die 95%-Übereinstimmungsgrenzen:** Bias ± 1.96 × [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) der Differenzen. Bei 95 % der Knie liegt die Messung von Person 2, bezogen auf die von Person 1, zwischen diesen Grenzen.
+- **Die 95%-Übereinstimmungsgrenzen:** Bias ± 1.96 × [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) der Differenzen. Bei etwa 95 % der Knie liegt die Messung von Person 2, bezogen auf die von Person 1, zwischen diesen Grenzen, sofern die Differenzen ungefähr normalverteilt sind.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -265,6 +265,7 @@ limit_cis <- rbind(lower = limits[1] + c(-1, 1) * qt(0.975, n_knees - 1) * se_li
 bias_ci <- t.test(inter_hka$difference)$conf.int                # das KI der mittleren Differenz
 c(bias = bias, bias_ci = bias_ci, sd = sd_diff, limits = limits)
 limit_cis
+sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])   # Knie ausserhalb der Grenzen
 
 ggplot(inter_hka, aes(mean, difference)) +
   geom_point() +
@@ -290,6 +291,7 @@ bias_ci = stats.ttest_1samp(difference, 0).confidence_interval()
 print(round(bias, 3), round(float(bias_ci.low), 3), round(float(bias_ci.high), 3), round(sd_diff, 3))   # der Bias, sein 95%-KI und die SD der Differenzen
 for limit in limits:
     print(round(limit, 3), round(limit - t_crit * se_limit, 3), round(limit + t_crit * se_limit, 3))    # jede Grenze mit ihrem 95%-KI
+print(((difference < limits[0]) | (difference > limits[1])).sum())                                   # Knie ausserhalb der Grenzen
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(mean, difference)
@@ -306,22 +308,56 @@ plt.show()
 ```{python}
 #| include: false
 chk = {"bias": float(bias), "bias_low": float(bias_ci.low), "sd": float(sd_diff), "limit_low": float(limits[0]),
-       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit)}
+       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit),
+       "outside": float(((difference < limits[0]) | (difference > limits[1])).sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = limits[1],
-                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2]),
+                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2],
+                 outside = sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])),
             reticulate::py$chk)
 ```
 
 - **Bias = 0.50°** ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.08° bis 0.93°): Person 2 misst im Mittel ein halbes Grad höher als Person 1. Dieselbe Differenz fand [Seite 7](../catalog/07-two-paired-groups.qmd#exercises) in Übung 2 mit einem [t-Test für gepaarte Stichproben](../glossary.qmd#t-test){.term}.
-- **Übereinstimmungsgrenzen −2.74° bis 3.74°:** Bei 95 % der Knie liegt die Messung von Person 2 zwischen 2.7° unter und 3.7° über der von Person 1.
-- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°; die letzte Tabelle von R und die letzten beiden Zeilen von Python, in denen auf jede Grenze ihr KI folgt) zeigen, wie [genau](../glossary.qmd#precision){.term} 60 Knie die Grenzen festlegen.
+- **Übereinstimmungsgrenzen −2.74° bis 3.74°:** Bei etwa 95 % der Knie liegt die Messung von Person 2 zwischen 2.7° unter und 3.7° über der von Person 1, sofern die Differenzen ungefähr normalverteilt sind. Hier liegen 3 der 60 Punkte (5 %) ausserhalb der gestrichelten Linien (die letzte Zahl, die vor der Grafik ausgegeben wird).
+- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°; die Zeilen `lower` und `upper` in R und die zwei Zeilen von Python, in denen auf jede Grenze ihr KI folgt) zeigen, wie [genau](../glossary.qmd#precision){.term} 60 Knie die Grenzen festlegen.
 - **Das Diagramm:** Die Punkte streuen gleichmässig um die Bias-Linie, ohne Trend nach oben oder unten, wenn sich der mittlere Winkel ändert. Ein Trend würde bedeuten, dass die beiden Personen bei manchen Knien (etwa bei stärkerem Varus) stärker voneinander abweichen als bei anderen, und ein einziges Paar von Grenzen würde diese Knie nicht beschreiben.
 
 Ob Grenzen von −2.7° bis 3.7° gut genug sind, ist eine klinische und keine statistische Frage. Würde eine Differenz von 3° die geplante Korrektur in Ihrer Studie verändern, ist sie relevant. Legen Sie die akzeptablen Grenzen **vor** der [Reliabilitätsstudie](../glossary.qmd#reliability){.term} fest und vergleichen Sie die Grenzen (und ihre KI) damit.
+
+**Standardmessfehler und kleinste nachweisbare Veränderung.** de Vet et al. (2006) beschreiben zwei weitere Masse für die Übereinstimmung, in den Einheiten der Messung selbst (hier Grad), die aus den drei Varianzen im [ICC-Kasten](#icc) aufgebaut sind. Der **Standardmessfehler** (*standard error of measurement*, SEM; nicht der Standardfehler des Mittelwerts, den [Seite 4](../catalog/04-describe-one-group.qmd#mean-sd) ebenfalls mit SEM abkürzt) ist die typische Grösse des Fehlers einer einzelnen Messung. Für die Übereinstimmung zählt er den systematischen Unterschied zwischen den Beurteilenden ebenfalls als Fehler: SEM = √(Varianz der Beurteilenden + Fehlervarianz). Die **kleinste nachweisbare Veränderung** (*smallest detectable change*, SDC) beträgt 1.96 × √2 × SEM: die kleinste Differenz zwischen zwei Messungen desselben Knies durch verschiedene Beurteilende, die grösser ist, als es der [Messfehler](../glossary.qmd#measurement-error){.term} allein üblicherweise hervorbringen würde. Das √2 steht da, weil beide Messungen einen Fehler enthalten, und 1.96 ergibt 95 %, wie bei den Übereinstimmungsgrenzen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+sem_agreement <- sqrt(parts[["raters"]] + parts[["error"]])   # der Unterschied zwischen den Beurteilenden zählt ebenfalls als Fehler
+sdc <- 1.96 * sqrt(2) * sem_agreement                          # die kleinste nachweisbare Veränderung
+c(sem = sem_agreement, sdc = sdc)
+```
+
+## Python
+
+```{python}
+sem_agreement = np.sqrt(parts["raters"] + parts["error"])     # der Unterschied zwischen den Beurteilenden zählt ebenfalls als Fehler
+sdc = 1.96 * np.sqrt(2) * sem_agreement                        # die kleinste nachweisbare Veränderung
+print(round(sem_agreement, 6), round(sdc, 6))
+```
+:::
+
+```{python}
+#| include: false
+chk = {"sem": float(sem_agreement), "sdc": float(sdc)}
+```
+
+```{r}
+#| include: false
+check_agree(list(sem = sem_agreement, sdc = sdc), reticulate::py$chk)
+```
+
+Für den HKA gilt SEM = 1.21°, die Wurzel aus 0.10 + 1.37, und SDC = 3.36° (die Ausgabe). Eine Differenz von weniger als etwa 3.4° zwischen zwei Messungen desselben Knies durch verschiedene Beurteilende liegt innerhalb dessen, was der Messfehler allein hervorbringen könnte.
 
 ## Kappa für Kategorien {#kappa}
 
@@ -338,6 +374,7 @@ cpak <- readings |>
   pivot_wider(names_from = rater, values_from = cpak_class) |>
   mutate(R1 = factor(R1, levels = cpak_levels), R2 = factor(R2, levels = cpak_levels))
 
+table(R1 = cpak$R1, R2 = cpak$R2)                            # die Klassen der beiden Personen, einander gegenübergestellt
 mean(cpak$R1 == cpak$R2)                                     # einfache prozentuale Übereinstimmung
 cpak_kappa <- DescTools::CohenKappa(cpak$R1, cpak$R2, conf.level = 0.95)
 cpak_kappa
@@ -348,10 +385,11 @@ cpak_kappa
 ```{python}
 cpak_levels = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 cpak = first_session.pivot(index="knee_id", columns="rater", values="cpak_class")
+cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
+                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False, rownames=["R1"], colnames=["R2"])
+print(cpak_table)                                              # die Klassen der beiden Personen, einander gegenübergestellt
 print((cpak["R1"] == cpak["R2"]).mean())                       # einfache prozentuale Übereinstimmung
 
-cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
-                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False)
 cpak_kappa = cohens_kappa(cpak_table.to_numpy())
 print(cpak_kappa.kappa, cpak_kappa.kappa_low, cpak_kappa.kappa_upp)
 ```
@@ -370,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %; die Ausgabe zeigt 0.667, und 0.667 × 60 = 40). Ein Teil davon wäre aber auch zufällig entstanden: hier 20.1 %, wie der Kasten unten berechnet. Kappa = 0.58 ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.44 bis 0.73): beim [Schätzwert](../glossary.qmd#estimate){.term} mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim [ICC](../glossary.qmd#icc){.term} beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
+Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %; R gibt 0.6666667 aus und Python 0.6666666666666666, also zwei Drittel, und zwei Drittel von 60 sind 40). Diese 40 Knie liegen auf der Diagonale der ersten Tabelle (8 + 13 + 3 + 3 + 9 + 4), die die Klassen von Person 1 in den Zeilen und die von Person 2 in den Spalten zeigt. Ein Teil davon wäre aber auch zufällig entstanden: hier 20.1 %, wie der Kasten unten berechnet. Kappa = 0.58 ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.44 bis 0.73): beim [Schätzwert](../glossary.qmd#estimate){.term} mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim [ICC](../glossary.qmd#icc){.term} beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: Kappa von Hand
@@ -415,6 +453,52 @@ check_agree(list(observed = observed, by_chance = by_chance, by_hand = (observed
                  software = cpak_kappa[["kappa"]], class_1_r1 = rowSums(cpak_table)[["I"]],
                  class_1_r2 = colSums(cpak_table)[["I"]]), reticulate::py$chk)
 ```
+
+::: {.callout-warning}
+## ⚠️ Achtung: Kappa hängt davon ab, wie häufig jede Kategorie ist
+Zwei erfundene Tabellen mit je 100 Knien, die zwei Beurteilende als «varus» oder «not varus» eingestuft haben. In beiden stimmen die Beurteilenden bei 90 Knien überein. In der ersten Tabelle ist die Hälfte der Knie varus; in der zweiten stuft jede beurteilende Person 90 der 100 Knie als varus ein.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+balanced <- as.table(matrix(c(45, 5, 5, 45), nrow = 2,
+                            dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+common <- as.table(matrix(c(85, 5, 5, 5), nrow = 2,
+                          dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+balanced
+common
+c(balanced = sum(diag(balanced)) / 100, common = sum(diag(common)) / 100)       # dieselbe Übereinstimmung von 90 %
+c(balanced = DescTools::CohenKappa(balanced), common = DescTools::CohenKappa(common))   # zwei verschiedene Kappas
+```
+
+## Python
+
+```{python}
+balanced = np.array([[45, 5], [5, 45]])          # Zeilen: Person 1 (varus, not varus); Spalten: Person 2
+common = np.array([[85, 5], [5, 5]])
+print(balanced)
+print(common)
+print(np.trace(balanced) / 100, np.trace(common) / 100)                  # dieselbe Übereinstimmung von 90 %
+print(cohens_kappa(balanced).kappa, cohens_kappa(common).kappa)          # zwei verschiedene Kappas
+```
+:::
+
+```{python}
+#| include: false
+chk = {"agree_balanced": float(np.trace(balanced) / 100), "agree_common": float(np.trace(common) / 100),
+       "kappa_balanced": float(cohens_kappa(balanced).kappa), "kappa_common": float(cohens_kappa(common).kappa)}
+```
+
+```{r}
+#| include: false
+check_agree(list(agree_balanced = sum(diag(balanced)) / 100, agree_common = sum(diag(common)) / 100,
+                 kappa_balanced = DescTools::CohenKappa(balanced), kappa_common = DescTools::CohenKappa(common)),
+            reticulate::py$chk)
+```
+
+Beide Tabellen zeigen 90 % Übereinstimmung, aber Kappa beträgt 0.80 in der ersten und 0.44 in der zweiten. Ist eine Kategorie häufig, bringt schon der Zufall allein einen grossen Teil der Übereinstimmung hervor: 0.9 × 0.9 + 0.1 × 0.1 = 0.82 in der zweiten Tabelle, gegenüber 0.5 × 0.5 + 0.5 × 0.5 = 0.50 in der ersten (der Kasten oben zeigt diesen Schritt). Auf der Skala von Landis und Koch erreichen diese zwei erfundenen Paare von Beurteilenden, mit derselben Übereinstimmung von 90 %, in der einen Tabelle «substanzielle» und in der anderen «mässige» Übereinstimmung; diese Bezeichnungen sind Konventionen, keine Eigenschaften der Messung. Kappa hängt davon ab, wie häufig jede Kategorie ist; ein Kappa aus einer Stichprobe mit einer anderen Zusammensetzung der Fälle ist deshalb möglicherweise nicht vergleichbar. Berichten Sie neben Kappa die einfache Übereinstimmung und die Tabelle, wie es diese Seite für die CPAK-Klasse tut.
+:::
 
 **Gewichtetes Kappa für geordnete Kategorien.** Ungewichtetes Kappa behandelt jede Abweichung als gleich schwerwiegend. Haben die Kategorien eine Reihenfolge, soll eine Abweichung um nur eine Kategorie weniger zählen als eine grosse Abweichung. Die CPAK-Klasse hat keine einheitliche Reihenfolge (sie ist ein 3 × 3-Raster aus zwei Winkeln), aber jede Achse hat eine. Die arithmetische HKA-Gruppe geht von Varus über neutral zu Valgus. Ein **gewichtetes Kappa** bestraft eine Abweichung zwischen Varus und neutral nur halb so stark wie eine zwischen Varus und Valgus (lineare Gewichte):
 
@@ -484,7 +568,7 @@ Die Gewichte hängen von der Reihenfolge der Kategorien ab. Legen Sie sie selbst
 
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
-> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
 
 ```{r}
 #| include: false
@@ -522,7 +606,9 @@ stopifnot(
   isTRUE(all.equal(parts[["knees"]] / sum(parts), inter_icc$value)),
   isTRUE(all.equal(parts[["knees"]] / (parts[["knees"]] + parts[["error"]]), inter_c$value)),
   round(intra_icc$value, 4) == 0.9148,
-  round(mean(cpak$R1 == cpak$R2), 3) == 0.667, round(0.667 * 60) == 40,
+  format(mean(cpak$R1 == cpak$R2), digits = 7) == "0.6666667",
+  reticulate::py_eval('repr(float((cpak["R1"] == cpak["R2"]).mean()))') == "0.6666666666666666",
+  isTRUE(all.equal(2 / 3 * 60, 40)), diag(table(cpak$R1, cpak$R2))[1:6] == c(8, 13, 3, 3, 9, 4), 8 + 13 + 3 + 3 + 9 + 4 == 40,
   rowSums(cpak_table)[["I"]] == 15, colSums(cpak_table)[["I"]] == 12, 15 / 60 * 12 / 60 == 0.05,
   round(100 * by_chance, 1) == 20.1, round((0.667 - 0.201) / (1 - 0.201), 2) == 0.58,
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
@@ -532,6 +618,14 @@ stopifnot(
   round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
   round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_icc$value - inter_1$value, 4) == 0.0004,
   shifted_icc$lbound < 0,
+  # numbers added with the content review of 20.11.2026 (Task 3.7)
+  sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2]) == 3, 3 / 60 == 0.05,
+  round(sem_agreement, 2) == 1.21, round(sqrt(0.10 + 1.37), 2) == 1.21, round(sdc, 2) == 3.36, round(sdc, 1) == 3.4,
+  sum(balanced) == 100, sum(common) == 100, sum(diag(balanced)) == 90, sum(diag(common)) == 90,
+  rowSums(balanced)[["varus"]] == 50, colSums(balanced)[["varus"]] == 50,
+  rowSums(common)[["varus"]] == 90, colSums(common)[["varus"]] == 90,
+  round(DescTools::CohenKappa(balanced), 2) == 0.80, round(DescTools::CohenKappa(common), 2) == 0.44,
+  round(0.9 * 0.9 + 0.1 * 0.1, 2) == 0.82, round(0.5 * 0.5 + 0.5 * 0.5, 2) == 0.50,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),
