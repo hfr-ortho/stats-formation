@@ -29,6 +29,8 @@ Pour garder le code court, les exemples de prothèses articulaires utilisent tou
 ::: {.callout-warning}
 ## ⚠️ Attention : ces tests écartent tout patient qui a manqué une visite
 L'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term}, le [test de Friedman](../glossary.qmd#friedman-test){.term} et le [test Q de Cochran](../glossary.qmd#cochran-q-test){.term} exigent que chaque patient soit mesuré à **chaque** visite. Un patient qui a manqué une visite est écarté complètement, avec ses autres mesures. Ci-dessous, 574 interventions avaient un score de fonction physique PROMIS préopératoire, mais seulement 328 en avaient quatre : l'analyse perd donc 574 − 328 = 246 interventions (246 ÷ 574 = 43 %) ; la première section les compte. Si les patients qui manquent des visites diffèrent des autres, le résultat est [biaisé](../glossary.qmd#bias){.term}. Les [modèles mixtes](../beyond/16-mixed-models.qmd#why-mixed-models) utilisent toutes les données disponibles de chacun et sont en général le meilleur choix pour des PROM répétés.
+
+Chaque section ci-dessous ne garde donc d'abord que les interventions (ou les patients) qui ont une mesure à chaque visite : l'étape `filter(all(!is.na(...)))` dans R, l'étape `notna().all()` en Python. C'est aussi ce filtre qui fait concorder les fonctions. Sur des données non filtrées, elles se comportent différemment : `anova_test()` de rstatix écarte elle-même les interventions incomplètes, avec un avertissement, et `rm_anova()`, `friedman()` et `cochran()` de pingouin les écartent sans avertissement ; `friedman.test()` et `DescTools::CochranQTest()` dans R, appelées avec une formule comme sur cette page, s'arrêtent sur une erreur ; et `aov()` avec `Error()` de base R les garde et donne un autre résultat (l'encadré R ou Python sous [ANOVA à mesures répétées](#repeated-measures-anova) le montre).
 :::
 
 ## ANOVA à mesures répétées {#repeated-measures-anova}
@@ -251,10 +253,48 @@ L'ANOVA dit que les moyennes des visites ne sont pas toutes égales. Pour dire *
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : quels outils vérifient la sphéricité
-- **R :** `aov(... + Error(case_id / visit))` de base donne le même test F mais ignore la sphéricité ; `rstatix::anova_test()` ajoute le test de Mauchly et les corrections. rstatix arrondit ses nombres à 3 décimales.
+- **R :** `aov(... + Error(case_id / visit))` de base donne le même test F sur des données complètes, mais ignore la sphéricité ; `rstatix::anova_test()` ajoute le test de Mauchly et les corrections. rstatix arrondit ses nombres à 3 décimales.
 - **Python :** `rm_anova(correction=True)` de pingouin donne le test de Mauchly et la correction de Greenhouse-Geisser. `AnovaRM` de statsmodels ne donne que le test F.
 - **Tailles d'effet :** pingouin renvoie l'êta carré soit partiel (`effsize="np2"`) soit généralisé (`effsize="ng2"`) ; rstatix renvoie les deux si on le demande.
+- **Visites manquées :** tout ce qui précède porte sur les 328 interventions qui ont les quatre scores, grâce au filtre sous « Regarder d'abord les données ». Sans ce filtre, les fonctions divergent :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| warning: false
+pf_unfiltered <- proms |>   # les mêmes scores sans le filtre : les 600 interventions, certaines avec des visites manquées
+  select(case_id, visit, promis_pf) |>
+  mutate(visit = factor(visit, levels = c("preop", "6wk", "3mo", "1yr")))
+
+# rstatix avertit qu'il a trouvé des scores manquants, et écarte les interventions incomplètes
+rstatix::get_anova_table(rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit))
+# aov() avertit seulement "Error() model is singular", et les garde
+summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered))
+```
+
+## Python
+
+```{python}
+pf_unfiltered = proms[["case_id", "visit", "promis_pf"]]   # les mêmes scores sans le filtre
+pf_unfiltered_anova = pg.rm_anova(data=pf_unfiltered, dv="promis_pf", within="visit", subject="case_id")   # écarte les interventions incomplètes sans rien dire
+print(pf_unfiltered_anova[["ddof1", "ddof2", "F"]])
+```
 :::
+
+rstatix et pingouin affichent le même F = 326.1 avec 3 et 981 degrés de liberté que plus haut : ils ont écarté eux-mêmes les interventions incomplètes. `aov()` non : il analyse tous les scores disponibles d'une autre façon, et sous `Error: case_id:visit`, il affiche F = 467.5 avec 3 et 1449 degrés de liberté. Ne rapportez pas ce nombre comme l'ANOVA à mesures répétées. `aov()` avec `Error()` est prévu pour des données complètes : sa page d'aide dit qu'il « is designed for balanced designs, and the results can be hard to interpret without balance ». La ligne `visit` sous `Error: case_id`, que les données complètes ne produisent pas, est un signe que les données ne sont pas équilibrées. C'est pourquoi cette page filtre d'abord, et n'exécute `aov()` pour la taille d'effet que sur les données filtrées.
+:::
+
+```{python}
+#| include: false
+chk = {"f": float(pf_unfiltered_anova.loc[0, "F"]), "df_error": float(pf_unfiltered_anova.loc[0, "ddof2"])}
+```
+
+```{r}
+#| include: false
+# pingouin on the unfiltered data gives the F of the filtered data above
+check_agree(list(f = pf_aov["visit", "F value"], df_error = pf_aov["Residuals", "Df"]), reticulate::py$chk)
+```
 
 ## Test de Friedman {#friedman}
 
@@ -470,7 +510,7 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.75 à 0.94. Par défaut, effectsize donne ici un intervalle [unilatéral](../glossary.qmd#two-sided){.term} (`alternative = "greater"`) ; `alternative = "two.sided"` demande un intervalle bilatéral. L'IC est un [bootstrap](../glossary.qmd#bootstrap){.term} par percentiles : R recalcule W sur 2,000 rééchantillonnages des données (`iterations = 2000` ; la valeur par défaut est 200) et garde les 95 % centraux des résultats, ce qui explique la graine dans le code. Comme W ne peut pas être négatif, cet intervalle ne peut pas descendre sous 0, et en pratique il n'atteint jamais 0. Ne le lisez donc pas comme un test de l'existence d'un effet ; c'est le rôle du test de Friedman. pingouin ne calcule pas cet IC.
+W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.75 à 0.94. Par défaut, effectsize donne ici un intervalle [unilatéral](../glossary.qmd#two-sided){.term} (`alternative = "greater"`) ; `alternative = "two.sided"` demande un intervalle bilatéral. L'IC est un [bootstrap](../glossary.qmd#bootstrap){.term} par percentiles : R recalcule W sur 2,000 rééchantillonnages des données (`iterations = 2000` ; la valeur par défaut est 200) et garde les 95 % centraux des résultats, ce qui explique la graine dans le code. Comme W ne peut pas être négatif, cet intervalle ne peut pas descendre sous 0, et ici il n'atteint pas 0. Ne le lisez donc pas comme un test de l'existence d'un effet ; c'est le rôle du test de Friedman. pingouin ne calcule pas cet IC.
 
 ### Rédiger les résultats
 
@@ -918,6 +958,23 @@ stopifnot(
   pf_anova$ANOVA$pes == 0.499, pf_anova$ANOVA$ges == 0.417,
   round(pf_pes$Eta2_partial, 2) == 0.50, round(pf_pes$CI_low, 2) == 0.46, round(pf_pes$CI_high, 2) == 0.54,
   sum(pf$promis_pf[pf$visit == "1yr"] == 57) == 28,
+  # without the complete-case filter (the warning box and the R vs Python box under repeated-measures ANOVA)
+  n_distinct(pf_unfiltered$case_id) == 600, sum(is.na(pf_unfiltered$promis_pf)) > 0,
+  round(suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id:visit"]][[1]]["visit", "F value"], 1) == 467.5,
+  suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id:visit"]][[1]]["Residuals", "Df"] == 1449,
+  identical(tryCatch({aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered); ""}, warning = conditionMessage), "Error() model is singular"),
+  "visit" %in% trimws(rownames(suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id"]][[1]])),
+  !"visit" %in% trimws(rownames(summary(pf_model)[["Error: case_id"]][[1]])),   # the complete data have no visit row there
+  isTRUE(all.equal(unname(friedman.test(as.matrix(pivot_wider(filter(trial, arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |> select(patient_id, visit, efas), names_from = visit, values_from = efas)[, -1]))$statistic),
+                   unname(efas_test$statistic))),   # with a matrix, friedman.test() drops incomplete patients itself
+  isTRUE(tryCatch({rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit); FALSE}, warning = function(w) TRUE)),
+  suppressWarnings(rstatix::get_anova_table(rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit)))$F == round(pf_aov["visit", "F value"], 3),
+  suppressWarnings(rstatix::get_anova_table(rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit)))$DFd == 981,
+  inherits(try(friedman.test(efas ~ visit | patient_id, data = filter(trial, arm == "boot", visit %in% c("6wk", "3mo", "12mo"))),
+               silent = TRUE), "try-error"),
+  inherits(try(DescTools::CochranQTest(walking_aid ~ visit | case_id, data = proms), silent = TRUE), "try-error"),
+  isTRUE(all.equal(reticulate::py_eval("float(pg.friedman(data=trial[(trial['arm'] == 'boot') & trial['visit'].isin(['6wk', '3mo', '12mo'])], dv='efas', within='visit', subject='patient_id')['Q'].iloc[0])"), unname(efas_test$statistic))),
+  isTRUE(all.equal(reticulate::py_eval("float(pg.cochran(data=proms, dv='walking_aid', within='visit', subject='case_id')['Q'].iloc[0])"), unname(aid_test$statistic))),
   min(proms$promis_pf, na.rm = TRUE) == 22.5, max(proms$promis_pf, na.rm = TRUE) == 57,
   n_distinct(efas_boot$patient_id) == 50, n_distinct(filter(trial, arm == "boot")$patient_id) == 60,
   round(efas_quartiles$median, 1) == c(12.5, 17, 20),

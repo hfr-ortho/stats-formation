@@ -34,7 +34,7 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist ein **[Messwert](../glossary.qmd#continuous-variable){.term}**, der zwischen **drei oder mehr [unabhängigen](../glossary.qmd#independence){.term} Gruppen** verglichen wird.
 - Innerhalb **jeder Gruppe** ist sie [ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term}, oder jede Gruppe ist ausreichend gross und nicht stark [schief](../glossary.qmd#skewed){.term} ([Seite 3](../foundations/03-distributions.qmd#within-groups)).
-- Die Gruppen haben **[ähnliche Streuungen](../glossary.qmd#equal-variances){.term}**: Als Faustregel ist die grösste [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) höchstens etwa doppelt so gross wie die kleinste. Ist das nicht der Fall, verwenden Sie die **[Welch-ANOVA](../glossary.qmd#welch-test){.term}** (siehe den Kasten «R oder Python»), besonders bei ungleich grossen Gruppen.
+- Die Gruppen haben **[ähnliche Streuungen](../glossary.qmd#equal-variances){.term}**. Das setzt nur die klassische ANOVA voraus. Die **[Welch-ANOVA](../glossary.qmd#welch-test){.term}** setzt es nicht voraus und ist deshalb die sichere Standardwahl, besonders bei ungleich grossen Gruppen, so wie der t-Test nach Welch bei zwei Gruppen ([Seite 6](06-two-unpaired-groups.qmd#unpaired-t)). Wenn Sie den klassischen Test verwenden, beurteilen Sie die Streuungen vor dem Testen, anhand der Grafik und der [Standardabweichungen](../glossary.qmd#standard-deviation){.term} (SD), und nie mit einem Test der Varianzen (Seite 6 erklärt, warum). Die Faustregel dieser Seite: Die grösste SD ist höchstens etwa doppelt so gross wie die kleinste. Dieser Abschnitt führt beide Versionen aus.
 - Ist die Zielgrösse schief, häuft sie sich am Boden oder an der Decke ([Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}) oder ist sie [ordinal](../glossary.qmd#ordinal){.term} → verwenden Sie den [Kruskal-Wallis-Test](#kruskal-wallis).
 
 ### Was der Test wirklich macht
@@ -91,7 +91,7 @@ print(cohort.groupby("asa")["age"].agg(["count", "mean", "std"]))
 ```
 :::
 
-Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen alle nahe bei 9 Jahren, die Streuungen sind also ähnlich. Die Gruppen sind jedoch sehr unterschiedlich gross: 300 Eingriffe bei ASA 2, nur 18 bei ASA 4.
+Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen alle nahe bei 9 Jahren (8.7 bis 9.3), deutlich innerhalb der Faustregel; die Streuungen sind also ähnlich genug für den klassischen Test. Das ist ein Urteil anhand der Tabelle und der Grafik, kein Test. Die Gruppen sind jedoch sehr unterschiedlich gross: 300 Eingriffe bei ASA 2, nur 18 bei ASA 4. Die Welch-ANOVA ist besonders bei ungleich grossen Gruppen die sichere Standardwahl (siehe den Punkt oben), deshalb führt «Analyse durchführen» sie neben dem klassischen Test aus.
 
 ### Analyse durchführen
 
@@ -101,6 +101,9 @@ Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen a
 ```{r}
 age_anova <- aov(age ~ asa, data = cohort)   # aov() berechnet die klassische einfaktorielle ANOVA
 summary(age_anova)
+
+age_welch <- oneway.test(age ~ asa, data = cohort, var.equal = FALSE)   # Welch-ANOVA: setzt gleiche Streuungen nicht voraus
+age_welch
 ```
 
 ## Python
@@ -108,21 +111,30 @@ summary(age_anova)
 ```{python}
 age_anova = pg.anova(data=cohort, dv="age", between="asa", detailed=True)   # klassische einfaktorielle ANOVA
 print(age_anova)
+
+age_welch = pg.welch_anova(data=cohort, dv="age", between="asa")   # Welch-ANOVA: setzt gleiche Streuungen nicht voraus
+print(age_welch)
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"f": float(age_anova.loc[0, "F"]), "ss_between": float(age_anova.loc[0, "SS"]),
-       "ss_within": float(age_anova.loc[1, "SS"]), "df_within": float(age_anova.loc[1, "DF"])}
+       "ss_within": float(age_anova.loc[1, "SS"]), "df_within": float(age_anova.loc[1, "DF"]),
+       "welch_f": float(age_welch.loc[0, "F"]), "welch_df_num": float(age_welch.loc[0, "ddof1"]),
+       "welch_df_denom": float(age_welch.loc[0, "ddof2"]), "welch_p": float(age_welch.loc[0, "p_unc"])}
 ```
 
 ```{r}
 #| include: false
 age_table <- summary(age_anova)[[1]]
 check_agree(list(f = age_table[1, "F value"], ss_between = age_table[1, "Sum Sq"],
-                 ss_within = age_table[2, "Sum Sq"], df_within = age_table[2, "Df"]), reticulate::py$chk)
+                 ss_within = age_table[2, "Sum Sq"], df_within = age_table[2, "Df"],
+                 welch_f = unname(age_welch$statistic), welch_df_num = unname(age_welch$parameter[1]),
+                 welch_df_denom = unname(age_welch$parameter[2]), welch_p = age_welch$p.value), reticulate::py$chk)
 ```
+
+Die erste Ausgabe ist die klassische ANOVA, die zweite die Welch-ANOVA. Dieser Abschnitt bespricht die klassische im Detail, weil ω² weiter unten und der [Tukey-HSD-Test](../beyond/15-post-hoc.qmd#after-anova) auf Seite 15 auf ihrer Tabelle aufbauen.
 
 ### Ausgabe lesen
 
@@ -131,7 +143,8 @@ check_agree(list(f = age_table[1, "F value"], ss_between = age_table[1, "Sum Sq"
 - **Mean Sq** (in Python `MS`): jede Sum Sq geteilt durch ihre Df. Das ergibt 1908.9 zwischen den Gruppen (5727 ÷ 3; R hat die ausgegebene Zahl 5727 gerundet, Python zeigt 5726.69) und 79.9 innerhalb der Gruppen (47599 ÷ 596).
 - **F = 23.9:** die erste Mean Sq geteilt durch die zweite, 1908.9 ÷ 79.9. Hätten die Gruppen denselben Mittelwert, läge F nahe bei 1.
 - **p < 0.001:** Gruppenmittelwerte, die sich so stark unterscheiden, wären sehr unwahrscheinlich, wenn jede ASA-Klasse dasselbe mittlere Alter hätte. R gibt den p-Wert als `1.28e-14` unter `Pr(>F)` aus, Python als `1.284107e-14` unter `p_unc`. Das ist die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term}: `e-14` bedeutet «den Dezimalpunkt um 14 Stellen nach links verschieben».
-- **np2 = 0.107** (nur Python): [Eta-Quadrat](../glossary.qmd#eta-squared){.term} (η²), der Anteil der gesamten Variation, der zwischen den Gruppen liegt, 5727 ÷ (5727 + 47599). Der Name in pingouin steht für «partielles Eta-Quadrat»; bei nur einer [Gruppierungsvariable](../glossary.qmd#variable){.term} ist das dieselbe Zahl. Der nächste Schritt korrigiert sie leicht.
+- **np2 = 0.107** (nur Python): [Eta-Quadrat](../glossary.qmd#eta-squared){.term} (η²), der Anteil der gesamten Variation, der zwischen den Gruppen liegt, 5727 ÷ (5727 + 47599). Der Name in pingouin steht für «partielles Eta-Quadrat»; bei nur einer [Gruppierungsvariable](../glossary.qmd#variable){.term} ist das dieselbe Zahl. Der Schritt zur Effektstärke weiter unten korrigiert sie leicht.
+- **Welch-ANOVA** (die zweite Ausgabe): F = 23.5 mit 3 und 60.3 Freiheitsgraden, p < 0.001 (R gibt `3.49e-10` aus, Python `3.489598e-10` unter `p_unc`). Anstelle von 596 werden ihre zweiten Freiheitsgrade aus den Daten geschätzt: 60.3 (`denom df` in R, `ddof2` in Python). Hier sind die Standardabweichungen ähnlich, und die Welch-ANOVA stimmt mit der klassischen überein (F = 23.9).
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: F von Hand
@@ -216,7 +229,9 @@ check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 
 > **Methods:** Age was compared across ASA classes with one-way analysis of variance (ANOVA), with omega squared (ω²) as the effect size.
 >
-> **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, 95% CI 0.06 to 0.15).
+> **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1, 63.4 years (SD 9.1) in ASA 2, 68.4 years (SD 8.8) in ASA 3 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, 95% CI 0.06 to 0.15).
+
+Wenn Sie stattdessen die Welch-ANOVA berichten, nennen Sie sie im Methodenteil, geben Sie im Resultatteil beide Freiheitsgrade an (F(3, 60.3) = 23.5, p < 0.001) und schliessen Sie den Games-Howell-Test an, die Welch-Version des Tukey-Tests, anstelle des Tukey-Tests ([Seite 15](../beyond/15-post-hoc.qmd#after-anova)).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die ANOVA sagt nicht, welche Gruppen sich unterscheiden
@@ -226,36 +241,8 @@ Eine [signifikante](../glossary.qmd#statistical-significance){.term} ANOVA bedeu
 ::: {.callout-tip}
 ## 🔀 R oder Python: klassische ANOVA oder Welch-ANOVA
 - Die **klassische ANOVA** setzt voraus, dass die Gruppen dieselbe Streuung haben. `aov()` in R, `f_oneway()` in scipy und `anova()` in pingouin führen sie standardmässig aus.
-- Die **Welch-ANOVA** setzt gleiche Streuungen nicht voraus. `oneway.test()` in R führt standardmässig die **Welch**-Version aus (für die klassische Version ergänzen Sie `var.equal = TRUE`), also das Gegenteil von `aov()`. In Python verwenden Sie `pg.welch_anova()` oder `stats.f_oneway(..., equal_var=False)`.
-
-::: {.panel-tabset group="language"}
-## R
-
-```{r}
-oneway.test(age ~ asa, data = cohort)   # Welch-ANOVA: setzt gleiche Streuungen nicht voraus
-```
-
-## Python
-
-```{python}
-print(pg.welch_anova(data=cohort, dv="age", between="asa"))   # Welch-ANOVA: setzt gleiche Streuungen nicht voraus
-```
+- Die **Welch-ANOVA** setzt gleiche Streuungen nicht voraus. `oneway.test()` in R führt standardmässig die **Welch**-Version aus (für die klassische Version ergänzen Sie `var.equal = TRUE`), also das Gegenteil von `aov()`; der Code unter «Analyse durchführen» setzt trotzdem `var.equal = FALSE`, damit er sagt, welche Version er ausführt. In Python verwenden Sie `pg.welch_anova()` oder `stats.f_oneway(..., equal_var=False)`.
 :::
-
-Hier sind die Standardabweichungen ähnlich, und die Welch-ANOVA stimmt überein: F = 23.5 (klassisch: 23.9), p < 0.001 (R gibt `3.49e-10` aus). Anstelle von 596 werden ihre zweiten Freiheitsgrade aus den Daten geschätzt: 60.3 (`denom df` in R, `ddof2` in Python).
-:::
-
-```{python}
-#| include: false
-welch = pg.welch_anova(data=cohort, dv="age", between="asa")
-chk = {"f": float(welch.loc[0, "F"]), "df_denom": float(welch.loc[0, "ddof2"])}
-```
-
-```{r}
-#| include: false
-welch <- oneway.test(age ~ asa, data = cohort)
-check_agree(list(f = unname(welch$statistic), df_denom = unname(welch$parameter[2])), reticulate::py$chk)
-```
 
 ## Kruskal-Wallis-Test {#kruskal-wallis}
 
@@ -437,7 +424,7 @@ satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon,
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H geteilt durch n − 1 ist 0.677 ÷ 501 = 0.00135. R gibt das als `1.35e-03` aus, die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} derselben Zahl: Der Dezimalpunkt rückt 3 Stellen nach links. Die Chirurgin oder der Chirurg erklärt im Wesentlichen nichts von der Variation der Zufriedenheit. Das [95%-KI](../glossary.qmd#confidence-interval){.term} von R reicht von 0.00 bis 0.02. Standardmässig gibt effectsize hier ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus (`alternative = "greater"`); `alternative = "two.sided"` verlangt ein zweiseitiges. Das KI ist ein Perzentil-[Bootstrap](../glossary.qmd#bootstrap){.term}: R berechnet ε² auf 2,000 Wiederholungsstichproben der Daten neu (`iterations = 2000`; der Standardwert ist 200) und behält die mittleren 95 % der Resultate, weshalb der Code einen Seed setzt. Weil ε² nicht negativ sein kann, kann dieses Intervall nicht unter 0 fallen, und in der Praxis erreicht es 0 nie (0.00 ist gerundet: Die Grenze liegt knapp über 0). Lesen Sie es daher nicht als Test, ob es überhaupt einen Effekt gibt; das prüft der Kruskal-Wallis-Test. scipy hat dafür keine Funktion.
+[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H geteilt durch n − 1 ist 0.677 ÷ 501 = 0.00135. R gibt das als `1.35e-03` aus, die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} derselben Zahl: Der Dezimalpunkt rückt 3 Stellen nach links. Die Chirurgin oder der Chirurg erklärt im Wesentlichen nichts von der Variation der Zufriedenheit. Das [95%-KI](../glossary.qmd#confidence-interval){.term} von R reicht von 0.00 bis 0.02. Standardmässig gibt effectsize hier ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus (`alternative = "greater"`); `alternative = "two.sided"` verlangt ein zweiseitiges. Das KI ist ein Perzentil-[Bootstrap](../glossary.qmd#bootstrap){.term}: R berechnet ε² auf 2,000 Wiederholungsstichproben der Daten neu (`iterations = 2000`; der Standardwert ist 200) und behält die mittleren 95 % der Resultate, weshalb der Code einen Seed setzt. Weil ε² nicht negativ sein kann, kann dieses Intervall nicht unter 0 fallen, und hier erreicht es 0 nicht (0.00 ist gerundet: Die Grenze liegt knapp über 0). Lesen Sie es daher nicht als Test, ob es überhaupt einen Effekt gibt; das prüft der Kruskal-Wallis-Test. scipy hat dafür keine Funktion.
 
 ### Resultate formulieren
 
@@ -462,7 +449,7 @@ Bei 98 Eingriffen [fehlt](../glossary.qmd#missing-data){.term} die Zufriedenheit
 ### Wann verwenden
 
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[kategorial](../glossary.qmd#categorical-variable){.term}** (hier [Ja/Nein](../glossary.qmd#binary){.term}) und wird zwischen **drei oder mehr [unabhängigen](../glossary.qmd#independence){.term} Gruppen** verglichen: eine [r × c-Tabelle](../glossary.qmd#contingency-table){.term}.
-- Jede **erwartete** Häufigkeit sollte mindestens 5 betragen. Fassen Sie sonst Kategorien zusammen, die inhaltlich zusammenpassen, oder verwenden Sie den [exakten Test nach Fisher](../glossary.qmd#fisher-exact-test){.term}; `fisher.test()` in R führt ihn auch bei grösseren Tabellen exakt aus. `stats.fisher_exact()` in scipy akzeptiert zwar grössere Tabellen, schätzt deren p-Wert aber durch zufälliges Neuziehen, sodass er sich von Durchlauf zu Durchlauf etwas ändert, wenn Sie keinen Seed angeben.
+- Die **erwarteten** Häufigkeiten dürfen nicht zu klein sein. Die einfache, vorsichtige Regel: Jede erwartete Häufigkeit beträgt mindestens 5. Weniger streng ist eine verbreitete Regel für Tabellen, die grösser sind als 2 × 2, die Cochran zugeschrieben wird: höchstens 20 % der erwarteten Häufigkeiten unter 5 und keine unter 1. Verletzt die Tabelle die Regel, an die Sie sich halten, fassen Sie Kategorien zusammen, die inhaltlich zusammenpassen, oder verwenden Sie den [exakten Test nach Fisher](../glossary.qmd#fisher-exact-test){.term}; `fisher.test()` in R führt ihn auch bei grösseren Tabellen exakt aus. `stats.fisher_exact()` in scipy akzeptiert zwar grössere Tabellen, schätzt deren p-Wert aber durch zufälliges Neuziehen, sodass er sich von Durchlauf zu Durchlauf etwas ändert, wenn Sie keinen Seed angeben.
 - Bei zwei Gruppen und einer Ja/Nein-Zielgrösse → [exakter Test nach Fisher](06-two-unpaired-groups.qmd#fisher-chi-square).
 
 ### Was der Test wirklich macht
@@ -619,7 +606,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sid
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, ein Zusammenhang zwischen [klein](../glossary.qmd#cohen-benchmarks){.term} und mittel (die zweite Ausgabe von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python»). R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} aus, 0.14 bis 0.35. Standardmässig gibt effectsize für V ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, nur mit einer unteren Grenze: Der Chi-Quadrat-Test fragt nur, ob der Zusammenhang grösser als null ist, und ein einseitiges Intervall führt zum selben Entscheid wie dieser Test. `alternative = "two.sided"` verlangt das übliche zweiseitige Intervall, vergleichbar mit den anderen 95%-KI dieser Website. scipy berechnet keines. Bei Ja/Nein-Zielgrössen ist die Rate in jeder Gruppe (mit ihrem KI, wie auf [Seite 4](04-describe-one-group.qmd#proportion)) meist aussagekräftiger als V. Und bedenken Sie, was der Test nicht sagt: welche Transplantate sich unterscheiden (siehe unten [Welche Gruppen unterscheiden sich?](#which-groups-differ)) und warum. Die Transplantate wurden nicht zufällig zugeteilt, ein Unterschied kann also von den Patientinnen und Patienten statt vom Transplantat kommen; [Seite 12](12-predict-from-several.qmd#multiple-logistic-regression) zeigt, wie Sie für andere Faktoren [adjustieren](../glossary.qmd#adjustment){.term}.
+V = 0.25, ein Zusammenhang zwischen [klein](../glossary.qmd#cohen-benchmarks){.term} und mittel (die zweite Ausgabe von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python»). R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} aus, 0.14 bis 0.35: Es beginnt über der Schwelle für klein und reicht über die Schwelle für mittel hinaus. Die Bezeichnung passt also zum Schätzwert, aber die Daten sind auch mit einem mittleren Zusammenhang vereinbar. Standardmässig gibt effectsize für V ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, nur mit einer unteren Grenze: Der Chi-Quadrat-Test fragt nur, ob der Zusammenhang grösser als null ist, und ein einseitiges Intervall führt zum selben Entscheid wie dieser Test. `alternative = "two.sided"` verlangt das übliche zweiseitige Intervall, vergleichbar mit den anderen 95%-KI dieser Website. scipy berechnet keines. Bei Ja/Nein-Zielgrössen ist die Rate in jeder Gruppe (mit ihrem KI, wie auf [Seite 4](04-describe-one-group.qmd#proportion)) meist aussagekräftiger als V. Und bedenken Sie, was der Test nicht sagt: welche Transplantate sich unterscheiden (siehe unten [Welche Gruppen unterscheiden sich?](#which-groups-differ)) und warum. Die Transplantate wurden nicht zufällig zugeteilt, ein Unterschied kann also von den Patientinnen und Patienten statt vom Transplantat kommen; [Seite 12](12-predict-from-several.qmd#multiple-logistic-regression) zeigt, wie Sie für andere Faktoren [adjustieren](../glossary.qmd#adjustment){.term}.
 
 ### Resultate formulieren
 
@@ -629,7 +616,7 @@ V = 0.25, ein Zusammenhang zwischen [klein](../glossary.qmd#cohen-benchmarks){.t
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Hier gibt es keine Yates-Korrektur, und prüfen Sie die erwarteten Häufigkeiten
-Die [Stetigkeitskorrektur nach Yates](../glossary.qmd#continuity-correction){.term} ([Seite 6](06-two-unpaired-groups.qmd#fisher-chi-square)) gilt nur für 2 × 2-Tabellen, beide Programme verzichten bei dieser 3 × 2-Tabelle also darauf. Die Regel für die erwarteten Häufigkeiten gilt weiterhin: Übung 3 zeigt eine Tabelle, die sie verletzt, und was dann zu tun ist.
+Die [Stetigkeitskorrektur nach Yates](../glossary.qmd#continuity-correction){.term} ([Seite 6](06-two-unpaired-groups.qmd#fisher-chi-square)) gilt nur für 2 × 2-Tabellen, beide Programme verzichten bei dieser 3 × 2-Tabelle also darauf. Die Regeln für die erwarteten Häufigkeiten gelten weiterhin: Übung 3 zeigt eine Tabelle, die die einfache Regel verletzt, und was dann zu tun ist.
 :::
 
 ::: {.callout-tip}
@@ -691,7 +678,7 @@ from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
 
-fig, ax = plt.subplots(figsize=(7, 4.5))
+fig, ax = plt.subplots(figsize=(7, 6.5))   # hoch genug für die Grafik und die Zahlentabelle darunter
 curves = []
 for implant, group in cohort.groupby("implant"):
     km = KaplanMeierFitter(label=implant).fit(group["followup_years"], group["revised"])
@@ -699,13 +686,14 @@ for implant, group in cohort.groupby("implant"):
     curves.append(km)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
-add_at_risk_counts(*curves, ax=ax)
+y_range = ax.set_ylim(0, 1)                                                # die ganze Achse, 0 bis 1, wie in R
+add_at_risk_counts(*curves, ax=ax, rows_to_show=["At risk", "Events"])   # die zwei Zeilen, die R zeigt
 plt.tight_layout()
 plt.show()
 ```
 :::
 
-Die Implantate A und B verlaufen fast gleich; Implantat C fällt von beiden ab.
+Die Implantate A und B verlaufen fast gleich; Implantat C fällt von beiden ab. Die Tabellen unter den beiden Grafiken unterscheiden sich an zwei Stellen um einen Eingriff: bei Implantat B nach 4 Jahren (127 in R, 126 in Python) und bei Implantat C nach 8 Jahren (12 in R, 11 in Python). R zählt einen Eingriff, dessen Nachbeobachtung genau zu diesem Zeitpunkt endet, noch zu den Eingriffen unter Risiko; lifelines nicht. Ein Eingriff mit Implantat B wurde nach genau 4 Jahren zensiert, einer mit Implantat C nach genau 8.
 
 ### Analyse durchführen
 
@@ -886,6 +874,8 @@ satisfied_n <- sum(!is.na(cohort$satisfaction_1yr))
 ex_failure <- table(factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
                     factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no")))
 ex_expected <- suppressWarnings(chisq.test(ex_failure))$expected
+r_risk <- summary(survfit(Surv(followup_years, revised) ~ implant, data = cohort), times = seq(0, 10, 2), extend = TRUE)$n.risk
+py_risk <- unlist(reticulate::py_eval("[int(f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed).loc[:t, 'at_risk'].iloc[-1]) for f in curves for t in range(0, 11, 2)]"))   # as add_at_risk_counts() counts
 set.seed(2026)
 los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, alternative = "two.sided", iterations = 2000)   # as in exercise 2's solution
 sat_quartiles <- satisfied |> group_by(surgeon) |>
@@ -896,13 +886,16 @@ los_by <- cohort |> group_by(surgeon) |>
 stopifnot(
   sum(table(cohort$patient_id) == 2) == 80,
   age_by_asa$n == c(36, 300, 246, 18),
-  round(age_by_asa$mean[c(1, 4)], 1) == c(59.8, 73.7), round(age_by_asa$sd[c(1, 4)], 1) == c(8.7, 9.3),
+  round(age_by_asa$mean, 1) == c(59.8, 63.4, 68.4, 73.7), round(age_by_asa$sd, 1) == c(8.7, 9.1, 8.8, 9.3),
+  max(age_by_asa$sd) / min(age_by_asa$sd) < 2,   # within the rule of thumb
   round(age_by_asa$sd) == c(9, 9, 9, 9),
   age_table[1, "Df"] == 3, round(age_table[1, "Sum Sq"]) == 5727, age_table[2, "Df"] == 596,
   round(age_table[1, "F value"], 1) == 23.9, age_table[1, "Pr(>F)"] < 0.001,
   signif(age_table[1, "Pr(>F)"], 3) == 1.28e-14,
   round(age_omega$Omega2, 2) == 0.10, round(age_omega$CI_low, 2) == 0.06, round(age_omega$CI_high, 2) == 0.15,
-  round(unname(welch$statistic), 1) == 23.5, welch$p.value < 0.001,
+  round(unname(age_welch$statistic), 1) == 23.5, age_welch$p.value < 0.001, unname(age_welch$parameter[1]) == 3,
+  abs(reticulate::py_eval("float(age_welch.loc[0, 'p_unc'])") / 3.489598e-10 - 1) < 1e-6,
+  isTRUE(all.equal(reticulate::py_eval("float(stats.f_oneway(*ages, equal_var=False).statistic)"), unname(age_welch$statistic))),
   satisfied_n == 502, sum(is.na(cohort$satisfaction_1yr)) == 98,
   round(unname(satisfaction_test$statistic), 2) == 0.68, unname(satisfaction_test$parameter) == 2,
   round(satisfaction_test$p.value, 3) == 0.713,
@@ -913,6 +906,7 @@ stopifnot(
   round(min(rts_test$expected), 1) == 33.1,
   round(unname(rts_test$statistic), 2) == 22.24, unname(rts_test$parameter) == 2, rts_test$p.value < 0.001,
   round(rts_v$Cramers_v, 2) == 0.25, round(rts_v$CI_low, 2) == 0.14, round(rts_v$CI_high, 2) == 0.35,
+  rts_v$Cramers_v > 0.1, rts_v$Cramers_v < 0.3, rts_v$CI_low > 0.1, rts_v$CI_high > 0.3,   # the CI reaches past the medium benchmark
   round(effectsize::cramers_v(rts_table, alternative = "two.sided")$Cramers_v, 2) == 0.24,
   round(implant_hr[, "exp(coef)"], 2) == c(0.82, 3.07),
   round(implant_hr["implantB", c("lower .95", "upper .95")], 2) == c(0.45, 1.50),
@@ -940,7 +934,7 @@ stopifnot(
   isTRUE(all.equal(between_ms / within_ms, age_table[1, "F value"])),
   round(c(between_ss, within_ss)) == c(5727, 47599), round(c(between_ms, within_ms), 1) == c(1908.9, 79.9),
   round(sqrt(79.9), 1) == 8.9, round(sqrt(within_ms), 1) == 8.9,
-  signif(welch$p.value, 3) == 3.49e-10, round(unname(welch$parameter[2]), 1) == 60.3,
+  signif(age_welch$p.value, 3) == 3.49e-10, round(unname(age_welch$parameter[2]), 1) == 60.3,
   answered_by$procedures == c(232, 211, 157), answered_by$answered == c(192, 177, 133),
   round(100 * answered_by$answered / answered_by$procedures) == c(83, 84, 85), 600 - 502 == 98,
   round(mean_ranks, 1) == c(248.0, 249.2, 259.6), (n_scores + 1) / 2 == 251.5, n_scores == 502,
@@ -953,6 +947,13 @@ stopifnot(
   isTRUE(all.equal(sum(chisq_parts), unname(rts_test$statistic))), round(chisq_expected["BPTB", "yes"], 1) == 63.8,
   signif(rts_test$p.value, 4) == 1.481e-05, round(sqrt(22.24 / (350 * 1)), 2) == 0.25,
   implant_cox$n == 600, implant_cox$nevent == 81,
+  # the two risk tables: R counts follow-up >= t, lifelines > t
+  r_risk == c(246, 210, 133, 83, 39, 16, 217, 182, 127, 70, 33, 4, 137, 104, 72, 34, 12, 1),   # R's table: implants A, B, C at 0, 2, ..., 10 years
+  sum(r_risk != py_risk) == 2, r_risk[r_risk != py_risk] == c(127, 12), py_risk[r_risk != py_risk] == c(126, 11),
+  which(r_risk != py_risk) == c(9, 17),   # implant B at 4 years, implant C at 8 years
+  sum(cohort$followup_years == 4 & cohort$implant == "B" & cohort$revised == 0) == 1,
+  sum(cohort$followup_years == 8 & cohort$implant == "C" & cohort$revised == 0) == 1,
+  sum(cohort$followup_years %in% c(0, 2, 4, 6, 8, 10)) == 2,   # no other procedure ends exactly at a time in the tables
   signif(summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"], 3) == 1.39e-05,
   round(unname(summary(implant_cox)$logtest["test"]), 2) == 27.64,
   signif(unname(summary(implant_cox)$logtest["pvalue"]), 1) == 1e-06,
@@ -964,7 +965,7 @@ stopifnot(
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][1, "F value"], 1) == 31.1,
   round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$Omega2, 2) == 0.13,
-  round(tapply(cohort$bmi, cohort$asa, mean)[c(1, 4)], 1) == c(26.3, 36.2), round(tapply(cohort$bmi, cohort$asa, sd)[c(1, 4)], 1) == c(4.9, 3.3),
+  round(tapply(cohort$bmi, cohort$asa, mean), 1) == c(26.3, 29.2, 32.1, 36.2), round(tapply(cohort$bmi, cohort$asa, sd), 1) == c(4.9, 5.2, 5.1, 3.3),
   summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][, "Df"] == c(3, 596),
   round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$CI_low, 2) == 0.08,
   round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$CI_high, 2) == 0.18,
@@ -974,7 +975,11 @@ stopifnot(
   round(effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, ci = NULL)$rank_epsilon_squared, 3) == 0.001,
   ex_failure[, "yes"] == c(6, 6, 3), rowSums(ex_failure) == c(129, 154, 67),
   round(100 * prop.table(ex_failure, 1)[, "yes"], 1) == c(4.7, 3.9, 4.5),
-  round(ex_expected[3, "yes"], 1) == 2.9, sum(ex_expected < 5) == 1,
+  round(ex_expected[3, "yes"], 1) == 2.9, sum(ex_expected < 5) == 1, length(ex_expected) == 6, round(100 * 1 / 6) == 17,
+  min(ex_expected) >= 1, mean(ex_expected < 5) <= 0.2,   # the 20% rule is met
+  isTRUE(tryCatch({chisq.test(ex_failure); FALSE}, warning = function(w) conditionMessage(w) == "Chi-squared approximation may be incorrect")),
+  round(suppressWarnings(chisq.test(ex_failure))$p.value, 3) == 0.949, signif(suppressWarnings(chisq.test(ex_failure))$p.value, 4) == 0.9489,
+  round(reticulate::py_eval("float(stats.chi2_contingency(pd.crosstab(acl['graft'], acl['failure_2y']).loc[['BPTB', 'hamstring', 'quadriceps'], [1, 0]]).pvalue)"), 3) == 0.949,
   round(fisher.test(ex_failure)$p.value, 3) == 0.943,
   los_by$median == c(0, 1, 0), los_by$q1 == c(0, 0, 0), los_by$q3 == c(1, 1, 1),
   signif(los_eps$rank_epsilon_squared, 3) == 0.00122,
@@ -1014,7 +1019,7 @@ print(cohort.groupby("asa")["bmi"].agg(["mean", "std"]))
 ```
 :::
 
-> **Results:** Mean BMI was 26.3 kg/m² (SD 4.9) in ASA 1 and 36.2 kg/m² (SD 3.3) in ASA 4 (F(3, 596) = 31.1, p < 0.001; ω² = 0.13, 95% CI 0.08 to 0.18).
+> **Results:** Mean BMI was 26.3 kg/m² (SD 4.9) in ASA 1, 29.2 kg/m² (SD 5.2) in ASA 2, 32.1 kg/m² (SD 5.1) in ASA 3 and 36.2 kg/m² (SD 3.3) in ASA 4 (one-way ANOVA, F(3, 596) = 31.1, p < 0.001; ω² = 0.13, 95% CI 0.08 to 0.18).
 
 Das überrascht nicht: Adipositas ist einer der Faktoren, die Anästhesistinnen und Anästhesisten bei der Vergabe einer ASA-Klasse berücksichtigen.
 :::
@@ -1069,7 +1074,9 @@ failure_table <- table(
 failure_table
 prop.table(failure_table, margin = 1)   # jede Anzahl geteilt durch ihre Zeilensumme: der Anteil Versagen pro Transplantat
 # R warnt hier ebenfalls: «Chi-squared approximation may be incorrect»
-chisq.test(failure_table)$expected   # eine erwartete Häufigkeit liegt unter 5
+failure_chisq <- chisq.test(failure_table)
+failure_chisq$expected               # eine erwartete Häufigkeit liegt unter 5
+failure_chisq                        # der Chi-Quadrat-Test, zum Vergleich mit Fisher
 fisher.test(failure_table)           # exakt, auch bei einer 3 x 2-Tabelle
 ```
 
@@ -1081,7 +1088,9 @@ import numpy as np
 failure_table = pd.crosstab(acl["graft"], acl["failure_2y"]).loc[["BPTB", "hamstring", "quadriceps"], [1, 0]]
 print(failure_table)
 print(failure_table.div(failure_table.sum(axis=1), axis=0))   # jede Anzahl geteilt durch ihre Zeilensumme: der Anteil Versagen pro Transplantat
-print(stats.chi2_contingency(failure_table).expected_freq)   # eine erwartete Häufigkeit liegt unter 5
+failure_chisq = stats.chi2_contingency(failure_table)
+print(failure_chisq.expected_freq)   # eine erwartete Häufigkeit liegt unter 5
+print(failure_chisq.pvalue)          # der p-Wert des Chi-Quadrat-Tests, zum Vergleich mit Fisher
 
 # Bei Tabellen, die grösser sind als 2 x 2, schätzt scipy den p-Wert nach Fisher durch zufälliges Neuziehen; mit einem Seed ist er wiederholbar
 failure_fisher = stats.fisher_exact(failure_table.to_numpy(),
@@ -1090,7 +1099,7 @@ print(failure_fisher.pvalue)
 ```
 :::
 
-Jede Zeile der ersten Tabelle ergibt die Gesamtzahl des Transplantats (6 + 123 = 129 BPTB-Rekonstruktionen), und die zweite Tabelle gibt den Anteil Versagen an (6 ÷ 129 = 0.047, also 4.7 %). Bei einem Quadrizepssehnen-Transplantat beträgt die erwartete Anzahl Versagen 2.9, also unter 5, sodass der [Chi-Quadrat-Test](../glossary.qmd#chi-square-test){.term} nicht zuverlässig ist; R weist selbst darauf hin, mit der Warnung «Chi-squared approximation may be incorrect». Das Zusammenfassen von Transplantaten würde die Frage verändern, verwenden Sie daher den [exakten Test nach Fisher](../glossary.qmd#fisher-exact-test){.term} auf die ganze [3 × 2-Tabelle](../glossary.qmd#contingency-table){.term}. `fisher.test()` in R berechnet ihn exakt (p = 0.943); scipy schätzt ihn aus 9,999 zufälligen Tabellen (die Standardeinstellung von `PermutationMethod`; 0.9405 mit diesem Seed), nahe an R, aber nicht identisch.
+Jede Zeile der ersten Tabelle ergibt die Gesamtzahl des Transplantats (6 + 123 = 129 BPTB-Rekonstruktionen), und die zweite Tabelle gibt den Anteil Versagen an (6 ÷ 129 = 0.047, also 4.7 %). Bei einem Quadrizepssehnen-Transplantat beträgt die erwartete Anzahl Versagen 2.9, also unter 5. Damit ist die einfache Regel für den [Chi-Quadrat-Test](../glossary.qmd#chi-square-test){.term} verletzt, die Regel, die R prüft: R warnt «Chi-squared approximation may be incorrect», sobald eine erwartete Häufigkeit unter 5 liegt (diese Seite blendet die Warnung aus; Sie sehen sie, wenn Sie den Code ausführen). Die Regel mit den 20 % ist erfüllt (eine der sechs erwarteten Häufigkeiten, 17 %, liegt unter 5, und keine unter 1), aber verwenden Sie sicherheitshalber den [exakten Test nach Fisher](../glossary.qmd#fisher-exact-test){.term} auf die ganze [3 × 2-Tabelle](../glossary.qmd#contingency-table){.term}; das Zusammenfassen von Transplantaten würde die Frage verändern. `fisher.test()` in R berechnet ihn exakt (p = 0.943); scipy schätzt ihn aus 9,999 zufälligen Tabellen (die Standardeinstellung von `PermutationMethod`; 0.9405 mit diesem Seed), nahe an R, aber nicht identisch. Hier stimmen die beiden Tests überein: Der Chi-Quadrat-Test ergibt p = 0.949 (`p-value = 0.9489` in R; in Python die Zeile unter den erwarteten Häufigkeiten).
 
 > **Results:** Graft failure within 2 years followed 6 of 129 BPTB reconstructions (4.7%), 6 of 154 hamstring reconstructions (3.9%) and 3 of 67 quadriceps reconstructions (4.5%) (Fisher's exact test p = 0.943).
 

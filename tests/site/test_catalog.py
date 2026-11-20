@@ -421,6 +421,87 @@ def test_hka_answer_justifies_the_paired_t_test_by_the_differences(site):
     assert "HKA angles are measurements that are roughly normal" not in text
     assert "60 pairs" in text and "−3.0° to 4.3°" in text
     assert 'readings["R2"] - readings["R1"]' in code_of(found) and "geom_histogram" in code_of(found)
+# ---- content review of 20.11.2026: pages 8 and 9 -------------------------------
+
+def test_anova_section_makes_welch_the_safe_default(site):
+    """Review C1, decision D2: page 6 says to use Welch's test from the start; page 8 agrees, keeps the
+    spread rule as a judgment from the plot (never a test of the variances) and prints Welch's F beside the classic."""
+    found = section("catalog/08-three-plus-unmatched.html", "one-way-anova")
+    text = text_of(found)
+    assert "so it is the safe default" in text and "never with a test of the variances" in text
+    assert "This page's rule of thumb: the largest SD is no more than about twice the smallest" in text
+    assert "If you report Welch's ANOVA instead" in text and "F(3, 60.3) = 23.5" in text
+    assert "beyond/15-post-hoc.html#after-anova" in [target("catalog/08-three-plus-unmatched.html", a["href"])
+                                                     for a in found.select("a[href]")]
+    assert "so \"Run it\" runs it beside the classic test" in text.replace("“", '"').replace("”", '"')
+    assert "If not, use Welch's ANOVA (see the R vs Python box)" not in text
+    assert "because its table is what ω² below and Tukey's test on page 15 are built from" in text
+    assert "oneway.test(age ~ asa, data = cohort, var.equal = FALSE)" in code_of(found)
+    assert "pg.welch_anova(" in code_of(found)
+    assert "F = 23.5 with 3 and 60.3 degrees of freedom" in text
+
+
+def test_anova_results_give_every_group_mean(site):
+    """Review B5: a four-group ANOVA's Results report all four means, not two; exercise 1 names its test too."""
+    page = "catalog/08-three-plus-unmatched.html"
+    results = " ".join(text_of(q) for q in section(page, "one-way-anova").select("blockquote"))
+    assert ("59.8 years (SD 8.7) in ASA 1, 63.4 years (SD 9.1) in ASA 2, 68.4 years (SD 8.8) in ASA 3 "
+            "and 73.7 years (SD 9.3) in ASA 4") in results
+    exercise = text_of(section(page, "exercises"))
+    assert ("26.3 kg/m² (SD 4.9) in ASA 1, 29.2 kg/m² (SD 5.2) in ASA 2, 32.1 kg/m² (SD 5.1) in ASA 3 "
+            "and 36.2 kg/m² (SD 3.3) in ASA 4 (one-way ANOVA, F(3, 596) = 31.1") in exercise
+
+
+def test_expected_count_rule_is_the_simple_cautious_one(site):
+    """Review B24: "at least 5 in every cell" is the simple rule; the 20% rule is attributed to Cochran
+    (through Bewick et al. 2004). Exercise 3's table breaks only the simple rule, and the two tests agree there."""
+    page = "catalog/08-three-plus-unmatched.html"
+    chi_square = text_of(section(page, "chi-square"))
+    assert "The simple, cautious rule: every expected count is at least 5" in chi_square
+    assert "attributed to Cochran" in chi_square and "no more than 20% of the expected counts below 5" in chi_square
+    exercise = text_of(section(page, "exercises"))
+    assert "isn't reliable" not in exercise
+    assert "That breaks the simple rule" in exercise and "to be safe, use Fisher's exact test" in exercise
+    assert "the chi-square test gives p = 0.949" in exercise
+
+
+def test_matched_page_says_the_complete_case_filter_makes_the_functions_agree(site):
+    """Review B21: without the filter, rstatix and pingouin drop incomplete procedures, friedman.test() and
+    CochranQTest() stop, and aov() with Error() keeps them and returns F = 467.5 instead of 326.1."""
+    page = "catalog/09-three-plus-matched.html"
+    warning = next(text_of(box) for box in load(page).select("div.callout-warning") if "missed visit" in text_of(box))
+    assert "That filter is also what makes the functions agree" in warning
+    assert "called with a formula, as on this page, stop with an error" in warning
+    box = text_of(section(page, "repeated-measures-anova").select("div.callout-tip")[-1])
+    assert "F = 467.5" in box and "valid only on complete data" not in box
+    assert "Don't report that number as the repeated-measures ANOVA" in box
+    assert "is designed for balanced designs, and the results can be hard to interpret without balance" in box
+    assert "one sign that the data aren't balanced" in box
+    assert "pf_unfiltered" in code_of(section(page, "repeated-measures-anova"))
+
+
+def test_python_survival_plot_on_page_8_uses_the_full_axis(site):
+    """Review B12: the Python Kaplan-Meier plot ran from about 0.6 where R's runs 0 to 100%; the risk tables
+    differ by one where a follow-up ends exactly at the time shown."""
+    found = section("catalog/08-three-plus-unmatched.html", "cox")
+    assert "y_range = ax.set_ylim(0, 1)" in code_of(found)
+    outputs = [out.get_text() for out in found.select(".cell-output")]
+    assert not [out for out in outputs if "(0.0, 1.0)" in out], "set_ylim()'s return value is printed"
+    assert "R counts a procedure whose follow-up ends exactly at that time as still at risk" in text_of(found)
+
+
+def test_bootstrap_cis_on_pages_8_and_9_do_not_claim_they_never_reach_0(site):
+    """A small, heavily tied sample can give a limit of exactly 0, so the pages say what happens here."""
+    for page, anchor in [("catalog/08-three-plus-unmatched.html", "kruskal-wallis"),
+                         ("catalog/09-three-plus-matched.html", "friedman")]:
+        text = text_of(section(page, anchor))
+        assert "in practice it never reaches 0" not in text and "here it doesn't reach 0" in text, page
+
+
+def test_cramers_v_label_describes_the_estimate_not_its_ci(site):
+    """V = 0.25 lies between the benchmarks; its CI, 0.14 to 0.35, reaches past the medium one (as page 10 says of its V)."""
+    text = text_of(section("catalog/08-three-plus-unmatched.html", "chi-square"))
+    assert "0.14 to 0.35: it runs from above the small benchmark to past the medium one" in text
 
 
 # ---- three or more groups -------------------------------------------------
