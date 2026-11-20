@@ -168,6 +168,7 @@ def test_tidy_page_warns_about_decimal_commas_and_two_digit_years(site):
     assert "decimal commas" in text
     assert "Replace the comma with a point before converting" in text
     assert "decimal_mark" not in text                    # a comma locale turns "31.2" into 312
+    assert "as long as no number has a thousands separator" in text   # the remedy's limit
     assert 'is 1970 in R and 2070 in Python' in text     # the two century rules differ
     assert "a two-digit year is a guess about the century" in text
     code = "".join(c.get_text() for c in soup.select("div.sourceCode code"))
@@ -199,7 +200,9 @@ def test_demographics_page_qualifies_baseline_p_values_and_smds(site):
     assert "177 of the 270 THA procedures and 166 of the 330 TKA procedures" in text
     assert "Smoking status (0.23) is the baseline characteristic that differs most" in text
     # Randomized trials are not observational: their bullet comes before "Other observational comparisons".
-    assert text.index("Randomized trials") < text.index("Other observational comparisons")
+    assert text.index("Randomized trials") < text.index("Matched or weighted cohorts")
+    assert "would give 0.33" not in text                  # rounded percentages: R's table only, and BMI's SMD
+    assert "not from the rounded percentages" in text
     assert "chance alone can produce SMDs above it" in text
     assert "p = 0.002 for the 520 patients" in text
     assert "The difference is pure chance." not in text

@@ -573,7 +573,7 @@ R a besoin d'une étape séparée pour les numéros de série Excel (`janitor::e
 
 ::: {.callout-warning}
 ## ⚠️ Attention : virgules décimales et années à deux chiffres
-Les fonctions qui lisent les nombres, plus haut, attendent un point décimal. Sur une feuille saisie avec des virgules décimales, elles se trompent sans avertissement, et différemment dans chaque langage : `"31,2"` devient 312 en R et 31 en Python. Dans les deux langages, remplacez la virgule par un point avant la conversion : les cellules saisies avec un point restent telles quelles, donc cela fonctionne aussi sur une colonne qui mélange les deux.
+Les fonctions qui lisent les nombres, plus haut, attendent un point décimal. Sur une feuille saisie avec des virgules décimales, elles se trompent sans avertissement, et différemment dans chaque langage : `"31,2"` devient 312 en R et 31 en Python. Dans les deux langages, remplacez la virgule par un point avant la conversion : les cellules saisies avec un point restent telles quelles, donc cela fonctionne aussi sur une colonne qui mélange les deux, à condition qu'aucun nombre n'ait de séparateur de milliers (`"1,234.5"` deviendrait 1.234 ; ce classeur n'en a aucun).
 
 Les dates cachent un piège semblable : une année à deux chiffres est une supposition sur le siècle. Les deux langages lisent `"13.01.45"` comme le 13 janvier 2045, ce qui est faux pour une date de naissance, et ils ne placent pas la limite entre les siècles à la même année : `"13.01.70"` donne 1970 en R et 2070 en Python. Saisissez les années avec quatre chiffres.
 
@@ -1039,6 +1039,9 @@ stopifnot(
   is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
   parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
   parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  parse_number(str_replace("1,234.5", ",", ".")) == 1.234,             # the remedy's limit: a thousands separator
+  reticulate::py_eval("float(number(pd.Series(['1,234.5']).str.replace(',', '.')).iloc[0])") == 1.234,
+  max(select(tidy, where(is.numeric)), na.rm = TRUE) < 1000,           # "this workbook has none"
   dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
   reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
   reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),

@@ -570,7 +570,7 @@ R needs a separate step for Excel serial numbers (`janitor::excel_numeric_to_dat
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: decimal commas and two-digit years
-The number helpers above expect a decimal point. On a sheet typed with decimal commas they go wrong without a warning, and differently in each language: `"31,2"` becomes 312 in R and 31 in Python. Replace the comma with a point before converting, in both languages: cells typed with a point stay as they are, so this works on a column that mixes the two.
+The number helpers above expect a decimal point. On a sheet typed with decimal commas they go wrong without a warning, and differently in each language: `"31,2"` becomes 312 in R and 31 in Python. Replace the comma with a point before converting, in both languages: cells typed with a point stay as they are, so this works on a column that mixes the two, as long as no number has a thousands separator (`"1,234.5"` would become 1.234; this workbook has none).
 
 Dates have a similar trap: a two-digit year is a guess about the century. Both languages read `"13.01.45"` as 13 January 2045, which is wrong for a date of birth, and they don't draw the line between the centuries at the same year: `"13.01.70"` is 1970 in R and 2070 in Python. Collect four-digit years.
 
@@ -1036,6 +1036,9 @@ stopifnot(
   is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
   parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
   parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  parse_number(str_replace("1,234.5", ",", ".")) == 1.234,             # the remedy's limit: a thousands separator
+  reticulate::py_eval("float(number(pd.Series(['1,234.5']).str.replace(',', '.')).iloc[0])") == 1.234,
+  max(select(tidy, where(is.numeric)), na.rm = TRUE) < 1000,           # "this workbook has none"
   dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
   reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
   reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),
