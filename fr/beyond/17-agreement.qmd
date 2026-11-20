@@ -27,7 +27,7 @@ Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants u
 
 On emploie souvent ces deux mots comme s'ils voulaient dire la même chose. Ce n'est pas le cas :
 
-- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), en général un nombre entre 0 et 1. Une estimation ou une borne de l'IC peut passer sous 0, comme dans l'[exercice 3](#exercises) ; une valeur sous 0 signifie une absence de fiabilité. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une [cohorte](../glossary.qmd#cohort){.term} où les déformations sont plus variées.
+- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), en général un nombre entre 0 et 1. Une estimation inférieure à 0 se lit comme une absence de fiabilité ; un IC qui descend sous 0, comme dans l'[exercice 3](#exercises), inclut cette possibilité. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une [cohorte](../glossary.qmd#cohort){.term} où les déformations sont plus variées.
 - **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 mesure chaque genou 3° de plus que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **[limites de concordance de Bland-Altman](../glossary.qmd#bland-altman){.term}**, en degrés.
 
 Rapportez les deux. Un chirurgien qui planifie une ostéotomie doit connaître la concordance en degrés, pas seulement savoir que le [CCI](../glossary.qmd#icc){.term} valait 0.9.
@@ -80,7 +80,7 @@ Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le déf
 - **Le type** (`unit`) : l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
 - **La définition** (`type`) : un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
 
-Koo et Li décrivent aussi un modèle **à un facteur, à effets aléatoires** (*one-way random*), dans lequel seuls les genoux sont des effets aléatoires (`model = "oneway"`) ; la ligne `ICC(1,1)` de pingouin est ce CCI.
+Koo et Li décrivent aussi un modèle **à un facteur, à effets aléatoires** (*one-way random* ; `model = "oneway"`), pour les études où chaque genou est lu par un ensemble différent d'évaluateurs, par exemple des évaluateurs différents dans chaque centre d'une étude multicentrique. C'est rarement le bon modèle quand les mêmes évaluateurs lisent tous les genoux, comme ici ; la ligne `ICC(1,1)` de pingouin est ce CCI.
 
 En termes simples, le CCI répartit la [dispersion](../glossary.qmd#spread){.term} de toutes les lectures en trois parts : les vraies différences entre les genoux, une différence systématique entre les évaluateurs, et ce qui reste, l'[erreur de mesure](../glossary.qmd#measurement-error){.term}. Chaque part est une [variance](../glossary.qmd#variance){.term}. Le CCI de concordance absolue est la part des genoux dans le total des trois ; le CCI de cohérence laisse de côté la différence entre les évaluateurs. Un encadré sous la sortie ci-dessous calcule les deux à la main.
 
@@ -191,7 +191,7 @@ check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = p
 
 ::: {.callout-warning}
 ## ⚠️ Attention : toujours dire de quel CCI il s'agit
-Les mêmes données donnent un CCI différent pour chaque définition et chaque type, et pour un modèle à un facteur : ici 0.889 pour la concordance absolue et 0.896 pour la cohérence (ligne `ICC(C,1)` de Python), 0.94 pour la moyenne des deux évaluateurs (ligne `ICC(A,k)` de Python) et, pour le modèle à un facteur, une différence seulement à la quatrième décimale (ligne `ICC(1,1)` de Python, 0.888950, contre 0.889383 dans la ligne `ICC(A,1)`). Les modèles à deux facteurs à effets aléatoires et à effets mixtes donnent le même nombre ; ils diffèrent par les évaluateurs auxquels le résultat s'applique. Dans R, exécutez de nouveau `irr::icc()` avec `type = "consistency"`, `unit = "average"` ou `model = "oneway"`. « CCI = 0.94 » sans que la forme soit nommée ne peut pas s'interpréter. Écrivez la forme en toutes lettres dans les Méthodes.
+Les mêmes données donnent un CCI différent pour chaque définition et chaque type, et pour un modèle à un facteur : ici 0.889 pour la concordance absolue et 0.896 pour la cohérence (ligne `ICC(C,1)` de Python), 0.94 pour la moyenne des deux évaluateurs (ligne `ICC(A,k)` de Python) et, pour le modèle à un facteur, une valeur qui s'arrondit aussi à 0.889 mais qui est inférieure de 0.0004 (ligne `ICC(1,1)` de Python, 0.888950, contre 0.889383 dans la ligne `ICC(A,1)`). Pour une même définition et un même type, les modèles à deux facteurs à effets aléatoires et à effets mixtes donnent le même nombre ; ils diffèrent par les évaluateurs auxquels le résultat s'applique. Dans R, exécutez de nouveau `irr::icc()` avec `type = "consistency"`, `unit = "average"` ou `model = "oneway"`. « CCI = 0.94 » sans que la forme soit nommée ne peut pas s'interpréter. Écrivez la forme en toutes lettres dans les Méthodes.
 :::
 
 ::: {.callout-tip}
@@ -530,7 +530,7 @@ stopifnot(
   round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
   # numbers added with the content review of 20.11.2026
   round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
-  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_1$value, 4) != round(inter_icc$value, 4),
+  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_icc$value - inter_1$value, 4) == 0.0004,
   shifted_icc$lbound < 0,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),

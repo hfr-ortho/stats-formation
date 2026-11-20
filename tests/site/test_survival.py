@@ -128,3 +128,6 @@ def test_cox_page_never_calls_one_minus_km_the_proportion_revised(site):
     text = text_of(load(COX))
     assert "had been revised" not in text, "1 − Kaplan-Meier is an estimate with deaths censored, not the share revised"
     assert "estimate of revision (1 − Kaplan-Meier, with deaths censored)" in text
+    code = code_of(load(COX))
+    assert "revised by 5 years" not in code, "the code comments say what the prose says"
+    assert code.count("Kaplan-Meier estimate of revision by 5 years, deaths censored") == 2

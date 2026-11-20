@@ -27,7 +27,7 @@ Run the code blocks in order, from the top: later blocks use the packages and da
 
 The two words are often used as if they meant the same thing. They don't:
 
-- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), usually a number between 0 and 1. An estimate or a CI limit can fall below 0, as in [exercise 3](#exercises); a value below 0 means no reliability. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a [cohort](../glossary.qmd#cohort){.term} with a wider range of deformities.
+- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), usually a number between 0 and 1. An estimate below 0 is read as no reliability; a CI that reaches below 0, as in [exercise 3](#exercises), includes that possibility. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a [cohort](../glossary.qmd#cohort){.term} with a wider range of deformities.
 - **Agreement** asks how close two readings are, in the measurement's own units. If rater 2 reads every knee 3° higher than rater 1, that's poor agreement, even though the two raters put the knees in exactly the same order. It's measured with the **[Bland-Altman limits of agreement](../glossary.qmd#bland-altman){.term}**, in degrees.
 
 Report both. A surgeon planning an osteotomy needs to know the agreement in degrees, not only that the [ICC](../glossary.qmd#icc){.term} was 0.9.
@@ -80,7 +80,7 @@ There are several ICCs, and the right one depends on the design. Three choices d
 - **Type** (`unit`): will the study use one rater's reading (**single**) or the mean of several (**average**)? Usually single.
 - **Definition** (`type`): should a rater who always reads higher count against the measurement (**absolute agreement**) or not (**consistency**)? For angles that feed clinical decisions, it should: choose absolute agreement.
 
-Koo and Li also describe a **one-way random** model, in which only the knees are random effects (`model = "oneway"`); pingouin's `ICC(1,1)` row is this ICC.
+Koo and Li also describe a **one-way random** model (`model = "oneway"`), for designs in which each knee is read by a different set of raters, for example different raters at each center of a multicenter study. It is rarely the right model when the same raters read every knee, as here; pingouin's `ICC(1,1)` row is this ICC.
 
 In plain words, the ICC splits the [spread](../glossary.qmd#spread){.term} of all the readings into three parts: real differences between knees, a systematic difference between the raters, and whatever is left, the [measurement error](../glossary.qmd#measurement-error){.term}. Each part is a [variance](../glossary.qmd#variance){.term}. The absolute-agreement ICC is the knees' share of the three together; the consistency ICC leaves the rater difference out. A box under the output below works both out by hand.
 
@@ -191,7 +191,7 @@ check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = p
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: always say which ICC
-The same data give a different ICC for each definition and type, and for a one-way model: here 0.889 for absolute agreement and 0.896 for consistency (Python's `ICC(C,1)` row), 0.94 for the average of the two raters (Python's `ICC(A,k)` row), and for the one-way model a difference only in the fourth decimal (Python's `ICC(1,1)` row, 0.888950, against 0.889383 in the `ICC(A,1)` row). Two-way random and two-way mixed give the same number; they differ in who the result applies to. In R, run `irr::icc()` again with `type = "consistency"`, `unit = "average"` or `model = "oneway"`. "ICC = 0.94" with no form named can't be interpreted. Write the form out in the Methods.
+The same data give a different ICC for each definition and type, and for a one-way model: here 0.889 for absolute agreement and 0.896 for consistency (Python's `ICC(C,1)` row), 0.94 for the average of the two raters (Python's `ICC(A,k)` row), and for the one-way model a value that also rounds to 0.889 but is 0.0004 lower (Python's `ICC(1,1)` row, 0.888950, against 0.889383 in the `ICC(A,1)` row). Two-way random and two-way mixed give the same number for the same definition and type; they differ in who the result applies to. In R, run `irr::icc()` again with `type = "consistency"`, `unit = "average"` or `model = "oneway"`. "ICC = 0.94" with no form named can't be interpreted. Write the form out in the Methods.
 :::
 
 ::: {.callout-tip}
@@ -530,7 +530,7 @@ stopifnot(
   round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
   # numbers added with the content review of 20.11.2026
   round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
-  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_1$value, 4) != round(inter_icc$value, 4),
+  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_icc$value - inter_1$value, 4) == 0.0004,
   shifted_icc$lbound < 0,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),

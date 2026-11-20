@@ -954,7 +954,7 @@ Where each definition on the glossary pages (`en/glossary.qmd`, `de/glossary.qmd
 
 ### `icc`
 
-**Intraclass correlation coefficient (ICC).** A measure of reliability from 0 to 1: the share of the total variation in the measurements that comes from real differences between patients, the rest being measurement error. Values close to 1 mean the measurement tells patients apart well. In a mixed model the same share describes how alike repeated measurements from one patient are.
+**Intraclass correlation coefficient (ICC).** A measure of reliability, usually between 0 and 1: the share of the total variation in the measurements that comes from real differences between patients, the rest being measurement error. Values close to 1 mean the measurement tells patients apart well. In a mixed model the same share describes how alike repeated measurements from one patient are.
 
 - **Source:** Koo TK, Li MY. A Guideline of Selecting and Reporting Intraclass Correlation Coefficients for Reliability Research. J Chiropr Med 2016;15(2):155–163; introduction and Table 1
 - **URL:** <https://pmc.ncbi.nlm.nih.gov/articles/PMC4913118/>
