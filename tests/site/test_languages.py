@@ -165,12 +165,20 @@ def test_log_rank_entry_says_what_r_computes_and_what_the_source_says(site):
     """R's survdiff() and mantelhaen.test() on the event-time 2 x 2 tables give the same statistic (C8)."""
     text = definition("en", "log-rank-test")
     assert "R and lifelines compute it as the Mantel-Haenszel calculation" in text
-    assert "which is why it is also called the Mantel-Haenszel test for survival data" in text
+    assert "of each event time, and it is also called the Mantel-Haenszel test for survival data" in text
+    assert "which is why" not in text, "no source says where the name comes from"
     assert "A statistics guide that tells the two names apart says they differ only in how events at the same time are handled" in text
     assert "nearly identical" not in text, "one name for one calculation, the guide's distinction attributed to the guide"
     german = definition("de", "log-rank-test")
     assert "Statistik-Leitfaden, der die beiden Namen unterscheidet, schreibt, sie unterschieden sich nur darin" in german
     assert "Sie unterscheiden sich nur darin" not in german
+    assert "Ereigniszeitpunkts, und er heisst auch Mantel-Haenszel-Test für Überlebensdaten" in german
+    assert "deshalb heisst er" not in german
+    french = definition("fr", "log-rank-test")
+    assert "Un guide de statistique qui distingue les deux noms écrit qu'ils ne diffèrent que par" in french
+    assert "presque identiques" not in french, "the guide's distinction is the guide's, not the site's"
+    assert "temps d'événement, et on l'appelle aussi test de Mantel-Haenszel pour données de survie" in french
+    assert "ce qui explique" not in french
 
 
 def test_t_test_entry_says_how_this_site_uses_students(site):
