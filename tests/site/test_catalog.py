@@ -349,6 +349,18 @@ def test_signed_rank_sections_state_symmetry_and_offer_the_sign_test(site, page,
     assert code in code_of(found)
 
 
+def test_page_5_routes_skewed_scores_as_page_7_does(site):
+    """Review C2, fix round 1: clearly skewed scores go to the sign test on page 5 as on page 7, and the
+    section's own skewed example says its signed-rank p-value is about the pseudomedian, not the median."""
+    found = section("catalog/05-one-group-vs-hypothetical.html", "wilcoxon-signed-rank")
+    when = text_of(found.select_one("section.level3"))
+    assert "outcome is skewed or has a ceiling" not in when
+    assert "roughly symmetric around its center" in when and "clearly skewed" in when
+    text = text_of(found)
+    assert "the rank-based test is the safer choice" not in text
+    assert "the scores are not symmetric" in text and "tests the median (85.75)" in text
+
+
 def test_paired_t_does_not_send_skewed_differences_to_ranks_without_the_caveat(site):
     """Review C2: page 7's paired t section routed skewed differences to the signed-rank test unconditionally."""
     when = text_of(section("catalog/07-two-paired-groups.html", "paired-t").select_one("section.level3"))
@@ -374,6 +386,7 @@ def test_matched_cohort_warning_describes_the_unstratified_model_fairly(site):
     warning = text_of(found.select_one("div.callout-warning"))
     assert "throws away the matching" not in warning
     assert "population-level hazard ratio" in warning and "within pairs" in warning
+    assert "if the matching factors are the only confounders" in warning   # the paper's condition
     assert "3.50" in warning and "3.60" in warning
 
 
@@ -385,6 +398,8 @@ def test_torsion_answer_groups_by_the_average_of_the_two_methods(site):
     assert "7.0° low" not in text
     assert "can create or distort a trend" in text
     assert "0.9° high in the 9 hips" in text and "3.5° low in the 6 hips" in text
+    assert "cancel in the mean" not in text and "partly offset each other" in text   # fix round 1
+    assert "The 65 hips in the middle group differ by −1.3°" in text
     assert "(torsion_budin_deg + torsion_ct_deg) / 2" in code_of(found)
 
 
