@@ -168,7 +168,7 @@ Les deux programmes traitent les temps de révision [ex æquo](../glossary.qmd#t
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un hazard ratio n'est pas un risque relatif
-« Trois fois le hazard » ne veut pas dire trois fois plus de révisions à 5 ans. À 5 ans, l'estimation de Kaplan-Meier de la révision (1 − [Kaplan-Meier](../glossary.qmd#kaplan-meier){.term}, décès censurés) était de 28.9 % pour l'implant C, contre 10.1 % pour l'implant A : un rapport de 2.85, et non 3.07 (le code ci-dessous affiche les trois [risques](../glossary.qmd#risk){.term} et ce rapport). Les deux rapports sont proches quand les révisions sont rares et s'éloignent quand elles deviennent fréquentes. Rapportez le hazard ratio comme un rapport de taux, et donnez les risques cumulés séparément.
+« Trois fois le hazard » ne veut pas dire trois fois plus de révisions à 5 ans. À 5 ans, l'estimation de Kaplan-Meier du [risque](../glossary.qmd#risk){.term} de révision (1 − [Kaplan-Meier](../glossary.qmd#kaplan-meier){.term}, décès censurés) était de 28.9 % pour l'implant C, contre 10.1 % pour l'implant A : un rapport de 2.85, et non 3.07 (le code ci-dessous affiche les trois risques et ce rapport). Les deux rapports sont proches quand les révisions sont rares et s'éloignent quand elles deviennent fréquentes. Rapportez le hazard ratio comme un rapport de taux, et donnez les risques cumulés séparément.
 :::
 
 ::: {.panel-tabset group="language"}
@@ -176,7 +176,7 @@ Les deux programmes traitent les temps de révision [ex æquo](../glossary.qmd#t
 
 ```{r}
 km_by_implant <- survfit(Surv(followup_years, revised) ~ implant, data = cohort)
-risk_5 <- 1 - summary(km_by_implant, times = 5)$surv    # estimation de Kaplan-Meier de la révision à 5 ans, décès censurés : A, B, C
+risk_5 <- 1 - summary(km_by_implant, times = 5)$surv    # estimation de Kaplan-Meier du risque de révision à 5 ans, décès censurés : A, B, C
 risk_5
 risk_5[3] / risk_5[1]                                   # C ÷ A : le rapport des risques
 ```
@@ -187,7 +187,7 @@ risk_5[3] / risk_5[1]                                   # C ÷ A : le rapport de
 risk_5 = {}
 for implant, group in cohort.groupby("implant"):
     implant_km = KaplanMeierFitter().fit(group["followup_years"], group["revised"])
-    risk_5[implant] = 1 - implant_km.survival_function_at_times(5).iloc[0]            # estimation de Kaplan-Meier de la révision à 5 ans, décès censurés
+    risk_5[implant] = 1 - implant_km.survival_function_at_times(5).iloc[0]            # estimation de Kaplan-Meier du risque de révision à 5 ans, décès censurés
     print(implant, round(risk_5[implant], 3))
 print(risk_5["C"] / risk_5["A"])                                                      # C ÷ A : le rapport des risques
 ```
@@ -214,7 +214,7 @@ Une étude qui compare des implants a une seule question : l'implant C comporte
 - **N'ajustez pas sur ce que l'implant cause.** Une luxation ou une réopération qui suit le choix de l'implant fait partie de l'effet de l'implant : ce n'est pas un autre facteur qui expliquerait la différence. [Ajuster](../glossary.qmd#adjustment){.term} sur cet événement masque l'effet que vous cherchez à mesurer.
 - **Ne choisissez pas les covariables d'après les données.** Garder seulement les prédicteurs avec p < 0.2 dans des modèles [univariés](../glossary.qmd#multivariable){.term}, ou laisser une procédure [pas à pas](../glossary.qmd#stepwise-selection){.term} les choisir, fait paraître les [valeurs p](../glossary.qmd#p-value){.term} et les [IC](../glossary.qmd#confidence-interval){.term} plus certains qu'ils ne le sont et donne des réponses différentes dans chaque [échantillon](../glossary.qmd#sample){.term}.
 
-**Les événements limitent le modèle.** Un [modèle de Cox](../glossary.qmd#cox-regression){.term} demande environ **10 événements par terme**, un terme étant un [coefficient](../glossary.qmd#coefficient){.term} : un prédicteur à deux niveaux comme le sexe est un terme, l'implant (B et C par rapport à A) en est deux, et une [spline](../glossary.qmd#spline){.term} à 3 degrés de liberté en est trois. La [cohorte](../glossary.qmd#cohort){.term} d'exercice compte 81 révisions, ce qui suffit pour environ huit termes. L'implant, l'âge, le sexe et l'IMC en utilisent cinq, soit environ 16 [événements](../glossary.qmd#event){.term} par terme. Avec moins d'événements, ajustez sur moins de facteurs, et dites-le.
+**Les événements limitent le modèle.** Une règle empirique courante est d'environ **10 événements par terme** dans un [modèle de Cox](../glossary.qmd#cox-regression){.term}, un terme étant un [coefficient](../glossary.qmd#coefficient){.term} : un prédicteur à deux niveaux comme le sexe est un terme, l'implant (B et C par rapport à A) en est deux, et une [spline](../glossary.qmd#spline){.term} à 3 degrés de liberté en est trois. C'est un repère, pas une limite stricte, et certaines études la jugent trop sévère. Selon cette règle, les 81 révisions de la [cohorte](../glossary.qmd#cohort){.term} d'exercice suffisent pour environ huit termes. L'implant, l'âge, le sexe et l'IMC en utilisent cinq, soit environ 16 [événements](../glossary.qmd#event){.term} par terme. Avec moins d'événements, ajustez sur moins de facteurs, et dites-le.
 
 ## De l'analyse univariée à l'analyse multivariée {#univariable-multivariable}
 
@@ -483,6 +483,7 @@ Dans les prothèses totales de hanche, avec la voie d'abord comme strate, le haz
 
 ```{r}
 tha |> filter(revised == 1, followup_years <= 0.5) |> count(approach)   # révisions des 6 premiers mois
+tha |> filter(revised == 1, followup_years > 0.5) |> count(approach)    # révisions après 6 mois
 
 # une ligne par patient et par période : (0, 0.5] ans et (0.5, fin du suivi]
 tha_split <- survSplit(Surv(followup_years, revised) ~ ., data = tha, cut = 0.5, episode = "period") |>
@@ -500,6 +501,7 @@ summary(split_model)$conf.int
 from lifelines import CoxTimeVaryingFitter
 
 print(tha[(tha["revised"] == 1) & (tha["followup_years"] <= 0.5)]["approach"].value_counts())   # révisions des 6 premiers mois
+print(tha[(tha["revised"] == 1) & (tha["followup_years"] > 0.5)]["approach"].value_counts())    # révisions après 6 mois
 
 hips = tha.reset_index(drop=True)
 hips["id"] = hips.index                                   # un identifiant par hanche, partagé par ses lignes
@@ -549,7 +551,11 @@ check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early 
 
 Pendant les 6 premiers mois, le hazard de révision était 8.47 fois plus élevé après la voie postérieure (IC à 95 % de 1.93 à 37.3). Après 6 mois, l'[estimation](../glossary.qmd#estimate){.term} était de 0.43 (IC à 95 % de 0.16 à 1.16), ce qui est [imprécis](../glossary.qmd#precision){.term}. L'IC de l'effet précoce est large parce qu'il repose sur 16 révisions précoces : 14 après la voie postérieure et seulement 2 après la voie antérieure (la première sortie).
 
-Choisissez le point de coupure avant de regarder, d'après un raisonnement clinique : ici, la période de risque de luxation le plus élevé après une prothèse de hanche. Essayer plusieurs points de coupure jusqu'à ce que l'un donne un résultat spectaculaire, c'est de la [pêche aux données](../glossary.qmd#p-hacking){.term} (*data dredging*). R peut aussi laisser un hazard ratio changer progressivement avec le temps (l'argument `tt()` de `coxph()`), ce qui évite de choisir un point de coupure.
+Le rapport après 6 mois pose un second problème : il ne compare que les hanches encore non révisées à 6 mois. Un groupe dont le hazard est plus élevé au début tend à perdre davantage de ses hanches sujettes à la révision : les hanches restantes des deux groupes peuvent alors ne plus être comparables, et un hazard ratio inférieur à 1 peut apparaître même sans aucun effet tardif. Hernán (2010) appelle cela le biais de sélection intégré (*built-in selection bias*) des hazard ratios par période. Ici, l'estimation tardive repose sur 21 révisions, 5 après la voie postérieure et 16 après la voie antérieure (la deuxième sortie), et son IC inclut 1 : elle ne montre donc pas de bénéfice tardif de la voie postérieure.
+
+Choisissez le point de coupure avant de regarder, d'après un raisonnement clinique : ici, la fin de la période de risque de luxation le plus élevé après une prothèse de hanche. Essayer plusieurs points de coupure jusqu'à ce que l'un donne un résultat spectaculaire, c'est de la [pêche aux données](../glossary.qmd#p-hacking){.term} (*data dredging*). R peut aussi laisser un hazard ratio changer progressivement avec le temps (l'argument `tt()` de `coxph()`), ce qui évite de choisir un point de coupure.
+
+Un hazard ratio n'est pas la seule façon de rapporter un effet qui change avec le temps. L'alternative qu'utilise ce site est la survie de chaque groupe à des moments fixés à l'avance, qui se passe de hazard ratio : la [page 13](13-kaplan-meier.qmd#log-rank) compare les deux voies d'abord à 6 mois. Pour les analyses avec covariables, Hernán (2010) propose des courbes de survie ajustées.
 
 > **Methods:** Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.
 >
@@ -561,7 +567,7 @@ Un [modèle de Cox](../glossary.qmd#cox-regression){.term} suppose que chaque li
 
 **Ensembles appariés.** Quand chaque patient avec l'implant C est [apparié](../glossary.qmd#matched){.term} à des patients semblables qui ont reçu d'autres implants, les patients appariés forment un ensemble. Un modèle de Cox **stratifié par ensemble apparié**, `strata(set_id)`, ne compare les implants qu'au sein des ensembles. Le tableau de décision l'appelle *régression conditionnelle à risques proportionnels*. La [page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) traite des paires appariées et la [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) des ensembles appariés de trois.
 
-**Patients bilatéraux.** 80 patients de la [cohorte](../glossary.qmd#cohort){.term} ont eu une prothèse des deux côtés. Leurs deux articulations partagent l'os, l'activité et le chirurgien du même patient : leurs résultats ne sont donc pas indépendants, et les traiter comme indépendants rend les [IC](../glossary.qmd#confidence-interval){.term} trop étroits. Il y a trois choix courants :
+**Patients bilatéraux.** 80 patients de la [cohorte](../glossary.qmd#cohort){.term} ont eu une prothèse des deux côtés. Leurs deux articulations partagent l'os, l'activité et le chirurgien du même patient : leurs résultats ne sont donc généralement pas indépendants. Quand les deux articulations d'un patient ont tendance à évoluer de la même façon, les traiter comme indépendantes rend généralement les [IC](../glossary.qmd#confidence-interval){.term} trop étroits. Il y a trois choix courants :
 
 - **Garder les deux articulations et utiliser des erreurs standard robustes** [en grappes](../glossary.qmd#clustered-data){.term} sur le patient. Les [hazard ratios](../glossary.qmd#hazard-ratio){.term} ne changent pas ; les IC tiennent compte de l'[appariement](../glossary.qmd#paired){.term}. C'est le choix habituel.
 - **Stratifier par patient**, `strata(patient_id)`, pour comparer les deux côtés de chaque patient. Seuls les patients dont les deux articulations diffèrent par le prédicteur, et qui ont eu une révision, apportent quelque chose : c'est donc rarement assez [précis](../glossary.qmd#precision){.term}.
@@ -624,7 +630,7 @@ check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), 
 ```
 
 - **exp(coef) :** inchangé : le hazard ratio de l'implant C est toujours de 3.19.
-- **se(coef) / robust se :** R affiche les deux ; lifelines n'affiche que l'erreur robuste quand vous demandez des erreurs en grappes. Ici elles sont presque identiques (0.259 et 0.258 pour l'implant C), si bien que l'IC bouge à peine (1.92 à 5.28). Seuls 20 des 80 patients bilatéraux ont eu une révision (les deux nombres que le code affiche en premier) : l'appariement compte donc peu dans cette cohorte. Il peut compter bien plus dans la vôtre : vérifiez, et dites dans les Méthodes ce que vous avez fait.
+- **se(coef) / robust se :** R affiche les deux ; lifelines n'affiche que l'erreur robuste quand vous demandez des erreurs en grappes. Ici elles sont presque identiques : pour l'implant C, l'erreur robuste est un peu plus petite (0.258 contre 0.259), si bien que l'IC bouge à peine (1.92 à 5.28, contre 1.92 à 5.29 sans grappes) ; pour l'implant B, elle est un peu plus grande (0.311 contre 0.310). Elles sont si proches à cause de la façon dont les données d'exercice ont été construites : le délai de révision de chaque articulation a été tiré séparément, et les données ne contiennent aucun facteur caché propre au patient, comme la qualité osseuse, qui ferait échouer ensemble ses deux articulations. Chez de vrais patients, les deux articulations partagent généralement de tels facteurs, d'où l'intérêt de la méthode : dans vos données, l'appariement peut compter bien plus. Vérifiez, et dites dans les Méthodes ce que vous avez fait. Sur les 80 patients opérés des deux côtés, 20 ont eu une révision (les deux nombres que le code affiche en premier).
 - **Pr(>|z|)** (tableau de R) : les [valeurs p](../glossary.qmd#p-value){.term}, calculées maintenant avec les [erreurs standard](../glossary.qmd#standard-error){.term} robustes. R les affiche en [notation scientifique](../glossary.qmd#scientific-notation){.term} : `5.463870e-01` vaut 0.546, et `6.743766e-06` vaut 0.00000674, rapporté comme p < 0.001. Le tableau sous [Rédiger les résultats d'un modèle de Cox](#reporting) les montre arrondies.
 
 ::: {.callout-tip}
@@ -790,6 +796,10 @@ stopifnot(
   sum(tha$revised == 1 & tha$followup_years <= 0.5) == 16,
   round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
   round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
+  # numbers added with Task 3.6 of the content review fixes: implant B's robust SE is slightly larger
+  round(summary(clustered_model)$coefficients["implantB", c("se(coef)", "robust se")], 3) == c(0.310, 0.311),
+  # the late split-model estimate rests on 21 revisions after 6 months: 16 anterior, 5 posterior
+  as.vector(table(tha$approach[tha$revised == 1 & tha$followup_years > 0.5])) == c(16, 5), 16 + 5 == 21,
   n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
   nrow(both_sides) == 80, sum(both_sides$any_revision) == 20,
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
