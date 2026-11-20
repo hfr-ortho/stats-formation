@@ -427,14 +427,14 @@ The red fill marks 18 revised cases. The `Notes` column mentions a revision ("re
 Now convert each text column into what it really is. One small function handles the mixed date formats. The recodes don't all treat a surprise the same way, so know which is which:
 
 - **Sex, procedure and side** look for the values they expect and turn anything else into a missing value. Sex is matched on the whole spellings the sheet uses, listed first in the code below, so a surprise like `Mme` shows up as missing instead of silently becoming "Male", as it would if we matched only the first letter.
-- **ASA** turns text it can't read as a class into a missing value in R, with a warning. In Python, `pd.to_numeric()` stops with an error instead.
+- **ASA** turns text it can't read as a number (Arabic or Roman) into a missing value in R, with a warning. In Python, such text stops `pd.to_numeric()` with an error instead. A wrong number gets through in both: a typo such as `12` stays 12, so cross-tab ASA, as [exercise 1](#exercises) does.
 - **The three comorbidity flags** are 1 when the cell names the abbreviation and 0 when it names anything else, so an unknown spelling such as `T2DM` counts as "no", not as missing. Check 3 below cross-tabulates them for that reason.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-count(step3, sex)   # every spelling of sex in the sheet: the recode below lists exactly these
+count(step3, sex)   # every spelling of sex in the sheet: the recode below lists exactly these, lower-cased
 
 # Dates arrive as Excel serial numbers ("42010"), ISO dates ("2015-04-21"),
 # or Swiss day-first text ("13.01.15", "13.1.2015"). Handle the serial
@@ -485,7 +485,7 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
-print(step3["sex"].value_counts().sort_index())   # every spelling of sex in the sheet: the recode below lists exactly these
+print(step3["sex"].value_counts().sort_index())   # every spelling of sex in the sheet: the recode below lists exactly these, lower-cased
 
 def number(text):
     # The first number in each cell: "67 yo" -> 67, "BMI 31.2" -> 31.2
@@ -913,6 +913,33 @@ assert int(step3["comorbidities"].isna().sum()) == 13
 assert int(flags.loc[flags["raw"].isna(), ["diabetes", "hypertension", "sleep_apnea"]].to_numpy().sum()) == 0
 ```
 
+```{python}
+#| include: false
+# Prose guard (Python side) for the made-up values in step 5's list and the 🔀 box in check 3: plain numbers for the R check below.
+def asa_recode(values):
+    return pd.to_numeric(pd.Series(values, dtype="str").str.replace("ASA ", "").replace(asa_roman))
+try:
+    asa_recode(["U"])
+    asa_u_stops = 0.0
+except ValueError:
+    asa_u_stops = 1.0
+chk_claims = {
+    "mme_missing": float(pd.Series(["Mme"], dtype="str").str.lower()
+                         .map({"f": "Female", "female": "Female", "m": "Male", "male": "Male"}).isna().iloc[0]),
+    "t2dm": float(pd.Series(["T2DM"], dtype="str").str.contains(r"\bDM\b", case=False).astype(int).iloc[0]),
+    "empty_flag": float(pd.Series([None], dtype="str").str.contains(r"\bDM\b", case=False).astype(int).iloc[0]),
+    "asa_u_stops": asa_u_stops,
+    "asa_12": float(asa_recode(["12"]).iloc[0]),
+}
+```
+
+```{r}
+#| include: false
+# What step 5 and the 🔀 box in check 3 say pandas does: Mme -> missing, T2DM -> 0, an empty cell -> 0,
+# ASA "U" stops with an error, ASA "12" stays 12.
+check_agree(list(mme_missing = 1, t2dm = 0, empty_flag = 0, asa_u_stops = 1, asa_12 = 12), reticulate::py$chk_claims)
+```
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -953,7 +980,15 @@ stopifnot(
   with(tidy[match(str_trim(step3$study_id[step3$comorbidities %in% c("GERD", "None")]), tidy$case_id), ],
        all(diabetes + hypertension + sleep_apnea == 0)),
   nrow(distinct(missed, case_id, visit)) == 72, nrow(missed) == 473, 564 - 473 == 91,
-  sum(is.na(items$response) & !paste(items$case_id, items$visit) %in% paste(missed$case_id, missed$visit)) == 91
+  sum(is.na(items$response) & !paste(items$case_id, items$visit) %in% paste(missed$case_id, missed$visit)) == 91,
+  # the made-up values in step 5's list and the 🔀 box in check 3 (R side; pandas is checked above)
+  is.na(case_when(str_to_lower("Mme") %in% c("f", "female") ~ "Female", str_to_lower("Mme") %in% c("m", "male") ~ "Male")),
+  str_detect("Mme", regex("^m", ignore_case = TRUE)),                                    # a first-letter match says Male
+  as.integer(str_detect("T2DM", regex("\\bDM\\b", ignore_case = TRUE))) == 0,
+  is.na(as.integer(str_detect(NA_character_, regex("\\bDM\\b", ignore_case = TRUE)))),  # an empty cell: NA in R
+  inherits(tryCatch(as.integer(as.roman(str_remove("U", "^ASA "))), warning = identity), "warning"),
+  is.na(suppressWarnings(as.integer(as.roman(str_remove("U", "^ASA "))))),
+  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12
 )
 ```
 

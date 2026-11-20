@@ -427,14 +427,14 @@ Le remplissage rouge marque 18 cas révisés. La colonne `Notes` ne mentionne un
 Convertissez maintenant chaque colonne de texte en ce qu'elle est réellement. Une petite fonction gère les formats de date mélangés. Les recodages ne traitent pas tous une surprise de la même façon ; sachez donc lequel fait quoi :
 
 - **Le sexe, l'intervention et le côté** cherchent les valeurs attendues et transforment tout le reste en valeur manquante. Le sexe est comparé aux graphies complètes utilisées dans la feuille, que le code ci-dessous liste d'abord : une surprise comme `Mme` apparaît donc comme valeur manquante au lieu de devenir « Male » en silence, comme ce serait le cas si nous ne comparions que la première lettre.
-- **La classe ASA** devient en R une valeur manquante quand le texte ne se lit pas comme une classe, avec un avertissement. En Python, `pd.to_numeric()` s'arrête plutôt sur une erreur.
+- **La classe ASA** devient en R une valeur manquante quand le texte ne se lit pas comme un nombre (arabe ou romain), avec un avertissement. En Python, un tel texte arrête plutôt `pd.to_numeric()` sur une erreur. Un nombre erroné passe dans les deux langages : une faute de frappe comme `12` reste 12. Croisez donc la classe ASA avec le texte brut, comme le fait l'[exercice 1](#exercises).
 - **Les trois indicateurs de comorbidité** valent 1 quand la cellule mentionne l'abréviation et 0 quand elle mentionne autre chose : une graphie inconnue comme `T2DM` compte donc comme « non », pas comme manquante. C'est pourquoi le contrôle 3 ci-dessous les croise avec le texte brut.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-count(step3, sex)   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci
+count(step3, sex)   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci, en minuscules
 
 # Les dates arrivent comme numéros de série Excel ("42010"), comme dates ISO
 # ("2015-04-21") ou comme texte suisse jour d'abord ("13.01.15", "13.1.2015").
@@ -486,7 +486,7 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
-print(step3["sex"].value_counts().sort_index())   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci
+print(step3["sex"].value_counts().sort_index())   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci, en minuscules
 
 def number(text):
     # Le premier nombre de chaque cellule : "67 yo" -> 67, "BMI 31.2" -> 31.2
@@ -916,6 +916,33 @@ assert int(step3["comorbidities"].isna().sum()) == 13
 assert int(flags.loc[flags["raw"].isna(), ["diabetes", "hypertension", "sleep_apnea"]].to_numpy().sum()) == 0
 ```
 
+```{python}
+#| include: false
+# Prose guard (Python side) for the made-up values in step 5's list and the 🔀 box in check 3: plain numbers for the R check below.
+def asa_recode(values):
+    return pd.to_numeric(pd.Series(values, dtype="str").str.replace("ASA ", "").replace(asa_roman))
+try:
+    asa_recode(["U"])
+    asa_u_stops = 0.0
+except ValueError:
+    asa_u_stops = 1.0
+chk_claims = {
+    "mme_missing": float(pd.Series(["Mme"], dtype="str").str.lower()
+                         .map({"f": "Female", "female": "Female", "m": "Male", "male": "Male"}).isna().iloc[0]),
+    "t2dm": float(pd.Series(["T2DM"], dtype="str").str.contains(r"\bDM\b", case=False).astype(int).iloc[0]),
+    "empty_flag": float(pd.Series([None], dtype="str").str.contains(r"\bDM\b", case=False).astype(int).iloc[0]),
+    "asa_u_stops": asa_u_stops,
+    "asa_12": float(asa_recode(["12"]).iloc[0]),
+}
+```
+
+```{r}
+#| include: false
+# What step 5 and the 🔀 box in check 3 say pandas does: Mme -> missing, T2DM -> 0, an empty cell -> 0,
+# ASA "U" stops with an error, ASA "12" stays 12.
+check_agree(list(mme_missing = 1, t2dm = 0, empty_flag = 0, asa_u_stops = 1, asa_12 = 12), reticulate::py$chk_claims)
+```
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -956,7 +983,15 @@ stopifnot(
   with(tidy[match(str_trim(step3$study_id[step3$comorbidities %in% c("GERD", "None")]), tidy$case_id), ],
        all(diabetes + hypertension + sleep_apnea == 0)),
   nrow(distinct(missed, case_id, visit)) == 72, nrow(missed) == 473, 564 - 473 == 91,
-  sum(is.na(items$response) & !paste(items$case_id, items$visit) %in% paste(missed$case_id, missed$visit)) == 91
+  sum(is.na(items$response) & !paste(items$case_id, items$visit) %in% paste(missed$case_id, missed$visit)) == 91,
+  # the made-up values in step 5's list and the 🔀 box in check 3 (R side; pandas is checked above)
+  is.na(case_when(str_to_lower("Mme") %in% c("f", "female") ~ "Female", str_to_lower("Mme") %in% c("m", "male") ~ "Male")),
+  str_detect("Mme", regex("^m", ignore_case = TRUE)),                                    # a first-letter match says Male
+  as.integer(str_detect("T2DM", regex("\\bDM\\b", ignore_case = TRUE))) == 0,
+  is.na(as.integer(str_detect(NA_character_, regex("\\bDM\\b", ignore_case = TRUE)))),  # an empty cell: NA in R
+  inherits(tryCatch(as.integer(as.roman(str_remove("U", "^ASA "))), warning = identity), "warning"),
+  is.na(suppressWarnings(as.integer(as.roman(str_remove("U", "^ASA "))))),
+  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12
 )
 ```
 

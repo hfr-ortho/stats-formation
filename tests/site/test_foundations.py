@@ -121,6 +121,9 @@ def test_tidy_page_states_what_guessing_and_recoding_really_do(site):
     assert "Forcing a number type is what loses values" in text
     assert "Each recode lists the values it expects" not in text   # the old blanket claim
     assert "so an unknown spelling such as T2DM counts as" in text
+    # as.roman() reads any Arabic or Roman numeral, so a wrong number passes; only non-numbers go missing.
+    assert "text it can't read as a class" not in text
+    assert "a typo such as 12 stays 12" in text
     assert "564 blank rows: 473 from 72 missed visits and 91 items skipped" in text
 
 
