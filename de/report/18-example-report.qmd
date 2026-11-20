@@ -319,7 +319,7 @@ stopifnot(in_range(as.numeric(study$surgery_date - study$prom_preop_date), 0, 30
 stopifnot(!anyNA(study$followup_years), all(study$surgery_date == study$surgery_date_registry),
           all(study$procedure == study$procedure_registry), all(study$revised == study$revised_registry))
 
-# Eine Zeile pro Person: Bei niemandem in dieser Stichprobe wurden beide Hüften oder beide Knie ersetzt
+# Eine Zeile pro Person: Keine Person kommt in dieser Stichprobe zweimal vor
 stopifnot(n_distinct(study$patient_id) == nrow(study))
 
 # Was fehlt: jetzt zählen, später berichten
@@ -349,7 +349,7 @@ assert in_range((study["prom_1yr_date"] - study["surgery_date"]).dt.days, 300, 4
 assert study["followup_years"].notna().all() and (study["surgery_date"] == study["surgery_date_registry"]).all()
 assert (study["procedure"] == study["procedure_registry"]).all() and (study["revised"] == study["revised_registry"]).all()
 
-# Eine Zeile pro Person: Bei niemandem in dieser Stichprobe wurden beide Hüften oder beide Knie ersetzt
+# Eine Zeile pro Person: Keine Person kommt in dieser Stichprobe zweimal vor
 assert study["patient_id"].nunique() == len(study)
 
 # Was fehlt: jetzt zählen, später berichten
@@ -374,7 +374,7 @@ Alle Prüfungen waren erfolgreich, deshalb lief der Code weiter. Die Arbeitsmapp
 
 ### Wer hat keinen Score nach 1 Jahr? {#missing-scores}
 
-Die Arbeitsmappe kann nicht sagen, warum ein Score fehlt, aber das Register zeigt, was mit jeder Person im ersten Jahr nach der Operation geschah. Stellen Sie beides in einer Kreuztabelle einander gegenüber: welche Scores jede Person hat, und ob sie vor 1 Jahr revidiert wurde, starb oder aus der Nachbeobachtung des Registers ausschied.
+Die Arbeitsmappe kann nicht sagen, warum ein Score fehlt, aber das Register zeigt, was mit jeder Person im ersten Jahr nach der Operation geschah. Stellen Sie beides in einer Kreuztabelle einander gegenüber: welche Scores jede Person hat, und ob sie vor 1 Jahr revidiert wurde, starb oder [zensiert](../glossary.qmd#censored){.term} wurde.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -388,9 +388,9 @@ first_year <- study |>
          before_1_year = case_when(followup_years >= 1 ~ "still followed",    # 1 Jahr oder länger nachbeobachtet
                                    event_status == 1   ~ "revised",
                                    event_status == 2   ~ "died",
-                                   .default            = "follow-up ended"),   # vor 1 Jahr zensiert
+                                   .default            = "censored"),          # Nachbeobachtung im Register vor 1 Jahr ohne Revision oder Tod beendet
          scores        = factor(scores, levels = c("both scores", "no pre-op score", "no 1-year score")),
-         before_1_year = factor(before_1_year, levels = c("revised", "died", "follow-up ended", "still followed")))
+         before_1_year = factor(before_1_year, levels = c("revised", "died", "censored", "still followed")))
 addmargins(table(scores = first_year$scores, before_1_year = first_year$before_1_year))   # Sum: die Summen
 
 # die Personen, deren Nachbeobachtung vor 1 Jahr endete, und wann (in Jahren)
@@ -408,10 +408,10 @@ scores = np.select([study["prom_1yr"].isna(), study["prom_preop"].isna()],
                    ["no 1-year score", "no pre-op score"], default="both scores")
 before_1_year = np.select([study["followup_years"] >= 1, study["event_status"] == 1, study["event_status"] == 2],
                           ["still followed", "revised", "died"],   # still followed: 1 Jahr oder länger nachbeobachtet
-                          default="follow-up ended")               # vor 1 Jahr zensiert
+                          default="censored")                      # Nachbeobachtung im Register vor 1 Jahr ohne Revision oder Tod beendet
 first_year = study.assign(
     scores=pd.Categorical(scores, categories=["both scores", "no pre-op score", "no 1-year score"]),
-    before_1_year=pd.Categorical(before_1_year, categories=["revised", "died", "follow-up ended", "still followed"]))
+    before_1_year=pd.Categorical(before_1_year, categories=["revised", "died", "censored", "still followed"]))
 print(pd.crosstab(first_year["scores"], first_year["before_1_year"], margins=True, margins_name="Sum").to_string())   # Sum: die Summen
 
 # die Personen, deren Nachbeobachtung vor 1 Jahr endete, und wann (in Jahren)
@@ -436,7 +436,7 @@ check_agree(list(n = sum(first_year$followup_years < 1),
                  years = sum(first_year$followup_years[first_year$followup_years < 1])), reticulate::py$chk_early)
 ```
 
-Jede Person steht genau einmal in der Tabelle, deshalb ergibt die Spalte `Sum` zusammen 120: 93 Personen mit beiden Scores, 5 ohne präoperativen Score und 22 ohne Score nach 1 Jahr. Alle 5 ohne präoperativen Score wurden nach 1 Jahr noch nachbeobachtet. Von den 22 ohne Score nach 1 Jahr waren 7 vor 1 Jahr aus der Nachbeobachtung des Registers ausgeschieden, wie die zweite Ausgabe zeigt: 4 wurden revidiert (nach 0.19, 0.26, 0.45 und 0.81 Jahren), 1 Person starb (nach 0.93 Jahren), und bei 2 endete die Nachbeobachtung im Register ohne Revision und ohne Tod (nach 0.04 und 0.16 Jahren). Die übrigen 15 wurden nach 1 Jahr noch nachbeobachtet, und die Daten sagen nicht, warum ihr Score fehlt.
+Jede Person steht genau einmal in der Tabelle, deshalb ergibt die Spalte `Sum` zusammen 120: 93 Personen mit beiden Scores, 5 ohne präoperativen Score und 22 ohne Score nach 1 Jahr. Alle 5 ohne präoperativen Score wurden nach 1 Jahr noch nachbeobachtet. Von den 22 ohne Score nach 1 Jahr wurden 7 weniger als 1 Jahr im Register nachbeobachtet, wie die zweite Ausgabe zeigt: 4 wurden revidiert (nach 0.19, 0.26, 0.45 und 0.81 Jahren), 1 Person starb (nach 0.93 Jahren), und 2 wurden zensiert (Nachbeobachtung im Register von 0.04 und 0.16 Jahren), ohne Revision und ohne Tod. Die übrigen 15 wurden nach 1 Jahr noch nachbeobachtet, und die Daten sagen nicht, warum ihr Score fehlt.
 
 Das ändert, wie das Resultat zu lesen ist. Die primäre Analyse (Schritt 6) vergleicht die Veränderung bei Personen mit beiden Scores, und wer im ersten Jahr revidiert wurde oder starb, hat keinen Score nach 1 Jahr: Alle frühen Revisionen und Todesfälle fehlen deshalb in ihr. Ihr Resultat beschreibt die Verbesserung der Personen, deren Prothese nach 1 Jahr noch nicht revidiert war und die noch nachbeobachtet wurden; die Revisionen zählt stattdessen Schritt 7. Der Methodenteil hält das fest, und der Resultatteil gibt die Zahlen an. Übung 3 fragt, ob die Scores nach dem einen Eingriff häufiger fehlten als nach dem anderen.
 
@@ -659,7 +659,7 @@ Hedges' g ist [Cohens d](../glossary.qmd#cohens-d){.term}, leicht verkleinert, u
 
 ### Eine Sensitivitätsanalyse: Adjustierung für das Geschlecht {#sensitivity}
 
-[Tabelle 1](../glossary.qmd#table-1){.term} zeigte, dass sich die Gruppen am stärksten im Geschlecht unterscheiden: 71.7 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49.3 % derjenigen mit Knie-TP (Schritt 4). Wenn sich Frauen und Männer unterschiedlich stark verbessern, könnte ein Teil der Differenz von 9 Punkten aus der unterschiedlichen Verteilung der Geschlechter stammen statt aus dem Eingriff. Eine [Sensitivitätsanalyse](../glossary.qmd#sensitivity-analysis){.term} prüft das: Eine [lineare Regression](../glossary.qmd#linear-regression){.term} der Veränderung auf den Eingriff und das Geschlecht gibt die Differenz zwischen den Eingriffen bei Personen gleichen Geschlechts an ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Sie [adjustiert](../glossary.qmd#adjustment){.term} nur für das Geschlecht, weil das Geschlecht der grösste Unterschied in Tabelle 1 ist und bei keiner Person fehlt, sodass alle 93 Personen im Modell bleiben. Der präoperative Score, der andere Unterschied, der für eine Veränderung zählt, ist die Frage von Übung 2.
+[Tabelle 1](../glossary.qmd#table-1){.term} zeigte, dass sich die Gruppen am stärksten im Geschlecht unterscheiden: 71.7 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49.3 % derjenigen mit Knie-TP (Schritt 4). Wenn sich Frauen und Männer unterschiedlich stark verbessern, könnte ein Teil der Differenz von 9 Punkten aus der unterschiedlichen Verteilung der Geschlechter stammen statt aus dem Eingriff. Eine [Sensitivitätsanalyse](../glossary.qmd#sensitivity-analysis){.term} prüft das: Eine [lineare Regression](../glossary.qmd#linear-regression){.term} der Veränderung auf den Eingriff und das Geschlecht gibt die Differenz zwischen den Eingriffen bei Personen gleichen Geschlechts an ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Sie [adjustiert](../glossary.qmd#adjustment){.term} nur für das Geschlecht, weil das Geschlecht der grösste Unterschied in Tabelle 1 ist und bei keiner Person fehlt, sodass alle 93 Personen im Modell bleiben. Der präoperative Score, der andere Unterschied, der für eine Veränderung zählt, ist die Frage von Übung 2. Diese Adjustierung stand nicht im Plan von Schritt 1: Sie wurde gewählt, nachdem Tabelle 1 den Unterschied gezeigt hatte, während ein echtes Protokoll die Variablen, für die es adjustiert, im Voraus nennt ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Deshalb bezeichnet der Methodenteil sie als post hoc: Sie ist eine [explorative Analyse](../glossary.qmd#prespecified){.term}, nach dem Ansehen der Daten gewählt, und ihr Resultat wirft Fragen für spätere Studien auf. Die primäre Analyse bleibt die, die Schritt 1 geplant hat.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -697,7 +697,7 @@ check_agree(list(estimate = coef(sensitivity)[["procedureTKA"]],
             reticulate::py$chk)
 ```
 
-Lesen Sie die Zeile `procedureTKA` (Python: `procedure[T.TKA]`; das KI steht in den Spalten mit den Überschriften `0` und `1`). Wie in Übung 2 ist der [Koeffizient](../glossary.qmd#coefficient){.term} Knie-TP minus Hüft-TP: −9.26 Punkte (95%-KI −14.99 bis −3.54; p = 0.002). R gibt den p-Wert als `1.815083e-03` aus, das ist 0.0018. Umgedreht, damit er zu Schritt 6 passt (Hüft-TP minus Knie-TP), beträgt die für das Geschlecht adjustierte Differenz 9.3 Punkte (95%-KI 3.5 bis 15.0), gegenüber 9.0 Punkten (95%-KI 3.5 bis 14.6) ohne Adjustierung. Die Adjustierung für das Geschlecht verschiebt den Schätzwert kaum, die unterschiedliche Verteilung der Geschlechter erklärt die Differenz zwischen den Eingriffen also nicht. Das Manuskript berichtet beides: die primäre Analyse und diese als Sensitivitätsanalyse.
+Lesen Sie die Zeile `procedureTKA` (Python: `procedure[T.TKA]`; das KI steht in den Spalten mit den Überschriften `0` und `1`). Wie in Übung 2 ist der [Koeffizient](../glossary.qmd#coefficient){.term} Knie-TP minus Hüft-TP: −9.26 Punkte (95%-KI −14.99 bis −3.54; p = 0.002). R gibt den p-Wert als `1.815083e-03` aus, das ist 0.0018. Umgedreht, damit er zu Schritt 6 passt (Hüft-TP minus Knie-TP), beträgt die für das Geschlecht adjustierte Differenz 9.3 Punkte (95%-KI 3.5 bis 15.0), gegenüber 9.0 Punkten (95%-KI 3.5 bis 14.6) ohne Adjustierung. Die Adjustierung für das Geschlecht verschiebt den Schätzwert kaum, die unterschiedliche Verteilung der Geschlechter erklärt die Differenz zwischen den Eingriffen also nicht. Das Manuskript berichtet beides: die primäre Analyse und diese als Post-hoc-Sensitivitätsanalyse.
 
 ## 7 · Revision: eine Überlebenszeitanalyse {#survival}
 
@@ -801,12 +801,12 @@ Alles von hier bis zu den Übungen ist das Manuskript, und das ist der Inhalt de
 - [Fehlende Daten](../glossary.qmd#missing-data){.term} werden gezählt und berichtet, nicht stillschweigend weggelassen.
 - Jeder [Schätzwert](../glossary.qmd#estimate){.term} hat ein [95%-KI](../glossary.qmd#confidence-interval){.term}, und der Methodenteil nennt jeden Test.
 - Das Manuskript wird aus derselben Datei erzeugt wie die Analyse. Ändern sich die Daten, aktualisieren sich [Tabelle 1](../glossary.qmd#table-1){.term} und Abbildung 1 von selbst, und die versteckte Prüfung hält das Rendern an, bis jede Zahl im Text von Hand angepasst ist.
-- Der Methodenteil berichtet, was die Berichtsleitlinie für das Studiendesign verlangt: [STROBE](https://www.strobe-statement.org/checklists/) für eine [Beobachtungsstudie](../glossary.qmd#observational-study){.term} wie diese, [CONSORT](https://www.consort-spirit.org/) für eine [randomisierte Studie](../glossary.qmd#randomized-trial){.term} (die aktuelle Version ist CONSORT 2025).
+- Der Methodenteil berichtet, was die Berichtsleitlinie für das Studiendesign verlangt: [STROBE](https://www.strobe-statement.org/checklists/) für eine [Beobachtungsstudie](../glossary.qmd#observational-study){.term} wie diese, [CONSORT](https://www.consort-spirit.org/) für eine [randomisierte Studie](../glossary.qmd#randomized-trial){.term} (die aktuelle Version ist CONSORT 2025). Diese erfundene Studie kann nicht alles davon liefern: Der nächste Kasten zählt auf, was fehlt.
 :::
 
 ::: {.callout-note}
 ## 💡 Was ein echter Methodenteil zusätzlich braucht
-Diese Studie ist erfunden, deshalb hält ihr Methodenteil nur fest, was der Code und die Daten zeigen. Der Methodenteil einer echten Studie braucht mehr. Ergänzen Sie die Sätze unten, die wie das Manuskript englisch sind, und ersetzen Sie jeden Teil in eckigen Klammern durch die Fakten Ihrer Studie. STROBE verlangt ausserdem, dass Sie beschreiben, wie und wann die Daten erhoben wurden, statt eine Studie nur «retrospektiv» oder «prospektiv» zu nennen; der erste Absatz dieses Methodenteils tut das, soweit die erfundenen Daten es erlauben.
+Diese Studie ist erfunden, deshalb hält ihr Methodenteil nur fest, was der Code und die Daten zeigen. Der Methodenteil einer echten Studie braucht mehr. Ergänzen Sie die Sätze unten, die wie das Manuskript englisch sind, und ersetzen Sie jeden Teil in eckigen Klammern durch die Fakten Ihrer Studie. Die Liste ist nicht die ganze Checkliste: Gehen Sie STROBE Punkt für Punkt durch; die Punkte zum Methodenteil betreffen zum Beispiel auch die Variablen, Verzerrungen (Bias) und die Methoden der Nachbeobachtung. STROBE verlangt ausserdem, dass Sie beschreiben, wie und wann die Daten erhoben wurden, statt eine Studie nur «retrospektiv» oder «prospektiv» zu nennen; der erste Absatz dieses Methodenteils tut das, soweit die erfundenen Daten es erlauben.
 
 **STROBE-Punkte** (die Checkliste für Kohortenstudien), die die erfundenen Daten nicht liefern können:
 
@@ -814,7 +814,7 @@ Diese Studie ist erfunden, deshalb hält ihr Methodenteil nur fest, was der Code
 - **Stichprobengrösse:** «[How the study size was arrived at: a sample size calculation, or all eligible patients in the period].»
 - **Daten der Erhebung und der Nachbeobachtung:** «The data were abstracted in [month and year], and registry follow-up ran until [date].»
 
-**Keine STROBE-Punkte, aber vorgeschrieben.** Das Schweizer Recht verlangt eine Bewilligung der Ethikkommission, bevor jemand die Daten anfasst ([Mit echten HFR-Daten arbeiten](../getting-started/real-data.qmd#swiss-rules)), und eine retrospektive Studie am HFR schliesst nur Patientinnen und Patienten ein, die den [Generalkonsent](../getting-started/real-data.qmd#general-consent) unterschrieben haben, ausser die Ethikkommission hat etwas anderes bewilligt. Die [Empfehlungen des ICMJE](https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html) für medizinische Fachzeitschriften verlangen im Methodenteil die Angabe, dass eine Ethikkommission die Forschung bewilligt hat.
+**Keine STROBE-Punkte: Bewilligung und Einwilligung.** Das Schweizer Recht verlangt eine Bewilligung der Ethikkommission, bevor jemand mit den Daten arbeitet ([Mit echten HFR-Daten arbeiten](../getting-started/real-data.qmd#swiss-rules)), und die [Empfehlungen des ICMJE](https://www.icmje.org/recommendations/browse/manuscript-preparation/preparing-for-submission.html) für medizinische Fachzeitschriften verlangen im Methodenteil eine Angabe, dass eine Ethikkommission die Forschung bewilligt hat. Zur Einwilligung: Eine retrospektive Studie am HFR schliesst nur Patientinnen und Patienten ein, die den [Generalkonsent](../getting-started/real-data.qmd#general-consent) unterschrieben haben, ausser die Ethikkommission hat etwas anderes bewilligt.
 
 - **Bewilligung der Ethikkommission:** «The study was approved by the CER-VD (BASEC number [number]).»
 - **Einwilligung:** «[Only patients who had signed HFR's general consent were included, or what the ethics committee approved instead.]»
@@ -860,17 +860,17 @@ To compare the improvement in joint-specific patient-reported scores from before
 
 ## Methods {#methods}
 
-**Patients and data.** In this cohort study, we studied 120 primary THAs and TKAs performed at two sites (60 at each) between January 2015 and November 2024, in 120 patients (one joint per patient). Patients' characteristics, the procedure and patient-reported scores were abstracted from the medical record into a standard sheet. Follow-up for revision and death came from the joint registry, linked by study ID.
+**Patients and data.** This cohort study included 120 primary THAs and TKAs performed at two sites (60 at each) between January 2015 and November 2024, in 120 patients (one joint per patient). Patients' characteristics, the procedure and patient-reported scores were abstracted from the medical record into a standard sheet. Follow-up for revision and death came from the joint registry, linked by study ID.
 
-**Outcomes.** The primary outcome was the change in the joint-specific score from before surgery to 1 year: the HOOS JR after THA and the KOOS JR after TKA, each scored from 0 to 100 (higher is better). The pre-op score was recorded within 30 days before surgery and the 1-year score 300 to 425 days after surgery; every recorded score fell inside these windows. Because the two are different instruments, the comparison is of points on each joint's own scale. The secondary outcome was revision of any component.
+**Outcomes.** The primary outcome was the change in the joint-specific score from before surgery to 1 year: the HOOS JR after THA and the KOOS JR after TKA, each scored from 0 to 100 (higher is better). The assessment windows were 0 to 30 days before surgery for the pre-op score and 300 to 425 days after surgery for the 1-year score; every recorded score fell inside them. Because the two are different instruments, the comparison is of points on each joint's own scale. The secondary outcome was revision of any component.
 
-**Statistical analysis.** The primary outcome and the primary analysis were specified before the outcome data were examined. Continuous variables are reported as mean (SD) and categorical variables as n (%); differences between procedures at baseline are described with standardized mean differences. The change in score was compared between procedures with Welch's t test in patients with both scores (complete-case analysis), and summarized as the mean difference with its 95% CI and Hedges' g. Patients who were revised or died before 1 year had no 1-year score and were therefore not in this analysis. In a sensitivity analysis, the difference in the change in score was adjusted for sex by linear regression. For revision, time was measured from the date of surgery to revision, death without revision (a competing event) or the end of registry follow-up (censored). Median follow-up was estimated with the reverse Kaplan-Meier method, censoring revisions and deaths. The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk. Tests were two-sided. Analyses used R 4.6.0 with the packages gtsummary 2.6.1 and smd 0.8.0 (Table 1), effectsize 1.0.3 (Hedges' g), survival 3.8-12 (follow-up and cumulative incidence) and ggsurvfit 1.2.1 (Figure 1).
+**Statistical analysis.** The primary outcome and the primary analysis were specified before the outcome data were examined. Continuous variables are reported as mean (SD) and categorical variables as n (%); differences between procedures at baseline are described with standardized mean differences. The change in score was compared between procedures with Welch's t test in patients with both scores (complete-case analysis), and summarized as the mean difference with its 95% CI and Hedges' g. Patients who were revised or died before 1 year had no 1-year score and were therefore not in this analysis. In a post hoc sensitivity analysis, the difference in the change in score was adjusted for sex, the largest baseline difference (@tbl-baseline), by linear regression. For revision, time was measured from the date of surgery to revision, death without revision (a competing event) or the end of registry follow-up (censored). Median follow-up was estimated with the reverse Kaplan-Meier method, censoring revisions and deaths. The cumulative incidence of revision was estimated with the Aalen-Johansen method, treating death as a competing risk. Tests were two-sided. Analyses used R 4.6.0 with the packages gtsummary 2.6.1 and smd 0.8.0 (Table 1), effectsize 1.0.3 (Hedges' g), survival 3.8-12 (follow-up and cumulative incidence) and ggsurvfit 1.2.1 (Figure 1).
 
 ## Results {#results}
 
 Of the 120 patients, 53 (44.2%) had a THA and 67 (55.8%) a TKA (@tbl-baseline). Women made up 38 of 53 THA patients (71.7%) and 33 of 67 TKA patients (49.3%; SMD 0.47). The mean pre-op score was 48.1 points (SD 11.5) in THA patients and 51.0 points (SD 11.8) in TKA patients (SMD 0.26).
 
-Both scores were available for 93 patients (77.5%): 46 of 53 after THA (86.8%) and 47 of 67 after TKA (70.1%). Of the other 27, 5 had no pre-op score (all after TKA) and 22 had no 1-year score; before 1 year, 4 of the 22 had been revised, 1 had died and 2 had reached the end of registry follow-up, and 15 were still followed. The mean change in score was 42.4 points (SD 13.0) after THA and 33.4 points (SD 13.9) after TKA (difference 9.0 points, 95% CI 3.5 to 14.6; Hedges' g 0.66, 95% CI 0.25 to 1.08; p = 0.002). Adjusted for sex, the difference (THA minus TKA) was 9.3 points (95% CI 3.5 to 15.0; p = 0.002). At 1 year, 15 of 46 THA patients (32.6%) and 7 of 47 TKA patients (14.9%) had the maximum score.
+Both scores were available for 93 patients (77.5%): 46 of 53 after THA (86.8%) and 47 of 67 after TKA (70.1%). Of the other 27, 5 had no pre-op score (all after TKA) and 22 had no 1-year score; before 1 year, 4 of the 22 had been revised, 1 had died and 2 had been censored (registry follow-up of 0.04 and 0.16 years), and 15 were still followed. The mean change in score was 42.4 points (SD 13.0) after THA and 33.4 points (SD 13.9) after TKA (difference 9.0 points, 95% CI 3.5 to 14.6; Hedges' g 0.66, 95% CI 0.25 to 1.08; p = 0.002). Adjusted for sex, the difference (THA minus TKA) was 9.3 points (95% CI 3.5 to 15.0; p = 0.002). At 1 year, 15 of 46 THA patients (32.6%) and 7 of 47 TKA patients (14.9%) had the maximum score.
 
 Over a median follow-up of 6.05 years (IQR 4.16 to 8.27), 18 patients had a revision and 18 died without one. The cumulative incidence of revision was 3.4% (95% CI 1.1% to 7.8%) at 2 years and 12.6% (95% CI 7.0% to 19.8%) at 5 years (@fig-revision).
 
@@ -923,9 +923,6 @@ stopifnot(
   round(unname(follow_up), 2) == c(4.16, 6.05, 8.27),
   round(100 * revision_rows$estimate, 1) == c(3.4, 12.6),
   round(100 * revision_rows$conf.low, 1) == c(1.1, 7.0), round(100 * revision_rows$conf.high, 1) == c(7.8, 19.8),
-  as.character(getRversion()) == "4.6.0",
-  sapply(c("gtsummary", "smd", "effectsize", "survival", "ggsurvfit"), packageDescription, fields = "Version") ==
-    c("2.6.1", "0.8.0", "1.0.3", "3.8-12", "1.2.1"),
   # numbers added with the audit fixes
   as.character(range(study$surgery_date)) == c("2015-01-22", "2024-11-11"),
   tapply(is.na(study$bmi), study$procedure, sum) == c(4, 4), 4 + 4 == 8,
@@ -953,13 +950,13 @@ stopifnot(
   93 + 5 + 22 == 120, 4 + 1 + 2 + 15 == 22, 4 + 1 + 2 == 7, 5 + 22 == 27,
   sort(first_year$followup_years[first_year$before_1_year == "revised"]) == c(0.19, 0.26, 0.45, 0.81),
   first_year$followup_years[first_year$before_1_year == "died"] == 0.93,
-  sort(first_year$followup_years[first_year$before_1_year == "follow-up ended"]) == c(0.04, 0.16),
+  sort(first_year$followup_years[first_year$before_1_year == "censored"]) == c(0.04, 0.16),
   all(is.na(study$prom_1yr[study$followup_years < 1])),
   # the Methods: one joint per patient, the score windows (B3)
   n_distinct(study$patient_id) == 120,
   in_range(as.numeric(study$surgery_date - study$prom_preop_date), 0, 30),
   in_range(as.numeric(study$prom_1yr_date - study$surgery_date), 300, 425),
-  # the sensitivity analysis adjusted for sex (B4); the manuscript turns it round to THA minus TKA
+  # the sensitivity analysis adjusted for sex (B4); the manuscript turns it around to THA minus TKA
   nobs(sensitivity) == 93, !anyNA(analysed$sex), smd_of("sex") == max(round(abs(smd_r$estimate), 2), na.rm = TRUE),
   round(coef(sensitivity)[["procedureTKA"]], 2) == -9.26, round(confint(sensitivity)["procedureTKA", ], 2) == c(-14.99, -3.54),
   round(-coef(sensitivity)[["procedureTKA"]], 1) == 9.3, round(-rev(confint(sensitivity)["procedureTKA", ]), 1) == c(3.5, 15.0),
@@ -967,6 +964,14 @@ stopifnot(
   round(summary(sensitivity)$coefficients["procedureTKA", "Pr(>|t|)"], 4) == 0.0018,
   round(summary(sensitivity)$coefficients["procedureTKA", "Pr(>|t|)"], 3) == 0.002
 )
+# The Methods' software sentence names these versions: under another R or package version, stop and say what to update.
+software <- c(R = as.character(getRversion()),
+              sapply(c("gtsummary", "smd", "effectsize", "survival", "ggsurvfit"), packageDescription, fields = "Version"))
+if (!identical(unname(software), c("4.6.0", "2.6.1", "0.8.0", "1.0.3", "3.8-12", "1.2.1"))) {
+  stop("Page 18's Methods name R 4.6.0, gtsummary 2.6.1, smd 0.8.0, effectsize 1.0.3, survival 3.8-12 and ggsurvfit 1.2.1, ",
+       "but this session has ", paste(names(software), software, collapse = ", "),
+       ": update the software sentence in en, de and fr, and this guard")
+}
 ```
 
 ::: {.content-visible when-format="html"}
