@@ -65,7 +65,7 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | B20 | 3.7 | open |  |
 | B21 | 3.4 | open |  |
 | B22 | 3.2 | done | pending |
-| B23 | 3.2 | partly (3.2 done) | pending |
+| B23 | 3.2 | done | pending |
 | B24 | 3.4, 3.5, 3.6 | open |  |
 | B25 | 3.9 | open |  |
 | C1 | 3.4, 3.7 | open |  |

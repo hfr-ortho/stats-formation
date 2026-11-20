@@ -570,40 +570,44 @@ R braucht für die Excel-Seriennummern einen eigenen Schritt (`janitor::excel_nu
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Dezimalkommas und zweistellige Jahreszahlen
-Die Zahlenfunktionen oben erwarten einen Dezimalpunkt. In einer Tabelle, die mit Dezimalkommas erfasst wurde, liefern sie ohne Warnung falsche Werte, und zwar in jeder Sprache andere: `"31,2"` wird in R zu 312 und in Python zu 31. In R teilen Sie `parse_number()` das Komma mit `locale = locale(decimal_mark = ",")` mit; in Python ersetzen Sie das Komma zuerst durch einen Punkt.
+Die Zahlenfunktionen oben erwarten einen Dezimalpunkt. In einer Tabelle, die mit Dezimalkommas erfasst wurde, liefern sie ohne Warnung falsche Werte, und zwar in jeder Sprache andere: `"31,2"` wird in R zu 312 und in Python zu 31. Ersetzen Sie in beiden Sprachen das Komma vor dem Umwandeln durch einen Punkt: Zellen mit einem Punkt bleiben, wie sie sind, deshalb funktioniert das auch in einer Spalte, die beides mischt.
 
-Bei Datumsangaben lauert eine ähnliche Falle: Eine zweistellige Jahreszahl ist eine Vermutung über das Jahrhundert. Beide Sprachen lesen `"13.01.45"` als 13. Januar 2045, was für ein Geburtsdatum falsch ist. Erfassen Sie vierstellige Jahreszahlen.
+Bei Datumsangaben lauert eine ähnliche Falle: Eine zweistellige Jahreszahl ist eine Vermutung über das Jahrhundert. Beide Sprachen lesen `"13.01.45"` als 13. Januar 2045, was für ein Geburtsdatum falsch ist, und sie ziehen die Grenze zwischen den Jahrhunderten nicht beim selben Jahr: `"13.01.70"` ist in R 1970 und in Python 2070. Erfassen Sie vierstellige Jahreszahlen.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-parse_number("31,2")                                        # das Komma wird als Tausendertrennzeichen gelesen
-parse_number("31,2", locale = locale(decimal_mark = ","))   # das Komma ist das Dezimalzeichen
-dmy("13.01.45")                                             # das Jahrhundert ist geraten
+parse_number("31,2")                                     # das Komma wird als Tausendertrennzeichen gelesen
+parse_number(str_replace(c("31,2", "31.2"), ",", "."))   # das Komma durch einen Punkt ersetzt
+dmy(c("13.01.45", "13.01.70"))                           # das Jahrhundert ist geraten
 ```
 
 ## Python
 
 ```{python}
-comma = pd.Series(["31,2"])
-print(number(comma).iloc[0])                         # die Hilfsfunktion hört beim Komma auf
-print(number(comma.str.replace(",", ".")).iloc[0])   # das Komma durch einen Punkt ersetzt
-print(parse_messy_date(pd.Series(["13.01.45"])).iloc[0])   # das Jahrhundert ist geraten
+print(number(pd.Series(["31,2"])).iloc[0])         # die Hilfsfunktion hört beim Komma auf
+both = pd.Series(["31,2", "31.2"])
+print(number(both.str.replace(",", ".")).tolist())   # das Komma durch einen Punkt ersetzt
+two_digit = parse_messy_date(pd.Series(["13.01.45", "13.01.70"]))
+print(two_digit.dt.strftime("%Y-%m-%d").tolist())    # das Jahrhundert ist geraten
 ```
 :::
 :::
 
 ```{python}
 #| include: false
-chk = {"decimal": float(number(comma.str.replace(",", ".")).iloc[0]),
-       "year": float(parse_messy_date(pd.Series(["13.01.45"])).iloc[0].year)}
+chk = {"comma": float(number(both.str.replace(",", ".")).iloc[0]),
+       "point": float(number(both.str.replace(",", ".")).iloc[1]),
+       "year_45": float(two_digit.iloc[0].year)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(decimal = parse_number("31,2", locale = locale(decimal_mark = ",")),
-                 year = year(dmy("13.01.45"))), reticulate::py$chk)
+# "13.01.70" differs by design (1970 in R, 2070 in pandas); the Prose guard pins both.
+check_agree(list(comma = parse_number(str_replace("31,2", ",", ".")),
+                 point = parse_number(str_replace("31.2", ",", ".")),
+                 year_45 = year(dmy("13.01.45"))), reticulate::py$chk)
 ```
 
 ## Einen Umfrage-Export umformen {#reshaping}
@@ -1030,11 +1034,12 @@ stopifnot(
   as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12,
   # numbers and claims added with the content-review fixes (B22, and step 5's list)
   is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
-  parse_number("31,2") == 312, parse_number("31,2", locale = locale(decimal_mark = ",")) == 31.2,
-  dmy("13.01.45") == as.Date("2045-01-13"),
+  parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
+  parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
   reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
-  reticulate::py_eval("float(number(pd.Series(['31,2']).str.replace(',', '.')).iloc[0])") == 31.2,
-  reticulate::py_eval("str(parse_messy_date(pd.Series(['13.01.45'])).iloc[0].date())") == "2045-01-13",
+  reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),
+  reticulate::py_eval("two_digit.dt.strftime('%Y-%m-%d').tolist()") == c("2045-01-13", "2070-01-13"),
   reticulate::py_eval("float(asa_recode(['0']).iloc[0])") == 0
 )
 ```

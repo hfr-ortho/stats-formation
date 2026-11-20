@@ -20,7 +20,7 @@ The [decision table](../choose-a-test.qmd) asks two questions: what's your **goa
 
 ## Why the shape of your data matters {#why}
 
-The methods in the first column work with **[means](../glossary.qmd#mean){.term}** and [SDs](../glossary.qmd#standard-deviation){.term} of the values themselves: [t tests](../glossary.qmd#t-test){.term} and [ANOVA](../glossary.qmd#anova){.term} compare means, and [Pearson correlation](../glossary.qmd#pearson-correlation){.term} measures a straight-line association. They assume roughly [normal](../glossary.qmd#normal-distribution){.term} data (for t tests and ANOVA, within each group). The tests in the second column ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) work on **[ranks](../glossary.qmd#rank){.term}**. They don't assume a normal distribution.
+The methods in the first column work with **[means](../glossary.qmd#mean){.term}** and [SDs](../glossary.qmd#standard-deviation){.term} of the values themselves: [t tests](../glossary.qmd#t-test){.term} and [ANOVA](../glossary.qmd#anova){.term} compare means, and [Pearson correlation](../glossary.qmd#pearson-correlation){.term} measures a straight-line association. They assume roughly [normal](../glossary.qmd#normal-distribution){.term} data (for t tests and ANOVA, within each group; for a paired t test, the differences). The tests in the second column ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) work on **[ranks](../glossary.qmd#rank){.term}**. They don't assume a normal distribution.
 
 ::: {.callout-note}
 ## 💡 In plain language
@@ -492,6 +492,7 @@ Here's all three for BMI in TKA vs THA, using the [unpaired (Welch's) t test](..
 ```{r}
 bmi_test <- t.test(bmi ~ procedure, data = cohort)   # Welch's t test (R's default)
 bmi_test
+tapply(cohort$bmi, cohort$procedure, sd)                             # the SD of BMI in each group
 
 difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # TKA minus THA
 ci <- -rev(bmi_test$conf.int)                                        # flip to TKA minus THA
@@ -507,6 +508,7 @@ tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
 
 bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # Welch's t test
 ci = bmi_test.confidence_interval()
+print(cohort.groupby("procedure")["bmi"].std())          # the SD of BMI in each group
 
 print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
                  "difference": tka.mean() - tha.mean(),
@@ -517,6 +519,7 @@ print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
 ```{python}
 #| include: false
 chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
+       "sd_tka": float(tka.std()), "sd_tha": float(tha.std()),
        "difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
        "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
 ```
@@ -524,13 +527,14 @@ chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
 ```{r}
 #| include: false
 check_agree(list(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+                 sd_tka = sd(cohort$bmi[cohort$procedure == "TKA"]), sd_tha = sd(cohort$bmi[cohort$procedure == "THA"]),
                  difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
             reticulate::py$chk)
 ```
 
-Reading the output: mean BMI is 31.2 in TKA and 29.5 in THA patients (`mean_tka` and `mean_tha`). The difference is 1.786, so 1.8 to one decimal (it comes from the unrounded means, which is why it isn't 31.2 − 29.5 = 1.7). The CI runs from 0.924 to 2.647, so 0.9 to 2.6 (R's small table shows 2.65 because it prints three significant figures). R prints p as `5.341e-05`, which is 0.00005 and is written as p < 0.001. R's first printout also shows t and df, the [test statistic](../glossary.qmd#test-statistic){.term} and its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) explains them, and here we need only the difference, its CI and p.
+Reading the output: mean BMI is 31.2 in TKA and 29.5 in THA patients (`mean_tka` and `mean_tha`), with SDs of 5.4 and 5.3 (the line that prints the SD of each group). The difference is 1.786, so 1.8 to one decimal (it comes from the unrounded means, which is why it isn't 31.2 − 29.5 = 1.7). The CI runs from 0.924 to 2.647, so 0.9 to 2.6 (R's small table shows 2.65 because it prints three significant figures). R prints p as `5.341e-05`, which is 0.00005 and is written as p < 0.001. R's first printout also shows t and df, the [test statistic](../glossary.qmd#test-statistic){.term} and its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) explains them, and here we need only the two means and SDs, the difference, its CI and p.
 
-> Mean BMI was 31.2 kg/m² in TKA patients and 29.5 kg/m² in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+> Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Is a difference of 1.8 kg/m² *clinically* important? The p-value can't tell you. Ask whether a difference anywhere in the CI (0.9 to 2.6 kg/m²) would change risk or management, for example complication rates. That's clinical judgment, not statistics. **Statistically significant** means only that data like these would be unusual if there were really no difference. It doesn't mean the difference is large or important.
 
@@ -587,7 +591,8 @@ stopifnot(
   skewness(cohort$los_days) > 1,
   # numbers added with the content-review fixes (B5)
   round(bmi_test$estimate[["mean in group TKA"]], 1) == 31.2, round(bmi_test$estimate[["mean in group THA"]], 1) == 29.5,
-  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8
+  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8,
+  round(sd(cohort$bmi[cohort$procedure == "TKA"]), 1) == 5.4, round(sd(cohort$bmi[cohort$procedure == "THA"]), 1) == 5.3
 )
 ```
 

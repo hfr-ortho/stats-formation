@@ -20,7 +20,7 @@ Die [Entscheidungstabelle](../choose-a-test.qmd) stellt zwei Fragen: Was ist Ihr
 
 ## Warum die Form Ihrer Daten wichtig ist {#why}
 
-Die Methoden der ersten Spalte arbeiten mit **[Mittelwerten](../glossary.qmd#mean){.term}** und [Standardabweichungen](../glossary.qmd#standard-deviation){.term} der Werte selbst: [t-Tests](../glossary.qmd#t-test){.term} und [ANOVA](../glossary.qmd#anova){.term} vergleichen Mittelwerte, und die [Pearson-Korrelation](../glossary.qmd#pearson-correlation){.term} misst einen geradlinigen (linearen) Zusammenhang. Sie setzen ungefähr [normalverteilte](../glossary.qmd#normal-distribution){.term} Daten voraus (bei t-Tests und ANOVA innerhalb jeder Gruppe). Die Tests der zweiten Spalte ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) arbeiten mit **[Rängen](../glossary.qmd#rank){.term}**. Sie setzen keine Normalverteilung voraus.
+Die Methoden der ersten Spalte arbeiten mit **[Mittelwerten](../glossary.qmd#mean){.term}** und [Standardabweichungen](../glossary.qmd#standard-deviation){.term} der Werte selbst: [t-Tests](../glossary.qmd#t-test){.term} und [ANOVA](../glossary.qmd#anova){.term} vergleichen Mittelwerte, und die [Pearson-Korrelation](../glossary.qmd#pearson-correlation){.term} misst einen geradlinigen (linearen) Zusammenhang. Sie setzen ungefähr [normalverteilte](../glossary.qmd#normal-distribution){.term} Daten voraus (bei t-Tests und ANOVA innerhalb jeder Gruppe; beim t-Test für gepaarte Stichproben die Differenzen). Die Tests der zweiten Spalte ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) arbeiten mit **[Rängen](../glossary.qmd#rank){.term}**. Sie setzen keine Normalverteilung voraus.
 
 ::: {.callout-note}
 ## 💡 Einfach erklärt
@@ -492,6 +492,7 @@ Hier alle drei für den BMI bei Knie-TP gegenüber Hüft-TP, mit dem [t-Test fü
 ```{r}
 bmi_test <- t.test(bmi ~ procedure, data = cohort)   # t-Test nach Welch (Standard in R)
 bmi_test
+tapply(cohort$bmi, cohort$procedure, sd)                             # die Standardabweichung des BMI in jeder Gruppe
 
 difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # Knie-TP minus Hüft-TP
 ci <- -rev(bmi_test$conf.int)                                        # umdrehen zu Knie-TP minus Hüft-TP
@@ -507,6 +508,7 @@ tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
 
 bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # t-Test nach Welch
 ci = bmi_test.confidence_interval()
+print(cohort.groupby("procedure")["bmi"].std())          # die Standardabweichung des BMI in jeder Gruppe
 
 print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
                  "difference": tka.mean() - tha.mean(),
@@ -517,6 +519,7 @@ print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
 ```{python}
 #| include: false
 chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
+       "sd_tka": float(tka.std()), "sd_tha": float(tha.std()),
        "difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
        "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
 ```
@@ -524,13 +527,14 @@ chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
 ```{r}
 #| include: false
 check_agree(list(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+                 sd_tka = sd(cohort$bmi[cohort$procedure == "TKA"]), sd_tha = sd(cohort$bmi[cohort$procedure == "THA"]),
                  difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
             reticulate::py$chk)
 ```
 
-So lesen Sie die Ausgabe: Der mittlere BMI beträgt 31.2 bei Knie-TP und 29.5 bei Hüft-TP (`mean_tka` und `mean_tha`). Die Differenz beträgt 1.786, auf eine Dezimalstelle also 1.8 (sie wird aus den ungerundeten Mittelwerten berechnet; deshalb ist sie nicht 31.2 − 29.5 = 1.7). Das KI reicht von 0.924 bis 2.647, also von 0.9 bis 2.6 (die kleine Tabelle von R zeigt 2.65, weil sie drei signifikante Stellen ausgibt). R gibt p als `5.341e-05` aus; das ist 0.00005 und wird als p < 0.001 geschrieben. Die erste Ausgabe von R zeigt ausserdem t und df, die [Teststatistik](../glossary.qmd#test-statistic){.term} und ihre [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}; [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) erklärt sie, und hier brauchen wir nur die Differenz, ihr KI und p.
+So lesen Sie die Ausgabe: Der mittlere BMI beträgt 31.2 bei Knie-TP und 29.5 bei Hüft-TP (`mean_tka` und `mean_tha`), mit Standardabweichungen von 5.4 und 5.3 (die Zeile, welche die Standardabweichung jeder Gruppe ausgibt). Die Differenz beträgt 1.786, auf eine Dezimalstelle also 1.8 (sie wird aus den ungerundeten Mittelwerten berechnet; deshalb ist sie nicht 31.2 − 29.5 = 1.7). Das KI reicht von 0.924 bis 2.647, also von 0.9 bis 2.6 (die kleine Tabelle von R zeigt 2.65, weil sie drei signifikante Stellen ausgibt). R gibt p als `5.341e-05` aus; das ist 0.00005 und wird als p < 0.001 geschrieben. Die erste Ausgabe von R zeigt ausserdem t und df, die [Teststatistik](../glossary.qmd#test-statistic){.term} und ihre [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term}; [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) erklärt sie, und hier brauchen wir nur die beiden Mittelwerte und Standardabweichungen, die Differenz, ihr KI und p.
 
-> Mean BMI was 31.2 kg/m² in TKA patients and 29.5 kg/m² in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+> Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Ist ein Unterschied von 1.8 kg/m² *klinisch* bedeutsam? Der p-Wert kann das nicht sagen. Fragen Sie, ob ein Unterschied irgendwo im KI (0.9 bis 2.6 kg/m²) das Risiko oder das Vorgehen ändern würde, zum Beispiel die Komplikationsraten. Das ist klinische Beurteilung, nicht Statistik. **Statistisch signifikant** heisst nur, dass solche Daten ungewöhnlich wären, wenn es wirklich keinen Unterschied gäbe. Es heisst nicht, dass der Unterschied gross oder wichtig ist.
 
@@ -587,7 +591,8 @@ stopifnot(
   skewness(cohort$los_days) > 1,
   # numbers added with the content-review fixes (B5)
   round(bmi_test$estimate[["mean in group TKA"]], 1) == 31.2, round(bmi_test$estimate[["mean in group THA"]], 1) == 29.5,
-  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8
+  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8,
+  round(sd(cohort$bmi[cohort$procedure == "TKA"]), 1) == 5.4, round(sd(cohort$bmi[cohort$procedure == "THA"]), 1) == 5.3
 )
 ```
 

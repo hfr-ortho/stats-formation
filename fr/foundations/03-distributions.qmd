@@ -20,7 +20,7 @@ Le [tableau de décision](../choose-a-test.qmd) pose deux questions : quel est 
 
 ## Pourquoi la forme de vos données compte {#why}
 
-Les méthodes de la première colonne travaillent avec les **[moyennes](../glossary.qmd#mean){.term}** et les [écarts-types](../glossary.qmd#standard-deviation){.term} des valeurs elles-mêmes : les [tests t](../glossary.qmd#t-test){.term} et l'[ANOVA](../glossary.qmd#anova){.term} comparent des moyennes, et la [corrélation de Pearson](../glossary.qmd#pearson-correlation){.term} mesure une association en ligne droite (linéaire). Elles supposent des données à peu près [normales](../glossary.qmd#normal-distribution){.term} (pour les tests t et l'ANOVA, dans chaque groupe). Les tests de la deuxième colonne ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) travaillent sur les **[rangs](../glossary.qmd#rank){.term}**. Ils ne supposent pas de distribution normale.
+Les méthodes de la première colonne travaillent avec les **[moyennes](../glossary.qmd#mean){.term}** et les [écarts-types](../glossary.qmd#standard-deviation){.term} des valeurs elles-mêmes : les [tests t](../glossary.qmd#t-test){.term} et l'[ANOVA](../glossary.qmd#anova){.term} comparent des moyennes, et la [corrélation de Pearson](../glossary.qmd#pearson-correlation){.term} mesure une association en ligne droite (linéaire). Elles supposent des données à peu près [normales](../glossary.qmd#normal-distribution){.term} (pour les tests t et l'ANOVA, dans chaque groupe ; pour le test t pour échantillons appariés, les différences). Les tests de la deuxième colonne ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) travaillent sur les **[rangs](../glossary.qmd#rank){.term}**. Ils ne supposent pas de distribution normale.
 
 ::: {.callout-note}
 ## 💡 En clair
@@ -492,6 +492,7 @@ Voici les trois pour l'IMC des patients PTG et PTH, avec le [test t pour échant
 ```{r}
 bmi_test <- t.test(bmi ~ procedure, data = cohort)   # test t de Welch (valeur par défaut de R)
 bmi_test
+tapply(cohort$bmi, cohort$procedure, sd)                             # l'écart-type de l'IMC dans chaque groupe
 
 difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # PTG moins PTH
 ci <- -rev(bmi_test$conf.int)                                        # inverser pour obtenir PTG moins PTH
@@ -507,6 +508,7 @@ tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
 
 bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # test t de Welch
 ci = bmi_test.confidence_interval()
+print(cohort.groupby("procedure")["bmi"].std())          # l'écart-type de l'IMC dans chaque groupe
 
 print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
                  "difference": tka.mean() - tha.mean(),
@@ -517,6 +519,7 @@ print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
 ```{python}
 #| include: false
 chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
+       "sd_tka": float(tka.std()), "sd_tha": float(tha.std()),
        "difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
        "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
 ```
@@ -524,13 +527,14 @@ chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
 ```{r}
 #| include: false
 check_agree(list(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+                 sd_tka = sd(cohort$bmi[cohort$procedure == "TKA"]), sd_tha = sd(cohort$bmi[cohort$procedure == "THA"]),
                  difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
             reticulate::py$chk)
 ```
 
-Lecture de la sortie : l'IMC moyen est de 31.2 pour les PTG et de 29.5 pour les PTH (`mean_tka` et `mean_tha`). La différence est de 1.786, donc 1.8 à une décimale (elle vient des moyennes non arrondies, c'est pourquoi elle ne vaut pas 31.2 − 29.5 = 1.7). L'IC va de 0.924 à 2.647, donc de 0.9 à 2.6 (le petit tableau de R affiche 2.65 parce qu'il donne trois chiffres significatifs). R affiche p comme `5.341e-05`, soit 0.00005, que l'on écrit p < 0.001. La première sortie de R montre aussi t et df, la [statistique de test](../glossary.qmd#test-statistic){.term} et ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) les explique, et ici nous n'avons besoin que de la différence, de son IC et de p.
+Lecture de la sortie : l'IMC moyen est de 31.2 pour les PTG et de 29.5 pour les PTH (`mean_tka` et `mean_tha`), avec des écarts-types de 5.4 et 5.3 (la ligne qui affiche l'écart-type de chaque groupe). La différence est de 1.786, donc 1.8 à une décimale (elle vient des moyennes non arrondies, c'est pourquoi elle ne vaut pas 31.2 − 29.5 = 1.7). L'IC va de 0.924 à 2.647, donc de 0.9 à 2.6 (le petit tableau de R affiche 2.65 parce qu'il donne trois chiffres significatifs). R affiche p comme `5.341e-05`, soit 0.00005, que l'on écrit p < 0.001. La première sortie de R montre aussi t et df, la [statistique de test](../glossary.qmd#test-statistic){.term} et ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) les explique, et ici nous n'avons besoin que des deux moyennes et écarts-types, de la différence, de son IC et de p.
 
-> Mean BMI was 31.2 kg/m² in TKA patients and 29.5 kg/m² in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+> Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Une différence de 1.8 kg/m² est-elle *cliniquement* importante ? La valeur p ne peut pas vous le dire. Demandez-vous si une différence située n'importe où dans l'IC (0.9 à 2.6 kg/m²) changerait le risque ou la prise en charge, par exemple le taux de complications. C'est un jugement clinique, pas de la statistique. **Statistiquement significatif** veut dire seulement que des données comme celles-ci seraient inhabituelles s'il n'y avait vraiment aucune différence. Cela ne veut pas dire que la différence est grande ou importante.
 
@@ -587,7 +591,8 @@ stopifnot(
   skewness(cohort$los_days) > 1,
   # numbers added with the content-review fixes (B5)
   round(bmi_test$estimate[["mean in group TKA"]], 1) == 31.2, round(bmi_test$estimate[["mean in group THA"]], 1) == 29.5,
-  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8
+  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8,
+  round(sd(cohort$bmi[cohort$procedure == "TKA"]), 1) == 5.4, round(sd(cohort$bmi[cohort$procedure == "THA"]), 1) == 5.3
 )
 ```
 

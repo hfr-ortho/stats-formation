@@ -25,7 +25,7 @@ Table 1 *describes* your patients. It doesn't answer your research question. Its
 
 ## Load the data and pick the variables {#setup}
 
-We'll describe the practice [cohort](../glossary.qmd#cohort){.term}: 600 primary hip and knee replacements (THA and TKA). Table 1 usually holds the characteristics measured *before* surgery. Length of stay is an outcome, measured after surgery: it is in this page's tables only as the example of a skewed variable, and the sections on balance leave it out.
+We'll describe the practice [cohort](../glossary.qmd#cohort){.term}: 600 primary hip and knee replacements (THA and TKA). Table 1 usually holds the characteristics measured *before* surgery. Length of stay is an outcome, measured after surgery: it is in this page's tables only as the example of a skewed variable, and where the tables compare groups, its row is not read as a sign of how alike the groups were before surgery.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -282,7 +282,7 @@ p = 0.002 for the 520 patients, against p < 0.001 for the 600 procedures. Still 
 
 The second problem is that a p-value mixes up *how big* a difference is with *how many patients* you have. With 6,000 patients a trivial difference gets p < 0.001. With 30, a large one doesn't.
 
-The **standardized mean difference (SMD)** measures only the size of the imbalance, in [standard-deviation](../glossary.qmd#standard-deviation){.term} units, whatever the [sample size](../glossary.qmd#sample-size){.term}. For a number such as age, it is the difference between the two groups' means divided by their pooled SD, the square root of the average of the two groups' [variances](../glossary.qmd#variance){.term}. For a yes/no variable such as sex, the means are the two groups' proportions (here, the share of women), and the variance of a proportion p is p(1 − p); for sex this gives the 0.31 in the table below. For a variable with more than two categories, such as ASA class or smoking status, both packages combine the differences in all the categories into one distance between the groups, which is always positive.
+The **standardized mean difference (SMD)** measures only the size of the imbalance, in [standard-deviation](../glossary.qmd#standard-deviation){.term} units, whatever the [sample size](../glossary.qmd#sample-size){.term}. For a number such as age, it is the difference between the two groups' means divided by their pooled SD, the square root of the average of the two groups' [variances](../glossary.qmd#variance){.term}. For a variable with two categories, such as sex, the means are the two groups' proportions (here, the share of women), and the variance of a proportion p is p(1 − p). For sex, with 177 of the 270 THA procedures and 166 of the 330 TKA procedures in women (the counts in the tables above), this gives the 0.31 in the table below; the rounded 66% and 50% would give 0.33. For a variable with more than two categories, such as ASA class or smoking status, both packages combine the differences in all the categories into one distance between the groups, which is always positive.
 
 A common rule of thumb: |SMD| below 0.1 is negligible. Treat it as a rough guide, not a line between "balanced" and "unbalanced": with a few hundred patients, chance alone can produce SMDs above it, even when the groups were formed at random. [Exercise 1](#exercises) shows this.
 
@@ -334,7 +334,7 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-Ignoring the signs for now (the box below explains them), sex (SMD 0.31) and BMI (0.33) are the clear imbalances. Age (0.10), ASA class (0.12) and smoking (0.15) are just over 0.1: worth a sentence, not alarm. Diabetes is negligible. Length of stay is left out: it is an outcome, so its SMD says nothing about how alike the groups were before surgery. R's table also gives a 95% [CI](../glossary.qmd#confidence-interval){.term} for each SMD; tableone doesn't compute one.
+Ignoring the signs for now (the box below explains them), sex (SMD 0.31) and BMI (0.33) are the clear imbalances. Age (0.10), ASA class (0.12) and smoking (0.15) are just over 0.1: worth a sentence, not alarm. Diabetes is negligible. The length-of-stay row is not read here: length of stay is an outcome, so its SMD says nothing about how alike the groups were before surgery. R's table also gives a 95% [CI](../glossary.qmd#confidence-interval){.term} for each SMD; tableone doesn't compute one.
 
 The two packages agree to three decimals. To see where they part, print the age SMD with more digits:
 
@@ -367,13 +367,13 @@ check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), re
 ::: {.callout-tip}
 ## 🔀 R vs Python: SMDs differ slightly
 - **Sign.** For the [variables](../glossary.qmd#variable){.term} entered as numbers (age, BMI, length of stay), gtsummary subtracts TKA from THA and tableone subtracts THA from TKA, so the signs are opposite. For [categories](../glossary.qmd#categorical-variable){.term} (sex, ASA class, smoking) the SMD has no direction and is positive in both. Report the absolute value, or say which group was subtracted from which.
-- **Fourth decimal.** For [continuous variables](../glossary.qmd#continuous-variable){.term}, R's `smd` package divides the [variances](../glossary.qmd#variance){.term} by *n*, while tableone divides by *n − 1* (the usual textbook formula). Age comes out as 0.1048 in R and 0.1046 in Python (the two numbers printed just above the box). Categorical SMDs match exactly.
+- **Fourth decimal.** For [continuous variables](../glossary.qmd#continuous-variable){.term}, R's `smd` package divides the variances by *n*, while tableone divides by *n − 1* (the usual textbook formula). Age comes out as 0.1048 in R and 0.1046 in Python (the two numbers printed just above the box). Categorical SMDs match exactly.
 :::
 
 **Which should you report?**
 
-- **Matched or weighted cohorts** ([propensity-score](../glossary.qmd#propensity-score){.term} studies, such as a [matched](../glossary.qmd#matched){.term} study of patients over 80): SMDs only. The matching made the groups alike on purpose, so a test of "did they differ?" makes no sense.
 - **Randomized trials**: no p-values for baseline differences. In a randomized trial any baseline difference is due to chance by construction, so a p-value for it answers no question; the CONSORT guideline for reporting trials advises against such tests.
+- **Matched or weighted cohorts** ([propensity-score](../glossary.qmd#propensity-score){.term} studies, such as a [matched](../glossary.qmd#matched){.term} study of patients over 80): SMDs only. The matching made the groups alike on purpose, so a test of "did they differ?" makes no sense.
 - **Other observational comparisons**: many journals still expect p-values. Give SMDs alongside, and discuss differences by their size, not their p-value.
 
 ## Missing data {#missing}
@@ -503,6 +503,8 @@ stopifnot(
   round(abs(smd_r$estimate[smd_r$variable == "sex"]), 2) == 0.31,
   round(abs(smd_r$estimate[smd_r$variable == "bmi"]), 2) == 0.33,
   # numbers and claims added with the content-review fixes (B23, C11, C14)
+  sum(cohort$sex == "Female" & cohort$procedure == "THA") == 177, sum(cohort$sex == "Female" & cohort$procedure == "TKA") == 166,
+  round((0.66 - 0.50) / sqrt((0.66 * 0.34 + 0.50 * 0.50) / 2), 2) == 0.33,
   nrow(patients) == 520, round(sex_test$p.value, 3) == 0.002, sex_test$p.value > 0.001,
   n_distinct(cohort$patient_id) == nrow(distinct(cohort, patient_id, sex, procedure)),   # sex, procedure: one per patient
   local({ p1 <- mean(cohort$sex[cohort$procedure == "THA"] == "Female"); p2 <- mean(cohort$sex[cohort$procedure == "TKA"] == "Female")
@@ -559,9 +561,9 @@ print(by_site.smd_table)
 ```
 :::
 
-Smoking status (0.23) differs most between sites. In R's table its 95% [CI](../glossary.qmd#confidence-interval){.term} (0.07 to 0.39) excludes zero; tableone gives no CI. ASA class is just over 0.1 as well (R prints 0.10, Python 0.103498). Yet site was assigned completely at random in this dataset, independent of everything else. With six baseline characteristics, a chance imbalance or two above 0.1 is to be expected: judge each SMD by its size and by whether it could plausibly matter, not by whether it is "[significant](../glossary.qmd#statistical-significance){.term}".
+Smoking status (0.23) is the baseline characteristic that differs most between sites. In R's table its 95% [CI](../glossary.qmd#confidence-interval){.term} (0.07 to 0.39) excludes zero; tableone gives no CI. ASA class is just over 0.1 as well (R prints 0.10, Python 0.103498). Yet site was assigned completely at random in this dataset, independent of everything else. With six baseline characteristics, a chance imbalance or two above 0.1 is to be expected: judge each SMD by its size and by whether it could plausibly matter, not by whether it is "[significant](../glossary.qmd#statistical-significance){.term}".
 
-Length of stay also has a large SMD (0.22; Python prints −0.22, see the box on signs), but it is an outcome, measured after surgery, so it plays no part in judging how alike the sites' patients were before surgery. (The program that made the data gives site no effect on length of stay, so this difference is chance too.)
+Length of stay also has an SMD above 0.1 (0.22; Python prints −0.22, see the box on signs), but it is an outcome, measured after surgery, so it plays no part in judging how alike the sites' patients were before surgery. (The program that made the data gives site no effect on length of stay, so this difference is chance too.)
 :::
 
 **2.** A fellow is comparing patients aged 80 or older with younger patients, [matched](../glossary.qmd#matched){.term} on sex, BMI and ASA class. Should the [baseline](../glossary.qmd#baseline){.term} table show [p-values](../glossary.qmd#p-value){.term} or SMDs? Why?
