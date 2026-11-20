@@ -152,6 +152,77 @@ def test_the_prose_guard_reads_the_missing_counts_from_the_data():
     assert "20 + 47 == 67" not in guard and "is.na(study$prom_1yr)" in guard
 
 
+# ---- content review of 20.11.2026: B1, B3, B4, B5 (task 3.8) -------------------------------
+
+def test_the_word_version_states_the_missing_data_handling_and_the_counts(site):
+    """B1: the primary analysis needs both scores, so every early failure is out of it; say so and count."""
+    text = docx_text(WORD)
+    assert "in patients with both scores (complete-case analysis)" in text
+    assert "Patients who were revised or died before 1 year had no 1-year score and were therefore not in this analysis." in text
+    assert ("Of the other 27, 5 had no pre-op score (all after TKA) and 22 had no 1-year score; before 1 year, "
+            "4 of the 22 had been revised, 1 had died and 2 had reached the end of registry follow-up, "
+            "and 15 were still followed.") in text
+
+
+def test_the_word_version_states_what_the_code_shows_about_design_and_windows(site):
+    """B3: only what the code and the data show: design, one joint per patient, windows, prespecification."""
+    text = docx_text(WORD)
+    assert "In this cohort study, we studied 120 primary THAs" in text
+    assert "in 120 patients (one joint per patient)" in text
+    assert "within 30 days before surgery and the 1-year score 300 to 425 days after surgery" in text
+    assert "The primary outcome and the primary analysis were specified before the outcome data were examined." in text
+    assert "censoring revisions and deaths" in text   # what the reverse Kaplan-Meier code does
+
+
+def test_the_word_version_gives_the_sex_adjusted_difference(site):
+    """B4: the adjusted estimate beside the crude one, in the same direction (THA minus TKA)."""
+    text = docx_text(WORD)
+    assert "In a sensitivity analysis, the difference in the change in score was adjusted for sex by linear regression." in text
+    assert "Adjusted for sex, the difference (THA minus TKA) was 9.3 points (95% CI 3.5 to 15.0; p = 0.002)." in text
+
+
+def test_the_word_version_cites_r_and_the_packages_behind_the_numbers(site):
+    """B5: the one program that produced the quoted numbers, with its version and main packages."""
+    text = docx_text(WORD)
+    assert re.search(r"Analyses used R \d+\.\d+\.\d+ with the packages gtsummary [\d.-]+ and smd [\d.-]+ \(Table 1\), "
+                     r"effectsize [\d.-]+ \(Hedges' g\), survival [\d.-]+ \(follow-up and cumulative incidence\) "
+                     r"and ggsurvfit [\d.-]+ \(Figure 1\)\.", text)
+    assert "Python 3.13" not in text and "R 4.6 and Python" not in text
+
+
+def test_the_word_version_leaves_out_the_teaching_box(site):
+    text = docx_text(WORD)
+    for teaching in ["What a real Methods also needs", "STROBE", "CONSORT", "BASEC", "[", "sensitivity analysis checks"]:
+        assert teaching not in text, teaching
+
+
+def test_the_missing_scores_are_cross_tabulated_against_the_first_year(site):
+    found = section(REPORT, "missing-scores")
+    code, text = code_of(found), text_of(found)
+    assert "before_1_year" in code and "addmargins(" in code and "pd.crosstab(" in code
+    assert "4 were revised (at 0.19, 0.26, 0.45 and 0.81 years)" in text
+    assert "patients whose joint was still in place, and who were still followed, at 1 year" in text
+    assert "are what the abstractor couldn't find" not in text_of(section(REPORT, "integrity"))
+
+
+def test_the_sensitivity_analysis_adjusts_for_sex_and_points_to_exercise_2(site):
+    found = section(REPORT, "sensitivity")
+    code, text = code_of(found), text_of(found)
+    assert "lm(change ~ procedure + sex, data = analysed)" in code and 'smf.ols("change ~ procedure + sex"' in code
+    assert "−9.26 points (95% CI −14.99 to −3.54" in text and "exercise 2" in text
+
+
+def test_the_manuscript_points_to_the_reporting_guidelines(site):
+    found = section(REPORT, "manuscript")
+    hrefs = [a["href"] for a in found.select("a[href]")]
+    assert "https://www.strobe-statement.org/checklists/" in hrefs and "https://www.consort-spirit.org/" in hrefs
+    assert any(target(REPORT, h).startswith("getting-started/real-data.html#") for h in hrefs if not h.startswith("http"))
+    text = text_of(found)
+    assert "What a real Methods also needs" in text and "CONSORT 2025" in text
+    assert "CER-VD (BASEC number [" in text and "Not STROBE items" in text
+    assert "the baseline differences between the groups" in text   # B4: the Discussion list
+
+
 def test_the_frozen_word_version_matches_the_current_data_and_ships_flextables_files():
     current = hashlib.md5((ROOT / "data" / "CHECKSUMS.md5").read_bytes()).hexdigest()
     frozen = FREEZE / "report" / "18-example-report" / "execute-results" / "docx.json"
