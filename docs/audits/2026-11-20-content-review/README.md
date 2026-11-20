@@ -26,7 +26,7 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | A3 | 1.3 | done | #48 |
 | A4 | 1.3 | done | #48 |
 | A5 | 1.3 | done | #48 |
-| A6 | 1.4 | done | pending |
+| A6 | 1.4 | done | #50 |
 | A7 | 1.1 | done | #46 |
 | A8 | 1.1 | done | #46 |
 | A9 | 1.1 | done | #46 |
@@ -38,10 +38,10 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | A15 | 1.1 | done | #46 |
 | U1 | 1.1 | done | #46 |
 | U2 | 2.1 | done | #49 |
-| U3 | 2.2 | open |  |
-| U4 | 2.2 | open |  |
-| U5 | 2.2 | open |  |
-| U6 | 2.2 | open |  |
+| U3 | 2.2 | done | pending |
+| U4 | 2.2 | done | pending |
+| U5 | 2.2 | done | pending |
+| U6 | 2.2 | done | pending |
 | U7 | 4.1 to 4.6 | open |  |
 | B1 | 3.8 | open |  |
 | B2 | 3.5 | open |  |
