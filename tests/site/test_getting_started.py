@@ -106,7 +106,9 @@ def test_setup_page_offers_the_zip_without_git(site):
 
 def test_every_python_block_on_the_setup_page_imports_what_it_uses(site):
     """Readers copy one block at a time, so a block that uses pd imports pandas itself."""
-    for block in load("getting-started/setup.html").select("div.sourceCode pre.python, pre.sourceCode.python"):
+    blocks = load("getting-started/setup.html").select("div.sourceCode pre.python, pre.sourceCode.python")
+    assert len(blocks) >= 2, "the selector no longer finds the page's Python blocks"
+    for block in blocks:
         code = block.get_text()
         if re.search(r"\bpd\.", code):
             assert "import pandas as pd" in code, code

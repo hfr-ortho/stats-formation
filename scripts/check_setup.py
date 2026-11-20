@@ -28,7 +28,7 @@ for name in ["pandas", "numpy", "matplotlib", "scipy", "openpyxl", "tableone", "
 cohort = Path("data/cohort.csv")
 report("practice data readable (data/cohort.csv)",
        cohort.exists() and len(cohort.read_text(encoding="utf-8").splitlines()) > 1,
-       "run this from the stats-formation folder")
+       "run this from the folder that holds renv.lock (stats-formation or stats-formation-main)")
 
 print("\nAll good - you are ready." if ok else "\nFix the problems above, then run this again.")
 sys.exit(0 if ok else 1)
