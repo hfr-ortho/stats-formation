@@ -91,7 +91,7 @@ print(cohort.groupby("asa")["age"].agg(["count", "mean", "std"]))
 ```
 :::
 
-Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen alle nahe bei 9 Jahren (8.7 bis 9.3), deutlich innerhalb der Faustregel; die Streuungen sind also ähnlich genug für den klassischen Test. Das ist ein Urteil anhand der Tabelle und der Grafik, kein Test. Die Gruppen sind jedoch sehr unterschiedlich gross: 300 Eingriffe bei ASA 2, nur 18 bei ASA 4.
+Das Alter steigt mit der ASA-Klasse stetig an. Die Standardabweichungen liegen alle nahe bei 9 Jahren (8.7 bis 9.3), deutlich innerhalb der Faustregel; die Streuungen sind also ähnlich genug für den klassischen Test. Das ist ein Urteil anhand der Tabelle und der Grafik, kein Test. Die Gruppen sind jedoch sehr unterschiedlich gross: 300 Eingriffe bei ASA 2, nur 18 bei ASA 4. Die Welch-ANOVA ist besonders bei ungleich grossen Gruppen die sichere Standardwahl (siehe den Punkt oben), deshalb führt «Analyse durchführen» sie neben dem klassischen Test aus.
 
 ### Analyse durchführen
 
@@ -230,6 +230,8 @@ check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 > **Methods:** Age was compared across ASA classes with one-way analysis of variance (ANOVA), with omega squared (ω²) as the effect size.
 >
 > **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1, 63.4 years (SD 9.1) in ASA 2, 68.4 years (SD 8.8) in ASA 3 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, 95% CI 0.06 to 0.15).
+
+Wenn Sie stattdessen die Welch-ANOVA berichten, nennen Sie sie im Methodenteil, geben Sie im Resultatteil beide Freiheitsgrade an (F(3, 60.3) = 23.5, p < 0.001) und schliessen Sie den Games-Howell-Test an, die Welch-Version des Tukey-Tests, anstelle des Tukey-Tests ([Seite 15](../beyond/15-post-hoc.qmd#after-anova)).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die ANOVA sagt nicht, welche Gruppen sich unterscheiden
@@ -684,7 +686,7 @@ for implant, group in cohort.groupby("implant"):
     curves.append(km)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
-ax.set_ylim(0, 1)                                                          # die ganze Achse, 0 bis 1, wie in R
+y_range = ax.set_ylim(0, 1)                                                # die ganze Achse, 0 bis 1, wie in R
 add_at_risk_counts(*curves, ax=ax, rows_to_show=["At risk", "Events"])   # die zwei Zeilen, die R zeigt
 plt.tight_layout()
 plt.show()
@@ -872,6 +874,8 @@ satisfied_n <- sum(!is.na(cohort$satisfaction_1yr))
 ex_failure <- table(factor(acl$graft, levels = c("BPTB", "hamstring", "quadriceps")),
                     factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no")))
 ex_expected <- suppressWarnings(chisq.test(ex_failure))$expected
+r_risk <- summary(survfit(Surv(followup_years, revised) ~ implant, data = cohort), times = seq(0, 10, 2), extend = TRUE)$n.risk
+py_risk <- unlist(reticulate::py_eval("[int(f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed).loc[:t, 'at_risk'].iloc[-1]) for f in curves for t in range(0, 11, 2)]"))   # as add_at_risk_counts() counts
 set.seed(2026)
 los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, alternative = "two.sided", iterations = 2000)   # as in exercise 2's solution
 sat_quartiles <- satisfied |> group_by(surgeon) |>
@@ -944,8 +948,9 @@ stopifnot(
   signif(rts_test$p.value, 4) == 1.481e-05, round(sqrt(22.24 / (350 * 1)), 2) == 0.25,
   implant_cox$n == 600, implant_cox$nevent == 81,
   # the two risk tables: R counts follow-up >= t, lifelines > t
-  sum(cohort$followup_years >= 4 & cohort$implant == "B") == 127, sum(cohort$followup_years > 4 & cohort$implant == "B") == 126,
-  sum(cohort$followup_years >= 8 & cohort$implant == "C") == 12, sum(cohort$followup_years > 8 & cohort$implant == "C") == 11,
+  r_risk == c(246, 210, 133, 83, 39, 16, 217, 182, 127, 70, 33, 4, 137, 104, 72, 34, 12, 1),   # R's table: implants A, B, C at 0, 2, ..., 10 years
+  sum(r_risk != py_risk) == 2, r_risk[r_risk != py_risk] == c(127, 12), py_risk[r_risk != py_risk] == c(126, 11),
+  which(r_risk != py_risk) == c(9, 17),   # implant B at 4 years, implant C at 8 years
   sum(cohort$followup_years == 4 & cohort$implant == "B" & cohort$revised == 0) == 1,
   sum(cohort$followup_years == 8 & cohort$implant == "C" & cohort$revised == 0) == 1,
   sum(cohort$followup_years %in% c(0, 2, 4, 6, 8, 10)) == 2,   # no other procedure ends exactly at a time in the tables

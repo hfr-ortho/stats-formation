@@ -30,7 +30,7 @@ To keep the code short, the joint replacement examples use every case, including
 ## ⚠️ Watch out: these tests drop anyone with a missed visit
 [Repeated-measures ANOVA](../glossary.qmd#repeated-measures-anova){.term}, the [Friedman test](../glossary.qmd#friedman-test){.term} and [Cochran's Q](../glossary.qmd#cochran-q-test){.term} need every patient measured at **every** visit. A patient who missed one visit is dropped completely, along with their other measurements. Below, 574 procedures had a pre-op PROMIS physical function score, but only 328 had all four, so the analysis loses 574 − 328 = 246 procedures (246 ÷ 574 = 43%); the first section counts them. If the patients who miss visits differ from those who don't, the result is [biased](../glossary.qmd#bias){.term}. [Mixed models](../beyond/16-mixed-models.qmd#why-mixed-models) use everyone's available data, and are usually the better choice for repeated PROMs.
 
-So each section below first keeps only the procedures (or patients) measured at every visit: the `filter(all(!is.na(...)))` step in R, the `notna().all()` step in Python. That filter is also what makes the functions agree. On unfiltered data they behave differently: rstatix's `anova_test()` drops the incomplete procedures itself, with a warning, and pingouin's `rm_anova()`, `friedman()` and `cochran()` drop them without one; R's `friedman.test()` and `DescTools::CochranQTest()` stop with an error; and base R's `aov()` with `Error()` keeps them and gives a different answer (the R vs Python box under [repeated-measures ANOVA](#repeated-measures-anova) shows it).
+So each section below first keeps only the procedures (or patients) measured at every visit: the `filter(all(!is.na(...)))` step in R, the `notna().all()` step in Python. That filter is also what makes the functions agree. On unfiltered data they behave differently: rstatix's `anova_test()` drops the incomplete procedures itself, with a warning, and pingouin's `rm_anova()`, `friedman()` and `cochran()` drop them without one; R's `friedman.test()` and `DescTools::CochranQTest()`, called with a formula, as on this page, stop with an error; and base R's `aov()` with `Error()` keeps them and gives a different answer (the R vs Python box under [repeated-measures ANOVA](#repeated-measures-anova) shows it).
 :::
 
 ## Repeated-measures ANOVA {#repeated-measures-anova}
@@ -282,7 +282,7 @@ print(pf_unfiltered_anova[["ddof1", "ddof2", "F"]])
 ```
 :::
 
-rstatix and pingouin print the same F = 326.1 on 3 and 981 degrees of freedom as above: they left out the incomplete procedures themselves. `aov()` doesn't: under `Error: case_id:visit` it prints F = 467.5 on 3 and 1449 degrees of freedom. Don't use that number. `aov()` with `Error()` is valid only on complete data: its help page says it "is designed for balanced designs" and warns that missing values "will likely lose the balance". That is why this page filters first, and runs `aov()` for the effect size only on the filtered data.
+rstatix and pingouin print the same F = 326.1 on 3 and 981 degrees of freedom as above: they left out the incomplete procedures themselves. `aov()` doesn't: it analyzes all the available scores in a different way, and under `Error: case_id:visit` it prints F = 467.5 on 3 and 1449 degrees of freedom. Don't report that number as the repeated-measures ANOVA. `aov()` with `Error()` is meant for complete data: its help page says it "is designed for balanced designs, and the results can be hard to interpret without balance". The `visit` row under `Error: case_id`, which the complete data don't produce, is one sign that the data aren't balanced. That is why this page filters first, and runs `aov()` for the effect size only on the filtered data.
 :::
 
 ```{python}
@@ -963,6 +963,10 @@ stopifnot(
   round(suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id:visit"]][[1]]["visit", "F value"], 1) == 467.5,
   suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id:visit"]][[1]]["Residuals", "Df"] == 1449,
   identical(tryCatch({aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered); ""}, warning = conditionMessage), "Error() model is singular"),
+  "visit" %in% trimws(rownames(suppressWarnings(summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_unfiltered)))[["Error: case_id"]][[1]])),
+  !"visit" %in% trimws(rownames(summary(pf_model)[["Error: case_id"]][[1]])),   # the complete data have no visit row there
+  isTRUE(all.equal(unname(friedman.test(as.matrix(pivot_wider(filter(trial, arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |> select(patient_id, visit, efas), names_from = visit, values_from = efas)[, -1]))$statistic),
+                   unname(efas_test$statistic))),   # with a matrix, friedman.test() drops incomplete patients itself
   isTRUE(tryCatch({rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit); FALSE}, warning = function(w) TRUE)),
   suppressWarnings(rstatix::get_anova_table(rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit)))$F == round(pf_aov["visit", "F value"], 3),
   suppressWarnings(rstatix::get_anova_table(rstatix::anova_test(data = pf_unfiltered, dv = promis_pf, wid = case_id, within = visit)))$DFd == 981,

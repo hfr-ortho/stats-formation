@@ -318,6 +318,10 @@ def test_anova_section_makes_welch_the_safe_default(site):
     text = text_of(found)
     assert "so it is the safe default" in text and "never with a test of the variances" in text
     assert "This page's rule of thumb: the largest SD is no more than about twice the smallest" in text
+    assert "If you report Welch's ANOVA instead" in text and "F(3, 60.3) = 23.5" in text
+    assert "beyond/15-post-hoc.html#after-anova" in [target("catalog/08-three-plus-unmatched.html", a["href"])
+                                                     for a in found.select("a[href]")]
+    assert "so \"Run it\" runs it beside the classic test" in text.replace("“", '"').replace("”", '"')
     assert "If not, use Welch's ANOVA (see the R vs Python box)" not in text
     assert "because its table is what ω² below and Tukey's test on page 15 are built from" in text
     assert "oneway.test(age ~ asa, data = cohort, var.equal = FALSE)" in code_of(found)
@@ -355,9 +359,12 @@ def test_matched_page_says_the_complete_case_filter_makes_the_functions_agree(si
     page = "catalog/09-three-plus-matched.html"
     warning = next(text_of(box) for box in load(page).select("div.callout-warning") if "missed visit" in text_of(box))
     assert "That filter is also what makes the functions agree" in warning
-    assert "stop with an error" in warning
+    assert "called with a formula, as on this page, stop with an error" in warning
     box = text_of(section(page, "repeated-measures-anova").select("div.callout-tip")[-1])
-    assert "F = 467.5" in box and "valid only on complete data" in box
+    assert "F = 467.5" in box and "valid only on complete data" not in box
+    assert "Don't report that number as the repeated-measures ANOVA" in box
+    assert "is designed for balanced designs, and the results can be hard to interpret without balance" in box
+    assert "one sign that the data aren't balanced" in box
     assert "pf_unfiltered" in code_of(section(page, "repeated-measures-anova"))
 
 
@@ -365,7 +372,9 @@ def test_python_survival_plot_on_page_8_uses_the_full_axis(site):
     """Review B12: the Python Kaplan-Meier plot ran from about 0.6 where R's runs 0 to 100%; the risk tables
     differ by one where a follow-up ends exactly at the time shown."""
     found = section("catalog/08-three-plus-unmatched.html", "cox")
-    assert "ax.set_ylim(0, 1)" in code_of(found)
+    assert "y_range = ax.set_ylim(0, 1)" in code_of(found)
+    outputs = [out.get_text() for out in found.select(".cell-output")]
+    assert not [out for out in outputs if "(0.0, 1.0)" in out], "set_ylim()'s return value is printed"
     assert "R counts a procedure whose follow-up ends exactly at that time as still at risk" in text_of(found)
 
 
