@@ -132,7 +132,7 @@ check_agree(list(n = age_summary$n, mean = age_summary$mean, sd = age_summary$sd
 - **n = 600:** die Anzahl der Fälle mit erfasstem Alter.
 - **mean = 65.5:** der Mittelwert, das mittlere Alter in Jahren.
 - **sd = 9.4:** die Standardabweichung (SD) in Jahren, der typische Abstand zwischen dem Alter einer Person und dem Mittelwert. Bei einer [glockenförmigen Verteilung](../glossary.qmd#normal-distribution){.term} liegen etwa 95 % der Patientinnen und Patienten innerhalb von 2 SD um den Mittelwert, hier 65.5 ± 2 × 9.4, also ungefähr zwischen 47 und 84 Jahren.
-- **95% CI 64.8 to 66.3:** das Konfidenzintervall (KI) für den **Mittelwert**. Es zeigt, wie genau 600 Patientinnen und Patienten das mittlere Alter von [Personen wie unseren](../glossary.qmd#population){.term} bestimmen. Über die [Streuung](../glossary.qmd#spread){.term} der einzelnen Personen sagt es nichts; dafür ist die SD da.
+- **95% CI 64.8 to 66.3:** das Konfidenzintervall (KI) für den **Mittelwert**. Es zeigt, wie genau 600 Fälle das mittlere Alter von [Personen wie unseren](../glossary.qmd#population){.term} bestimmen. Über die [Streuung](../glossary.qmd#spread){.term} der einzelnen Personen sagt es nichts; dafür ist die SD da.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: Mittelwert, SD und KI von Hand
@@ -390,7 +390,7 @@ check_agree(list(middle = mean(sorted_scores[c(97, 98)]), q1 = mean(sorted_score
 
 ### Resultate formulieren
 
-> **Methods:** Continuous variables that were skewed or bounded are reported as median (interquartile range, IQR).
+> **Methods:** Continuous variables that were skewed or piled up at a floor or ceiling are reported as median (interquartile range, IQR).
 >
 > **Results:** The median Oxford Hip Score at 1 year was 42 points (IQR 39 to 46; 95% CI for the median 41 to 43).
 
@@ -615,7 +615,7 @@ cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 # followup_years: Zeit von der Operation bis zur Revision oder Zensierung; revised: 1 = revidiert, 0 = zensiert
 cohort |> select(case_id, followup_years, revised) |> head(5)
-cohort |> summarise(patients = n(), revisions = sum(revised),
+cohort |> summarise(cases = n(), revisions = sum(revised),
                     median_followup = median(followup_years))
 ```
 
@@ -635,7 +635,7 @@ print(len(cohort), cohort["revised"].sum(), cohort["followup_years"].median())
 ```
 :::
 
-Jede Zeile braucht genau zwei Angaben: **wie lange** die Person nachbeobachtet wurde und **ob** die Nachbeobachtung mit dem [Ereignis](../glossary.qmd#event){.term} (1) endete oder zensiert wurde (0). Der erste Fall wurde 6.2 Jahre ohne Revision nachbeobachtet; der fünfte wurde nach 5.8 Jahren revidiert. Die zweite Ausgabe zählt 600 Fälle und 81 Revisionen, die 81 / 600 = 0.135 von oben, bei einer [medianen](../glossary.qmd#median){.term} Nachbeobachtung von 4.365 Jahren (R zeigt 4.36). Python gibt die drei Zahlen ohne Beschriftung aus.
+Jede Zeile braucht genau zwei Angaben: **wie lange** die Person nachbeobachtet wurde und **ob** die Nachbeobachtung mit dem [Ereignis](../glossary.qmd#event){.term} (1) endete oder zensiert wurde (0). Der erste Fall wurde 6.2 Jahre ohne Revision nachbeobachtet; der fünfte wurde nach 5.8 Jahren revidiert. Die zweite Ausgabe zählt 600 Fälle und 81 Revisionen, die 81 / 600 = 0.135 von oben, und gibt dann den [Median](../glossary.qmd#median){.term} der Spalte `followup_years` an, ihren mittleren Wert: 4.365 Jahre (R zeigt 4.36). Python gibt die drei Zahlen ohne Beschriftung aus. Dieser mittlere Wert ist nicht die mediane Nachbeobachtungszeit der Studie, denn Revisionen und Todesfälle kürzen die Zeiten in der Spalte ab. [Seite 13](../survival/13-kaplan-meier.qmd#follow-up) erklärt, warum, und berechnet die mediane Nachbeobachtungszeit mit der inversen Kaplan-Meier-Methode: 5.62 Jahre.
 
 ### Analyse durchführen
 
@@ -694,8 +694,8 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 
 - **Die Kurve** beginnt bei 100 % und fällt bei jeder Revision um eine Stufe. Zensierte Personen lösen keine Stufe aus; sie verlassen nur die Gruppe «unter Risiko».
 - **Das schattierte Band** ist das 95%-[KI](../glossary.qmd#confidence-interval){.term}. Es wird nach rechts breiter, weil weniger Personen unter Nachbeobachtung bleiben.
-- **Die Anzahl Personen unter Risiko** (numbers at risk) unter der Abbildung zeigt, wie viele Personen zu jedem Zeitpunkt noch nachbeobachtet wurden. Trauen Sie dem rechten Ende der Kurve weniger: Nach 10 Jahren sind nur noch 21 der 600 Fälle übrig (die letzte Zahl in der ersten Zeile unter der Abbildung).
-- **Nach 5 Jahren:** **[survival](../glossary.qmd#survival){.term}** 0.863 (95%-KI 0.828 bis 0.892), mit 263 Personen, die noch unter Risiko stehen (`n.risk` in R, die letzte Zahl, die Python ausgibt).
+- **Die Anzahl Personen unter Risiko** (numbers at risk) unter der Abbildung zeigt, wie viele Fälle zu jedem Zeitpunkt noch nachbeobachtet wurden. Trauen Sie dem rechten Ende der Kurve weniger: Nach 10 Jahren sind nur noch 21 der 600 Fälle übrig (die letzte Zahl in der ersten Zeile unter der Abbildung).
+- **Nach 5 Jahren:** **[survival](../glossary.qmd#survival){.term}** 0.863 (95%-KI 0.828 bis 0.892), mit 263 Eingriffen, die noch unter Risiko stehen (`n.risk` in R, die letzte Zahl, die Python ausgibt).
 - **Was sonst noch ausgegeben wird:** In der Zeile von R ist `n.event` 66 die Anzahl Revisionen bis 5 Jahre (81 über die ganze Nachbeobachtung), und `std.err` ist der [Standardfehler](../glossary.qmd#standard-error){.term} des Schätzwerts. Die erste Zeile von Python, «600 total observations, 519 right-censored observations», fasst die Daten zusammen: 600 Fälle − 81 Revisionen = 519 zensierte.
 
 ::: {.callout-note collapse="true"}
@@ -748,7 +748,7 @@ check_agree(list(moments = nrow(km_steps), revisions = sum(km_steps$revisions), 
 
 > **Methods:** Implant survivorship was estimated with the Kaplan-Meier method, with revision for any reason as the end point. Patients were censored at death or at their last follow-up.
 >
-> **Results:** Revision-free survival at 5 years was 86.3% (95% CI 82.8% to 89.2%; 263 patients at risk).
+> **Results:** Revision-free survival at 5 years was 86.3% (95% CI 82.8% to 89.2%; 263 procedures at risk).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Tod ist nicht einfach «in der Nachbeobachtung verloren»
@@ -792,6 +792,8 @@ stopifnot(
   round(z * sqrt(lower_limit * (1 - lower_limit) / patients), 4) == 0.0123,
   isTRUE(all.equal(wilson_center + c(-1, 1) * wilson_half, as.vector(wilson))),
   sum(cohort$revised) == 81, 81 / 600 == 0.135, median(cohort$followup_years) == 4.365, 600 - 81 == 519,
+  round(unname(quantile(survfit(Surv(followup_years, event_status == 0) ~ 1, data = cohort),
+                        probs = 0.5, conf.int = FALSE)), 2) == 5.62,   # page 13's reverse Kaplan-Meier median follow-up
   km_5$n.event == 66, sum(cohort$followup_years >= 10) == 21,
   km_steps$followup_years[1] == 0.03, km_steps$revisions[1] == 2, km_steps$at_risk[1] == 599,
   round(km_steps$got_past[1], 3) == 0.997, nrow(km_steps) == 59, sum(km_steps$revisions) == 66,

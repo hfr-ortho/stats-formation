@@ -21,22 +21,22 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 
 | ID | Task | Status | Pull request |
 |---|---|---|---|
-| A1 | 1.3 | open |  |
-| A2 | 1.3 | open |  |
-| A3 | 1.3 | open |  |
-| A4 | 1.3 | open |  |
-| A5 | 1.3 | open |  |
+| A1 | 1.3 | done | pending |
+| A2 | 1.3 | done | pending |
+| A3 | 1.3 | done | pending |
+| A4 | 1.3 | done | pending |
+| A5 | 1.3 | done | pending |
 | A6 | 1.4 | open |  |
-| A7 | 1.1 | done | pending |
-| A8 | 1.1 | done | pending |
-| A9 | 1.1 | done | pending |
+| A7 | 1.1 | done | #46 |
+| A8 | 1.1 | done | #46 |
+| A9 | 1.1 | done | #46 |
 | A10 | 1.2 | done | pending |
 | A11 | 1.2 | done | pending |
 | A12 | 1.2 | done | pending |
 | A13 | 1.2 | done | pending |
 | A14 | 1.2 | done | pending |
-| A15 | 1.1 | done | pending |
-| U1 | 1.1 | done | pending |
+| A15 | 1.1 | done | #46 |
+| U1 | 1.1 | done | #46 |
 | U2 | 2.1 | open |  |
 | U3 | 2.2 | open |  |
 | U4 | 2.2 | open |  |

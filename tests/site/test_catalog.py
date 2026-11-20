@@ -244,6 +244,58 @@ def test_wilcoxon_box_describes_page_6s_cis_correctly(site):
     assert "as they do on page 6" in text
 
 
+# ---- content review of 20.11.2026: pages 4 to 6 -------------------------------
+
+def test_describe_page_does_not_give_the_column_median_as_the_follow_up(site):
+    """Review A1: revisions and deaths cut followup_years short; page 13's reverse Kaplan-Meier gives 5.62 years."""
+    page = "catalog/04-describe-one-group.html"
+    found = section(page, "kaplan-meier")
+    text = text_of(found)
+    assert "with a median follow-up of 4.365 years" not in text
+    assert "not the study's median follow-up" in text and "5.62 years" in text
+    assert "survival/13-kaplan-meier.html#follow-up" in [target(page, a["href"]) for a in found.select("a[href]")]
+
+
+def test_describe_page_counts_procedures_not_patients(site):
+    """Review A2: cohort rows are procedures; the 263 at risk at 5 years belong to 233 patients."""
+    page = "catalog/04-describe-one-group.html"
+    found = section(page, "kaplan-meier")
+    text = text_of(found)
+    assert "263 procedures" in text and "263 patients" not in text
+    assert "263 procedures at risk" in " ".join(text_of(q) for q in found.select("blockquote"))
+    assert "how many cases were still being followed" in text
+    assert "patients = n()" not in code_of(found)   # the count of rows is labeled cases in the output too
+    assert "how precisely 600 cases pin down" in text_of(section(page, "mean-sd"))
+
+
+def test_binomial_box_describes_the_set_it_adds_up(site):
+    """Review A3: the p-value adds every result no more likely than 1,034; on the high side that starts at 1,122."""
+    text = text_of(section("catalog/05-one-group-vs-hypothetical.html", "binomial-test"))
+    assert "no more likely than 1,034" in text and "1,122 or more on the high side" in text
+    assert "every result further from 1,080" not in text
+
+
+def test_describe_pages_do_not_send_bounded_scores_to_ranks(site):
+    """Review A13, as on pages 2, 3 and 7: values piled up at a floor or ceiling, not a bounded scale, call for ranks."""
+    for page, anchor in [("catalog/04-describe-one-group.html", "median-iqr"),
+                         ("catalog/05-one-group-vs-hypothetical.html", "one-sample-t")]:
+        assert "bounded" not in text_of(load(page)), page
+        assert "floor or ceiling" in text_of(section(page, anchor)), page
+
+
+def test_two_odds_ratios_are_close_only_with_large_counts(site):
+    """Review A4: for the table 3, 1 / 1, 3 the sample odds ratio is 9 and fisher.test() gives 6.41."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "fisher-chi-square"))
+    assert "always close" not in text and "The two are close unless the counts are small" in text
+
+
+def test_hodges_lehmann_estimate_can_land_on_half_points(site):
+    """Review A5: the median of an even number of whole-number differences (3,364 here) can be a half."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "mann-whitney"))
+    assert "land on whole numbers too" not in text
+    assert "its CI can only land on whole or half points (here all three are whole)" in text
+
+
 # ---- three or more groups -------------------------------------------------
 
 THREE_GROUP_PAGES = [page for page in WRITTEN if page.startswith(("catalog/08-", "catalog/09-"))]

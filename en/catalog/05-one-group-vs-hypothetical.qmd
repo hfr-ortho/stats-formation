@@ -40,7 +40,7 @@ Choose the hypothetical value **before** you look at your data, and say where it
 - The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}** (minutes, kg/m², points).
 - It's **[roughly normal](../glossary.qmd#normal-distribution){.term}**, or the [sample](../glossary.qmd#sample){.term} is large (about 30 or more) and not badly [skewed](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#robustness)).
 - Each patient is counted once and patients are [independent](../glossary.qmd#independence){.term} of each other.
-- If the data are skewed, [bounded](../glossary.qmd#bounded-scale){.term} or [ordinal](../glossary.qmd#ordinal){.term} → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
+- If the data are skewed, pile up at a [floor or ceiling](../glossary.qmd#ceiling-effect){.term} or are [ordinal](../glossary.qmd#ordinal){.term} → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
 
 ### What the test really does
 
@@ -736,6 +736,8 @@ check_agree(list(p = surgery_test$p.value, estimate = unname(surgery_test$estima
 probabilities <- dbinom(0:1200, size = 1200, prob = 0.90)        # step 1: the probability of each possible result, from 0 to 1200, if the target of 90% were true
 observed_probability <- dbinom(1034, size = 1200, prob = 0.90)   # step 2: the probability of the result we saw, 1034
 sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])   # step 3: add up every result that is no more likely (the small factor guards against rounding)
+kept <- (0:1200)[probabilities <= observed_probability * (1 + 1e-7)]     # the results that step 3 added up
+rbind(low_side = range(kept[kept < 1080]), high_side = range(kept[kept > 1080]))   # the lowest and highest of them on each side of 1080
 ```
 
 ## Python
@@ -746,20 +748,24 @@ import numpy as np
 probabilities = stats.binom.pmf(np.arange(1201), 1200, 0.90)     # step 1: the probability of each possible result, from 0 to 1200, if the target of 90% were true
 observed_probability = stats.binom.pmf(1034, 1200, 0.90)         # step 2: the probability of the result we saw, 1034
 print(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())   # step 3: add up every result that is no more likely (the small factor guards against rounding)
+kept = np.arange(1201)[probabilities <= observed_probability * (1 + 1e-7)]       # the results that step 3 added up
+print(kept[kept < 1080][[0, -1]], kept[kept > 1080][[0, -1]])   # the lowest and highest of them below 1080, then above it
 ```
 :::
 
-If 90% were the true proportion, 1,080 of the 1,200 patients would be expected. Seeing exactly 1,034 would be very unlikely, and so would every result further from 1,080 on either side. Their probabilities add up to 0.0000268, the p-value both programs printed (`2.682e-05`).
+If 90% were the true proportion, 1,080 of the 1,200 patients would be expected. Seeing exactly 1,034 would be very unlikely, and so would every result that is no more likely than 1,034: 1,034 or fewer on the low side, 1,122 or more on the high side (the last output shows where they start and end). Their probabilities add up to 0.0000268, the p-value both programs printed (`2.682e-05`).
 :::
 
 ```{python}
 #| include: false
-chk = {"p_by_hand": float(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum())}
+chk = {"p_by_hand": float(probabilities[probabilities <= observed_probability * (1 + 1e-7)].sum()),
+       "low_side_end": float(kept[kept < 1080].max()), "high_side_start": float(kept[kept > 1080].min())}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)])), reticulate::py$chk)
+check_agree(list(p_by_hand = sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)]),
+                 low_side_end = max(kept[kept < 1080]), high_side_start = min(kept[kept > 1080])), reticulate::py$chk)
 ```
 
 ### Effect size and 95% CI
@@ -828,6 +834,8 @@ stopifnot(
   round(as.vector(asa_expected)) == c(60, 330, 198, 12), signif(asa_test$p.value, 4) == 5.992e-06,
   isTRUE(all.equal(sum(probabilities[probabilities <= observed_probability * (1 + 1e-7)]), surgery_test$p.value)),
   signif(surgery_test$p.value, 4) == 2.682e-05, round(surgery_test$p.value, 7) == 0.0000268,
+  range(kept[kept < 1080]) == c(0, 1034), range(kept[kept > 1080]) == c(1122, 1200),   # the results no more likely than 1034
+  min((1081:1200)[dbinom(1081:1200, 1200, 0.90) <= dbinom(1034, 1200, 0.90)]) == 1122,
   round(100 * prop.test(within_48h, patients, correct = FALSE)$conf.int, 1) == c(84.1, 88.0),
   # exercise solutions
   round(mean(cohort$age), 1) == 65.5, round(mean(cohort$age) - 66, 1) == -0.5,
