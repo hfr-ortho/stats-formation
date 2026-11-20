@@ -1,7 +1,9 @@
 """The ways into the site (spec section 3): the welcome page, the test chooser (the decision table)
 and the A–Z index of tests and methods."""
 
-from sitelib import CELL_ANCHORS, load, target, text_of
+from bs4 import BeautifulSoup
+
+from sitelib import CELL_ANCHORS, SITE_ROOT, load, target, text_of
 
 HOME = "index.html"
 CHOOSE = "choose-a-test.html"
@@ -127,3 +129,18 @@ def test_mantel_haenszel_row_tells_the_survival_test_from_the_stratified_one(sit
     row = next(text for name, text, _ in index_rows() if name == "Mantel-Haenszel test (survival)")
     assert "Same as the log-rank test" in row
     assert "2 × 2 tables" in row and "not on this site" in row
+    assert "The name also covers a test of two categorical variables across strata" in row
+    assert "different test" not in row, "help(mantelhaen.test) describes one calculation, not two tests"
+
+
+def test_mantel_haenszel_row_says_the_same_in_german_and_french(site):
+    rows = {"de": ("Mantel-Haenszel-Test (Überleben)", ["Dasselbe wie der Log-Rank-Test", "2 × 2-Tabellen",
+                   "über Strata hinweg", "auf dieser Website nicht vor"]),
+            "fr": ("Test de Mantel-Haenszel (survie)", ["Autre nom du test du log-rank", "tableaux 2 × 2",
+                   "à travers des strates", "absent de ce site"])}
+    for lang, (name, words) in rows.items():
+        soup = BeautifulSoup((SITE_ROOT / lang / A_TO_Z).read_text(encoding="utf-8"), "html.parser")
+        row = next(text_of(tr) for tr in soup.select("main table tbody tr") if text_of(tr.select_one("td")).startswith(name))
+        for word in words:
+            assert word in row, (lang, word)
+        assert "anderer Test" not in row and "autre test" not in row, lang
