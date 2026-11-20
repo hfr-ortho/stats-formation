@@ -17,7 +17,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Eine [Korrelation](../glossary.qmd#correlation){.term} ([Seite 10](10-association.qmd)) sagt, wie stark zwei Grössen zusammenhängen. Die **Regression** sagt, **um wie viel sich die [Zielgrösse](../glossary.qmd#outcome){.term} pro Einheit des [Prädiktors](../glossary.qmd#predictor){.term} verändert**, und erlaubt es, die Zielgrösse für eine neue Patientin oder einen neuen Patienten vorherzusagen. Welche Regression passt, hängt von der Zielgrösse ab: eine [Messgrösse](../glossary.qmd#continuous-variable){.term} entlang einer Geraden oder einer Kurve, eine Messgrösse, die nicht [normalverteilt](../glossary.qmd#normal-distribution){.term} ist, eine [Ja/Nein-Zielgrösse](../glossary.qmd#binary){.term} oder die Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term}. Bei mehreren Prädiktoren gleichzeitig siehe [Seite 12](12-predict-from-several.qmd).
+Eine [Korrelation](../glossary.qmd#correlation){.term} ([Seite 10](10-association.qmd)) sagt, wie stark zwei Grössen zusammenhängen. Die **Regression** sagt, **um wie viel sich die [Zielgrösse](../glossary.qmd#outcome){.term} pro Einheit des [Prädiktors](../glossary.qmd#predictor){.term} verändert**, und erlaubt es, die Zielgrösse für eine neue Patientin oder einen neuen Patienten vorherzusagen. Welche Regression passt, hängt von der Zielgrösse ab: eine [Messgrösse](../glossary.qmd#continuous-variable){.term} entlang einer Geraden oder einer Kurve, eine Messgrösse, deren Residuen um eine Gerade nicht annähernd [normalverteilt](../glossary.qmd#normal-distribution){.term} sind, eine [Ja/Nein-Zielgrösse](../glossary.qmd#binary){.term} oder die Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term}. Bei mehreren Prädiktoren gleichzeitig siehe [Seite 12](12-predict-from-several.qmd).
 
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
@@ -35,7 +35,7 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine **[Messgrösse](../glossary.qmd#continuous-variable){.term}**, und Sie möchten wissen, wie stark sie sich **pro Einheit eines [Prädiktors](../glossary.qmd#predictor){.term}** verändert, oder sie vorhersagen.
 - Der Zusammenhang ist ungefähr eine **Gerade**, und die Zielgrösse jeder Patientin und jedes Patienten ist von denen der anderen [unabhängig](../glossary.qmd#independence){.term}.
 - Die **[Residuen](../glossary.qmd#residual){.term}** (der Abstand jeder Patientin und jedes Patienten von der Geraden) sind ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term}, mit ähnlicher [Streuung](../glossary.qmd#spread){.term} entlang der ganzen Geraden. Prüfen Sie das nach der Anpassung.
-- Wenn der Zusammenhang gekrümmt ist → [nichtlineare Regression](#nonlinear-regression). Wenn die Zielgrösse [schief](../glossary.qmd#skewed){.term} ist oder einen [Deckeneffekt](../glossary.qmd#ceiling-effect){.term} hat → [nichtparametrische Regression](#nonparametric-regression). Wenn sie [Ja/Nein](../glossary.qmd#binary){.term} ist → [logistische Regression](#logistic-regression).
+- Wenn der Zusammenhang gekrümmt ist → [nichtlineare Regression](#nonlinear-regression). Wenn die Residuen einer angepassten Geraden nicht annähernd normalverteilt sind, oft weil die Zielgrösse [schief](../glossary.qmd#skewed){.term} ist, einen [Deckeneffekt](../glossary.qmd#ceiling-effect){.term} hat oder [Ausreisser](../glossary.qmd#outlier){.term} enthält → [nichtparametrische Regression](#nonparametric-regression). Wenn die Zielgrösse [Ja/Nein](../glossary.qmd#binary){.term} ist → [logistische Regression](#logistic-regression).
 
 ### Was der Test wirklich macht
 
@@ -211,9 +211,79 @@ plt.show()
 
 Das tun sie hier: ein Band gleichbleibender Breite, ohne Krümmung und ohne Trichterform.
 
+Prüfen Sie dann wie auf [Seite 3](../foundations/03-distributions.qmd#look) mit einem [QQ-Diagramm](../glossary.qmd#qq-plot){.term}, ob die Residuen annähernd normalverteilt sind: Die Punkte sollten nahe an der Linie liegen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(residual = resid(bmi_model)) |>
+  ggplot(aes(sample = residual)) +
+  geom_qq(alpha = 0.4) +
+  geom_qq_line() +
+  labs(x = "Normal quantiles", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+from scipy import stats
+
+fig, ax = plt.subplots(figsize=(6, 3))
+qq = stats.probplot(bmi_model.resid, plot=ax)   # der Name hält die Zahlen aus der Ausgabe heraus
+ax.set_title("")                                # probplot setzt einen Titel; die R-Grafik hat keinen
+ax.set_xlabel("Normal quantiles")
+ax.set_ylabel("Residual, minutes")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+Das sind sie hier: Die Punkte liegen auf der Linie, nur die extremsten Residuen an beiden Enden biegen leicht gegen 0 ab. Das deutet auf etwas kürzere Ausläufer hin, als eine Normalverteilung sie hat, nicht auf Schiefe.
+
 ### Effektstärke und 95%-KI
 
 Die **Steigung** mit ihrem 95%-[KI](../glossary.qmd#confidence-interval){.term} ist die [Effektstärke](../glossary.qmd#effect-size){.term}: 1.37 Minuten pro kg/m² (95%-KI 1.15 bis 1.58). Rechnen Sie sie auf eine klinisch bedeutsame Differenz um: 5 kg/m² BMI gehen mit 5 × 1.368 = 6.8 Minuten mehr einher (95%-KI 5 × 1.151 = 5.8 bis 5 × 1.585 = 7.9). Die Steigung und beide Grenzen ihres KI werden mit 5 multipliziert, mit den ungerundeten Zahlen aus der Ausgabe. **R² = 0.20** sagt, wie viel der Variation die Gerade erklärt.
+
+Die Gerade beantwortet auch zwei verschiedene Fragen zu Patientinnen und Patienten mit einem bestimmten BMI, hier 30 kg/m². Das **95%-KI für den Mittelwert**, 82.7 bis 85.1 Minuten, gibt an, wo die mittlere Operationsdauer aller solchen Patientinnen und Patienten liegt. Das **95%-Vorhersageintervall**, 55.0 bis 112.7 Minuten, gibt an, wo die Operationsdauer einer einzelnen neuen Person zu erwarten ist: Es ist viel breiter, weil es zur Unsicherheit über die Gerade selbst noch die eigene Streuung dieser Person um die Gerade hinzufügt. R gibt beide als `lwr` und `upr` aus, Python als `mean_ci_lower` und `mean_ci_upper`, dann `obs_ci_lower` und `obs_ci_upper`.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_30 <- tibble(bmi = 30)                                # der BMI, für den vorhergesagt wird
+predict(bmi_model, bmi_30, interval = "confidence")       # 95%-KI für die mittlere Operationsdauer bei einem BMI von 30
+predict(bmi_model, bmi_30, interval = "prediction")       # 95%-Vorhersageintervall für eine einzelne Person mit einem BMI von 30
+mean(abs(resid(bmi_model)) <= sigma(bmi_model))           # Anteil der Patientinnen und Patienten höchstens einen Residualstandardfehler von der Geraden entfernt
+```
+
+## Python
+
+```{python}
+at_30 = bmi_model.get_prediction(pd.DataFrame({"bmi": [30]})).summary_frame(alpha=0.05)   # Vorhersagen bei einem BMI von 30
+print(at_30[["mean", "mean_ci_lower", "mean_ci_upper"]])   # 95%-KI für die mittlere Operationsdauer
+print(at_30[["obs_ci_lower", "obs_ci_upper"]])             # 95%-Vorhersageintervall für eine einzelne Person
+print((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())   # Anteil der Patientinnen und Patienten höchstens einen Residualstandardfehler von der Geraden entfernt
+```
+:::
+
+```{python}
+#| include: false
+chk = {"fit": float(at_30["mean"].iloc[0]), "mean_low": float(at_30["mean_ci_lower"].iloc[0]),
+       "mean_high": float(at_30["mean_ci_upper"].iloc[0]), "obs_low": float(at_30["obs_ci_lower"].iloc[0]),
+       "obs_high": float(at_30["obs_ci_upper"].iloc[0]),
+       "within": float((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())}
+```
+
+```{r}
+#| include: false
+mean_30 <- predict(bmi_model, bmi_30, interval = "confidence")
+one_30 <- predict(bmi_model, bmi_30, interval = "prediction")
+check_agree(list(fit = mean_30[1, "fit"], mean_low = mean_30[1, "lwr"], mean_high = mean_30[1, "upr"],
+                 obs_low = one_30[1, "lwr"], obs_high = one_30[1, "upr"],
+                 within = mean(abs(resid(bmi_model)) <= sigma(bmi_model))), reticulate::py$chk)
+```
 
 ### Resultate formulieren
 
@@ -223,7 +293,7 @@ Die **Steigung** mit ihrem 95%-[KI](../glossary.qmd#confidence-interval){.term} 
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die Gerade ist ein Mittelwert, und zwar nur innerhalb Ihrer Daten
-Die Gerade sagt die **mittlere** Operationsdauer bei jedem BMI vorher. Einzelne Patientinnen und Patienten streuen um etwa 15 Minuten nach beiden Seiten um sie (der Residualstandardfehler); für die Planung des Eingriffs bei einer einzelnen Person ist sie daher ein schlechtes Werkzeug. Und der BMI reicht hier von 18.0 bis 44.5 (ausgegeben unter «Zuerst die Daten ansehen»): Verwenden Sie die Gerade nicht, um ausserhalb dieses Bereichs vorherzusagen.
+Die Gerade sagt die **mittlere** Operationsdauer bei jedem BMI vorher. Einzelne Patientinnen und Patienten streuen um sie: Der Residualstandardfehler, 14.7 Minuten, ist die Standardabweichung der Residuen, sodass nur etwa zwei Drittel der Patientinnen und Patienten (hier 67.2 %, die letzte Zahl unter «Effektstärke und 95%-KI») höchstens 14.7 Minuten von der Geraden entfernt liegen. Für eine einzelne Person mit einem BMI von 30 reicht das Vorhersageintervall von 55.0 bis 112.7 Minuten; für die Planung des Eingriffs bei einer einzelnen Person ist die Gerade daher ein schlechtes Werkzeug. Und der BMI reicht hier von 18.0 bis 44.5 (ausgegeben unter «Zuerst die Daten ansehen»): Verwenden Sie die Gerade nicht, um ausserhalb dieses Bereichs vorherzusagen.
 :::
 
 ## Nichtlineare Regression {#nonlinear-regression}
@@ -429,7 +499,7 @@ Der KOOS JR stieg von etwa 49.8 Punkten (95%-KI 48.5 bis 51.2) am Tag der Operat
 
 ### Resultate formulieren
 
-> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery.
+> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery. The up to four scores from each knee were treated as independent, so the CIs do not account for the correlation between scores from the same knee and are illustrative only.
 >
 > **Results:** In 330 knees (1146 scores), the fitted curve gave an estimated KOOS JR of 49.8 points (95% CI 48.5 to 51.2) at surgery and a plateau of 84.2 points (95% CI 82.6 to 85.9); half of the change was reached at about 56 days (95% CI 49 to 64).
 
@@ -450,7 +520,7 @@ Jedes Knie hat bis zu vier Scores (vor der Operation, nach 6 Wochen, 3 Monaten u
 
 ### Wann verwenden
 
-- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine [Messgrösse](../glossary.qmd#continuous-variable){.term}, die **nicht [normalverteilt](../glossary.qmd#normal-distribution){.term}** ist: Sie hat einen [Deckeneffekt](../glossary.qmd#ceiling-effect){.term}, ist [schief](../glossary.qmd#skewed){.term} oder hat [Ausreisser](../glossary.qmd#outlier){.term}, sodass die [Residuen](../glossary.qmd#residual){.term} einer Geraden nicht normalverteilt sein werden.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine [Messgrösse](../glossary.qmd#continuous-variable){.term}, und die **[Residuen](../glossary.qmd#residual){.term} einer angepassten Geraden sind nicht annähernd [normalverteilt](../glossary.qmd#normal-distribution){.term}**, oft weil die Zielgrösse einen [Deckeneffekt](../glossary.qmd#ceiling-effect){.term} hat, [schief](../glossary.qmd#skewed){.term} ist oder [Ausreisser](../glossary.qmd#outlier){.term} enthält. Entscheidend sind die Residuen, nicht die Form der Zielgrösse selbst.
 - **LOWESS** (lokal gewichtete Glättung) zeichnet die Form ohne Formel: Es passt viele kleine Geraden an, jede an die Punkte in ihrer Nähe, und verbindet sie zu einer glatten Kurve. Es liefert ein Bild, keinen p-Wert.
 - Die **Theil-Sen-Steigung** ist der Median der [Steigungen](../glossary.qmd#slope){.term} zwischen allen Paaren von Patientinnen und Patienten. Einige extreme Fälle verschieben sie kaum, und ihr [KI](../glossary.qmd#confidence-interval){.term} beruht auf [Rängen](../glossary.qmd#rank){.term}, nicht auf normalverteilten Residuen.
 - Wenn die Residuen ungefähr normalverteilt sind → [lineare Regression](#linear-regression).
@@ -646,7 +716,7 @@ Theil-Sen ist unempfindlich gegenüber Ausreissern, aber über einen Höchstwert
 
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}** (verstorben oder nicht), und Sie möchten das **Odds Ratio** pro Einheit eines [Prädiktors](../glossary.qmd#predictor){.term}.
 - Sie setzt voraus, dass sich die [Log-Odds](../glossary.qmd#odds){.term} geradlinig mit dem Prädiktor verändern: Jeder zusätzliche Tag Verzögerung multipliziert die Odds mit demselben Faktor.
-- Sie brauchen genug Patientinnen und Patienten mit der Zielgrösse: Als Faustregel gelten mindestens 10 pro Prädiktor.
+- Sie brauchen genug Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse (hier die Verstorbenen): Als gängige Faustregel gelten mindestens 10 pro Koeffizient, den das Modell schätzt. Ein gemessener Prädiktor oder ein Ja/Nein-Prädiktor braucht einen Koeffizienten, ein Prädiktor mit drei Kategorien zwei. Manche Studien halten die Regel für zu streng.
 - Wenn die Zielgrösse die Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term} ist → [Cox-Regression](#cox).
 
 ### Was der Test wirklich macht
@@ -1028,7 +1098,7 @@ check_agree(list(hr5 = exp(5 * coef(slope_cox))[["tibial_slope_deg"]], low5 = ex
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Ein Hazard Ratio ist kein Behandlungseffekt
-Der Slope wurde nicht zugeteilt: Patientinnen und Patienten mit einem steilen Slope können sich auch in anderen Punkten unterscheiden. Ein Hazard Ratio von 1.27 pro Grad zeigt nicht, dass eine Osteotomie, die den Slope um 1° verringert, den Hazard um so viel senken würde. Das kann nur eine Studie zur Osteotomie selbst zeigen. Bei etwa 10 Transplantatversagen pro Term erlauben die 31 Transplantatversagen hier etwa drei Terme ([Seite 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+Der Slope wurde nicht zugeteilt: Patientinnen und Patienten mit einem steilen Slope können sich auch in anderen Punkten unterscheiden. Ein Hazard Ratio von 1.27 pro Grad zeigt nicht, dass eine Osteotomie, die den Slope um 1° verringert, den Hazard um so viel senken würde. Das kann nur eine Studie zur Osteotomie selbst zeigen. Nach einer gängigen Faustregel von etwa 10 Transplantatversagen pro Term, also pro Koeffizient, den das Modell schätzt (manche Studien halten die Regel für zu streng), erlauben die 31 Transplantatversagen hier etwa drei Terme ([Seite 14](../survival/14-cox-regression.qmd#choosing-covariates)).
 :::
 
 ::: {.callout-tip}
@@ -1058,6 +1128,9 @@ stopifnot(
   round(bmi_ci["bmi", ], 2) == c(1.15, 1.58), round(bmi_fit$r.squared, 2) == 0.20, round(bmi_fit$sigma, 1) == 14.7,
   round(5 * coef(bmi_model)[["bmi"]], 1) == 6.8, round(5 * bmi_ci["bmi", ], 1) == c(5.8, 7.9),
   range(cohort$bmi) == c(18.0, 44.5),
+  round(mean_30[1, c("lwr", "upr")], 1) == c(82.7, 85.1), round(one_30[1, c("lwr", "upr")], 1) == c(55.0, 112.7),
+  round(100 * mean(abs(resid(bmi_model)) <= sigma(bmi_model)), 1) == 67.2,
+  abs(mean(scale(resid(bmi_model))^3)) < 0.1, mean(scale(resid(bmi_model))^4) - 3 < 0,   # the QQ plot: no skew, slightly short tails
   range(proms$visit_days[proms$visit == "preop"], na.rm = TRUE) == c(-27, -1),
   nrow(koos) == 1146, n_distinct(koos$case_id) == 330,
   round(recovery_coef[, "Estimate"], 1) == c(84.2, 49.8, 80.9), round(summary(recovery)$sigma, 2) == 12.33,
