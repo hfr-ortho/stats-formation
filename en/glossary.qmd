@@ -66,7 +66,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   Many patients score the best (or worst) value a scale allows, so the scale cannot show how much better (or worse) they really are.
 
 [Censored]{#censored}
-:   Followed for a while without having the event, then no longer observed: the study ended, the patient moved away, or the patient died. All we know is that the event had not happened by then.
+:   Followed for a while without having the event, then no longer observed: the study ended, the patient moved away, or the patient died without the event, when death is not the event studied (see the entry Competing risk). All we know is that the event had not happened by then. The usual methods assume that censored patients have the same chance of a later event as those still being followed.
 
 [Central limit theorem]{#central-limit-theorem}
 :   A mathematical result: when samples are large enough, the means of repeated samples follow a normal distribution even if the individual values do not. This is why tests on means, such as the t test and ANOVA, still work for values that are not normally distributed, provided the sample is large enough.
@@ -203,6 +203,9 @@ Every definition comes from a published reference. The [list of sources](https:/
 [False discovery rate]{#false-discovery-rate}
 :   Of all the results called significant in a set of tests, the expected share that are false positives. Controlling it, as the Benjamini-Hochberg adjustment does, is a less strict standard than controlling the family-wise error rate.
 
+[False negative (type II error)]{#false-negative}
+:   A result that is not statistically significant when there truly is a difference: chance kept the sample from showing a statistically significant difference. For a true difference of a given size, its probability is called beta, and power is 1 minus beta. Statisticians call it a type II error.
+
 [False positive (type I error)]{#false-positive}
 :   A statistically significant result when there is truly no difference: chance alone made the sample look as if there were one. A test at the 0.05 significance level gives a false positive in 5% of studies in which there is truly no difference. Statisticians call it a type I error.
 
@@ -300,7 +303,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   A confidence interval for a Kaplan-Meier survival probability that is worked out on a transformed scale (the logarithm of minus the logarithm of the survival probability) and then converted back. Because of the transformation, the limits cannot fall below 0% or above 100%, as the plain interval of the estimate plus and minus about 2 standard errors can. In R it is conf.type = "log-log" in survfit(); lifelines uses it for its Kaplan-Meier intervals.
 
 [Log-rank test]{#log-rank-test}
-:   A test of whether the survival curves of two or more groups differ, also called the Mantel-Cox test (the Mantel-Haenszel test for survival data is nearly identical). At each time an event happens, it works out how many events each group would be expected to have if the groups did not differ, then compares the totals observed and expected. It gives a p-value but no effect size.
+:   A test of whether the survival curves of two or more groups differ, also called the Mantel-Cox test. At each time an event happens, it works out how many events each group would be expected to have if the groups did not differ, then compares the totals observed and expected. For two groups, R and lifelines compute it as the Mantel-Haenszel calculation on the 2 × 2 table of each event time, and it is also called the Mantel-Haenszel test for survival data. A statistics guide that tells the two names apart says they differ only in how events at the same time are handled. It gives a p-value but no effect size.
 
 [Logarithm (log scale)]{#logarithm}
 :   The power to which a base must be raised to give a number: the log to base 10 of 100 is 2. In statistics, log usually means the natural log, whose base is e, about 2.718. Equal steps on a log scale mean equal ratios, which pulls in a long right tail, so skewed data and ratios are often analyzed there; zero and negative numbers have no logarithm.
@@ -378,7 +381,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   The probability that an event happens divided by the probability that it does not: in a group, the number of patients with the event divided by the number without it. Odds of 0.1 mean 1 patient with the event for every 10 without, a risk of about 9%. The log odds, the logarithm of the odds, can take any value and are the scale on which logistic regression works.
 
 [Odds ratio]{#odds-ratio}
-:   The odds of the outcome in one group divided by the odds in the other. The odds are the number with the outcome divided by the number without it.
+:   The odds of the outcome in one group divided by the odds in the other. The odds are the number with the outcome divided by the number without it. An odds ratio is not a risk ratio: it lies further from 1, and the two differ most when the outcome is common, so reading an odds ratio as a risk ratio overstates the effect.
 
 [Ordinal]{#ordinal}
 :   Describes data whose values are categories with a natural order, such as mild, moderate and severe, or satisfaction from 1 to 5. The order has meaning, but the steps between neighboring categories are not necessarily equal.
@@ -501,10 +504,10 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   A retrospective study uses data that already exist, such as records from routine care: the outcomes have already happened when the study starts. A prospective study is planned first, and the patients are then enrolled and followed forward in time. Both words are used in more than one way, so a paper should say how and when its data were collected.
 
 [Reverse Kaplan-Meier method (median follow-up)]{#reverse-kaplan-meier}
-:   A way to calculate the median follow-up, that is, how long patients were followed. It runs the Kaplan-Meier method with the roles swapped: being censored counts as the event, and patients who had the event count as censored. The plain median of all follow-up times comes out too short, because patients with an early event stop being followed early.
+:   A way to calculate the median follow-up, that is, how long patients were followed. It runs the Kaplan-Meier method with the roles swapped: a patient's observation ending without the event, at the close of the study or through loss to follow-up, counts as the event, and patients who had the event count as censored. When death is not the event studied, a death can count either way, as censored or as the end of follow-up; the two can give different medians, so the Methods section says which was used. The plain median of all follow-up times comes out too short, because patients with an early event stop being followed early.
 
 [Risk]{#risk}
-:   The probability that an event, such as a revision or a death, happens within a stated period. It is estimated as the number of patients who had the event in that period divided by the number of patients at its start.
+:   The probability that an event, such as a revision or a death, happens within a stated period. It is estimated as the number of patients who had the event in that period divided by the number of patients at its start. That count gives the risk only when every patient was followed for the whole period or until the event: patients who left early are counted as if they never had the event. Otherwise the risk is estimated with the Kaplan-Meier method (1 minus the survival probability) or, with competing risks, as the cumulative incidence.
 
 [Risk difference]{#risk-difference}
 :   The risk in one group minus the risk in the other, where each risk is the proportion of patients in that group who have the event. It can be written as a proportion or in percentage points.
@@ -537,7 +540,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   How software prints very small or very large numbers. 2.7e-08 means 2.7 with the decimal point moved 8 places to the left: 0.000000027.
 
 [Score test]{#score-test}
-:   One of three standard tests of a model's coefficients, with the likelihood ratio test and the Wald test. It is calculated at the no-effect values of the coefficients, so it does not need the fitted estimates. For a Cox model that compares groups, it is equivalent to the log-rank test.
+:   One of three standard tests of a model's coefficients, with the likelihood ratio test and the Wald test. It is calculated at the no-effect values of the coefficients, so it does not need the fitted estimates. For a Cox model that compares groups, it gives the same number as the log-rank test when no two events happen at the same time; with tied event times the two differ slightly, unless the Cox model handles ties with the exact method.
 
 [Sensitivity analysis]{#sensitivity-analysis}
 :   A repeat of the main analysis with one choice changed, such as another method, another definition of the outcome or another way of handling missing data. If the result stays about the same, it does not depend on that choice.
@@ -579,7 +582,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   The difference between two groups' means, divided by the standard deviation. It has no units and does not depend on the sample size, so in a Table 1 it shows how far apart two groups are on each baseline characteristic. Cohen's d and Hedges' g are versions of it.
 
 [Statistically significant]{#statistical-significance}
-:   A result is called statistically significant when its p-value is below a threshold fixed before the analysis, the significance level, which is almost always 0.05 (the 5% level). It means the null hypothesis is rejected because data like these would be unusual if it were true. It does not mean that the difference is large or clinically important.
+:   A result is called statistically significant when its p-value is below a threshold fixed before the analysis, the significance level or alpha, which is almost always 0.05 (the 5% level). It means the null hypothesis is rejected because data like these would be unusual if it were true. It does not mean that the difference is large or clinically important. A result that is not statistically significant does not show that there is no difference; the confidence interval shows which differences remain compatible with the data.
 
 [Stepwise selection]{#stepwise-selection}
 :   An automatic way to choose a model's predictors: software adds or removes one predictor at a time according to its p-value until none is left to add or remove. Its results are unreliable: the p-values of the final model come out too small, its confidence intervals can't be trusted, and predictors that are only noise often get in.
@@ -600,7 +603,7 @@ Every definition comes from a published reference. The [list of sources](https:/
 :   A score rescaled so that the average of a reference population is 50 and the standard deviation is 10. PROMIS scores are T-scores, for most measures with the US general population as the reference, so a patient at 40 is 1 standard deviation below that average. It is unrelated to the t test.
 
 [t test]{#t-test}
-:   A test that compares means: one group's mean with a hypothetical value (one-sample t test), the means of two separate groups (unpaired t test), or two paired measurements (paired t test). Its test statistic, t, is the difference divided by its standard error: the further t is from 0, the smaller the p-value. Also called Student's t test.
+:   A test that compares means: one group's mean with a hypothetical value (one-sample t test), the means of two separate groups (unpaired t test), or two paired measurements (paired t test). Its test statistic, t, is the difference divided by its standard error: the further t is from 0, the smaller the p-value. Student's t test is also a name for t tests in general, but on this site it means the unpaired t test that assumes equal variances; the site's unpaired t tests are Welch's version, which does not make that assumption.
 
 [Table 1]{#table-1}
 :   The first table of most clinical papers, which describes the patients who were studied: age, sex and other characteristics, usually as recorded at baseline and shown for each group. It lets readers judge whether the patients resemble their own and how alike the groups were.
