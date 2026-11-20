@@ -358,13 +358,21 @@ def test_page_5_routes_skewed_scores_as_page_7_does(site):
     assert "roughly symmetric around its center" in when and "clearly skewed" in when
     text = text_of(found)
     assert "the rank-based test is the safer choice" not in text
-    assert "the scores are not symmetric" in text and "tests the median (85.75)" in text
+    assert "the scores are not symmetric and the pseudomedian is not the median" in text
+    assert "tests the median (85.75, the first output under" in text
 
 
 def test_paired_t_does_not_send_skewed_differences_to_ranks_without_the_caveat(site):
     """Review C2: page 7's paired t section routed skewed differences to the signed-rank test unconditionally."""
     when = text_of(section("catalog/07-two-paired-groups.html", "paired-t").select_one("section.level3"))
     assert "symmetric" in when and "sign test" in when
+
+
+def test_one_sample_t_does_not_send_skewed_data_to_ranks_without_the_caveat(site):
+    """Review C2, fix round 2: page 5's t test section routed skewed, ceiling and ordinal data to the
+    signed-rank test unconditionally, as page 7's paired t section did."""
+    when = text_of(section("catalog/05-one-group-vs-hypothetical.html", "one-sample-t").select_one("section.level3"))
+    assert "symmetric" in when and "sign test" in when and "clearly skewed" in when
 
 
 def test_two_by_two_table_reports_the_risk_ratio(site):
@@ -399,7 +407,7 @@ def test_torsion_answer_groups_by_the_average_of_the_two_methods(site):
     assert "can create or distort a trend" in text
     assert "0.9° high in the 9 hips" in text and "3.5° low in the 6 hips" in text
     assert "cancel in the mean" not in text and "partly offset each other" in text   # fix round 1
-    assert "The 65 hips in the middle group differ by −1.3°" in text
+    assert "In the 65 hips in between, it reads 1.3° low, close to the overall mean difference of −1.2°." in text
     assert "(torsion_budin_deg + torsion_ct_deg) / 2" in code_of(found)
 
 
