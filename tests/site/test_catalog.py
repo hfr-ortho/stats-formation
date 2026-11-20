@@ -326,7 +326,10 @@ def test_describe_page_methods_name_their_ci_methods(site):
 
 def test_describe_page_survival_axes_match_in_both_languages(site):
     """Review B12: R draws the survival axis from 0 to 100%; the Python plot must not zoom in on the top."""
-    assert "ax.set_ylim(0, 1)" in code_of(section("catalog/04-describe-one-group.html", "kaplan-meier"))
+    found = section("catalog/04-describe-one-group.html", "kaplan-meier")
+    assert "ax.set_ylim(0, 1)" in code_of(found)
+    outputs = " ".join(o.get_text() for o in found.select(".cell-output"))
+    assert "(0.0, 1.0)" not in outputs   # set_ylim() returns the limits; unnamed, reticulate prints them (golden rule 10)
 
 
 def test_describe_page_band_and_column_wording_is_exact(site):
