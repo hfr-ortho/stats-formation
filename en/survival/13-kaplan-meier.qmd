@@ -257,6 +257,7 @@ km.plot_survival_function(ax=ax, show_censors=True,                # a tick for 
                           censor_styles={"ms": 3, "alpha": 0.4}, legend=False)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
+y_range = ax.set_ylim(0, 1)                                          # the whole axis, 0 to 1, as in R
 add_at_risk_counts(km, ax=ax, xticks=[0, 2, 4, 6, 8, 10], rows_to_show=["At risk", "Events"])
 plt.tight_layout()
 plt.show()
@@ -283,12 +284,12 @@ How to read it:
 
 - **The steps:** the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still [at risk](../glossary.qmd#at-risk){.term}.
 - **The ticks** mark [censored](../glossary.qmd#censored){.term} patients. They don't move the curve; they leave the at-risk group.
-- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens at each revision, and widens more when few procedures remain at risk. Between revisions its width doesn't change, however many patients leave.
+- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens at each revision and nowhere else: between revisions its width doesn't change, however many patients leave. Late in follow-up, when few procedures remain at risk, each revision widens it more than one did in the middle years.
 - **The table below the plot** gives the number of procedures still being followed (**at risk**) at each time, 600 at surgery, 332 at 4 years and 84 at 8 years in R (lifelines shows 331 and 83; the R vs Python box below explains why), and the revisions so far. Always publish the numbers at risk with the curve: they tell the reader how much to trust each part of it.
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the tail of the curve
-By 10 years only 21 procedures are still followed, so each late revision moves the curve a lot. Don't draw conclusions from the far right-hand end. A common rule of thumb is to stop drawing the curve once fewer than about 10% of procedures (here, 60) remain at risk.
+By 10 years only 21 procedures are still followed, so each late revision moves the curve a lot. Don't draw conclusions from the far right-hand end. A common rule of thumb is to stop drawing the curve once fewer than about 10% of procedures (here, 60) remain at risk. This page draws the curve, and reports survivorship, past that point on purpose, to show what the tail is worth. The count falls below 60 between 8 years (84 at risk) and 10 years (21), and the 10-year survivorship in the next section is the 7.9-year estimate carried forward.
 :::
 
 ::: {.callout-tip}
@@ -354,17 +355,21 @@ A survivorship figure means nothing without the time it refers to. Give the 95% 
 
 ## How long were patients followed? {#follow-up}
 
-Every survival paper reports the **[median](../glossary.qmd#median){.term} follow-up**. The obvious way to calculate it is wrong:
+Every survival paper reports the **[median](../glossary.qmd#median){.term} follow-up**. The obvious calculation, the median of the observed times, gives a different quantity, and it is misleading as a measure of follow-up:
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-median(cohort$followup_years)        # misleading: revisions and deaths cut follow-up short
+median(cohort$followup_years)        # the middle observed time: misleading as follow-up, since revisions and deaths cut it short
 
 # reverse Kaplan-Meier: treat "still followed at the end" as the event
 reverse_km <- survfit(Surv(followup_years, event_status == 0) ~ 1, data = cohort)
 quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
+
+# the same, but with a death counting as the end of follow-up: only revisions are censored
+death_ends_km <- survfit(Surv(followup_years, event_status != 1) ~ 1, data = cohort)
+quantile(death_ends_km, probs = 0.5, conf.int = FALSE)
 ```
 
 ## Python
@@ -372,12 +377,17 @@ quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
 ```{python}
 from lifelines.utils import qth_survival_times
 
-print(cohort["followup_years"].median())   # misleading: revisions and deaths cut follow-up short
+print(cohort["followup_years"].median())   # the middle observed time: misleading as follow-up, since revisions and deaths cut it short
 
 # reverse Kaplan-Meier: treat "still followed at the end" as the event
 reverse_km = KaplanMeierFitter().fit(cohort["followup_years"],
                                      event_observed=(cohort["event_status"] == 0))
 print(qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_))   # 25th, 50th, 75th percentiles
+
+# the same, but with a death counting as the end of follow-up: only revisions are censored
+death_ends_km = KaplanMeierFitter().fit(cohort["followup_years"],
+                                        event_observed=(cohort["event_status"] != 1))
+print(qth_survival_times(0.5, death_ends_km.survival_function_))
 ```
 :::
 
@@ -385,14 +395,16 @@ print(qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_))   # 
 #| include: false
 follow_up_quartiles = qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_).iloc[:, 0]
 chk = {"crude": float(cohort["followup_years"].median()), "q1": float(follow_up_quartiles.iloc[0]),
-       "median": float(follow_up_quartiles.iloc[1]), "q3": float(follow_up_quartiles.iloc[2])}
+       "median": float(follow_up_quartiles.iloc[1]), "q3": float(follow_up_quartiles.iloc[2]),
+       "death_ends": float(qth_survival_times(0.5, death_ends_km.survival_function_))}
 ```
 
 ```{r}
 #| include: false
 follow_up_quartiles <- quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
 check_agree(list(crude = median(cohort$followup_years), q1 = follow_up_quartiles[[1]],
-                 median = follow_up_quartiles[[2]], q3 = follow_up_quartiles[[3]]),
+                 median = follow_up_quartiles[[2]], q3 = follow_up_quartiles[[3]],
+                 death_ends = quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]),
             reticulate::py$chk)
 ```
 
@@ -400,7 +412,9 @@ The plain median, 4.4 years, mixes two things: how long the study watched patien
 
 The **reverse Kaplan-Meier** method answers the real question: how long would patients have been followed if nothing had happened to them? It swaps the roles: being [censored](../glossary.qmd#censored){.term} at the end of follow-up becomes the "[event](../glossary.qmd#event){.term}", and revisions and deaths become the censored observations. The median follow-up is **5.62 years** ([IQR](../glossary.qmd#iqr){.term} 3.52 to 7.93).
 
-> **Methods:** Median follow-up was estimated with the reverse Kaplan-Meier method.
+Censoring the deaths, as here, asks how long the study would have followed each patient. If a death counts as the end of follow-up instead, only the revisions are censored, and the median is 5.00 years (the last line of the output: R prints `5`, Python `5.0`). The choice moves the answer, so the Methods name it.
+
+> **Methods:** Median follow-up was estimated with the reverse Kaplan-Meier method, censoring revisions and deaths.
 >
 > **Results:** The median follow-up was 5.62 years (IQR 3.52 to 7.93).
 
@@ -445,6 +459,7 @@ km_anterior.plot_survival_function(ax=ax)
 km_posterior.plot_survival_function(ax=ax)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
+y_range = ax.set_ylim(0, 1)                                          # the whole axis, 0 to 1, as in R
 add_at_risk_counts(km_anterior, km_posterior, ax=ax, rows_to_show=["At risk", "Events"])
 plt.tight_layout()
 plt.show()
@@ -469,7 +484,7 @@ check_agree(list(chisq = approach_logrank$chisq, p = approach_logrank$pvalue), r
 - **Observed / Expected:** the posterior hips had 19 revisions where 16.1 were expected; the anterior hips had 18 where 20.9 were expected.
 - **Chisq = 0.9 on 1 degree of freedom, p = 0.340:** R's printout rounds p to 0.3, and the line under it gives 0.33968. Python prints the test statistic and then p. No clear evidence that the curves differ over the whole follow-up.
 
-But look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the [CIs](../glossary.qmd#confidence-interval){.term} overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.
+For this comparison, one time point was fixed in advance, from clinical reasoning: 6 months, the period of highest dislocation risk after hip replacement ([page 14](14-cox-regression.qmd#remedies) splits the follow-up there for the same reason). Now look at the plot. The posterior curve drops sharply in the first months, then the two curves come together (late on they even cross, where the [CIs](../glossary.qmd#confidence-interval){.term} overlap widely). The early revisions are real: by 6 months, survivorship was 88.7% after the posterior approach and 98.6% after the anterior approach.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -817,6 +832,16 @@ stopifnot(
   max(cohort$followup_years[cohort$revised == 1]) == 7.9, km_7_10$n.risk == c(92, 21),
   km_7_10$surv[1] == km_7_10$surv[2], km_7_10$lower[1] == km_7_10$lower[2],
   km_7_10$upper[1] == km_7_10$upper[2],
+  # numbers added with Task 3.6 of the content review fixes
+  # the band widens at each revision and nowhere else; a late revision (under 200 at risk, 6.1 to 7.9 years)
+  # widens it more than any revision in the middle years (300 to 500 at risk, 2.0 to 4.3 years)
+  all(diff(c(0, km$upper - km$lower))[km$n.event == 0] == 0), all(diff(c(0, km$upper - km$lower))[km$n.event > 0] > 0),
+  min((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk < 200]) >
+    max((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk >= 300 & km$n.risk <= 500]),
+  # the at-risk count falls below 60 (10% of 600) between 8 and 10 years
+  nrow(cohort) / 10 == 60, sum(cohort$followup_years >= 8) >= 60, sum(cohort$followup_years >= 10) < 60,
+  round(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]], 2) == 5.00,
+  format(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]) == "5",
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

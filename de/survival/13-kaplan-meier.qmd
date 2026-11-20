@@ -257,6 +257,7 @@ km.plot_survival_function(ax=ax, show_censors=True,                # ein Strich 
                           censor_styles={"ms": 3, "alpha": 0.4}, legend=False)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
+y_range = ax.set_ylim(0, 1)                                          # die ganze Achse, 0 bis 1, wie in R
 add_at_risk_counts(km, ax=ax, xticks=[0, 2, 4, 6, 8, 10], rows_to_show=["At risk", "Events"])
 plt.tight_layout()
 plt.show()
@@ -283,12 +284,12 @@ So lesen Sie die Kurve:
 
 - **Die Stufen:** Die Kurve beginnt bei 100 % und fällt bei jeder Revision. Die Stufen werden später grösser, weil jede Revision dann einen grösseren Anteil der wenigen Personen ausmacht, die noch [unter Risiko](../glossary.qmd#at-risk){.term} sind.
 - **Die Striche** markieren [zensierte](../glossary.qmd#censored){.term} Personen. Diese Personen verschieben die Kurve nicht; sie verlassen die Gruppe unter Risiko.
-- **Das schattierte Band** ist das 95%-KI ([Konfidenzintervall](../glossary.qmd#confidence-interval){.term}). Es wird bei jeder Revision breiter, und umso mehr, je weniger Eingriffe noch unter Risiko stehen. Zwischen zwei Revisionen bleibt seine Breite gleich, egal wie viele Personen ausscheiden.
+- **Das schattierte Band** ist das 95%-KI ([Konfidenzintervall](../glossary.qmd#confidence-interval){.term}). Es wird bei jeder Revision breiter und sonst nirgends: Zwischen zwei Revisionen bleibt seine Breite gleich, egal wie viele Personen ausscheiden. Spät in der Nachbeobachtung, wenn nur noch wenige Eingriffe unter Risiko stehen, verbreitert jede Revision das Band stärker, als es eine Revision in den mittleren Jahren tat.
 - **Die Tabelle unter der Abbildung** zeigt die Anzahl Eingriffe, die zu jedem Zeitpunkt noch nachbeobachtet werden (**unter Risiko**): 600 bei der Operation, 332 nach 4 Jahren und 84 nach 8 Jahren in R (lifelines zeigt 331 und 83; der Kasten «R oder Python» unten erklärt, warum), und die bisherigen Revisionen. Veröffentlichen Sie die Anzahl Personen unter Risiko immer zusammen mit der Kurve: Sie zeigt den Lesenden, wie viel Vertrauen jeder Teil der Kurve verdient.
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: das Ende der Kurve
-Nach 10 Jahren werden nur noch 21 Eingriffe nachbeobachtet, sodass jede späte Revision die Kurve stark verschiebt. Ziehen Sie aus dem rechten Ende der Kurve keine Schlüsse. Als Faustregel hört man auf, die Kurve zu zeichnen, wenn weniger als etwa 10 % der Eingriffe (hier 60) unter Risiko sind.
+Nach 10 Jahren werden nur noch 21 Eingriffe nachbeobachtet, sodass jede späte Revision die Kurve stark verschiebt. Ziehen Sie aus dem rechten Ende der Kurve keine Schlüsse. Als Faustregel hört man auf, die Kurve zu zeichnen, wenn weniger als etwa 10 % der Eingriffe (hier 60) unter Risiko sind. Diese Seite zeichnet die Kurve und berichtet das Überleben des Implantats absichtlich über diesen Punkt hinaus, um zu zeigen, was das Ende der Kurve wert ist. Die Anzahl unter Risiko sinkt unter 60, und zwar zwischen 8 Jahren (84 unter Risiko) und 10 Jahren (21), und das Überleben des Implantats nach 10 Jahren im nächsten Abschnitt ist der Schätzwert nach 7.9 Jahren, unverändert fortgeschrieben.
 :::
 
 ::: {.callout-tip}
@@ -354,17 +355,21 @@ Eine Angabe zum Überleben des Implantats bedeutet nichts ohne den Zeitpunkt, au
 
 ## Wie lange wurden die Patientinnen und Patienten nachbeobachtet? {#follow-up}
 
-Jede Publikation zum Überleben berichtet die **[mediane](../glossary.qmd#median){.term} Nachbeobachtungszeit**. Der naheliegende Weg, sie zu berechnen, ist falsch:
+Jede Publikation zum Überleben berichtet die **[mediane](../glossary.qmd#median){.term} Nachbeobachtungszeit**. Die naheliegende Berechnung, der Median der beobachteten Zeiten, ergibt eine andere Grösse und ist als Mass für die Nachbeobachtung irreführend:
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
-median(cohort$followup_years)        # irreführend: Revisionen und Todesfälle verkürzen die Nachbeobachtung
+median(cohort$followup_years)        # der Wert in der Mitte der beobachteten Zeiten: als Nachbeobachtung irreführend, weil Revisionen und Todesfälle sie verkürzen
 
 # inverse Kaplan-Meier-Methode: «am Ende noch nachbeobachtet» gilt als das Ereignis
 reverse_km <- survfit(Surv(followup_years, event_status == 0) ~ 1, data = cohort)
 quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
+
+# dasselbe, aber ein Todesfall zählt als Ende der Nachbeobachtung: nur Revisionen werden zensiert
+death_ends_km <- survfit(Surv(followup_years, event_status != 1) ~ 1, data = cohort)
+quantile(death_ends_km, probs = 0.5, conf.int = FALSE)
 ```
 
 ## Python
@@ -372,12 +377,17 @@ quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
 ```{python}
 from lifelines.utils import qth_survival_times
 
-print(cohort["followup_years"].median())   # irreführend: Revisionen und Todesfälle verkürzen die Nachbeobachtung
+print(cohort["followup_years"].median())   # der Wert in der Mitte der beobachteten Zeiten: als Nachbeobachtung irreführend, weil Revisionen und Todesfälle sie verkürzen
 
 # inverse Kaplan-Meier-Methode: «am Ende noch nachbeobachtet» gilt als das Ereignis
 reverse_km = KaplanMeierFitter().fit(cohort["followup_years"],
                                      event_observed=(cohort["event_status"] == 0))
 print(qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_))   # 25., 50., 75. Perzentil
+
+# dasselbe, aber ein Todesfall zählt als Ende der Nachbeobachtung: nur Revisionen werden zensiert
+death_ends_km = KaplanMeierFitter().fit(cohort["followup_years"],
+                                        event_observed=(cohort["event_status"] != 1))
+print(qth_survival_times(0.5, death_ends_km.survival_function_))
 ```
 :::
 
@@ -385,14 +395,16 @@ print(qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_))   # 
 #| include: false
 follow_up_quartiles = qth_survival_times([0.75, 0.5, 0.25], reverse_km.survival_function_).iloc[:, 0]
 chk = {"crude": float(cohort["followup_years"].median()), "q1": float(follow_up_quartiles.iloc[0]),
-       "median": float(follow_up_quartiles.iloc[1]), "q3": float(follow_up_quartiles.iloc[2])}
+       "median": float(follow_up_quartiles.iloc[1]), "q3": float(follow_up_quartiles.iloc[2]),
+       "death_ends": float(qth_survival_times(0.5, death_ends_km.survival_function_))}
 ```
 
 ```{r}
 #| include: false
 follow_up_quartiles <- quantile(reverse_km, probs = c(0.25, 0.5, 0.75), conf.int = FALSE)
 check_agree(list(crude = median(cohort$followup_years), q1 = follow_up_quartiles[[1]],
-                 median = follow_up_quartiles[[2]], q3 = follow_up_quartiles[[3]]),
+                 median = follow_up_quartiles[[2]], q3 = follow_up_quartiles[[3]],
+                 death_ends = quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]),
             reticulate::py$chk)
 ```
 
@@ -400,7 +412,9 @@ Der einfache Median, 4.4 Jahre, vermischt zwei Dinge: wie lange die Studie Perso
 
 Die **inverse Kaplan-Meier-Methode** (*reverse Kaplan-Meier*) beantwortet die eigentliche Frage: Wie lange wären die Personen nachbeobachtet worden, wenn ihnen nichts zugestossen wäre? Sie vertauscht die Rollen: Die [Zensierung](../glossary.qmd#censored){.term} am Ende der Nachbeobachtung wird zum «[Ereignis](../glossary.qmd#event){.term}», und Revisionen und Todesfälle werden zu den zensierten Beobachtungen. Die mediane Nachbeobachtungszeit beträgt **5.62 Jahre**, der [Interquartilsabstand (IQR)](../glossary.qmd#iqr){.term} reicht von 3.52 bis 7.93.
 
-> **Methods:** Median follow-up was estimated with the reverse Kaplan-Meier method.
+Werden die Todesfälle zensiert, wie hier, fragt man, wie lange die Studie jede Person nachbeobachtet hätte. Zählt ein Todesfall stattdessen als Ende der Nachbeobachtung, werden nur die Revisionen zensiert, und der Median beträgt 5.00 Jahre (die letzte Zeile der Ausgabe: R gibt `5` aus, Python `5.0`). Die Wahl verändert das Resultat, deshalb nennt sie der Methodenteil.
+
+> **Methods:** Median follow-up was estimated with the reverse Kaplan-Meier method, censoring revisions and deaths.
 >
 > **Results:** The median follow-up was 5.62 years (IQR 3.52 to 7.93).
 
@@ -445,6 +459,7 @@ km_anterior.plot_survival_function(ax=ax)
 km_posterior.plot_survival_function(ax=ax)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
+y_range = ax.set_ylim(0, 1)                                          # die ganze Achse, 0 bis 1, wie in R
 add_at_risk_counts(km_anterior, km_posterior, ax=ax, rows_to_show=["At risk", "Events"])
 plt.tight_layout()
 plt.show()
@@ -469,7 +484,7 @@ check_agree(list(chisq = approach_logrank$chisq, p = approach_logrank$pvalue), r
 - **Observed / Expected:** Die Hüften mit posteriorem Zugang hatten 19 Revisionen, wo 16.1 zu erwarten waren; die Hüften mit anteriorem Zugang hatten 18, wo 20.9 zu erwarten waren.
 - **Chisq = 0.9 on 1 degree of freedom, p = 0.340:** Die Ausgabe von R rundet p auf 0.3, und die Zeile darunter zeigt 0.33968. Python gibt die Teststatistik und dann p aus. Kein klarer Hinweis, dass sich die Kurven über die gesamte Nachbeobachtung unterscheiden.
 
-Aber schauen Sie sich die Abbildung an. Die Kurve des posterioren Zugangs fällt in den ersten Monaten steil ab, dann nähern sich die beiden Kurven an (später kreuzen sie sich sogar, wobei sich die [KI](../glossary.qmd#confidence-interval){.term} breit überlappen). Die frühen Revisionen sind real: Nach 6 Monaten betrug das Überleben des Implantats 88.7 % nach dem posterioren Zugang und 98.6 % nach dem anterioren Zugang.
+Für diesen Vergleich wurde vorab ein Zeitpunkt festgelegt, aus klinischen Überlegungen: 6 Monate, der Zeitraum mit dem höchsten Luxationsrisiko nach Hüftgelenkersatz ([Seite 14](14-cox-regression.qmd#remedies) teilt die Nachbeobachtung aus demselben Grund dort auf). Schauen Sie sich nun die Abbildung an. Die Kurve des posterioren Zugangs fällt in den ersten Monaten steil ab, dann nähern sich die beiden Kurven an (später kreuzen sie sich sogar, wobei sich die [KI](../glossary.qmd#confidence-interval){.term} breit überlappen). Die frühen Revisionen sind real: Nach 6 Monaten betrug das Überleben des Implantats 88.7 % nach dem posterioren Zugang und 98.6 % nach dem anterioren Zugang.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -817,6 +832,16 @@ stopifnot(
   max(cohort$followup_years[cohort$revised == 1]) == 7.9, km_7_10$n.risk == c(92, 21),
   km_7_10$surv[1] == km_7_10$surv[2], km_7_10$lower[1] == km_7_10$lower[2],
   km_7_10$upper[1] == km_7_10$upper[2],
+  # numbers added with Task 3.6 of the content review fixes
+  # the band widens at each revision and nowhere else; a late revision (under 200 at risk, 6.1 to 7.9 years)
+  # widens it more than any revision in the middle years (300 to 500 at risk, 2.0 to 4.3 years)
+  all(diff(c(0, km$upper - km$lower))[km$n.event == 0] == 0), all(diff(c(0, km$upper - km$lower))[km$n.event > 0] > 0),
+  min((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk < 200]) >
+    max((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk >= 300 & km$n.risk <= 500]),
+  # the at-risk count falls below 60 (10% of 600) between 8 and 10 years
+  nrow(cohort) / 10 == 60, sum(cohort$followup_years >= 8) >= 60, sum(cohort$followup_years >= 10) < 60,
+  round(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]], 2) == 5.00,
+  format(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]) == "5",
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

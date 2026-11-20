@@ -127,7 +127,91 @@ def test_cox_page_never_calls_one_minus_km_the_proportion_revised(site):
     """Page 13 warns never to call 1 − Kaplan-Meier the proportion revised when patients die (review A8)."""
     text = text_of(load(COX))
     assert "had been revised" not in text, "1 − Kaplan-Meier is an estimate with deaths censored, not the share revised"
-    assert "estimate of revision (1 − Kaplan-Meier, with deaths censored)" in text
+    # review of Task 1.1: "the estimate of revision" was terse next to "the three risks"
+    assert "estimate of the risk of revision (1 − Kaplan-Meier, with deaths censored)" in text
     code = code_of(load(COX))
     assert "revised by 5 years" not in code, "the code comments say what the prose says"
-    assert code.count("Kaplan-Meier estimate of revision by 5 years, deaths censored") == 2
+    assert code.count("Kaplan-Meier estimate of the risk of revision by 5 years, deaths censored") == 2
+
+
+# ---- content review of 20.11.2026: contradictions and missing caveats, pages 13 and 14 ----------
+
+def test_km_band_widens_only_at_revisions_and_most_late(site):
+    """Review of Task 1.1: the band opens from zero at the first revisions, so "widens more when few
+    remain" needs the middle years as its comparison (the wording page 4 uses)."""
+    text = text_of(section(KM, "kaplan-meier"))
+    assert "widens more when few procedures remain at risk" not in text
+    assert "It widens at each revision and nowhere else" in text
+    assert "each revision widens it more than one did in the middle years" in text
+
+
+def test_km_tail_rule_says_the_page_runs_past_it_on_purpose(site):
+    """Review C7 (decision D3): the page states the 10% rule, then reports 10 years with 21 at risk."""
+    warning = text_of(section(KM, "kaplan-meier").select_one("div.callout-warning"))
+    assert "A common rule of thumb" in warning
+    assert "past that point on purpose" in warning
+    assert "between 8 years (84 at risk) and 10 years (21)" in warning
+    assert "the 7.9-year estimate carried forward" in warning
+
+
+def test_km_python_survival_plots_use_the_whole_axis(site):
+    """Review B12: R draws survival from 0 to 100%; the Python plots zoomed in on 0.6 to 1. set_ylim()
+    returns the limits, and unnamed, reticulate prints them on the page (golden rule 10)."""
+    for anchor in ["kaplan-meier", "log-rank"]:
+        found = section(KM, anchor)
+        assert "y_range = ax.set_ylim(0, 1)" in code_of(found), anchor
+        outputs = " ".join(out.get_text() for out in found.select(".cell-output"))
+        assert "(0.0, 1.0)" not in outputs, anchor
+
+
+def test_median_follow_up_methods_say_deaths_were_censored(site):
+    """Review B5: censoring deaths in the reverse Kaplan-Meier moves the answer (5.62 against 5.00 years)."""
+    found = section(KM, "follow-up")
+    methods = " ".join(text_of(q) for q in found.select("blockquote"))
+    assert "reverse Kaplan-Meier method, censoring revisions and deaths." in methods
+    text = text_of(found)
+    assert "is wrong" not in text and "the median is 5.00 years" in text
+    assert "misleading as a measure of follow-up" in text
+    code = code_of(found)
+    assert "event_status != 1" in code and code.count("misleading as follow-up") == 2
+
+
+def test_approach_time_point_is_fixed_before_the_plot_is_read(site):
+    """Review C6: the page says "decide your time points before you look", so the 6-month point is
+    fixed in advance, on page 14's clinical grounds, before the reader looks at the plot."""
+    text = text_of(section(KM, "log-rank"))
+    assert "But look at the plot" not in text
+    fixed = text.find("one time point was fixed in advance")
+    assert 0 <= fixed < text.find("Now look at the plot")
+    assert "the period of highest dislocation risk after hip replacement" in text
+
+
+def test_events_per_term_is_a_rule_of_thumb(site):
+    """Review B24 (Peduzzi 1995; Vittinghoff and McCulloch 2007): a prudent rule, not a requirement."""
+    text = text_of(section(COX, "choosing-covariates"))
+    assert "needs about" not in text
+    assert "A common rule of thumb is about 10 events per term" in text
+    assert "some studies find it too strict" in text
+
+
+def test_late_period_hazard_ratio_compares_survivors(site):
+    """Review B17 (Hernán 2010): a period-specific hazard ratio compares the survivors of the earlier
+    period, who are no longer like-for-like groups; Hernán suggests adjusted survival curves."""
+    found = section(COX, "remedies")
+    text = text_of(found)
+    assert "compares only the hips still unrevised at 6 months" in text
+    assert "a hazard ratio below 1 can appear even when the approach has no effect after 6 months" in text
+    assert "adjusted survival curves" in text and "Hernán (2010)" in text
+    assert "restricted mean" not in text   # no source for it was opened
+    hrefs = [a["href"] for a in found.select("a[href]")]
+    assert any(href.endswith("13-kaplan-meier.html#log-rank") for href in hrefs)
+
+
+def test_bilateral_paragraph_gives_the_real_reason(site):
+    """Review B18: the practice data have no built-in link between a patient's two joints; the robust
+    standard errors printed are mostly slightly smaller, so "too narrow" needs its condition."""
+    text = text_of(section(COX, "stratified-cox"))
+    assert "so the pairing matters little in this cohort" not in text
+    assert "When a patient's two joints tend to fare alike, treating them as independent makes the" in text
+    assert "each joint's revision time was drawn separately" in text
+    assert "slightly larger for implant B (0.311 against 0.310)" in text
