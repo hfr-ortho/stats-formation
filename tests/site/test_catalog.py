@@ -383,6 +383,9 @@ def test_curve_fits_warn_that_repeated_scores_make_the_cis_unreliable(site, page
     assert warnings, f"{page}#{anchor}: no warning that the CIs can't be trusted"
     assert "are too narrow" not in text_of(warnings[0])
     assert any(a["href"].split("#")[0].endswith("beyond/16-mixed-models.html") for a in warnings[0].select("a[href]"))
+    # Review B2: a resident copies the Methods sentence, not the box, so the Methods say it too.
+    methods = [text_of(p) for p in section(page, anchor).select("blockquote p") if text_of(p).startswith("Methods:")]
+    assert methods and "treated as independent" in methods[0] and "illustrative only" in methods[0], methods
 
 
 def test_cox_warning_says_a_slope_is_not_a_treatment(site):
@@ -421,7 +424,8 @@ SECTION_LINKS = {
     "catalog/09-three-plus-matched.html": ["survival/14-cox-regression.html#choosing-covariates"],
     "catalog/11-predict-from-one.html": ["survival/13-kaplan-meier.html#competing-risks",
                                          "survival/14-cox-regression.html#fine-gray"],
-    "catalog/12-predict-from-several.html": ["survival/14-cox-regression.html#proportional-hazards"],
+    "catalog/12-predict-from-several.html": ["survival/14-cox-regression.html#proportional-hazards",
+                                             "survival/14-cox-regression.html#choosing-covariates"],   # review B9
 }
 
 
@@ -447,10 +451,114 @@ def test_logistic_warning_does_not_read_the_shape_off_open_ended_bands(site):
 
 
 def test_pearson_warning_gives_the_trend_at_high_torsion(site):
+    """Review B13: grouping by CT alone gave 7.0° in 8 hips; Bland and Altman (1995) group by the average of the two methods."""
     warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
-    assert "averaged 7.0° lower" in warning
+    assert "averaged 7.0° lower" not in warning
+    assert "Grouped by the average of the two readings" in warning
+    assert "1.3° lower in the 65 hips from 5° to 25°, and 3.5° lower in the 6 hips over 25°" in warning
+    box = section("catalog/10-association.html", "pearson").select_one("div.callout-warning")
+    assert "np." not in code_of(box)   # numpy is imported only in the collapsed box, which readers may skip
 
 
 def test_cox_events_rule_matches_page_14(site):
     warning = text_of(section("catalog/11-predict-from-one.html", "cox").select_one("div.callout-warning"))
     assert "about three terms" in warning
+    assert "per coefficient the model estimates" in warning and "too strict" in warning   # review C3
+
+
+# ---- content review of 20.11.2026: pages 10 to 12 -----------------------------
+
+def test_pearson_warning_says_r_depends_on_the_range(site):
+    """Review B13 (Bland and Altman 1986): the same two methods give a lower r in a narrow sample."""
+    warning = text_of(section("catalog/10-association.html", "pearson").select_one("div.callout-warning"))
+    assert "Over all 80 hips r = 0.86; in the 30 hips with 10° to 20° on CT it is 0.53" in warning
+    assert "(the first lines of the code below)" in warning   # golden rule 22: the numbers point to their code
+    assert "a lower r in a sample with a narrow range" in warning
+
+
+def test_expected_count_rule_gives_the_cautious_and_the_usual_version(site):
+    """Review B24: "every expected count at least 5" is the cautious rule, not a requirement."""
+    text = text_of(section("catalog/10-association.html", "contingency-coefficients"))
+    assert "needs every expected count to be at least 5" not in text
+    assert "attributed to Cochran" in text and "no more than 20% of the expected counts below 5, and none below 1" in text
+
+
+def test_linear_regression_shows_the_two_intervals_at_one_bmi(site):
+    """Review B14: the CI for the mean at BMI 30 against the prediction interval for one patient."""
+    found = section("catalog/11-predict-from-one.html", "linear-regression")
+    text, code = text_of(found), code_of(found)
+    assert 'interval = "confidence"' in code and 'interval = "prediction"' in code and "get_prediction" in code
+    assert "82.7 to 85.1 minutes" in text and "55.0 to 112.7 minutes" in text and "prediction interval" in text
+    assert "is estimated to lie" in text   # an interval estimate, not a certainty
+    warning = text_of(found.select_one("div.callout-warning"))
+    assert "by about 15 minutes either way" not in warning
+    assert "the standard deviation of the residuals" in warning and "67.2%" in warning
+
+
+def test_linear_regressions_check_the_residuals(site):
+    """Review B15: page 11 asks for roughly normal residuals, so it shows them; page 12 shows its model's residuals."""
+    page_11 = code_of(section("catalog/11-predict-from-one.html", "linear-regression"))
+    assert "geom_qq" in page_11 and "probplot" in page_11
+    page_12 = code_of(section("catalog/12-predict-from-several.html", "multiple-linear-regression"))
+    assert "resid(time_model)" in page_12 and "time_model.resid" in page_12
+
+
+def test_nonparametric_regression_is_chosen_by_the_residuals(site):
+    """Review B15: linear regression assumes normal residuals, not a normal outcome."""
+    page = "catalog/11-predict-from-one.html"
+    assert "a measurement that isn't normal" not in text_of(load(page))
+    assert "residuals around a straight line aren't roughly normal" in text_of(load(page).select_one("main"))
+    for anchor in ["linear-regression", "nonparametric-regression"]:
+        assert "residuals of a straight-line fit aren't roughly normal" in text_of(section(page, anchor)), anchor
+
+
+@pytest.mark.parametrize("page,anchors", [
+    ("catalog/11-predict-from-one.html", ["logistic-regression", "cox"]),
+    ("catalog/12-predict-from-several.html", ["multiple-linear-regression", "multiple-logistic-regression", "cox"]),
+])
+def test_events_rule_counts_coefficients_as_page_14_does(site, page, anchors):
+    """Review C3: page 14 counts about 10 events per coefficient; pages 11 and 12 said per predictor."""
+    assert "per predictor" not in text_of(load(page))
+    for anchor in anchors:
+        text = text_of(section(page, anchor))
+        assert "per coefficient the model estimates" in text, anchor
+        if anchor != "multiple-linear-regression":   # the abstracts that find it too strict are about logistic and Cox models
+            assert "too strict" in text, anchor
+    if page.startswith("catalog/12-"):
+        logistic = text_of(section(page, "multiple-logistic-regression"))
+        assert "about 17 coefficients" in logistic and "about 17 predictors" not in logistic
+        assert "allows one coefficient, two at a stretch" in text_of(section(page, "exercises"))
+
+
+def test_multiple_regression_says_which_coefficients_are_findings(site):
+    """Review C4 (Westreich and Greenland 2013): the covariates' coefficients are adjustments, not findings."""
+    page = "catalog/12-predict-from-several.html"
+    linear = section(page, "multiple-linear-regression")
+    assert "adjustments, not findings" in text_of(linear)
+    results = [text_of(p) for p in linear.select("blockquote p") if text_of(p).startswith("Results:")]
+    assert results and "1.27 minutes" in results[0] and "6.74" not in results[0] and "per year" not in results[0]
+    assert "describe prediction, not each factor's own effect" in text_of(section(page, "multiple-logistic-regression"))
+    # "When to use it" must not promise each predictor's own effect, which the effect-size step then takes back.
+    assert "the effect of each of several predictors" not in text_of(load(page))
+    assert "you want the effect of one predictor with the others taken into account" in text_of(linear)
+    assert "you want the hazard ratio of one predictor" in text_of(section(page, "cox"))
+    description = text_of(load(page).select_one("div.description"))   # the front-matter description, under the title
+    assert "the effect of each predictor" not in description
+    assert "one predictor's effect with the others taken into account, and prediction from several" in description
+
+
+def test_multiple_linear_regression_names_the_equal_slopes_assumption(site):
+    """Review B9: the model as written gives BMI one slope for every group; an interaction term lets it differ."""
+    page = "catalog/12-predict-from-several.html"
+    found = section(page, "multiple-linear-regression")
+    assert "the same BMI slope for hips and knees" in text_of(found)
+    assert "glossary.html#interaction" in [target(page, a["href"]) for a in found.select("a[href]")]
+    # Review B9: the sentence carries page 14's two rules, not just a link to them.
+    assert "and not for anything that predictor itself causes" in text_of(found)
+
+
+def test_adjusted_cox_shift_is_not_read_as_confounding(site):
+    """Review C5: a hazard ratio shifts a bit when a strong predictor is added, even without confounding (page 14)."""
+    text = text_of(section("catalog/12-predict-from-several.html", "cox"))
+    assert "so adjustment shouldn't change much" not in text
+    assert "even without confounding" in text and "from 3.07 to 3.19" in text

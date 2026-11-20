@@ -1,6 +1,6 @@
 ---
 title: "12 · Predict a value from several variables"
-description: "Multiple linear and nonlinear regression, multiple logistic regression and Cox regression: the effect of each predictor, adjusted for the others."
+description: "Multiple linear and nonlinear regression, multiple logistic regression and Cox regression: one predictor's effect with the others taken into account, and prediction from several."
 engine: knitr
 toc-depth: 2
 ---
@@ -32,9 +32,10 @@ To keep the code short, the joint replacement examples use every case, including
 
 ### When to use it
 
-- The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}**, and you want the effect of each of **several [predictors](../glossary.qmd#predictor){.term}**, adjusted for the others.
+- The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}**, and you want the effect of **one [predictor](../glossary.qmd#predictor){.term}** with the others taken into account, or to predict the outcome from **several**.
 - The [assumptions](../glossary.qmd#assumption){.term} of [simple linear regression](11-predict-from-one.qmd#linear-regression) still apply: straight-line effects, [independent](../glossary.qmd#independence){.term} patients, and [residuals](../glossary.qmd#residual){.term} that are [roughly normal](../glossary.qmd#normal-distribution){.term} with an even [spread](../glossary.qmd#spread){.term}.
-- Choose the predictors **before** looking at the results, from what you know clinically. As a rule of thumb, allow at least 10 to 20 patients per predictor.
+- The model as written also assumes each predictor's effect is the same in every group: the same BMI slope for hips and knees, and for men and women. An [interaction](../glossary.qmd#interaction){.term} term (`bmi * procedure` in the formula) lets a slope differ between groups.
+- Choose the predictors **before** looking at the results, from what you know clinically. [Page 14](../survival/14-cox-regression.qmd#choosing-covariates) explains which: adjust for factors that affect both the predictor your question is about and the outcome, and not for anything that predictor itself causes. As a rule of thumb, allow at least 10 to 20 patients per coefficient the model estimates: a measured or yes/no predictor takes one, a predictor with three categories takes two.
 - If an effect may bend → [splines](#multiple-nonlinear-regression). If the outcome is [yes/no](../glossary.qmd#binary){.term} → [multiple logistic regression](#multiple-logistic-regression).
 
 ### What the test really does
@@ -178,15 +179,46 @@ check_agree(list(by_hand = coef(lm(time_left ~ bmi_left))[["bmi_left"]],
                  alone = coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]]), reticulate::py$chk)
 ```
 
+Before trusting the coefficients, check the [residuals](../glossary.qmd#residual){.term} as on [page 11](11-predict-from-one.qmd#linear-regression): plotted against the fitted values, they should form a band of even width around 0, with no curve.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
+  ggplot(aes(fitted, residual)) +
+  geom_point(alpha = 0.4) +
+  geom_hline(yintercept = 0) +
+  labs(x = "Fitted operative time, minutes", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.scatter(time_model.fittedvalues, time_model.resid, alpha=0.4)
+ax.axhline(0, color="black")
+ax.set_xlabel("Fitted operative time, minutes")
+ax.set_ylabel("Residual, minutes")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+They do here: an even band, with no curve and no funnel shape.
+
 ### Effect size and 95% CI
 
-The **adjusted coefficients** with their 95% CIs are the [effect sizes](../glossary.qmd#effect-size){.term}, with **[R²](../glossary.qmd#r-squared){.term}** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own (the last line of the box above; [page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
+The question is about BMI, so **BMI's adjusted coefficient** with its 95% CI is the [effect size](../glossary.qmd#effect-size){.term} that answers it, with **[R²](../glossary.qmd#r-squared){.term}** for the model as a whole. BMI's coefficient fell only a little after adjustment, from 1.37 minutes per kg/m² on its own (the last line of the box above; [page 11](11-predict-from-one.qmd#linear-regression)) to 1.27: age, sex and procedure explain little of BMI's link with operative time.
+
+The coefficients for age, sex and procedure are adjustments, not findings. They are in the model to make the comparison of BMI fair, and a model chosen for BMI's question isn't necessarily the right one for theirs ([page 14](../survival/14-cox-regression.qmd#univariable-multivariable) says the same of hazard ratios). So the Results below report, of the coefficients, only BMI's.
 
 ### How to report it
 
 > **Methods:** Operative time was modeled with multiple linear regression on BMI, age, sex and procedure, chosen before the analysis.
 >
-> **Results:** Adjusted for age, sex and procedure, the coefficient for BMI was 1.27 minutes of operative time per kg/m² (95% CI 1.06 to 1.49; p < 0.001). The coefficient for TKA (vs THA) was 6.74 minutes (95% CI 4.40 to 9.08) and for age 0.27 minutes per year (95% CI 0.15 to 0.39). The model explained 27% of the variation in operative time (R² = 0.27).
+> **Results:** Adjusted for age, sex and procedure, the coefficient for BMI was 1.27 minutes of operative time per kg/m² (95% CI 1.06 to 1.49; p < 0.001). The model explained 27% of the variation in operative time (R² = 0.27).
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: "adjusted" isn't "caused", and more predictors isn't better
@@ -409,7 +441,7 @@ The time constant was 27.5 days longer for knees (95% CI 15.9 to 40.1). Half of 
 
 ### How to report it
 
-> **Methods:** HOOS JR (hips) and KOOS JR (knees) were modeled against days since surgery with an exponential recovery curve whose start, plateau and time constant could differ between hips and knees, fitted by nonlinear least squares. Whether BMI's effect on operative time was linear was checked by adding a natural cubic spline (3 degrees of freedom) and comparing the models with an F test.
+> **Methods:** HOOS JR (hips) and KOOS JR (knees) were modeled against days since surgery with an exponential recovery curve whose start, plateau and time constant could differ between hips and knees, fitted by nonlinear least squares. The up to four scores from each joint were treated as independent, so the CIs do not account for the correlation between scores from the same joint and are illustrative only. Whether BMI's effect on operative time was linear was checked by adding a natural cubic spline (3 degrees of freedom) and comparing the models with an F test.
 >
 > **Results:** The difference in the time constant between knees and hips was 27.5 days (95% CI 15.9 to 40.1); half of the change was reached at about 56 days after knee replacement and 37 days after hip replacement. For BMI and operative time, comparing a spline with a straight line gave F = 0.58 (df = 2 and 593, p = 0.562).
 
@@ -430,9 +462,9 @@ Hips answer HOOS JR and knees KOOS JR. A point on one isn't guaranteed to equal 
 
 ### When to use it
 
-- The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}**, and you want the **odds ratio** for each of several [predictors](../glossary.qmd#predictor){.term}, [adjusted for](../glossary.qmd#adjustment){.term} the others.
+- The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}**, and you want to predict it from several [predictors](../glossary.qmd#predictor){.term}, each with its **odds ratio** [adjusted for](../glossary.qmd#adjustment){.term} the others.
 - The [assumptions](../glossary.qmd#assumption){.term} of [simple logistic regression](11-predict-from-one.qmd#logistic-regression) still apply, for every measured predictor.
-- **Events limit predictors.** A common rule of thumb is at least 10 patients in the smaller outcome group per predictor. Here 173 returned and 177 didn't, so this [model](../glossary.qmd#model){.term} can afford about 17.
+- **Events limit the model.** A common rule of thumb is at least 10 patients in the smaller outcome group per coefficient the model estimates: a measured or yes/no predictor takes one, a predictor with three categories takes two. Some studies find the rule too strict. Here 173 returned and 177 didn't, so this [model](../glossary.qmd#model){.term} can afford about 17 coefficients.
 - If the outcome is time until an [event](../glossary.qmd#event){.term} → [Cox regression](#cox).
 
 ### What the test really does
@@ -548,6 +580,8 @@ print(odds_ratios)
 
 The **adjusted odds ratios** are the [effect sizes](../glossary.qmd#effect-size){.term}: 0.71 per 10 years of age (95% [CI](../glossary.qmd#confidence-interval){.term} 0.51 to 0.96) and 1.42 per Tegner level (95% CI 1.22 to 1.67). For a hamstring graft the odds ratio is 0.41 (0.25 to 0.69) and for a quadriceps graft 0.33 (0.17 to 0.63), both compared with BPTB. The CI for male sex (0.73, 0.46 to 1.17) is wide.
 
+Each of these odds ratios is adjusted for the other three predictors at once. That suits this section's question, which factors predict return to sport, but such mutually adjusted odds ratios describe prediction, not each factor's own effect. To estimate one factor's effect, build a model for that factor, with covariates chosen as [page 14](../survival/14-cox-regression.qmd#choosing-covariates) explains; the other estimates in that model then aren't findings.
+
 ### How to report it
 
 > **Methods:** Return to sport at 12 months was modeled with multiple logistic regression on age (per 10 years), sex, graft and pre-injury Tegner level, chosen before the analysis.
@@ -556,7 +590,7 @@ The **adjusted odds ratios** are the [effect sizes](../glossary.qmd#effect-size)
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the smaller group sets the limit, and predictors must come first
-The rule of thumb counts the smaller outcome group. It allows about 17 predictors here, but only one or two for graft failure within 2 years (15 of 350; exercise 2, and the first line of output below). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let [p-values](../glossary.qmd#p-value){.term} choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome. The table below shows it: the `TRUE` row (`True` in Python) holds 6 and 0.
+The rule of thumb counts the smaller outcome group. It allows about 17 coefficients here, but only one or two for graft failure within 2 years (15 of 350; exercise 2, and the first line of output below). Beyond that, the odds ratios become unstable, so choose predictors clinically, in advance; don't let [p-values](../glossary.qmd#p-value){.term} choose them for you. And use only what's known before the outcome: all 6 patients whose graft failed in the first year had not returned to sport at 12 months, so a failure can't predict return to sport here, it's part of the outcome. The table below shows it: the `TRUE` row (`True` in Python) holds 6 and 0.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -600,8 +634,8 @@ As on [page 11](11-predict-from-one.qmd#logistic-regression), R's `confint()` [p
 
 ### When to use it
 
-- The [outcome](../glossary.qmd#outcome){.term} is **time until an [event](../glossary.qmd#event){.term}** (revision), and you want each [predictor](../glossary.qmd#predictor){.term}'s **hazard ratio**, adjusted for the others.
-- **Events limit predictors**, as in [logistic regression](../glossary.qmd#logistic-regression){.term}: about 10 events per predictor. 81 revisions allow about eight; implant (which uses two, B and C against A), age, sex and BMI use five.
+- The [outcome](../glossary.qmd#outcome){.term} is **time until an [event](../glossary.qmd#event){.term}** (revision), and you want the **hazard ratio** of one [predictor](../glossary.qmd#predictor){.term} (here implant) with the others taken into account, or to predict the event from several predictors.
+- **Events limit the model**, as in [logistic regression](../glossary.qmd#logistic-regression){.term}: a common rule of thumb is about 10 events per coefficient the model estimates, and some studies find it too strict. 81 revisions allow about eight coefficients; implant (which uses two, B and C against A), age, sex and BMI use five.
 - [Proportional hazards](../glossary.qmd#proportional-hazards){.term} must hold for every predictor. [Page 14](../survival/14-cox-regression.qmd#proportional-hazards) shows how to check it and covers Cox regression in full.
 
 ### What the test really does
@@ -649,7 +683,7 @@ print(cohort.groupby("implant").agg(n=("case_id", "count"), revised=("revised", 
 ```
 :::
 
-38 of 137 implant C procedures were revised, against 25 of 246 for A and 18 of 217 for B. The three groups are alike in age (65 to 66 years on average), sex (42% to 44% men) and BMI (about 30 to 31), so adjustment shouldn't change much.
+38 of 137 implant C procedures were revised, against 25 of 246 for A and 18 of 217 for B. The three groups are alike in age (65 to 66 years on average), sex (42% to 44% men) and BMI (about 30 to 31), so these factors can't [confound](../glossary.qmd#confounding){.term} the comparison much. Adjustment can still move the hazard ratios a little, for another reason (see "Effect size and 95% CI").
 
 ### Run it
 
@@ -704,7 +738,7 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 
 ### Effect size and 95% CI
 
-The **adjusted hazard ratios** with their 95% CIs are the [effect sizes](../glossary.qmd#effect-size){.term}. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29). Without adjustment the hazard ratios are 0.82 for B and 3.07 for C (the code below), so adjusting for age, sex and BMI changes little.
+The **adjusted hazard ratios** with their 95% CIs are the [effect sizes](../glossary.qmd#effect-size){.term}. The one the question asks about: implant C against A, 3.19 (95% CI 1.92 to 5.29). Without adjustment the hazard ratios are 0.82 for B and 3.07 for C (the code below), so adjusting for age, sex and BMI changes little: implant C's moved from 3.07 to 3.19. A small shift like this says little about confounding. A hazard ratio shifts a bit whenever a strong predictor of the outcome is added, even without confounding, and sex is one here (0.51 under "Read the output"), although the implant groups are alike in sex.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -764,6 +798,7 @@ by_implant <- cohort |> group_by(implant) |> summarise(n = n(), revised = sum(re
 adjusted_p <- summary(adjusted_cox)$coefficients[, "Pr(>|z|)"]
 unadjusted_hr <- exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))
 ex_surgeon <- lm(op_time_min ~ bmi + age + sex + procedure + surgeon, data = cohort)
+bmi_by_procedure <- lm(op_time_min ~ bmi * procedure + age + sex, data = cohort)   # the equal-slopes assumption, checked
 ex_surgeon_test <- anova(time_model, ex_surgeon)
 hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 ex_fail <- glm(failure_2y ~ tibial_slope_deg + age_10, family = binomial, data = acl)
@@ -780,6 +815,8 @@ stopifnot(
   round(time_fit$r.squared, 2) == 0.27, round(time_fit$adj.r.squared, 2) == 0.26,
   pf(time_fit$fstatistic[1], time_fit$fstatistic[2], time_fit$fstatistic[3], lower.tail = FALSE) < 0.001,
   round(coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]], 2) == 1.37,
+  round(coef(bmi_by_procedure)[["bmi:procedureTKA"]], 3) == 0.017,
+  round(summary(bmi_by_procedure)$coefficients["bmi:procedureTKA", "Pr(>|t|)"], 3) == 0.938,
   nrow(recovery_data) == 2052, sum(recovery_data$knee) == 1146, sum(recovery_data$knee == 0) == 906,
   round(joint_coef["tau_hip", "Estimate"], 1) == 53.4, round(joint_coef["tau_diff", "Estimate"], 1) == 27.5,
   round(joint_coef[c("plateau_diff", "start_diff"), "Estimate"], 2) == c(-3.66, 4.25),
@@ -820,7 +857,7 @@ stopifnot(
   bend_test$Df[2] == 2, bend_test$Res.Df[2] == 593,
   round(log(2) * coef(joint_recovery)[["tau_diff"]], 2) == 19.05, round(log(2) * joint_ci["tau_diff", ], 2) == c(11.03, 27.83),
   round(log(2) * joint_wald["tau_diff", ], 1) == c(10.6, 27.5),
-  by_rts$n == c(177, 173), 177 + 173 == 350, round(100 * 173 / 350, 1) == 49.4,
+  by_rts$n == c(177, 173), 177 + 173 == 350, round(100 * sum(acl$rts_12mo) / nrow(acl), 1) == 49.4,
   signif(rts_coef[c("grafthamstring", "graftquadriceps"), "Pr(>|z|)"], 3) == c(0.000746, 0.000965),
   round(rts_wald["age_10", ], 2) == c(0.52, 0.97), round(rts_wald["tegner_preinjury", ], 2) == c(1.22, 1.66),
   round(rts_wald["graftquadriceps", ], 2) == c(0.17, 0.64),
@@ -883,7 +920,7 @@ There's no clear evidence that adding surgeon improves the model, and BMI's coef
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-The [outcome](../glossary.qmd#outcome){.term} is [yes/no](../glossary.qmd#binary){.term}: **[multiple logistic regression](../glossary.qmd#logistic-regression){.term}**. With 15 [events](../glossary.qmd#event){.term}, the rule of thumb allows one predictor, two at a stretch, and the [CIs](../glossary.qmd#confidence-interval){.term} show the strain.
+The [outcome](../glossary.qmd#outcome){.term} is [yes/no](../glossary.qmd#binary){.term}: **[multiple logistic regression](../glossary.qmd#logistic-regression){.term}**. With 15 [events](../glossary.qmd#event){.term}, the rule of thumb allows one coefficient, two at a stretch: tibial slope and age, both measured, take one each. The [CIs](../glossary.qmd#confidence-interval){.term} show the strain.
 
 ::: {.panel-tabset group="language"}
 ## R

@@ -175,47 +175,71 @@ check_agree(list(r = r_by_hand, t = r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_han
 > **Results:** The correlation between femoral torsion on CT and on the modified Budin view was r = 0.86 (Pearson; 95% CI 0.79 to 0.91; p < 0.001; n = 80 hips).
 
 ::: {.callout-warning}
-## ⚠️ Achtung: r erkennt nur Geraden, belegt keine Ursache und ist keine Übereinstimmung
+## ⚠️ Achtung: r erkennt nur Geraden, hängt von der Spannweite ab, belegt keine Ursache und ist keine Übereinstimmung
 Ein Zusammenhang, der erst steigt und dann fällt, kann ein r nahe 0 haben, und ein einzelner Ausreisser kann eine Korrelation erzeugen oder verdecken: Schauen Sie sich daher immer zuerst das Streudiagramm an. Zudem sagt eine Korrelation nicht, was was verursacht, und nicht, ob etwas anderes (Alter, Geschlecht) beide antreibt. Um für weitere Variablen zu adjustieren, verwenden Sie die [multiple Regression](12-predict-from-several.qmd#multiple-linear-regression).
 
-**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten (die [mittlere Differenz](../glossary.qmd#mean-difference){.term} ± 1.96 Standardabweichungen). Selbst diese Grenzen verbergen einen Trend: Bei den 8 Hüften mit 25° oder mehr im CT lag die Budin-Messung im Mittel 7.0° tiefer. Der Code unten berechnet diese Zahlen. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
+**r hängt von der Spannweite der Werte in der Stichprobe ab.** Über alle 80 Hüften ist r = 0.86; bei den 30 Hüften mit 10° bis 20° im CT ist es 0.53, mit denselben zwei Methoden (die ersten Zeilen des Codes unten). Achten Sie deshalb beim Lesen einer Publikation auf die Spannweite der Werte in ihrer Stichprobe, bevor Sie ihr r mit einem anderen vergleichen: Dieselben zwei Methoden ergeben in einer Stichprobe mit enger Spannweite ein tieferes r.
+
+**Ein hohes r ist keine Übereinstimmung.** Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen. Hier ist r = 0.86, und doch wich die Budin-Messung bis zu 12.9° vom CT ab; für 95 % der Differenzen wären Werte von −10.2° bis 7.8° zu erwarten (die [mittlere Differenz](../glossary.qmd#mean-difference){.term} ± 1.96 Standardabweichungen). Selbst diese Grenzen verbergen einen Trend. Gruppiert nach dem Mittelwert der beiden Messungen (nicht nach dem CT allein, denn eine Gruppierung nach der Messung einer einzigen Methode kann einen Trend erzeugen oder verzerren), lag die Budin-Messung im Mittel 0.9° höher als das CT bei den 9 Hüften unter 5°, 1.3° tiefer bei den 65 Hüften von 5° bis 25° und 3.5° tiefer bei den 6 Hüften über 25°. Der Code unten berechnet diese Zahlen. Ob eine Methode die andere ersetzen kann, beurteilen Sie mit den [Bland-Altman-Grenzen](../beyond/17-agreement.qmd#bland-altman).
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+cor(imaging$torsion_ct_deg, imaging$torsion_budin_deg)                  # r über alle 80 Hüften
+narrow <- imaging$torsion_ct_deg >= 10 & imaging$torsion_ct_deg <= 20   # Hüften mit 10° bis 20° im CT
+sum(narrow)                                                              # wie viele
+cor(imaging$torsion_ct_deg[narrow], imaging$torsion_budin_deg[narrow])   # r in dieser engen Spannweite
+
 difference <- imaging$torsion_budin_deg - imaging$torsion_ct_deg   # Budin minus CT, ein Wert pro Hüfte
 max(abs(difference))                                  # der grösste Abstand zwischen den beiden Methoden
 mean(difference) + c(-1.96, 1.96) * sd(difference)    # wo 95 % der Differenzen zu erwarten sind
-high_ct <- imaging$torsion_ct_deg >= 25               # Hüften mit 25° oder mehr im CT
-sum(high_ct)                                          # wie viele
-mean(difference[high_ct])                             # ihre mittlere Differenz
+average <- (imaging$torsion_ct_deg + imaging$torsion_budin_deg) / 2   # der Mittelwert der beiden Methoden, ein Wert pro Hüfte
+torsion_band <- cut(average, c(-Inf, 5, 25, Inf), labels = c("under 5°", "5° to 25°", "over 25°"))
+tibble(torsion_band, difference) |>
+  group_by(torsion_band) |>
+  summarise(hips = n(), mean_difference = mean(difference))   # Budin minus CT, nach dem Mittelwert der beiden
 ```
 
 ## Python
 
 ```{python}
+print(stats.pearsonr(imaging["torsion_ct_deg"], imaging["torsion_budin_deg"]).statistic)   # r über alle 80 Hüften
+narrow = (imaging["torsion_ct_deg"] >= 10) & (imaging["torsion_ct_deg"] <= 20)   # Hüften mit 10° bis 20° im CT
+print(narrow.sum())                                                              # wie viele
+print(stats.pearsonr(imaging.loc[narrow, "torsion_ct_deg"], imaging.loc[narrow, "torsion_budin_deg"]).statistic)   # r in dieser engen Spannweite
+
 difference = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]   # Budin minus CT, ein Wert pro Hüfte
 print(difference.abs().max())                         # der grösste Abstand zwischen den beiden Methoden
 print(difference.mean() - 1.96 * difference.std(), difference.mean() + 1.96 * difference.std())   # wo 95 % der Differenzen zu erwarten sind
-high_ct = imaging["torsion_ct_deg"] >= 25             # Hüften mit 25° oder mehr im CT
-print(high_ct.sum(), difference[high_ct].mean())      # wie viele, und ihre mittlere Differenz
+average = (imaging["torsion_ct_deg"] + imaging["torsion_budin_deg"]) / 2   # der Mittelwert der beiden Methoden, ein Wert pro Hüfte
+torsion_band = pd.cut(average, [-float("inf"), 5, 25, float("inf")], labels=["under 5°", "5° to 25°", "over 25°"])
+print(difference.groupby(torsion_band, observed=True).agg(["count", "mean"]))   # Budin minus CT, nach dem Mittelwert der beiden
 ```
 :::
 :::
 
 ```{python}
 #| include: false
+by_band = difference.groupby(torsion_band, observed=True).agg(["count", "mean"])
 chk = {"largest": float(difference.abs().max()), "low": float(difference.mean() - 1.96 * difference.std()),
-       "high": float(difference.mean() + 1.96 * difference.std()), "n_high": float(high_ct.sum()),
-       "mean_high": float(difference[high_ct].mean())}
+       "high": float(difference.mean() + 1.96 * difference.std()), "n_narrow": float(narrow.sum()),
+       "r_all": float(stats.pearsonr(imaging["torsion_ct_deg"], imaging["torsion_budin_deg"]).statistic),
+       "r_narrow": float(stats.pearsonr(imaging.loc[narrow, "torsion_ct_deg"], imaging.loc[narrow, "torsion_budin_deg"]).statistic),
+       "n_under_5": float(by_band["count"].iloc[0]), "n_5_to_25": float(by_band["count"].iloc[1]), "n_over_25": float(by_band["count"].iloc[2]),
+       "mean_under_5": float(by_band["mean"].iloc[0]), "mean_5_to_25": float(by_band["mean"].iloc[1]), "mean_over_25": float(by_band["mean"].iloc[2])}
 ```
 
 ```{r}
 #| include: false
+band_n <- as.vector(table(torsion_band))
+band_mean <- as.vector(tapply(difference, torsion_band, mean))
 check_agree(list(largest = max(abs(difference)), low = mean(difference) - 1.96 * sd(difference),
-                 high = mean(difference) + 1.96 * sd(difference), n_high = sum(high_ct),
-                 mean_high = mean(difference[high_ct])), reticulate::py$chk)
+                 high = mean(difference) + 1.96 * sd(difference), n_narrow = sum(narrow),
+                 r_all = cor(imaging$torsion_ct_deg, imaging$torsion_budin_deg),
+                 r_narrow = cor(imaging$torsion_ct_deg[narrow], imaging$torsion_budin_deg[narrow]),
+                 n_under_5 = band_n[1], n_5_to_25 = band_n[2], n_over_25 = band_n[3],
+                 mean_under_5 = band_mean[1], mean_5_to_25 = band_mean[2], mean_over_25 = band_mean[3]), reticulate::py$chk)
 ```
 
 ## Spearman-Korrelation {#spearman}
@@ -434,7 +458,7 @@ Bei der Hüfte wird der HOOS JR beantwortet, beim Knie der KOOS JR. Beide reiche
 - Zwei **[kategoriale](../glossary.qmd#categorical-variable){.term}** [Variablen](../glossary.qmd#variable){.term} an denselben Patientinnen und Patienten. Der [Chi-Quadrat-Test](../glossary.qmd#chi-square-test){.term} ([Seite 8](08-three-plus-unmatched.qmd#chi-square)) fragt, ob sie überhaupt zusammenhängen; ein Kontingenzkoeffizient sagt, **wie stark**.
 - **Phi (φ)** ist für [2 × 2-Tabellen](../glossary.qmd#contingency-table){.term} gedacht. **Cramérs V** funktioniert bei jeder Tabellengrösse und entspricht bei einer 2 × 2-Tabelle φ (ohne dessen Vorzeichen). Beide reichen von 0 (kein Zusammenhang) bis 1 (jede Kategorie der einen Variable sagt die andere genau voraus).
 - Der **Kontingenzkoeffizient nach Pearson (C)** ist älter. Sein Maximum liegt unter 1 und hängt von der Grösse der Tabelle ab (es beträgt √((k − 1) ÷ k), wobei k die kleinere der beiden Zahlen Zeilenanzahl und Spaltenanzahl ist: √(1 ÷ 2) = 0.71 bei einer Tabelle mit zwei Spalten); das macht ihn schwer lesbar, bevorzugen Sie daher V.
-- Der [p-Wert](../glossary.qmd#p-value){.term} des Chi-Quadrat-Tests setzt voraus, dass jede [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} mindestens 5 beträgt.
+- Der [p-Wert](../glossary.qmd#p-value){.term} des Chi-Quadrat-Tests ist unbedenklich, wenn jede [erwartete Häufigkeit](../glossary.qmd#expected-count){.term} mindestens 5 beträgt: die einfache, vorsichtige Regel. Eine verbreitete Regel, die Cochran zugeschrieben wird, erlaubt etwas mehr: höchstens 20 % der erwarteten Häufigkeiten unter 5 und keine unter 1.
 
 ### Was der Test wirklich macht
 
@@ -629,7 +653,11 @@ stopifnot(
   round(max(abs(budin_minus_ct)), 1) == 12.9,
   round(mean(budin_minus_ct) + c(-1, 1) * 1.96 * sd(budin_minus_ct), 1) == c(-10.2, 7.8),
   round(mean(budin_minus_ct), 1) == -1.2,
-  sum(imaging$torsion_ct_deg >= 25) == 8, round(mean(budin_minus_ct[imaging$torsion_ct_deg >= 25]), 1) == -7.0,
+  sum(imaging$torsion_ct_deg >= 10 & imaging$torsion_ct_deg <= 20) == 30,
+  round(cor(imaging$torsion_ct_deg[narrow], imaging$torsion_budin_deg[narrow]), 2) == 0.53,
+  as.vector(table(torsion_band)) == c(9, 65, 6),
+  round(as.vector(tapply(budin_minus_ct, torsion_band, mean)), 1) == c(0.9, -1.3, -3.5),
+  !any(((imaging$torsion_ct_deg + imaging$torsion_budin_deg) / 2) %in% c(5, 25)),   # no average on a cut point, so "under 5°" and "over 25°" are exact
   min(imaging$torsion_ct_deg) < 0,
   nrow(change) == 404, change_medians$n[c(1, 5)] == c(14, 198), round(change_medians$median[c(1, 5)], 1) == c(25.4, 43.8),
   all(diff(change_medians$median) > 0),
@@ -648,7 +676,7 @@ stopifnot(
   isTRUE(all.equal(r_by_hand, unname(torsion_corr$estimate))),
   isTRUE(all.equal(r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_hand^2), unname(torsion_corr$statistic))),
   abs(reticulate::py_eval("float(torsion_corr.pvalue)") / 3.0576926692219362e-24 - 1) < 1e-9,
-  isTRUE(all.equal(difference, budin_minus_ct)), sum(high_ct) == 8,
+  isTRUE(all.equal(difference, budin_minus_ct)), sum(narrow) == 30,
   round(mean(difference) + c(-1.96, 1.96) * sd(difference), 2) == c(-10.19, 7.81),
   isTRUE(all.equal(cor(improvement_ranks, satisfaction_ranks), unname(satisfaction_corr$estimate))),
   as.vector(tapply(satisfaction_ranks, change$satisfaction_1yr, unique)) == c(7.5, 23.5, 54, 141, 305.5),

@@ -1,6 +1,6 @@
 ---
 title: "12 · Einen Wert aus mehreren Variablen vorhersagen"
-description: "Multiple lineare und nichtlineare Regression, multiple logistische Regression und Cox-Regression: der Effekt jedes Prädiktors, adjustiert für die anderen."
+description: "Multiple lineare und nichtlineare Regression, multiple logistische Regression und Cox-Regression: der Effekt eines Prädiktors unter Berücksichtigung der anderen und die Vorhersage aus mehreren."
 engine: knitr
 toc-depth: 2
 ---
@@ -32,9 +32,10 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 
 ### Wann verwenden
 
-- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine **[Messgrösse](../glossary.qmd#continuous-variable){.term}**, und Sie möchten den Effekt jedes von **mehreren [Prädiktoren](../glossary.qmd#predictor){.term}**, adjustiert für die anderen.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist eine **[Messgrösse](../glossary.qmd#continuous-variable){.term}**, und Sie möchten den Effekt **eines [Prädiktors](../glossary.qmd#predictor){.term}** unter Berücksichtigung der anderen, oder die Zielgrösse aus **mehreren** vorhersagen.
 - Die [Voraussetzungen](../glossary.qmd#assumption){.term} der [einfachen linearen Regression](11-predict-from-one.qmd#linear-regression) gelten weiterhin: geradlinige Effekte, voneinander [unabhängige](../glossary.qmd#independence){.term} Patientinnen und Patienten sowie [Residuen](../glossary.qmd#residual){.term}, die ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term} sind und gleichmässig [streuen](../glossary.qmd#spread){.term}.
-- Wählen Sie die Prädiktoren **bevor** Sie die Resultate ansehen, aus klinischem Wissen. Als Faustregel gelten mindestens 10 bis 20 Patientinnen und Patienten pro Prädiktor.
+- So wie es geschrieben ist, nimmt das Modell zudem an, dass die Wirkung jedes Prädiktors in jeder Gruppe gleich ist: dieselbe BMI-Steigung für Hüften und Knie sowie für Männer und Frauen. Ein [Interaktionsterm](../glossary.qmd#interaction){.term} (`bmi * procedure` in der Formel) lässt zu, dass sich eine Steigung zwischen Gruppen unterscheidet.
+- Wählen Sie die Prädiktoren **bevor** Sie die Resultate ansehen, aus klinischem Wissen. [Seite 14](../survival/14-cox-regression.qmd#choosing-covariates) erklärt, welche: Adjustieren Sie für Faktoren, die sowohl den Prädiktor beeinflussen, um den es in Ihrer Frage geht, als auch die Zielgrösse, und nicht für etwas, das dieser Prädiktor selbst verursacht. Als Faustregel gelten mindestens 10 bis 20 Patientinnen und Patienten pro Koeffizient, den das Modell schätzt: Ein gemessener oder ein Ja/Nein-Prädiktor braucht einen, ein Prädiktor mit drei Kategorien zwei.
 - Wenn sich ein Effekt krümmen könnte → [Splines](#multiple-nonlinear-regression). Wenn die Zielgrösse [Ja/Nein](../glossary.qmd#binary){.term} ist → [multiple logistische Regression](#multiple-logistic-regression).
 
 ### Was der Test wirklich macht
@@ -178,15 +179,46 @@ check_agree(list(by_hand = coef(lm(time_left ~ bmi_left))[["bmi_left"]],
                  alone = coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]]), reticulate::py$chk)
 ```
 
+Bevor Sie den Koeffizienten trauen, prüfen Sie die [Residuen](../glossary.qmd#residual){.term} wie auf [Seite 11](11-predict-from-one.qmd#linear-regression): Gegen die angepassten Werte aufgetragen, sollten sie ein Band gleichbleibender Breite um 0 bilden, ohne Krümmung.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
+  ggplot(aes(fitted, residual)) +
+  geom_point(alpha = 0.4) +
+  geom_hline(yintercept = 0) +
+  labs(x = "Fitted operative time, minutes", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.scatter(time_model.fittedvalues, time_model.resid, alpha=0.4)
+ax.axhline(0, color="black")
+ax.set_xlabel("Fitted operative time, minutes")
+ax.set_ylabel("Residual, minutes")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+Das tun sie hier: ein Band gleichbleibender Breite, ohne Krümmung und ohne Trichterform.
+
 ### Effektstärke und 95%-KI
 
-Die **adjustierten Koeffizienten** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}, dazu das **[R²](../glossary.qmd#r-squared){.term}** für das Modell als Ganzes. Der Koeffizient des BMI sank durch die Adjustierung nur wenig, von 1.37 Minuten pro kg/m² allein (die letzte Zeile im Kasten oben; [Seite 11](11-predict-from-one.qmd#linear-regression)) auf 1.27: Alter, Geschlecht und Eingriff erklären nur einen kleinen Teil des Zusammenhangs zwischen BMI und Operationsdauer.
+Die Frage betrifft den BMI, also ist **der adjustierte Koeffizient des BMI** mit seinem 95%-KI die [Effektstärke](../glossary.qmd#effect-size){.term}, die sie beantwortet, dazu das **[R²](../glossary.qmd#r-squared){.term}** für das Modell als Ganzes. Der Koeffizient des BMI sank durch die Adjustierung nur wenig, von 1.37 Minuten pro kg/m² allein (die letzte Zeile im Kasten oben; [Seite 11](11-predict-from-one.qmd#linear-regression)) auf 1.27: Alter, Geschlecht und Eingriff erklären nur einen kleinen Teil des Zusammenhangs zwischen BMI und Operationsdauer.
+
+Die Koeffizienten für Alter, Geschlecht und Eingriff sind Adjustierungen, keine Befunde. Sie stehen im Modell, damit der Vergleich nach BMI fair ist, und ein Modell, das für die Frage nach dem BMI gewählt wurde, ist nicht unbedingt das richtige für ihre eigenen Fragen ([Seite 14](../survival/14-cox-regression.qmd#univariable-multivariable) sagt dasselbe über Hazard Ratios). Der Results-Satz unten nennt deshalb von den Koeffizienten nur den des BMI.
 
 ### Resultate formulieren
 
 > **Methods:** Operative time was modeled with multiple linear regression on BMI, age, sex and procedure, chosen before the analysis.
 >
-> **Results:** Adjusted for age, sex and procedure, the coefficient for BMI was 1.27 minutes of operative time per kg/m² (95% CI 1.06 to 1.49; p < 0.001). The coefficient for TKA (vs THA) was 6.74 minutes (95% CI 4.40 to 9.08) and for age 0.27 minutes per year (95% CI 0.15 to 0.39). The model explained 27% of the variation in operative time (R² = 0.27).
+> **Results:** Adjusted for age, sex and procedure, the coefficient for BMI was 1.27 minutes of operative time per kg/m² (95% CI 1.06 to 1.49; p < 0.001). The model explained 27% of the variation in operative time (R² = 0.27).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: «Adjustiert» heisst nicht «verursacht», und mehr Prädiktoren sind nicht besser
@@ -409,7 +441,7 @@ Die Zeitkonstante war bei Knien um 27.5 Tage länger (95%-KI 15.9 bis 40.1). Bis
 
 ### Resultate formulieren
 
-> **Methods:** HOOS JR (hips) and KOOS JR (knees) were modeled against days since surgery with an exponential recovery curve whose start, plateau and time constant could differ between hips and knees, fitted by nonlinear least squares. Whether BMI's effect on operative time was linear was checked by adding a natural cubic spline (3 degrees of freedom) and comparing the models with an F test.
+> **Methods:** HOOS JR (hips) and KOOS JR (knees) were modeled against days since surgery with an exponential recovery curve whose start, plateau and time constant could differ between hips and knees, fitted by nonlinear least squares. The up to four scores from each joint were treated as independent, so the CIs do not account for the correlation between scores from the same joint and are illustrative only. Whether BMI's effect on operative time was linear was checked by adding a natural cubic spline (3 degrees of freedom) and comparing the models with an F test.
 >
 > **Results:** The difference in the time constant between knees and hips was 27.5 days (95% CI 15.9 to 40.1); half of the change was reached at about 56 days after knee replacement and 37 days after hip replacement. For BMI and operative time, comparing a spline with a straight line gave F = 0.58 (df = 2 and 593, p = 0.562).
 
@@ -430,9 +462,9 @@ Bei Hüften wird der HOOS JR (Score für Hüft-Gelenkersatz, Kurzform) beantwort
 
 ### Wann verwenden
 
-- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}**, und Sie möchten das **Odds Ratio** jedes von mehreren [Prädiktoren](../glossary.qmd#predictor){.term}, [adjustiert für](../glossary.qmd#adjustment){.term} die anderen.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[Ja/Nein](../glossary.qmd#binary){.term}**, und Sie möchten sie aus mehreren [Prädiktoren](../glossary.qmd#predictor){.term} vorhersagen; jeder Prädiktor erhält sein **Odds Ratio**, [adjustiert für](../glossary.qmd#adjustment){.term} die anderen.
 - Die [Voraussetzungen](../glossary.qmd#assumption){.term} der [einfachen logistischen Regression](11-predict-from-one.qmd#logistic-regression) gelten weiterhin, für jeden gemessenen Prädiktor.
-- **Die Anzahl der Ereignisse begrenzt die Prädiktoren.** Als Faustregel gelten mindestens 10 Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse pro Prädiktor. Hier sind 173 zurückgekehrt und 177 nicht, sodass dieses [Modell](../glossary.qmd#model){.term} etwa 17 Prädiktoren verkraftet.
+- **Die Anzahl der Ereignisse begrenzt das Modell.** Als gängige Faustregel gelten mindestens 10 Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse pro Koeffizient, den das Modell schätzt: Ein gemessener oder ein Ja/Nein-Prädiktor braucht einen, ein Prädiktor mit drei Kategorien zwei. Manche Studien halten die Regel für zu streng. Hier sind 173 zurückgekehrt und 177 nicht, sodass dieses [Modell](../glossary.qmd#model){.term} etwa 17 Koeffizienten verkraftet.
 - Wenn die Zielgrösse die Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term} ist → [Cox-Regression](#cox).
 
 ### Was der Test wirklich macht
@@ -548,6 +580,8 @@ print(odds_ratios)
 
 Die **adjustierten Odds Ratios** sind die [Effektstärken](../glossary.qmd#effect-size){.term}: 0.71 pro 10 Lebensjahre (95%-[KI](../glossary.qmd#confidence-interval){.term} 0.51 bis 0.96) und 1.42 pro Tegner-Stufe (95%-KI 1.22 bis 1.67). Für ein Hamstring-Transplantat beträgt das Odds Ratio 0.41 (0.25 bis 0.69) und für ein Quadrizeps-Transplantat 0.33 (0.17 bis 0.63), jeweils gegenüber BPTB. Das KI für das männliche Geschlecht (0.73, 0.46 bis 1.17) ist breit.
 
+Jedes dieser Odds Ratios ist gleichzeitig für die drei anderen Prädiktoren adjustiert. Das passt zur Frage dieses Abschnitts, welche Faktoren die Rückkehr zum Sport vorhersagen. Solche gegenseitig adjustierten Odds Ratios beschreiben aber die Vorhersage, nicht die eigene Wirkung jedes Faktors. Um die Wirkung eines einzelnen Faktors zu schätzen, bauen Sie ein Modell für diesen Faktor, mit Kovariaten, die wie auf [Seite 14](../survival/14-cox-regression.qmd#choosing-covariates) gewählt sind; die übrigen Schätzungen in diesem Modell sind dann keine Befunde.
+
 ### Resultate formulieren
 
 > **Methods:** Return to sport at 12 months was modeled with multiple logistic regression on age (per 10 years), sex, graft and pre-injury Tegner level, chosen before the analysis.
@@ -556,7 +590,7 @@ Die **adjustierten Odds Ratios** sind die [Effektstärken](../glossary.qmd#effec
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die kleinere Gruppe setzt die Grenze, und die Prädiktoren müssen zuerst feststehen
-Die Faustregel zählt die kleinere Gruppe der Zielgrösse. Sie erlaubt hier etwa 17 Prädiktoren, bei einem Transplantatversagen innerhalb von 2 Jahren aber nur einen oder zwei (15 von 350; Übung 2 und die erste Zeile der Ausgabe unten). Darüber hinaus werden die Odds Ratios instabil. Wählen Sie die Prädiktoren daher klinisch und im Voraus; lassen Sie nicht die [p-Werte](../glossary.qmd#p-value){.term} für sich wählen. Und verwenden Sie nur, was vor der Zielgrösse bekannt ist: Alle 6 Patientinnen und Patienten, bei denen das Transplantat im ersten Jahr versagte, waren nach 12 Monaten nicht zum Sport zurückgekehrt. Ein Versagen kann die Rückkehr zum Sport hier also nicht vorhersagen, denn es ist Teil der Zielgrösse. Die Tabelle unten zeigt es: In der Zeile `TRUE` (in Python `True`) stehen 6 und 0.
+Die Faustregel zählt die kleinere Gruppe der Zielgrösse. Sie erlaubt hier etwa 17 Koeffizienten, bei einem Transplantatversagen innerhalb von 2 Jahren aber nur einen oder zwei (15 von 350; Übung 2 und die erste Zeile der Ausgabe unten). Darüber hinaus werden die Odds Ratios instabil. Wählen Sie die Prädiktoren daher klinisch und im Voraus; lassen Sie nicht die [p-Werte](../glossary.qmd#p-value){.term} für sich wählen. Und verwenden Sie nur, was vor der Zielgrösse bekannt ist: Alle 6 Patientinnen und Patienten, bei denen das Transplantat im ersten Jahr versagte, waren nach 12 Monaten nicht zum Sport zurückgekehrt. Ein Versagen kann die Rückkehr zum Sport hier also nicht vorhersagen, denn es ist Teil der Zielgrösse. Die Tabelle unten zeigt es: In der Zeile `TRUE` (in Python `True`) stehen 6 und 0.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -600,8 +634,8 @@ Wie auf [Seite 11](11-predict-from-one.qmd#logistic-regression) [profiliert](../
 
 ### Wann verwenden
 
-- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist die **Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term}** (Revision), und Sie möchten das **Hazard Ratio** jedes [Prädiktors](../glossary.qmd#predictor){.term}, adjustiert für die anderen.
-- **Die Anzahl der Ereignisse begrenzt die Prädiktoren**, wie bei der [logistischen Regression](../glossary.qmd#logistic-regression){.term}: etwa 10 Ereignisse pro Prädiktor. 81 Revisionen erlauben etwa acht; das Implantat (das zwei braucht, B und C gegenüber A), Alter, Geschlecht und BMI benötigen fünf.
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist die **Zeit bis zu einem [Ereignis](../glossary.qmd#event){.term}** (Revision), und Sie möchten das **Hazard Ratio** eines [Prädiktors](../glossary.qmd#predictor){.term} (hier des Implantats) unter Berücksichtigung der anderen, oder das Ereignis aus mehreren Prädiktoren vorhersagen.
+- **Die Anzahl der Ereignisse begrenzt das Modell**, wie bei der [logistischen Regression](../glossary.qmd#logistic-regression){.term}: Als gängige Faustregel gelten etwa 10 Ereignisse pro Koeffizient, den das Modell schätzt, und manche Studien halten sie für zu streng. 81 Revisionen erlauben etwa acht Koeffizienten; das Implantat (das zwei braucht, B und C gegenüber A), Alter, Geschlecht und BMI benötigen fünf.
 - Die [proportionalen Hazards](../glossary.qmd#proportional-hazards){.term} müssen für jeden Prädiktor gelten. [Seite 14](../survival/14-cox-regression.qmd#proportional-hazards) zeigt, wie man das prüft, und behandelt die Cox-Regression ausführlich.
 
 ### Was der Test wirklich macht
@@ -649,7 +683,7 @@ print(cohort.groupby("implant").agg(n=("case_id", "count"), revised=("revised", 
 ```
 :::
 
-Revidiert wurden 38 von 137 Eingriffen mit Implantat C, gegenüber 25 von 246 mit A und 18 von 217 mit B. Die drei Gruppen gleichen sich in Alter (im Mittel 65 bis 66 Jahre), Geschlecht (42 % bis 44 % Männer) und BMI (etwa 30 bis 31), die Adjustierung dürfte also nicht viel ändern.
+Revidiert wurden 38 von 137 Eingriffen mit Implantat C, gegenüber 25 von 246 mit A und 18 von 217 mit B. Die drei Gruppen gleichen sich in Alter (im Mittel 65 bis 66 Jahre), Geschlecht (42 % bis 44 % Männer) und BMI (etwa 30 bis 31), diese Faktoren können den Vergleich also kaum durch [Confounding](../glossary.qmd#confounding){.term} verzerren. Die Adjustierung kann die Hazard Ratios aus einem anderen Grund trotzdem ein wenig verschieben (siehe «Effektstärke und 95%-KI»).
 
 ### Analyse durchführen
 
@@ -704,7 +738,7 @@ check_agree(list(hr_b = adjusted_hr["implantB", "exp(coef)"], hr_c = adjusted_hr
 
 ### Effektstärke und 95%-KI
 
-Die **adjustierten Hazard Ratios** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}. Für die Frage massgebend ist das Hazard Ratio von Implantat C gegenüber A: 3.19 (95%-KI 1.92 bis 5.29). Ohne Adjustierung betragen die Hazard Ratios 0.82 für B und 3.07 für C (der Code unten); die Adjustierung für Alter, Geschlecht und BMI ändert also wenig.
+Die **adjustierten Hazard Ratios** mit ihren 95%-KI sind die [Effektstärken](../glossary.qmd#effect-size){.term}. Für die Frage massgebend ist das Hazard Ratio von Implantat C gegenüber A: 3.19 (95%-KI 1.92 bis 5.29). Ohne Adjustierung betragen die Hazard Ratios 0.82 für B und 3.07 für C (der Code unten); die Adjustierung für Alter, Geschlecht und BMI ändert also wenig: Das Hazard Ratio von Implantat C veränderte sich von 3.07 auf 3.19. Eine so kleine Verschiebung sagt wenig über Confounding aus. Ein Hazard Ratio verschiebt sich immer ein wenig, wenn ein starker Prädiktor der Zielgrösse hinzukommt, auch ohne Confounding, und das Geschlecht ist hier ein solcher (0.51 unter «Ausgabe lesen»), obwohl sich die Implantatgruppen im Geschlecht gleichen.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -764,6 +798,7 @@ by_implant <- cohort |> group_by(implant) |> summarise(n = n(), revised = sum(re
 adjusted_p <- summary(adjusted_cox)$coefficients[, "Pr(>|z|)"]
 unadjusted_hr <- exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = cohort)))
 ex_surgeon <- lm(op_time_min ~ bmi + age + sex + procedure + surgeon, data = cohort)
+bmi_by_procedure <- lm(op_time_min ~ bmi * procedure + age + sex, data = cohort)   # the equal-slopes assumption, checked
 ex_surgeon_test <- anova(time_model, ex_surgeon)
 hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE)
 ex_fail <- glm(failure_2y ~ tibial_slope_deg + age_10, family = binomial, data = acl)
@@ -780,6 +815,8 @@ stopifnot(
   round(time_fit$r.squared, 2) == 0.27, round(time_fit$adj.r.squared, 2) == 0.26,
   pf(time_fit$fstatistic[1], time_fit$fstatistic[2], time_fit$fstatistic[3], lower.tail = FALSE) < 0.001,
   round(coef(lm(op_time_min ~ bmi, data = cohort))[["bmi"]], 2) == 1.37,
+  round(coef(bmi_by_procedure)[["bmi:procedureTKA"]], 3) == 0.017,
+  round(summary(bmi_by_procedure)$coefficients["bmi:procedureTKA", "Pr(>|t|)"], 3) == 0.938,
   nrow(recovery_data) == 2052, sum(recovery_data$knee) == 1146, sum(recovery_data$knee == 0) == 906,
   round(joint_coef["tau_hip", "Estimate"], 1) == 53.4, round(joint_coef["tau_diff", "Estimate"], 1) == 27.5,
   round(joint_coef[c("plateau_diff", "start_diff"), "Estimate"], 2) == c(-3.66, 4.25),
@@ -820,7 +857,7 @@ stopifnot(
   bend_test$Df[2] == 2, bend_test$Res.Df[2] == 593,
   round(log(2) * coef(joint_recovery)[["tau_diff"]], 2) == 19.05, round(log(2) * joint_ci["tau_diff", ], 2) == c(11.03, 27.83),
   round(log(2) * joint_wald["tau_diff", ], 1) == c(10.6, 27.5),
-  by_rts$n == c(177, 173), 177 + 173 == 350, round(100 * 173 / 350, 1) == 49.4,
+  by_rts$n == c(177, 173), 177 + 173 == 350, round(100 * sum(acl$rts_12mo) / nrow(acl), 1) == 49.4,
   signif(rts_coef[c("grafthamstring", "graftquadriceps"), "Pr(>|z|)"], 3) == c(0.000746, 0.000965),
   round(rts_wald["age_10", ], 2) == c(0.52, 0.97), round(rts_wald["tegner_preinjury", ], 2) == c(1.22, 1.66),
   round(rts_wald["graftquadriceps", ], 2) == c(0.17, 0.64),
@@ -883,7 +920,7 @@ Es gibt keinen klaren Hinweis, dass das Modell durch die Chirurgin oder den Chir
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
-Die [Zielgrösse](../glossary.qmd#outcome){.term} ist [Ja/Nein](../glossary.qmd#binary){.term}: **[multiple logistische Regression](../glossary.qmd#logistic-regression){.term}**. Bei 15 [Ereignissen](../glossary.qmd#event){.term} erlaubt die Faustregel einen Prädiktor, mit Mühe zwei, und an den [KI](../glossary.qmd#confidence-interval){.term} sieht man, dass das Modell an seine Grenze stösst.
+Die [Zielgrösse](../glossary.qmd#outcome){.term} ist [Ja/Nein](../glossary.qmd#binary){.term}: **[multiple logistische Regression](../glossary.qmd#logistic-regression){.term}**. Bei 15 [Ereignissen](../glossary.qmd#event){.term} erlaubt die Faustregel einen Koeffizienten, mit Mühe zwei: Slope und Alter, beide gemessen, brauchen je einen. An den [KI](../glossary.qmd#confidence-interval){.term} sieht man, dass das Modell an seine Grenze stösst.
 
 ::: {.panel-tabset group="language"}
 ## R
