@@ -40,7 +40,7 @@ Choose the hypothetical value **before** you look at your data, and say where it
 - The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}** (minutes, kg/m², points).
 - It's **[roughly normal](../glossary.qmd#normal-distribution){.term}**, or the [sample](../glossary.qmd#sample){.term} is large (about 30 or more) and not badly [skewed](../glossary.qmd#skewed){.term} ([page 3](../foundations/03-distributions.qmd#robustness)).
 - Each patient is counted once and patients are [independent](../glossary.qmd#independence){.term} of each other.
-- If the data are skewed, pile up at a [floor or ceiling](../glossary.qmd#ceiling-effect){.term} or are [ordinal](../glossary.qmd#ordinal){.term} → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank).
+- If the data are not normal but roughly [symmetric](../glossary.qmd#symmetric){.term} around their center → the [Wilcoxon signed-rank test](#wilcoxon-signed-rank). If they are clearly skewed (a [floor or ceiling](../glossary.qmd#ceiling-effect){.term} often makes them so) or [ordinal](../glossary.qmd#ordinal){.term}, or your claim is about the median, use the [sign test](../glossary.qmd#sign-test){.term} that the same section shows.
 
 ### What the test really does
 
@@ -89,7 +89,7 @@ plt.show()
 ```
 :::
 
-A roughly [symmetric](../glossary.qmd#symmetric){.term} hump, centered a little to the left of the dashed line at 90 minutes.
+A roughly symmetric hump, centered a little to the left of the dashed line at 90 minutes.
 
 ### Run it
 
@@ -226,10 +226,10 @@ Both R's `t.test(x, mu = 90)` and scipy's `ttest_1samp(x, popmean=90)` report th
 
 ### When to use it
 
-- The [outcome](../glossary.qmd#outcome){.term} is **[skewed](../glossary.qmd#skewed){.term}** or has a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}**, so a [mean](../glossary.qmd#mean){.term} isn't a fair summary ([page 3](../foundations/03-distributions.qmd#transform)).
+- The [outcome](../glossary.qmd#outcome){.term} has outliers or heavy tails, so a [mean](../glossary.qmd#mean){.term} isn't a fair summary, but it is still roughly [symmetric](../glossary.qmd#symmetric){.term} around its center. When the scores are clearly **[skewed](../glossary.qmd#skewed){.term}**, as a **[ceiling or floor](../glossary.qmd#ceiling-effect){.term}** often makes them ([page 3](../foundations/03-distributions.qmd#transform)), use the sign test below.
 - It ranks how far each patient is above or below the [hypothetical value](../glossary.qmd#hypothetical-value){.term}. It doesn't assume a [normal distribution](../glossary.qmd#normal-distribution){.term}, but it does need distances that can be compared, so the outcome must be a [measurement](../glossary.qmd#continuous-variable){.term}.
-- For an **[ordinal](../glossary.qmd#ordinal){.term}** scale (satisfaction from 1 to 5), count the patients above and below the value and compare the two counts with a [binomial test](#binomial-test). This is called the **[sign test](../glossary.qmd#sign-test){.term}**.
-- Strictly, it tests the **[pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (the Hodges-Lehmann estimate below), which equals the [median](../glossary.qmd#median){.term} only for a [symmetric](../glossary.qmd#symmetric){.term} [distribution](../glossary.qmd#distribution){.term}. With a ceiling the two differ a little; report both.
+- It assumes the scores are spread symmetrically around their center, and its [null hypothesis](../glossary.qmd#null-hypothesis){.term} is that this center is the hypothetical value: R's help page for `wilcox.test()` calls it a [distribution](../glossary.qmd#distribution){.term} "symmetric about `mu`", the hypothetical value. Its p-value and its estimate are about the **[pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (the Hodges-Lehmann estimate below), which equals the [median](../glossary.qmd#median){.term} only for a symmetric distribution. With a ceiling the two differ a little; report both.
+- If your claim is about the median itself, the scores are clearly skewed, or the scale is **[ordinal](../glossary.qmd#ordinal){.term}** (satisfaction from 1 to 5), count the patients above and below the value and compare the two counts with a [binomial test](#binomial-test). This is called the **[sign test](../glossary.qmd#sign-test){.term}**, and it needs no symmetry. The last line under "Run it" runs it on these scores.
 - If the data are roughly normal → the [one-sample t test](#one-sample-t) is more familiar and slightly more [powerful](../glossary.qmd#power){.term}.
 
 ### What the test really does
@@ -295,7 +295,7 @@ plt.show()
 ```
 :::
 
-260 patients: 170 scored above 80 and 90 below. 170 + 90 = 260, so nobody scored exactly 80 and nobody is dropped from the test. A ceiling at 100 and a long tail to the left: the [rank-based test](../glossary.qmd#nonparametric){.term} is the safer choice.
+260 patients: 170 scored above 80 and 90 below. 170 + 90 = 260, so nobody scored exactly 80 and nobody is dropped from the test. The histogram shows a ceiling at 100 and a long tail to the left, so the scores are not symmetric and the pseudomedian is not the median: the signed-rank p-value below is about the pseudomedian (84.4, the Hodges-Lehmann estimate under "Effect size and 95% CI"), and the sign test on the last line under "Run it" tests the median (85.75, the first output under "Effect size and 95% CI") against 80.
 
 ### Run it
 
@@ -307,6 +307,8 @@ koos_test <- wilcox.test(koos_1yr, mu = 80,
                          exact = FALSE, correct = FALSE,   # see the R vs Python box
                          conf.int = TRUE)                  # adds the Hodges-Lehmann estimate and CI
 koos_test
+
+binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value   # the sign test: 170 above 80 out of 260
 ```
 
 ## Python
@@ -315,18 +317,22 @@ koos_test
 # pg.wilcoxon() runs scipy's test and adds the rank-biserial effect size
 koos_test = pg.wilcoxon(koos_1yr - 80, method="approx", correction=False)   # see the R vs Python box
 print(koos_test)
+
+print(stats.binomtest(int((koos_1yr > 80).sum()), int((koos_1yr != 80).sum())).pvalue)   # the sign test: 170 above 80 out of 260
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"p": float(koos_test["p_val"].iloc[0]),
-       "log_p": float(np.log(koos_test["p_val"].iloc[0]))}   # tiny p-values: compare them on a log scale too
+       "log_p": float(np.log(koos_test["p_val"].iloc[0])),   # tiny p-values: compare them on a log scale too
+       "sign_log_p": float(np.log(stats.binomtest(int((koos_1yr > 80).sum()), int((koos_1yr != 80).sum())).pvalue))}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticulate::py$chk)
+check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value),
+                 sign_log_p = log(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value)), reticulate::py$chk)
 ```
 
 ### Read the output
@@ -335,6 +341,7 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 - **p < 0.001:** scores this far from 80 would be very unlikely if the typical patient really scored 80. R prints `2.293e-06`, that is 0.000002293; pingouin prints `0.000002`.
 - **(pseudo)median 84.35, 95% CI 82.7 to 86.1** (R only): the Hodges-Lehmann estimate of the center of the scores, with its [CI](../glossary.qmd#confidence-interval){.term}.
 - **RBC = 0.34** (Python): the [rank-biserial effect size](../glossary.qmd#rank-biserial){.term}, below.
+- **The last line** (R prints `7.943109e-07`, Python a few more digits): the sign test's p-value, 0.0000008, so p < 0.001. It asks only how many patients scored above 80 (170) and how many below (90), so it is about the median: 170 of 260 would be very unlikely if the median score were 80.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: the rank sums by hand
@@ -825,6 +832,8 @@ stopifnot(
   isTRUE(all.equal(time_difference / time_se, unname(op_test$statistic))), round(time_se, 3) == 0.671,
   round(time_difference, 2) == -5.52, round(-5.52 / 0.671, 2) == -8.23, 4 * 5.5 == 22, signif(op_test$p.value, 4) == 1.204e-15,
   sum(koos_1yr > 80) == 170, sum(koos_1yr < 80) == 90, 170 + 90 == 260,
+  signif(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value, 7) == 7.943109e-07,   # the sign test
+  round(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value, 7) == 0.0000008,
   sum(distance_rank[distance > 0]) == 22698.5, sum(distance_rank[distance < 0]) == 11231.5, 260 * 261 / 2 == 33930,
   round((22698.5 - 11231.5) / 33930, 2) == 0.34,
   mean(distance_rank[distance > 0]) > mean(distance_rank[distance < 0]),

@@ -390,7 +390,7 @@ check_agree(list(middle = mean(sorted_scores[c(97, 98)]), q1 = mean(sorted_score
 
 ### Rédiger les résultats
 
-> **Methods:** Continuous variables that were skewed or piled up at a floor or ceiling are reported as median (interquartile range, IQR).
+> **Methods:** Continuous variables that were skewed or piled up at a floor or ceiling are reported as median (interquartile range, IQR). 95% confidence intervals for medians were calculated with the exact binomial method.
 >
 > **Results:** The median Oxford Hip Score at 1 year was 42 points (IQR 39 to 46; 95% CI for the median 41 to 43).
 
@@ -635,7 +635,7 @@ print(len(cohort), cohort["revised"].sum(), cohort["followup_years"].median())
 ```
 :::
 
-Chaque ligne a besoin d'exactement deux informations : **combien de temps** le patient a été suivi et **si** le suivi s'est terminé par l'[événement](../glossary.qmd#event){.term} (1) ou par une censure (0). La première intervention a été suivie pendant 6.2 ans sans révision ; la cinquième a été révisée à 5.8 ans. La seconde sortie compte 600 interventions et 81 révisions, le 81 / 600 = 0.135 ci-dessus, puis donne la [médiane](../glossary.qmd#median){.term} de la colonne `followup_years`, sa valeur du milieu : 4.365 ans (R affiche 4.36, sous `column_median`). Python affiche les trois nombres sans étiquette. Cette valeur du milieu n'est pas le suivi médian de l'étude, car les révisions et les décès raccourcissent certaines de ses durées. La [page 13](../survival/13-kaplan-meier.qmd#follow-up) explique pourquoi et calcule le suivi médian par la méthode de Kaplan-Meier inversé : 5.62 ans.
+Chaque ligne a besoin d'exactement deux informations : **combien de temps** le patient a été suivi et **si** le suivi s'est terminé par l'[événement](../glossary.qmd#event){.term} (1) ou par une censure (0). La première intervention a été suivie pendant 6.2 ans sans révision ; la cinquième a été révisée à 5.8 ans. La seconde sortie compte 600 interventions et 81 révisions, le 81 / 600 = 0.135 ci-dessus, puis donne la [médiane](../glossary.qmd#median){.term} de la colonne `followup_years`, sa valeur du milieu : 4.365 ans (R affiche 4.36, sous `column_median`). Python affiche les trois nombres sans étiquette. Cette valeur du milieu n'est pas le suivi médian de l'étude, car les révisions et les décès raccourcissent certaines des durées de la colonne. La [page 13](../survival/13-kaplan-meier.qmd#follow-up) explique pourquoi et calcule le suivi médian par la méthode de Kaplan-Meier inversé : 5.62 ans.
 
 ### Exécuter l'analyse
 
@@ -652,7 +652,7 @@ km |>
   add_confidence_interval() +
   add_risktable() +
   scale_ggsurvfit() +
-  labs(x = "Years since surgery", y = "Revision-free survival")
+  labs(x = "Years since surgery", y = "Survivorship free of revision")
 
 summary(km, times = 5)                             # l'estimation à 5 ans
 ```
@@ -666,7 +666,8 @@ km.fit(cohort["followup_years"], event_observed=cohort["revised"])
 fig, ax = plt.subplots(figsize=(7, 4.5))
 km.plot_survival_function(ax=ax, legend=False)
 ax.set_xlabel("Years since surgery")
-ax.set_ylabel("Revision-free survival")
+ax.set_ylabel("Survivorship free of revision")
+y_range = ax.set_ylim(0, 1)                        # l'axe entier, de 0 à 1, comme dans R
 add_at_risk_counts(km, ax=ax)
 plt.tight_layout()
 plt.show()
@@ -693,7 +694,7 @@ check_agree(list(surv_5 = km_5$surv, ci_low = km_5$lower, ci_high = km_5$upper),
 ### Lire le résultat
 
 - **La courbe** commence à 100 % et descend d'un palier à chaque révision. Les patients censurés ne la font pas descendre ; ils quittent simplement le groupe « à risque ».
-- **La bande ombrée** est l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %. Elle s'élargit à chaque révision, et d'autant plus que peu d'interventions restent à risque ; entre deux révisions, sa largeur ne change pas.
+- **La bande ombrée** est l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %. Elle s'élargit à chaque révision et nulle part ailleurs : entre deux révisions, sa largeur ne change pas. Tard dans le suivi, quand peu d'interventions restent à risque, chaque révision l'élargit davantage qu'une révision ne le faisait dans les années intermédiaires.
 - **Les effectifs à risque** (*Number at risk* sur le graphique) sous le graphique indiquent combien d'interventions étaient encore suivies à chaque moment. Faites moins confiance à l'extrémité droite de la courbe : à 10 ans, il ne reste que 21 des 600 interventions (le dernier nombre de la première ligne sous le graphique).
 - **À 5 ans :** [survie](../glossary.qmd#survival){.term} de 0.863 (IC à 95 % de 0.828 à 0.892), avec 263 interventions encore à risque (`n.risk` dans R, le dernier nombre qu'affiche Python).
 - **Le reste de ce qui s'affiche :** dans la ligne de R, `n.event` 66 est le nombre de révisions jusqu'à 5 ans (81 sur tout le suivi) et `std.err` est l'[erreur standard](../glossary.qmd#standard-error){.term} de l'estimation. La première ligne de Python, « 600 total observations, 519 right-censored observations », résume les données : 600 interventions − 81 révisions = 519 censurées.
@@ -746,9 +747,9 @@ check_agree(list(moments = nrow(km_steps), revisions = sum(km_steps$revisions), 
 
 ### Rédiger les résultats
 
-> **Methods:** Implant survivorship was estimated with the Kaplan-Meier method, with revision for any reason as the end point. Patients were censored at death or at their last follow-up.
+> **Methods:** Implant survivorship was estimated with the Kaplan-Meier method, with revision for any reason as the end point. Patients were censored at death or at their last follow-up. Confidence intervals used the log-log transformation.
 >
-> **Results:** Revision-free survival at 5 years was 86.3% (95% CI 82.8% to 89.2%; 263 procedures at risk).
+> **Results:** Survivorship free of revision at 5 years was 86.3% (95% CI 82.8% to 89.2%; 263 procedures at risk).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le décès n'est pas seulement une « perte de vue »
@@ -815,6 +816,11 @@ stopifnot(
   round(cohort$followup_years[5], 1) == 5.8, cohort$revised[5] == 1,
   round(km_5$surv, 3) == 0.863, round(km_5$lower, 3) == 0.828, round(km_5$upper, 3) == 0.892,
   km_5$n.risk == 263,
+  # the band widens at each revision and nowhere else; a late revision (under 200 at risk, from 5.8 years)
+  # widens it more than any revision in the middle years (300 to 500 at risk, 2.0 to 4.3 years)
+  all(diff(c(0, km$upper - km$lower))[km$n.event == 0] == 0), all(diff(c(0, km$upper - km$lower))[km$n.event > 0] > 0),
+  min((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk < 200]) >
+    max((diff(c(0, km$upper - km$lower)) / km$n.event)[km$n.event > 0 & km$n.risk >= 300 & km$n.risk <= 500]),
   # exercise solutions
   round(mean(cohort$bmi), 1) == 30.4, round(sd(cohort$bmi), 1) == 5.4,
   round(t.test(cohort$bmi)$conf.int[1], 1) == 30.0, round(t.test(cohort$bmi)$conf.int[2], 1) == 30.9,
