@@ -133,6 +133,103 @@ def test_every_term_link_points_to_an_entry_of_its_own_language(site):
                 assert entry in entries, f"{lang}/{page}: no glossary entry '{entry}'"
 
 
+
+def definition(lang, entry):
+    """An entry's definition on a language's glossary page: the text the hover shows."""
+    dt = load_lang(lang, "glossary.html").select_one(f"dl dt:has(span#{entry})")
+    assert dt is not None, f"{lang}: no glossary entry '{entry}'"
+    return text_of(dt.find_next_sibling("dd"))
+
+
+# Words each corrected entry must carry in every language (content review of 20.11.2026, task 3.9).
+CORRECTED_ENTRIES = {
+    "log-rank-test": {"en": "Mantel-Haenszel calculation", "de": "Mantel-Haenszel-Rechnung", "fr": "calcul de Mantel-Haenszel"},
+    "t-test": {"en": "on this site", "de": "auf dieser Website", "fr": "sur ce site"},
+    "censored": {"en": "Competing risk", "de": "Konkurrierendes Risiko", "fr": "Risque concurrent"},
+    "risk": {"en": "Kaplan-Meier", "de": "Kaplan-Meier", "fr": "Kaplan-Meier"},
+    "score-test": {"en": "exact method", "de": "exakten Methode", "fr": "méthode exacte"},
+    "odds-ratio": {"en": "not a risk ratio", "de": "kein relatives Risiko", "fr": "pas un risque relatif"},
+    "statistical-significance": {"en": "confidence interval", "de": "Konfidenzintervall", "fr": "intervalle de confiance"},
+    "false-negative": {"en": "beta", "de": "Beta", "fr": "bêta"},
+    "reverse-kaplan-meier": {"en": "loss to follow-up", "de": "verloren", "fr": "perdu de vue"},
+}
+
+
+def test_corrected_glossary_entries_say_the_same_in_every_language(site):
+    for entry, words in CORRECTED_ENTRIES.items():
+        for lang, word in words.items():
+            assert word in definition(lang, entry), (lang, entry, word)
+
+
+def test_log_rank_entry_says_what_r_computes_and_what_the_source_says(site):
+    """R's survdiff() and mantelhaen.test() on the event-time 2 x 2 tables give the same statistic (C8)."""
+    text = definition("en", "log-rank-test")
+    assert "R and lifelines compute it as the Mantel-Haenszel calculation" in text
+    assert "of each event time, and it is also called the Mantel-Haenszel test for survival data" in text
+    assert "which is why" not in text, "no source says where the name comes from"
+    assert "A statistics guide that tells the two names apart says they differ only in how events at the same time are handled" in text
+    assert "nearly identical" not in text, "one name for one calculation, the guide's distinction attributed to the guide"
+    german = definition("de", "log-rank-test")
+    assert "Statistik-Leitfaden, der die beiden Namen unterscheidet, schreibt, sie unterschieden sich nur darin" in german
+    assert "Sie unterscheiden sich nur darin" not in german
+    assert "Ereigniszeitpunkts, und er heisst auch Mantel-Haenszel-Test für Überlebensdaten" in german
+    assert "deshalb heisst er" not in german
+    french = definition("fr", "log-rank-test")
+    assert "Un guide de statistique qui distingue les deux noms écrit qu'ils ne diffèrent que par" in french
+    assert "presque identiques" not in french, "the guide's distinction is the guide's, not the site's"
+    assert "temps d'événement, et on l'appelle aussi test de Mantel-Haenszel pour données de survie" in french
+    assert "ce qui explique" not in french
+
+
+def test_t_test_entry_says_how_this_site_uses_students(site):
+    text = definition("en", "t-test")
+    assert "on this site it means the unpaired t test that assumes equal variances" in text, "C9"
+    assert "Welch's" in text
+
+
+def test_censored_entry_puts_death_with_the_competing_risk_and_names_the_assumption(site):
+    text = definition("en", "censored")
+    assert "or the patient died." not in text, "C10: death is censored only when it isn't the event studied"
+    assert "died without the event, when death is not the event studied" in text
+    assert "the same chance of a later event as those still being followed" in text
+
+
+def test_risk_entry_says_when_the_simple_count_works(site):
+    assert "only when every patient was followed for the whole period or until the event" in definition("en", "risk"), "B25"
+
+
+def test_score_test_entry_says_when_it_equals_the_log_rank_test(site):
+    text = definition("en", "score-test")
+    assert "it is equivalent to the log-rank test." not in text, "B25: exact only without tied event times"
+    assert "when no two events happen at the same time" in text
+
+
+def test_odds_ratio_entry_warns_it_is_not_a_risk_ratio(site):
+    assert "An odds ratio is not a risk ratio: it lies further from 1" in definition("en", "odds-ratio"), "B7"
+    german = definition("de", "odds-ratio")
+    assert "Ein Odds Ratio ist kein relatives Risiko: Es liegt" in german and "eine Odds Ratio" not in german.lower(), \
+        "the German site writes das Odds Ratio"
+
+
+def test_significance_entry_says_non_significance_is_not_no_difference(site):
+    text = definition("en", "statistical-significance")
+    assert "not statistically significant does not show that there is no difference" in text, "B8"
+    assert "the significance level or alpha" in text
+
+
+def test_false_negative_entry_names_beta_and_power(site):
+    text = definition("en", "false-negative")
+    assert "type II error" in text and "power is 1 minus beta" in text
+    assert "chance kept the sample from showing a statistically significant difference" in text
+    assert "as if there were none" not in text, "not significant is not the same as looking like no difference"
+
+
+def test_reverse_kaplan_meier_entry_leaves_the_deaths_to_the_methods(site):
+    text = definition("en", "reverse-kaplan-meier")
+    assert "being censored counts as the event" not in text, "page 13 censors deaths in the reverse analysis too"
+    assert "a death can count either way" in text
+    assert "the two can give different medians" in text, "shown on one dataset"
+
 def test_every_page_includes_the_report_link_script(site):
     pages = sorted(p for p in SITE_ROOT.rglob("*.html") if "site_libs" not in p.parts)
     assert pages
