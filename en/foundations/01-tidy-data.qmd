@@ -165,7 +165,7 @@ We'll fix it one step at a time. Every step is small enough to check. Run the st
 
 ### Step 1: read both tabs, as text {#step-1-read-both-tabs-as-text}
 
-Read everything as text first. If you let the software guess types, it silently turns `32.1 kg/m2` into a [missing value](../glossary.qmd#missing-data){.term}, and you never find out. We'll convert types deliberately in step 5.
+Read everything as text first. If you let the software guess types, each reader guesses differently, and the same column can come out differently on each tab: readxl reads every column of this workbook as text, while pandas reads BMI as a mix of numbers and text (`33.5 kg/m2` stays as typed), and the pre-op score as numbers on Site A but as a mix on Site B, where one cell says `unk`. Forcing a number type is what loses values: with `col_types = "numeric"`, readxl turns `33.5 kg/m2` into a [missing value](../glossary.qmd#missing-data){.term} and only warns, and pandas, given `dtype=float`, stops with an error. We'll convert types deliberately in step 5.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -424,12 +424,18 @@ The red fill marks 18 revised cases. The `Notes` column mentions a revision ("re
 
 ### Step 5: give every column its real type {#step-5-give-every-column-its-real-type}
 
-Now convert each text column into what it really is. One small function handles the mixed date formats. Each recode lists the values it expects and turns anything else into a missing value, so a surprise like `U` for sex shows up instead of silently becoming "Male".
+Now convert each text column into what it really is. One small function handles the mixed date formats. The recodes don't all treat a surprise the same way, so know which is which:
+
+- **Sex, procedure and side** look for the values they expect and turn anything else into a missing value. Sex is matched on the whole spellings the sheet uses, listed first in the code below, so a surprise like `Mme` shows up as missing instead of silently becoming "Male", as it would if we matched only the first letter.
+- **ASA** turns text it can't read as a class into a missing value in R, with a warning. In Python, `pd.to_numeric()` stops with an error instead.
+- **The three comorbidity flags** are 1 when the cell names the abbreviation and 0 when it names anything else, so an unknown spelling such as `T2DM` counts as "no", not as missing. Check 3 below cross-tabulates them for that reason.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+count(step3, sex)   # every spelling of sex in the sheet: the recode below lists exactly these
+
 # Dates arrive as Excel serial numbers ("42010"), ISO dates ("2015-04-21"),
 # or Swiss day-first text ("13.01.15", "13.1.2015"). Handle the serial
 # numbers, then the ISO dates, then read the rest day-first.
@@ -451,8 +457,8 @@ tidy <- step3 |>
     site,
     surgery_date = parse_messy_date(dos),
     age          = parse_number(age),            # "67 yo"      -> 67
-    sex          = case_when(str_detect(sex, regex("^f", ignore_case = TRUE)) ~ "Female",
-                             str_detect(sex, regex("^m", ignore_case = TRUE)) ~ "Male"),  # anything else -> NA
+    sex          = case_when(str_to_lower(sex) %in% c("f", "female") ~ "Female",
+                             str_to_lower(sex) %in% c("m", "male")   ~ "Male"),     # anything else -> NA
     bmi          = parse_number(bmi),            # "BMI 31.2"   -> 31.2
     asa          = as.integer(as.roman(str_remove(asa, "^ASA "))),  # "II", "ASA 2", "2" -> 2
     diabetes     = as.integer(str_detect(comorbidities, regex("\\bDM\\b", ignore_case = TRUE))),
@@ -479,6 +485,8 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
+print(step3["sex"].value_counts().sort_index())   # every spelling of sex in the sheet: the recode below lists exactly these
+
 def number(text):
     # The first number in each cell: "67 yo" -> 67, "BMI 31.2" -> 31.2
     return pd.to_numeric(text.str.extract(r"(\d+\.?\d*)")[0])
@@ -501,7 +509,8 @@ tidy = pd.DataFrame({
     "site":         step3["site"],
     "surgery_date": parse_messy_date(step3["dos"]),
     "age":          number(step3["age"]),
-    "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
+    "sex":          step3["sex"].str.lower().map({"f": "Female", "female": "Female",
+                                              "m": "Male", "male": "Male"}),   # anything else -> missing
     "bmi":          number(step3["bmi"]),
     "asa":          pd.to_numeric(step3["asa"].str.replace("ASA ", "").replace(asa_roman)),
     "diabetes":     step3["comorbidities"].str.contains(r"\bDM\b", case=False).astype(int),
@@ -589,6 +598,13 @@ items
 
 items |> distinct(case_id, instrument) |> count(instrument)   # patients per instrument
 sum(is.na(items$response))                                    # rows with no answer
+
+missed <- items |>                                            # visits with no answer at all
+  group_by(case_id, visit) |>
+  filter(all(is.na(response))) |>
+  ungroup()
+nrow(distinct(missed, case_id, visit))                        # missed visits
+nrow(missed)                                                  # their rows
 ```
 
 ## Python
@@ -615,6 +631,11 @@ print(items)
 
 print(items.drop_duplicates("case_id")["instrument"].value_counts())   # patients per instrument
 print(items["response"].isna().sum())                                  # rows with no answer
+
+blank = items["response"].isna()
+missed = items[blank.groupby([items["case_id"], items["visit"]]).transform("all")]   # visits with no answer at all
+print(len(missed.drop_duplicates(["case_id", "visit"])))               # missed visits
+print(len(missed))                                                     # their rows
 ```
 :::
 
@@ -622,13 +643,15 @@ print(items["response"].isna().sum())                                  # rows wi
 #| include: false
 chk = {"rows": float(len(items)), "mean": float(items["response"].mean())}
 chk_survey = {"koos": float((items.drop_duplicates("case_id")["instrument"] == "KOOS JR").sum()),
-              "blank": float(items["response"].isna().sum())}
+              "blank": float(items["response"].isna().sum()),
+              "missed_visits": float(len(missed.drop_duplicates(["case_id", "visit"]))), "missed_rows": float(len(missed))}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(rows = nrow(items), mean = mean(items$response, na.rm = TRUE)), reticulate::py$chk)
-check_agree(list(koos = n_distinct(items$case_id[items$instrument == "KOOS JR"]), blank = sum(is.na(items$response))),
+check_agree(list(koos = n_distinct(items$case_id[items$instrument == "KOOS JR"]), blank = sum(is.na(items$response)),
+                 missed_visits = nrow(distinct(missed, case_id, visit)), missed_rows = nrow(missed)),
             reticulate::py$chk_survey)
 survey_key <- read_csv("data/answer-keys/survey_items_long.csv", show_col_types = FALSE)
 stopifnot(isTRUE(all.equal(as.data.frame(items), as.data.frame(survey_key), check.attributes = FALSE)))
@@ -640,7 +663,7 @@ pd.testing.assert_frame_equal(items, pd.read_csv("data/answer-keys/survey_items_
                               check_dtype=False)
 ```
 
-A KOOS JR patient now has 7 items × 4 visits = 28 rows, and a HOOS JR patient 6 items × 4 visits = 24. With 82 KOOS JR and 68 HOOS JR patients, that makes 82 × 28 + 68 × 24 = 3,928 rows. A missed visit still has its rows, with the response blank (564 rows here), so "expected but not answered" stays visible.
+A KOOS JR patient now has 7 items × 4 visits = 28 rows, and a HOOS JR patient 6 items × 4 visits = 24. With 82 KOOS JR and 68 HOOS JR patients, that makes 82 × 28 + 68 × 24 = 3,928 rows. A missed visit still has its rows, with the response blank, so "expected but not answered" stays visible. There are 564 blank rows: 473 from 72 missed visits and 91 items skipped in visits that were otherwise answered. The last three numbers in the output are 564, 72 and 473; the 91 is 564 − 473.
 
 ## Checking nothing changed {#integrity}
 
@@ -696,6 +719,13 @@ step3 |>
   transmute(case_id = str_trim(study_id), raw = sex) |>
   left_join(select(tidy, case_id, clean = sex), by = "case_id") |>
   count(raw, clean)
+
+# The comorbidity text against the three flags made from it
+step3 |>
+  transmute(case_id = str_trim(study_id), raw = comorbidities) |>
+  left_join(select(tidy, case_id, diabetes, hypertension, sleep_apnea), by = "case_id") |>
+  count(raw, diabetes, hypertension, sleep_apnea) |>
+  print(n = Inf)                                      # every row, not just the first 10
 ```
 
 ## Python
@@ -704,7 +734,35 @@ step3 |>
 raw_sex = pd.DataFrame({"case_id": step3["study_id"].str.strip(), "raw": step3["sex"]})
 recode = raw_sex.merge(tidy[["case_id", "sex"]].rename(columns={"sex": "clean"}), on="case_id")
 print(recode.groupby(["raw", "clean"], dropna=False).size())
+
+# The comorbidity text against the three flags made from it
+raw_comorb = pd.DataFrame({"case_id": step3["study_id"].str.strip(), "raw": step3["comorbidities"]})
+flags = raw_comorb.merge(tidy[["case_id", "diabetes", "hypertension", "sleep_apnea"]], on="case_id")
+print(flags.groupby(["raw", "diabetes", "hypertension", "sleep_apnea"], dropna=False).size())
 ```
+:::
+
+```{python}
+#| include: false
+chk = {"combinations": float(len(flags.groupby(["raw", "diabetes", "hypertension", "sleep_apnea"], dropna=False))),
+       "diabetes": float(flags["diabetes"].sum()), "none": float((flags[["diabetes", "hypertension", "sleep_apnea"]].sum(axis=1) == 0).sum())}
+```
+
+```{r}
+#| include: false
+flags_r <- step3 |>
+  transmute(case_id = str_trim(study_id), raw = comorbidities) |>
+  left_join(select(tidy, case_id, diabetes, hypertension, sleep_apnea), by = "case_id")
+check_agree(list(combinations = nrow(count(flags_r, raw, diabetes, hypertension, sleep_apnea)),
+                 diabetes = sum(flags_r$diabetes), none = sum(flags_r$diabetes + flags_r$hypertension + flags_r$sleep_apnea == 0)),
+            reticulate::py$chk)
+```
+
+In the comorbidity table, check every 0, not just every 1: `GERD` should have all three flags at 0, but a spelling the code doesn't recognize (say `T2DM`) would also show up as a 0 where you expect a 1.
+
+::: {.callout-tip}
+## 🔀 R vs Python: a cell that says `None`
+pandas reads a cell that says `None` as a missing value, even with `dtype=str`, because `None` is on its default list of missing-value codes. readxl keeps the text. So the Python table shows `NaN` where R shows `None` (13 patients). Both give those patients 0 in all three flags. A truly empty comorbidity cell would come out differently: R gives it a missing flag, pandas a 0.
 :::
 
 **4. Range and logic checks.** Values a person can't have, and dates in the wrong order.
@@ -838,6 +896,23 @@ print("identical")
 ```
 :::
 
+```{python}
+#| include: false
+# Prose guard (Python side) for what step 1 says pandas does when it guesses, and for the 🔀 box in check 3.
+guess = {s: pd.read_excel(path, sheet_name=s, header=3) for s in ["Site A", "Site B"]}
+assert all(guess[s]["BMI"].dtype == object for s in guess)
+assert {float, str} <= {type(v) for v in guess["Site A"]["BMI"].dropna()} and "33.5 kg/m2" in set(guess["Site A"]["BMI"])
+assert guess["Site A"]["Score"].dtype == "float64" and guess["Site B"]["Score"].dtype == object
+assert [v for v in guess["Site B"]["Score"] if isinstance(v, str)] == ["unk"]
+try:
+    pd.read_excel(path, sheet_name="Site A", header=3, dtype={"BMI": float})
+    raise AssertionError("dtype=float no longer stops with an error")
+except ValueError:
+    pass
+assert int(step3["comorbidities"].isna().sum()) == 13
+assert int(flags.loc[flags["raw"].isna(), ["diabetes", "hypertension", "sleep_apnea"]].to_numpy().sum()) == 0
+```
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -866,7 +941,19 @@ stopifnot(
   all(parse_messy_date(step3$dos)[step3$dos %in% "08.02.15"] == as.Date("2015-02-08")),
   all(as.numeric(wrong - preop)[step3$dos %in% "08.02.15"] > 31),
   as.vector(table(step3$asa)[c("2", "ASA 2", "II")]) == c(43, 4, 14), 43 + 4 + 14 == 61, sum(is.na(step3$asa)) == 3,
-  max(tidy$asa, na.rm = TRUE) == 3
+  max(tidy$asa, na.rm = TRUE) == 3,
+  # numbers and claims added with the content-review fixes (A10 to A12)
+  all(vapply(c("Site A", "Site B"), \(s) all(vapply(read_excel(path, sheet = s, skip = 3, .name_repair = "minimal"),
+                                                    is.character, logical(1))), logical(1))),   # guessing: all text
+  "33.5 kg/m2" %in% raw$bmi[raw$site == "Site A"], identical(sort(unique(na.omit(str_subset(raw$prom_preop[raw$site == "Site B"], "[a-z]")))), "unk"),
+  is.na(suppressWarnings(read_excel(path, sheet = "Site A", skip = 3, col_types = "numeric", .name_repair = "minimal"))$BMI[
+    which(raw$bmi[raw$site == "Site A"] == "33.5 kg/m2")]),
+  setequal(str_to_lower(unique(step3$sex)), c("f", "female", "m", "male")), !anyNA(tidy$sex),
+  any(step3$comorbidities %in% "GERD"), sum(step3$comorbidities %in% "None") == 13, !anyNA(step3$comorbidities),
+  with(tidy[match(str_trim(step3$study_id[step3$comorbidities %in% c("GERD", "None")]), tidy$case_id), ],
+       all(diabetes + hypertension + sleep_apnea == 0)),
+  nrow(distinct(missed, case_id, visit)) == 72, nrow(missed) == 473, 564 - 473 == 91,
+  sum(is.na(items$response) & !paste(items$case_id, items$visit) %in% paste(missed$case_id, missed$visit)) == 91
 )
 ```
 

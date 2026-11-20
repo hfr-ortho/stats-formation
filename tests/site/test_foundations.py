@@ -113,6 +113,35 @@ def test_tidy_page_names_the_code_key_like_the_template(site):
     assert "crosswalk" not in text
 
 
+def test_tidy_page_states_what_guessing_and_recoding_really_do(site):
+    """Review A10 to A12: guessing keeps the text, forcing a number loses it; which recodes
+    fail to missing and which to "no"; the blank survey rows are not all missed visits."""
+    text = text_of("foundations/01-tidy-data.html")
+    assert "silently turns" not in text
+    assert "Forcing a number type is what loses values" in text
+    assert "Each recode lists the values it expects" not in text   # the old blanket claim
+    assert "so an unknown spelling such as T2DM counts as" in text
+    assert "564 blank rows: 473 from 72 missed visits and 91 items skipped" in text
+
+
+def test_bounded_is_not_a_reason_for_the_rank_column(site):
+    """Review A13: every PROM is bounded; values piled up at the bound are what send a score to ranks."""
+    chart = load("foundations/03-distributions.html").select_one(".mermaid, pre.mermaid-js").get_text()
+    assert "bounded" not in chart
+    assert "floor or ceiling" in chart
+    for page in ["foundations/02-demographics.html", "catalog/07-two-paired-groups.html"]:
+        text = text_of(page)
+        assert "bounded" not in text, page
+        assert "floor or ceiling" in text, page
+
+
+def test_distributions_page_does_not_say_pearson_compares_means(site):
+    """Review A14: Pearson correlation measures a straight-line association; it compares no means."""
+    text = text_of("foundations/03-distributions.html")
+    assert "Pearson correlation ) compare means" not in text
+    assert "Pearson correlation measures a straight-line association" in text
+
+
 def test_worked_examples_match_the_sections_they_point_to(site):
     text = text_of("foundations/03-distributions.html")
     for phrase in ["Is the EFAS score at 3 months different with a boot than with a cast?",

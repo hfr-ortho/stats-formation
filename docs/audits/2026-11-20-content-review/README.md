@@ -30,11 +30,11 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | A7 | 1.1 | done | pending |
 | A8 | 1.1 | done | pending |
 | A9 | 1.1 | done | pending |
-| A10 | 1.2 | open |  |
-| A11 | 1.2 | open |  |
-| A12 | 1.2 | open |  |
-| A13 | 1.2 | open |  |
-| A14 | 1.2 | open |  |
+| A10 | 1.2 | done | pending |
+| A11 | 1.2 | done | pending |
+| A12 | 1.2 | done | pending |
+| A13 | 1.2 | done | pending |
+| A14 | 1.2 | done | pending |
 | A15 | 1.1 | done | pending |
 | U1 | 1.1 | done | pending |
 | U2 | 2.1 | open |  |

@@ -122,6 +122,9 @@ def test_recode_cross_tabs_compare_raw_values_with_the_result():
     text = (SRC / "foundations" / "01-tidy-data.qmd").read_text(encoding="utf-8")
     check = section(text, "**3. Cross-tab every recode.**", "**4. Range and logic checks.**")
     assert "left_join(" in check and "merge(" in check
+    # Review A11: the comorbidity flags default to 0, so they get a cross-tab too, in both languages.
+    for lang, code in visible_chunks(check):
+        assert "comorbidities" in code and "sleep_apnea" in code, lang
 
 
 def test_tidy_recodes_send_unexpected_codes_to_missing():
@@ -129,6 +132,10 @@ def test_tidy_recodes_send_unexpected_codes_to_missing():
     step5 = section(text, "### Step 5: give every column its real type", "## Reshaping a survey export")
     assert step5.count("case_when(") >= 3      # sex, procedure, side
     assert step5.count("np.select(") >= 2      # procedure, side
+    # Review A11: sex matches whole values; a first-letter match turns "Mme" into "Male".
+    assert 'regex("^f"' not in step5 and 'regex("^m"' not in step5
+    assert '.str[0]' not in step5
+    assert '"female"' in step5 and '"male"' in step5
 
 
 def test_quartile_guard_reads_what_the_libraries_display():
