@@ -40,7 +40,7 @@ Un test pour données appariées ne peut utiliser que les patients mesurés aux 
 - Chaque patient (ou [paire appariée](../glossary.qmd#matched){.term}) donne **deux mesures** de la même chose : ici, l'angle alpha de la même hanche sur deux incidences radiographiques.
 - Les **différences** entre les deux mesures sont [à peu près normales](../glossary.qmd#normal-distribution){.term}, ou il y a environ 30 paires ou plus. La [condition](../glossary.qmd#assumption){.term} porte sur les différences, pas sur chaque mesure prise séparément.
 - Les paires sont [indépendantes](../glossary.qmd#independence){.term} les unes des autres.
-- Si les différences sont [asymétriques](../glossary.qmd#skewed){.term}, ou si les mesures s'accumulent au [plancher ou au plafond](../glossary.qmd#ceiling-effect){.term} ou sont [ordinales](../glossary.qmd#ordinal){.term} → le [test des rangs signés de Wilcoxon](#wilcoxon-signed-rank).
+- Si les différences sont [asymétriques](../glossary.qmd#skewed){.term}, ou si les mesures s'accumulent au [plancher ou au plafond](../glossary.qmd#ceiling-effect){.term} ou sont [ordinales](../glossary.qmd#ordinal){.term} → la [section suivante](#wilcoxon-signed-rank). Son test des rangs signés de Wilcoxon suppose que les différences sont réparties de façon [symétrique](../glossary.qmd#symmetric){.term} autour de leur centre ; si elles sont nettement asymétriques, ou si votre affirmation porte sur la différence médiane, utilisez le [test des signes](../glossary.qmd#sign-test){.term}, que cette section montre aussi.
 
 ### Ce que fait vraiment le test
 
@@ -247,8 +247,9 @@ Faire un [test t pour échantillons indépendants](../glossary.qmd#t-test){.term
 ### Quand l'utiliser
 
 - Deux mesures [appariées](../glossary.qmd#paired){.term}, et le [critère](../glossary.qmd#outcome){.term} est **[asymétrique](../glossary.qmd#skewed){.term}** ou a un **[plafond ou un plancher](../glossary.qmd#ceiling-effect){.term}**. Le KOOS JR à 1 an a un plafond ([page 3](../foundations/03-distributions.qmd#transform)).
-- Pour une échelle **[ordinale](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), comptez les patients dont le score a monté et ceux dont il a baissé, et comparez les deux effectifs avec un [test binomial](../glossary.qmd#binomial-test){.term} (le **[test des signes](../glossary.qmd#sign-test){.term}**, [page 5](05-one-group-vs-hypothetical.qmd#binomial-test)).
 - Le test classe les tailles des changements et compare les rangs des améliorations à ceux des détériorations.
+- Le test suppose que les changements sont répartis de façon [symétrique](../glossary.qmd#symmetric){.term} autour de leur centre, et son [hypothèse nulle](../glossary.qmd#null-hypothesis){.term} est que ce centre vaut zéro : la page d'aide de `wilcox.test()` dans R parle d'une [distribution](../glossary.qmd#distribution){.term} de `x - y` « symmetric about `mu` », avec `mu` = 0 sauf si vous le changez. Sa valeur p et son estimateur portent sur la **[pseudo-médiane](../glossary.qmd#hodges-lehmann){.term}** des changements (l'estimateur de Hodges-Lehmann ci-dessous), qui ne coïncide avec le changement [médian](../glossary.qmd#median){.term} que si les changements sont symétriques.
+- Si votre affirmation porte sur le changement médian, si les changements sont nettement asymétriques ou si l'échelle est **[ordinale](../glossary.qmd#ordinal){.term}** (satisfaction de 1 à 5), comptez les patients dont le score a monté et ceux dont il a baissé, et comparez les deux effectifs avec un [test binomial](../glossary.qmd#binomial-test){.term} (le **[test des signes](../glossary.qmd#sign-test){.term}**, [page 5](05-one-group-vs-hypothetical.qmd#binomial-test)). Il ne demande aucune symétrie. La dernière ligne sous « Exécuter l'analyse » l'applique à ces changements.
 - Les changements exactement nuls ne disent rien sur la direction et sont écartés.
 - Si les changements sont [à peu près normaux](../glossary.qmd#normal-distribution){.term} → le [test t pour échantillons appariés](#paired-t).
 
@@ -336,6 +337,8 @@ koos_test <- wilcox.test(koos$koos_1yr, koos$koos_preop, paired = TRUE,
                          exact = FALSE, correct = FALSE,   # voir l'encadré R ou Python
                          conf.int = TRUE)                  # ajoute l'estimateur de Hodges-Lehmann et son IC
 koos_test
+
+binom.test(sum(koos$change > 0), sum(koos$change != 0))$p.value   # le test des signes : 246 améliorations, 0 détérioration
 ```
 
 ## Python
@@ -344,20 +347,25 @@ koos_test
 # pg.wilcoxon() exécute le test de scipy et ajoute la taille d'effet bisériale par rangs
 koos_test = pg.wilcoxon(koos["1yr"], koos["preop"], method="approx", correction=False)   # voir l'encadré R ou Python
 print(koos_test)
+
+print(stats.binomtest(int((koos["change"] > 0).sum()), int((koos["change"] != 0).sum())).pvalue)   # le test des signes : 246 améliorations, 0 détérioration
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"p": float(koos_test["p_val"].iloc[0]), "rbc": float(koos_test["RBC"].iloc[0])}
+chk = {"p": float(koos_test["p_val"].iloc[0]), "rbc": float(koos_test["RBC"].iloc[0]),
+       "sign_log_p": float(np.log(stats.binomtest(int((koos["change"] > 0).sum()), int((koos["change"] != 0).sum())).pvalue))}
 ```
 
 ```{r}
 #| include: false
 koos_rb <- effectsize::rank_biserial(koos$koos_1yr, koos$koos_preop, paired = TRUE)
-# No log-p check here (page 5 has one): R computes this two-sided p as 1 - pnorm(13.6), which is
-# exactly 0 in floating point. With every patient improved, no Wilcoxon setting changes a shown number.
-check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticulate::py$chk)
+# No log-p check for the signed-rank test (page 5 has one): R computes this two-sided p as 1 - pnorm(13.6),
+# which is exactly 0 in floating point. With every patient improved, no Wilcoxon setting changes a shown number.
+# The sign test's p (about 1.8e-74) is not 0, so it is compared on a log scale.
+check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial,
+                 sign_log_p = log(binom.test(sum(koos$change > 0), sum(koos$change != 0))$p.value)), reticulate::py$chk)
 ```
 
 ### Lire le résultat
@@ -367,6 +375,7 @@ check_agree(list(p = koos_test$p.value, rbc = koos_rb$r_rank_biserial), reticula
 - **CLES = 0.965** (Python) : à ignorer ici. pingouin la calcule comme si les deux colonnes étaient deux groupes non appariés (le score à 1 an de n'importe quel patient contre le score préopératoire de n'importe quel patient) : elle ne vaut donc pas 1, bien que tous les patients se soient améliorés.
 - **(pseudo)median 34.1, IC à 95 % de 32.3 à 35.9 :** l'[estimateur de Hodges-Lehmann](../glossary.qmd#hodges-lehmann){.term} du changement typique, ci-dessous.
 - **RBC = 1.0** (Python) : la [taille d'effet](../glossary.qmd#effect-size){.term} [bisériale par rangs](../glossary.qmd#rank-biserial){.term}, ci-dessous.
+- **La dernière ligne** (R affiche `1.768687e-74`, Python quelques chiffres de plus) : la valeur p du test des signes, donc p < 0.001. Il ne compte que les directions : 246 améliorations et 0 détérioration.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : les sommes des rangs à la main
@@ -720,7 +729,7 @@ check_agree(list(a_first = sum(informative$implant == "A"), c_first = sum(inform
 ```{r}
 pair_cox <- coxph(Surv(followup_years, revised) ~ implant + strata(set_id), data = pairs)
 summary(pair_cox)
-exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs)))   # le mauvais modèle, appariement ignoré : voir l'encadré ⚠️ ci-dessous
+exp(coef(coxph(Surv(followup_years, revised) ~ implant, data = pairs)))   # appariement ignoré : une autre question, voir l'encadré ⚠️ ci-dessous
 ```
 
 ## Python
@@ -734,7 +743,7 @@ pair_cox = CoxPHFitter().fit(
 )
 print(pair_cox.summary[["exp(coef)", "exp(coef) lower 95%", "exp(coef) upper 95%", "p"]])
 print(CoxPHFitter().fit(pairs[["followup_years", "revised", "implant"]], duration_col="followup_years", event_col="revised",
-                        formula="implant", fit_options={"precision": 1e-9}).hazard_ratios_)   # le mauvais modèle, appariement ignoré : voir l'encadré ⚠️ ci-dessous
+                        formula="implant", fit_options={"precision": 1e-9}).hazard_ratios_)   # appariement ignoré : une autre question, voir l'encadré ⚠️ ci-dessous
 ```
 :::
 
@@ -771,8 +780,8 @@ Le **hazard ratio** est la [taille d'effet](../glossary.qmd#effect-size){.term}�
 > **Results:** In 52 pairs matched on procedure, age, sex, BMI and ASA class, 17 implant C and 5 implant A procedures were revised (hazard ratio for implant C vs A 3.50, 95% CI 1.15 to 10.63; p = 0.027).
 
 ::: {.callout-warning}
-## ⚠️ Attention : n'ignorez pas l'appariement
-Un modèle de Cox ordinaire sur les mêmes 104 patients (sans `strata()`) les traite comme s'ils n'avaient aucun lien. Il jette l'appariement que vous avez pris la peine de construire. Ici, il donne une réponse un peu différente (hazard ratio 3.60) ; avec des facteurs d'appariement plus forts, la différence peut être grande. Analysez les données appariées comme des données appariées. (La dernière ligne sous « Exécuter l'analyse » l'ajuste : 3.597.)
+## ⚠️ Attention : ignorer l'appariement change la question
+Un modèle de Cox ordinaire sur les mêmes 104 patients (sans `strata()`) ignore l'appariement. Dans une cohorte appariée comme celle-ci, ce n'est pas faux, mais il répond à une autre question. Le modèle stratifié donne le hazard ratio **au sein des paires** : 3.50. Le modèle ordinaire donne un **hazard ratio à l'échelle de la population** : si les facteurs d'appariement sont les seuls [facteurs de confusion](../glossary.qmd#confounding){.term}, il estime l'effet dans une population où les facteurs d'appariement sont répartis comme chez les patients appariés (Sjölander et Greenland, *Statistics in Medicine* 2013). Ici, les deux sont proches : 3.60 contre 3.50. (La dernière ligne sous « Exécuter l'analyse » ajuste le modèle ordinaire : 3.597.) Le même article recommande de tenir compte dans une certaine mesure des facteurs d'appariement ; prendre en compte l'appariement, comme le fait le modèle stratifié, reste donc le choix habituel.
 :::
 
 ::: {.callout-tip}
@@ -790,6 +799,7 @@ wide_pair <- function(data, value, first, second) {   # complete pairs of two vi
 ex_torsion <- t.test(imaging$torsion_budin_deg, imaging$torsion_ct_deg, paired = TRUE)
 ex_torsion_d <- effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_deg, method = "z", adjust = FALSE)
 ex_torsion_diff <- imaging$torsion_budin_deg - imaging$torsion_ct_deg
+ex_torsion_average <- (imaging$torsion_budin_deg + imaging$torsion_ct_deg) / 2
 ex_hka <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
   filter(session == 1) |> select(knee_id, rater, hka_deg) |> pivot_wider(names_from = rater, values_from = hka_deg)
 ex_hka_test <- t.test(ex_hka$R2, ex_hka$R1, paired = TRUE)
@@ -846,6 +856,7 @@ stopifnot(
   isTRUE(all.equal(mean_difference / difference_se, unname(alpha_test$statistic))),
   sum(koos$change == 0) == 0, nrow(koos) == 246, sum(change_ranks[koos$change > 0]) == 30381, sum(change_ranks[koos$change < 0]) == 0,
   unname(koos_test$statistic) == 30381,
+  signif(binom.test(sum(koos$change > 0), sum(koos$change != 0))$p.value, 7) == 1.768687e-74,   # the sign test
   isTRUE(all.equal(unname(pair_hr[1, "exp(coef)"]), 14 / 4, tolerance = 1e-6)),   # the hazard ratio is the ratio of the two counts
   round(pair_hr[1, "exp(coef)"], 2) == 3.50, round(pair_hr[1, c("lower .95", "upper .95")], 2) == c(1.15, 10.63),
   round(summary(pair_cox)$coefficients[1, "Pr(>|z|)"], 3) == 0.027,
@@ -857,7 +868,9 @@ stopifnot(
   round(mean(ex_torsion_diff) / sd(ex_torsion_diff), 2) == -0.26,
   round(c(mean(imaging$torsion_ct_deg), sd(imaging$torsion_ct_deg), mean(imaging$torsion_budin_deg), sd(imaging$torsion_budin_deg)), 1) == c(14.5, 8.9, 13.3, 7.6),
   round(c(ex_torsion_d$CI_low, ex_torsion_d$CI_high), 2) == c(-0.48, -0.04),
-  mean(ex_torsion_diff[imaging$torsion_ct_deg < 5]) > 0, mean(ex_torsion_diff[imaging$torsion_ct_deg > 25]) < 0,
+  sum(ex_torsion_average <= 5) == 9, sum(ex_torsion_average > 25) == 6, !any(ex_torsion_average %in% c(5, 25)),
+  round(mean(ex_torsion_diff[ex_torsion_average <= 5]), 1) == 0.9, round(mean(ex_torsion_diff[ex_torsion_average > 25]), 1) == -3.5,
+  round(range(ex_hka$R2 - ex_hka$R1), 1) == c(-3.0, 4.3),
   nrow(ex_hka) == 60, round(unname(ex_hka_test$estimate), 2) == 0.50,
   round(ex_hka_test$conf.int, 2) == c(0.08, 0.93), round(ex_hka_test$p.value, 3) == 0.022,
   nrow(ex_later) == 225, sum(ex_later$koos_1yr > ex_later$koos_3mo) == 176, sum(ex_later$koos_1yr < ex_later$koos_3mo) == 46,
@@ -888,9 +901,10 @@ effectsize::repeated_measures_d(imaging$torsion_budin_deg, imaging$torsion_ct_de
 imaging |> summarise(n = n(), ct_mean = mean(torsion_ct_deg), ct_sd = sd(torsion_ct_deg),
                      budin_mean = mean(torsion_budin_deg), budin_sd = sd(torsion_budin_deg))
 imaging |>
-  mutate(ct_torsion = cut(torsion_ct_deg, c(-Inf, 5, 25, Inf), labels = c("under 5°", "5° to 25°", "over 25°"))) |>
-  group_by(ct_torsion) |>
-  summarise(hips = n(), mean_difference = mean(torsion_budin_deg - torsion_ct_deg))   # Budin moins CT, selon la torsion mesurée au CT
+  mutate(average = (torsion_budin_deg + torsion_ct_deg) / 2,                         # la moyenne des deux méthodes
+         torsion = cut(average, c(-Inf, 5, 25, Inf), labels = c("under 5°", "5° to 25°", "over 25°"))) |>
+  group_by(torsion) |>
+  summarise(hips = n(), mean_difference = mean(torsion_budin_deg - torsion_ct_deg))   # Budin moins CT, selon la moyenne des deux
 ```
 
 ## Python
@@ -900,32 +914,60 @@ torsion_test = stats.ttest_rel(imaging["torsion_budin_deg"], imaging["torsion_ct
 torsion_diff = imaging["torsion_budin_deg"] - imaging["torsion_ct_deg"]
 print(torsion_test, torsion_diff.mean(), torsion_test.confidence_interval(), torsion_diff.mean() / torsion_diff.std())
 print(imaging[["torsion_ct_deg", "torsion_budin_deg"]].agg(["count", "mean", "std"]))
-ct_torsion = pd.cut(imaging["torsion_ct_deg"], [-np.inf, 5, 25, np.inf], labels=["under 5°", "5° to 25°", "over 25°"])
-print(torsion_diff.groupby(ct_torsion, observed=True).agg(["count", "mean"]))   # Budin moins CT, selon la torsion mesurée au CT
+average = (imaging["torsion_budin_deg"] + imaging["torsion_ct_deg"]) / 2              # la moyenne des deux méthodes
+torsion = pd.cut(average, [-np.inf, 5, 25, np.inf], labels=["under 5°", "5° to 25°", "over 25°"])
+print(torsion_diff.groupby(torsion, observed=True).agg(["count", "mean"]))   # Budin moins CT, selon la moyenne des deux
 ```
 :::
 
+```{python}
+#| include: false
+torsion_groups = torsion_diff.groupby(torsion, observed=True).agg(["count", "mean"])
+chk = {"hips_low": float(torsion_groups["count"].iloc[0]), "hips_high": float(torsion_groups["count"].iloc[2]),
+       "low": float(torsion_groups["mean"].iloc[0]), "middle": float(torsion_groups["mean"].iloc[1]),
+       "high": float(torsion_groups["mean"].iloc[2])}
+```
+
+```{r}
+#| include: false
+torsion_groups <- imaging |>
+  mutate(torsion = cut((torsion_budin_deg + torsion_ct_deg) / 2, c(-Inf, 5, 25, Inf))) |>
+  group_by(torsion) |>
+  summarise(hips = n(), mean_difference = mean(torsion_budin_deg - torsion_ct_deg))
+check_agree(list(hips_low = torsion_groups$hips[1], hips_high = torsion_groups$hips[3],
+                 low = torsion_groups$mean_difference[1], middle = torsion_groups$mean_difference[2],
+                 high = torsion_groups$mean_difference[3]), reticulate::py$chk)
+```
+
 > **Results:** In 80 hips, the mean femoral torsion was 14.5° (SD 8.9) on CT and 13.3° (SD 7.6) on the Budin view (mean difference, Budin minus CT, −1.2°, 95% CI −2.2 to −0.2; d~z~ = −0.26, 95% CI −0.48 to −0.04; p = 0.023).
 
-Une différence de moyennes d'environ 1° semble rassurante, mais elle cache la façon dont les deux méthodes divergent : l'incidence de Budin donne des valeurs élevées dans les hanches à faible torsion et basses dans celles à forte torsion, et les deux erreurs s'annulent dans la [moyenne](../glossary.qmd#mean){.term}. Un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} ne pose de question que sur la différence moyenne ; la [page 17](../beyond/17-agreement.qmd#bland-altman) montre comment juger la [concordance](../glossary.qmd#agreement){.term}. Le dernier tableau le montre : l'incidence de Budin donne 1.4° de trop dans les 11 hanches avec moins de 5° de torsion au CT, et 7.0° de moins dans les 8 hanches avec plus de 25°.
+Une différence de moyennes d'environ 1° semble rassurante, mais elle cache la façon dont les deux méthodes divergent : l'incidence de Budin donne des valeurs élevées dans les hanches à faible torsion et basses dans celles à forte torsion, et les deux erreurs s'annulent dans la [moyenne](../glossary.qmd#mean){.term}. Un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} ne pose de question que sur la différence moyenne ; la [page 17](../beyond/17-agreement.qmd#bland-altman) montre comment juger la [concordance](../glossary.qmd#agreement){.term}. Le dernier tableau regroupe les hanches selon la moyenne de leurs deux mesures, et non selon la seule mesure au CT, car regrouper les différences selon la valeur d'une seule des deux méthodes peut créer ou déformer une tendance (Bland et Altman, *Lancet* 1995). Il montre le schéma : l'incidence de Budin donne 0.9° de trop dans les 9 hanches dont les deux mesures font en moyenne moins de 5°, et 3.5° de moins dans les 6 hanches dont la moyenne dépasse 25°.
 :::
 
 **2.** Deux évaluateurs ont mesuré l'angle hanche-genou-cheville (HKA) sur les 60 mêmes radiographies de genou ([`data/radiographic_reliability.csv`](https://github.com/hfr-ortho/stats-formation/raw/main/data/radiographic_reliability.csv), séance 1). L'évaluateur 2 donne-t-il systématiquement des valeurs plus élevées que l'évaluateur 1 ? Choisissez le test et exécutez-le.
 
 ::: {.callout-tip collapse="true"}
 ## Solution
-Deux mesures de la même radiographie sont **[appariées](../glossary.qmd#paired){.term}**, et les angles HKA sont des mesures [à peu près normales](../glossary.qmd#normal-distribution){.term} : le **test t pour échantillons appariés**.
+Deux mesures de la même radiographie sont **[appariées](../glossary.qmd#paired){.term}**, le test porte donc sur les différences, une par genou. Le [test t pour échantillons appariés](#paired-t) demande que les différences, et non les mesures de chaque évaluateur, soient [à peu près normales](../glossary.qmd#normal-distribution){.term}, ou qu'il y ait environ 30 paires ou plus. Ici, il y a 60 paires, et l'histogramme des différences ne montre ni longue queue ni valeur atypique : elles vont de −3.0° à 4.3° (les dernières lignes de la sortie). Donc : le **test t pour échantillons appariés**.
 
 ::: {.panel-tabset group="language"}
 ## R
 
 ```{r}
+#| fig-height: 3
 readings <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
   filter(session == 1) |>
   select(knee_id, rater, hka_deg) |>
   pivot_wider(names_from = rater, values_from = hka_deg)
 
+hka_difference <- readings$R2 - readings$R1        # évaluateur 2 moins évaluateur 1, une différence par genou
+ggplot(tibble(difference = hka_difference), aes(difference)) +
+  geom_histogram(binwidth = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed") +   # aucune différence
+  labs(x = "HKA angle, rater 2 minus rater 1, degrees", y = "Knees")
+
 t.test(readings$R2, readings$R1, paired = TRUE)   # évaluateur 2 moins évaluateur 1
+range(hka_difference)                              # la plus petite et la plus grande différence
 ```
 
 ## Python
@@ -933,8 +975,18 @@ t.test(readings$R2, readings$R1, paired = TRUE)   # évaluateur 2 moins évaluat
 ```{python}
 readings = pd.read_csv("data/radiographic_reliability.csv")
 readings = readings[readings["session"] == 1].pivot(index="knee_id", columns="rater", values="hka_deg")
+hka_difference = readings["R2"] - readings["R1"]           # évaluateur 2 moins évaluateur 1, une différence par genou
+fig, ax = plt.subplots(figsize=(6, 3))
+ax.hist(hka_difference, bins=np.arange(-3.25, 5, 0.5))
+ax.axvline(0, linestyle="--")                               # aucune différence
+ax.set_xlabel("HKA angle, rater 2 minus rater 1, degrees")
+ax.set_ylabel("Knees")
+plt.tight_layout()
+plt.show()
+
 hka_test = stats.ttest_rel(readings["R2"], readings["R1"])   # évaluateur 2 moins évaluateur 1
-print(hka_test, (readings["R2"] - readings["R1"]).mean(), hka_test.confidence_interval())
+print(hka_test, hka_difference.mean(), hka_test.confidence_interval())
+print(hka_difference.agg(["min", "max"]).round(1))          # la plus petite et la plus grande différence
 ```
 :::
 

@@ -309,6 +309,94 @@ def test_hodges_lehmann_estimate_can_land_on_half_points(site):
     assert "its CI can only land on whole or half points (here all three are whole)" in text
 
 
+# ---- content review of 20.11.2026: misleading sentences and missing caveats, pages 4 to 7 ----------
+
+def test_describe_page_methods_name_their_ci_methods(site):
+    """Review B5: the Methods name the log-log CI (as page 13's do) and the median's exact binomial CI;
+    implant survivorship with deaths censored is "survivorship free of revision", as on page 13."""
+    page = "catalog/04-describe-one-group.html"
+    km = section(page, "kaplan-meier")
+    report = " ".join(text_of(q) for q in km.select("blockquote"))
+    assert "Confidence intervals used the log-log transformation." in report
+    assert "Survivorship free of revision at 5 years was 86.3%" in report
+    assert "Revision-free" not in text_of(km) and "Revision-free" not in code_of(km)
+    median = " ".join(text_of(q) for q in section(page, "median-iqr").select("blockquote"))
+    assert "95% confidence intervals for medians were calculated with the exact binomial method." in median
+
+
+def test_describe_page_survival_axes_match_in_both_languages(site):
+    """Review B12: R draws the survival axis from 0 to 100%; the Python plot must not zoom in on the top."""
+    assert "ax.set_ylim(0, 1)" in code_of(section("catalog/04-describe-one-group.html", "kaplan-meier"))
+
+
+def test_describe_page_band_and_column_wording_is_exact(site):
+    """Review of Task 1.3: the band opens from zero, so "widens more when few remain" needs the middle
+    years as its comparison; "its times" had no clear owner."""
+    text = text_of(section("catalog/04-describe-one-group.html", "kaplan-meier"))
+    assert "each revision widens it more than one did in the middle years" in text
+    assert "cut some of the column's times short" in text
+
+
+@pytest.mark.parametrize("page,code", [("catalog/05-one-group-vs-hypothetical.html", "binom.test(sum(koos_1yr > 80)"),
+                                       ("catalog/07-two-paired-groups.html", "binom.test(sum(koos$change > 0)")])
+def test_signed_rank_sections_state_symmetry_and_offer_the_sign_test(site, page, code):
+    """Review C2, B6: the signed-rank null is a distribution "symmetric about mu" (help(wilcox.test));
+    its p-value goes with the pseudomedian, and a claim about the median needs the sign test."""
+    found = section(page, "wilcoxon-signed-rank")
+    when = text_of(found.select_one("section.level3"))   # "When to use it"
+    assert "symmetric" in when and "pseudomedian" in when and "sign test" in when
+    assert "claim is about the median" in when
+    assert code in code_of(found)
+
+
+def test_paired_t_does_not_send_skewed_differences_to_ranks_without_the_caveat(site):
+    """Review C2: page 7's paired t section routed skewed differences to the signed-rank test unconditionally."""
+    when = text_of(section("catalog/07-two-paired-groups.html", "paired-t").select_one("section.level3"))
+    assert "symmetric" in when and "sign test" in when
+
+
+def test_two_by_two_table_reports_the_risk_ratio(site):
+    """Review B7: with a common outcome the odds ratio lies further from 1 than the risk ratio (exercise 3)."""
+    page = "catalog/06-two-unpaired-groups.html"
+    found = section(page, "fisher-chi-square")
+    report = " ".join(text_of(q) for q in found.select("blockquote"))
+    assert "risk ratio 0.84, 95% CI 0.28 to 2.53" in report
+    assert "further from 1 than the risk ratio" in text_of(found)
+    answers = text_of(section(page, "exercises"))
+    assert "risk ratio 1.15, 95% CI 0.93 to 1.42" in answers and "odds ratio 1.31" in answers
+
+
+def test_matched_cohort_warning_describes_the_unstratified_model_fairly(site):
+    """Review B10 (Sjölander and Greenland 2013): in a matched cohort, ignoring the matching gives a
+    population-level hazard ratio, not a wrong one; the stratified model gives the within-pair one."""
+    found = section("catalog/07-two-paired-groups.html", "stratified-cox")
+    assert "wrong model" not in code_of(found) and "wrong model" not in text_of(found)
+    warning = text_of(found.select_one("div.callout-warning"))
+    assert "throws away the matching" not in warning
+    assert "population-level hazard ratio" in warning and "within pairs" in warning
+    assert "3.50" in warning and "3.60" in warning
+
+
+def test_torsion_answer_groups_by_the_average_of_the_two_methods(site):
+    """Review B13 (Bland and Altman 1995): grouping the difference by one method's value can create or
+    distort a trend; grouping by the average of the two is unlikely to mislead in this way."""
+    found = section("catalog/07-two-paired-groups.html", "exercises")
+    text = text_of(found)
+    assert "7.0° low" not in text
+    assert "can create or distort a trend" in text
+    assert "0.9° high in the 9 hips" in text and "3.5° low in the 6 hips" in text
+    assert "(torsion_budin_deg + torsion_ct_deg) / 2" in code_of(found)
+
+
+def test_hka_answer_justifies_the_paired_t_test_by_the_differences(site):
+    """Review C12: the paired t test's assumption is about the differences, not about each measurement."""
+    found = section("catalog/07-two-paired-groups.html", "exercises")
+    text = text_of(found)
+    assert "HKA angles are measurements that are roughly normal" not in text
+    assert "60 pairs" in text and "−3.0° to 4.3°" in text
+    assert 'readings["R2"] - readings["R1"]' in code_of(found) and "geom_histogram" in code_of(found)
+
+
 # ---- three or more groups -------------------------------------------------
 
 THREE_GROUP_PAGES = [page for page in WRITTEN if page.startswith(("catalog/08-", "catalog/09-"))]
