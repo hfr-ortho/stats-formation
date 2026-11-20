@@ -80,7 +80,7 @@ Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le déf
 - **Le type** (`unit`) : l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
 - **La définition** (`type`) : un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
 
-Koo et Li décrivent aussi un modèle **à un facteur, à effets aléatoires** (*one-way random* ; `model = "oneway"`), pour les études où chaque genou est lu par un ensemble différent d'évaluateurs, par exemple des évaluateurs différents dans chaque centre d'une étude multicentrique. C'est rarement le bon modèle quand les mêmes évaluateurs lisent tous les genoux, comme ici ; la ligne `ICC(1,1)` de pingouin est ce CCI.
+Koo et Li décrivent aussi un modèle **à un facteur, à effets aléatoires** (*one-way random* ; `model = "oneway"`), pour les études où chaque genou est lu par un ensemble différent d'évaluateurs, par exemple des évaluateurs différents dans chaque centre d'une étude multicentrique. Il ne convient pas à une étude où les mêmes évaluateurs lisent tous les genoux, comme ici ; ce plan demande un modèle à deux facteurs. Dans la sortie de pingouin, la ligne `ICC(1,1)` est ce CCI.
 
 En termes simples, le CCI répartit la [dispersion](../glossary.qmd#spread){.term} de toutes les lectures en trois parts : les vraies différences entre les genoux, une différence systématique entre les évaluateurs, et ce qui reste, l'[erreur de mesure](../glossary.qmd#measurement-error){.term}. Chaque part est une [variance](../glossary.qmd#variance){.term}. Le CCI de concordance absolue est la part des genoux dans le total des trois ; le CCI de cohérence laisse de côté la différence entre les évaluateurs. Un encadré sous la sortie ci-dessous calcule les deux à la main.
 
@@ -245,7 +245,7 @@ L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : 
 Le [CCI](../glossary.qmd#icc){.term} est un rapport et n'a pas d'unité. Pour voir à quelle distance peuvent se trouver deux lectures, en degrés, tracez la **différence** entre elles en fonction de leur **moyenne**, un point par genou. Ajoutez ensuite trois lignes :
 
 - **Le biais :** la différence [moyenne](../glossary.qmd#mean){.term}, qui montre si un évaluateur mesure systématiquement des angles plus grands.
-- **Les limites de concordance à 95 % :** biais ± 1.96 × [écart-type](../glossary.qmd#standard-deviation){.term} (ET) des différences. Pour 95 % des genoux, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
+- **Les limites de concordance à 95 % :** biais ± 1.96 × [écart-type](../glossary.qmd#standard-deviation){.term} (ET) des différences. Pour environ 95 % des genoux, si les différences suivent à peu près une loi normale, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -265,6 +265,7 @@ limit_cis <- rbind(lower = limits[1] + c(-1, 1) * qt(0.975, n_knees - 1) * se_li
 bias_ci <- t.test(inter_hka$difference)$conf.int                # l'IC de la différence moyenne
 c(bias = bias, bias_ci = bias_ci, sd = sd_diff, limits = limits)
 limit_cis
+sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])   # genoux hors des limites
 
 ggplot(inter_hka, aes(mean, difference)) +
   geom_point() +
@@ -290,6 +291,7 @@ bias_ci = stats.ttest_1samp(difference, 0).confidence_interval()
 print(round(bias, 3), round(float(bias_ci.low), 3), round(float(bias_ci.high), 3), round(sd_diff, 3))   # le biais, son IC à 95 % et l'écart-type des différences
 for limit in limits:
     print(round(limit, 3), round(limit - t_crit * se_limit, 3), round(limit + t_crit * se_limit, 3))    # chaque limite avec son IC à 95 %
+print(((difference < limits[0]) | (difference > limits[1])).sum())                                   # genoux hors des limites
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(mean, difference)
@@ -306,20 +308,54 @@ plt.show()
 ```{python}
 #| include: false
 chk = {"bias": float(bias), "bias_low": float(bias_ci.low), "sd": float(sd_diff), "limit_low": float(limits[0]),
-       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit)}
+       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit),
+       "outside": float(((difference < limits[0]) | (difference > limits[1])).sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = limits[1],
-                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2]),
+                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2],
+                 outside = sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])),
             reticulate::py$chk)
 ```
 
 - **Bias = 0.50°** ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.08° à 0.93°) : l'évaluateur 2 mesure en moyenne un demi-degré de plus que l'évaluateur 1, la même différence que celle trouvée avec un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
-- **Limites de concordance, −2.74° à 3.74° :** pour 95 % des genoux, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1.
+- **Limites de concordance, −2.74° à 3.74° :** pour environ 95 % des genoux, si les différences suivent à peu près une loi normale, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1. Ici, 3 des 60 points (5 %) se trouvent hors des lignes pointillées (le dernier nombre affiché avant le graphique).
 - **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; le dernier tableau de R, et les deux dernières lignes de Python, où chaque limite est suivie de son IC) montrent avec quelle [précision](../glossary.qmd#precision){.term} 60 genoux fixent les limites.
 - **Le graphique :** les points se répartissent régulièrement autour de la ligne du biais, sans tendance à la hausse ni à la baisse quand l'angle moyen change. Une tendance voudrait dire que les évaluateurs sont plus en désaccord pour certains genoux (plus en varus, par exemple) que pour d'autres, et une seule paire de limites ne les décrirait pas.
+
+**Erreur standard de mesure et plus petite variation détectable.** de Vet et al. (2006) décrivent deux autres mesures de la concordance, en degrés, construites à partir des trois variances de [l'encadré sur le CCI](#icc). L'**erreur standard de mesure** (*standard error of measurement*, SEM) est la taille typique de l'erreur d'une lecture. Pour la concordance, elle compte aussi comme erreur la différence systématique entre les évaluateurs : SEM = √(variance des évaluateurs + variance de l'erreur). La **plus petite variation détectable** (*smallest detectable change*, SDC) vaut 1.96 × √2 × SEM : la plus petite différence entre deux lectures d'un même genou qui dépasse ce que l'[erreur de mesure](../glossary.qmd#measurement-error){.term} seule produirait habituellement. Le √2 vient de ce que les deux lectures comportent chacune une erreur, et 1.96 donne 95 %, comme pour les limites de concordance.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+sem_agreement <- sqrt(parts[["raters"]] + parts[["error"]])   # la différence entre évaluateurs compte aussi comme erreur
+sdc <- 1.96 * sqrt(2) * sem_agreement                          # la plus petite variation détectable
+c(sem = sem_agreement, sdc = sdc)
+```
+
+## Python
+
+```{python}
+sem_agreement = np.sqrt(parts["raters"] + parts["error"])     # la différence entre évaluateurs compte aussi comme erreur
+sdc = 1.96 * np.sqrt(2) * sem_agreement                        # la plus petite variation détectable
+print(sem_agreement, sdc)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"sem": float(sem_agreement), "sdc": float(sdc)}
+```
+
+```{r}
+#| include: false
+check_agree(list(sem = sem_agreement, sdc = sdc), reticulate::py$chk)
+```
+
+Pour le HKA, SEM = 1.21°, la racine carrée de 0.10 + 1.37, et SDC = 3.36° (la sortie). Une différence de moins d'environ 3.4° entre deux lectures d'un même genou reste dans ce que l'erreur de mesure seule pourrait produire.
 
 Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de [fiabilité](../glossary.qmd#reliability){.term}, puis comparez-y les limites (et leurs IC).
 
@@ -415,6 +451,52 @@ check_agree(list(observed = observed, by_chance = by_chance, by_hand = (observed
                  software = cpak_kappa[["kappa"]], class_1_r1 = rowSums(cpak_table)[["I"]],
                  class_1_r2 = colSums(cpak_table)[["I"]]), reticulate::py$chk)
 ```
+
+::: {.callout-warning}
+## ⚠️ Attention : le kappa dépend de la fréquence de chaque catégorie
+Deux tableaux inventés, de 100 genoux chacun, que deux évaluateurs ont classés « varus » ou « not varus ». Les évaluateurs sont d'accord sur 90 genoux dans les deux. Dans le premier tableau, la moitié des genoux sont en varus ; dans le second, chaque évaluateur en classe 90 sur 100 en varus.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+balanced <- as.table(matrix(c(45, 5, 5, 45), nrow = 2,
+                            dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+common <- as.table(matrix(c(85, 5, 5, 5), nrow = 2,
+                          dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+balanced
+common
+c(balanced = sum(diag(balanced)) / 100, common = sum(diag(common)) / 100)       # la même concordance de 90 %
+c(balanced = DescTools::CohenKappa(balanced), common = DescTools::CohenKappa(common))   # deux kappas différents
+```
+
+## Python
+
+```{python}
+balanced = np.array([[45, 5], [5, 45]])          # lignes : évaluateur 1 (varus, not varus) ; colonnes : évaluateur 2
+common = np.array([[85, 5], [5, 5]])
+print(balanced)
+print(common)
+print(np.trace(balanced) / 100, np.trace(common) / 100)                  # la même concordance de 90 %
+print(cohens_kappa(balanced).kappa, cohens_kappa(common).kappa)          # deux kappas différents
+```
+:::
+
+```{python}
+#| include: false
+chk = {"agree_balanced": float(np.trace(balanced) / 100), "agree_common": float(np.trace(common) / 100),
+       "kappa_balanced": float(cohens_kappa(balanced).kappa), "kappa_common": float(cohens_kappa(common).kappa)}
+```
+
+```{r}
+#| include: false
+check_agree(list(agree_balanced = sum(diag(balanced)) / 100, agree_common = sum(diag(common)) / 100,
+                 kappa_balanced = DescTools::CohenKappa(balanced), kappa_common = DescTools::CohenKappa(common)),
+            reticulate::py$chk)
+```
+
+Les deux tableaux montrent 90 % de concordance, mais le kappa vaut 0.80 dans le premier et 0.44 dans le second. Quand une catégorie est fréquente, le hasard seul produit déjà une grande part de la concordance : 0.9 × 0.9 + 0.1 × 0.1 = 0.82 dans le second tableau, contre 0.5 × 0.5 + 0.5 × 0.5 = 0.50 dans le premier (l'encadré ci-dessus montre cette étape). Sur l'échelle de Landis et Koch, les mêmes évaluateurs obtiennent une concordance « substantielle » dans un tableau et « modérée » dans l'autre ; ces libellés sont des conventions, pas des propriétés de la mesure. Le kappa dépend de la fréquence de chaque catégorie : un kappa issu d'un échantillon où les cas se répartissent autrement n'est donc peut-être pas comparable. Indiquez la concordance brute et le tableau à côté du kappa, comme le fait cette page pour la classe CPAK.
+:::
 
 **Le kappa pondéré pour des catégories ordonnées.** Le kappa non pondéré traite tout désaccord comme également grave. Quand les catégories ont un ordre, un écart d'une catégorie doit compter moins qu'un grand écart. La classe CPAK n'a pas d'ordre unique (c'est une grille de 3 × 3 pour deux angles), mais chaque axe en a un. Le groupe HKA arithmétique va de varus à neutre puis à valgus. Un **kappa pondéré** pénalise de moitié un désaccord entre varus et neutre par rapport à un désaccord entre varus et valgus (pondération linéaire) :
 
@@ -532,6 +614,14 @@ stopifnot(
   round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
   round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_icc$value - inter_1$value, 4) == 0.0004,
   shifted_icc$lbound < 0,
+  # numbers added with the content review of 20.11.2026 (Task 3.7)
+  sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2]) == 3, 3 / 60 == 0.05,
+  round(sem_agreement, 2) == 1.21, round(sqrt(0.10 + 1.37), 2) == 1.21, round(sdc, 2) == 3.36, round(sdc, 1) == 3.4,
+  sum(balanced) == 100, sum(common) == 100, sum(diag(balanced)) == 90, sum(diag(common)) == 90,
+  rowSums(balanced)[["varus"]] == 50, colSums(balanced)[["varus"]] == 50,
+  rowSums(common)[["varus"]] == 90, colSums(common)[["varus"]] == 90,
+  round(DescTools::CohenKappa(balanced), 2) == 0.80, round(DescTools::CohenKappa(common), 2) == 0.44,
+  round(0.9 * 0.9 + 0.1 * 0.1, 2) == 0.82, round(0.5 * 0.5 + 0.5 * 0.5, 2) == 0.50,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),

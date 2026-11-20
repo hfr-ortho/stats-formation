@@ -93,7 +93,7 @@ Les 330 genoux ont tous au moins un score (4 + 28 + 106 + 192 = 330), 1146 score
 
 ## Un intercept aléatoire pour chaque genou {#random-intercept}
 
-Les scores d'un même genou sont liés : un genou qui part bas reste en général plus bas que la moyenne. Un [modèle mixte](../glossary.qmd#mixed-model){.term} en tient compte avec un **intercept aléatoire** : chaque genou a son propre niveau de départ, décalé vers le haut ou vers le bas par rapport à la moyenne. Les **effets fixes** (ici, les visites) décrivent le patient moyen ; les intercepts aléatoires décrivent de combien les genoux diffèrent de cette moyenne.
+Les scores d'un même genou sont liés : un genou qui part bas reste en général plus bas que la moyenne. Un [modèle mixte](../glossary.qmd#mixed-model){.term} en tient compte avec un **intercept aléatoire** : chaque genou a son propre niveau global, à chaque visite : ses quatre scores sont tous décalés de la même quantité vers le haut ou vers le bas par rapport à la moyenne. Les **effets fixes** (ici, les visites) décrivent le patient moyen ; les intercepts aléatoires décrivent de combien les genoux diffèrent de cette moyenne.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -136,7 +136,7 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 Lire le résultat :
 
 - **Fixed effects :** le KOOS JR moyen était de 50.0 avant l'opération (l'[intercept](../glossary.qmd#intercept){.term}), et plus haut de 12.5 points à 6 semaines, de 24.2 à 3 mois et de 33.9 à 1 an. Le [coefficient](../glossary.qmd#coefficient){.term} de chaque visite est sa différence avec la visite préopératoire.
-- **Random effects :** les niveaux de départ propres aux genoux varient autour de la moyenne avec un [écart-type (ET)](../glossary.qmd#standard-deviation){.term} de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET [résiduel](../glossary.qmd#residual){.term} de 8.6 points (ligne « Residual » de R : variance 73.45, ET 8.570 ; Python n'affiche que la variance, sous la forme « Scale: 73.4507 » dans l'en-tête, et √73.45 = 8.57).
+- **Random effects :** les niveaux globaux propres aux genoux varient autour de la moyenne avec un [écart-type (ET)](../glossary.qmd#standard-deviation){.term} de 8.8 points (ligne « case_id (Intercept) » de R ; la ligne « case_id Var » de Python donne la [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). Les scores varient aussi d'une visite à l'autre au sein d'un même genou, avec un ET [résiduel](../glossary.qmd#residual){.term} de 8.6 points (ligne « Residual » de R : variance 73.45, ET 8.570 ; Python n'affiche que la variance, sous la forme « Scale: 73.4507 » dans l'en-tête, et √73.45 = 8.57).
 - **Part de la variation qui se situe entre les genoux :** la variance des genoux divisée par la variance des genoux plus la variance résiduelle, 78.1 / (78.1 + 73.5) = 0.52, le [coefficient de corrélation intraclasse](../glossary.qmd#icc){.term} (CCI ; la [page 17](17-agreement.qmd#icc) reprend la même idée pour les évaluateurs). Environ la moitié de la [dispersion](../glossary.qmd#spread){.term} des scores vient du fait que les genoux diffèrent les uns des autres ; c'est pourquoi les scores ne peuvent pas être traités comme [indépendants](../glossary.qmd#independence){.term}.
 - **REML :** les deux programmes ajustent le [modèle](../glossary.qmd#model){.term} par [maximum de vraisemblance restreint](../glossary.qmd#reml){.term}, le choix habituel pour l'estimer.
 
@@ -193,6 +193,52 @@ alike <- cor(side_by_side[, c("preop", "6wk", "3mo", "1yr")], use = "pairwise.co
 check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop", "1yr"],
                  first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
 ```
+
+**Ce que le modèle suppose.** Le modèle à intercept aléatoire, tel qu'il est écrit ici, repose sur trois hypothèses. Les résidus suivent à peu près une [loi normale](../glossary.qmd#normal-distribution){.term}. Ils ont la même dispersion à chaque visite : le modèle ajuste un seul ET résiduel, 8.6 points, pour les quatre. Et comme le niveau propre d'un genou décale ses quatre scores de la même quantité, deux scores d'un même genou se ressemblent autant, quelles que soient les deux visites choisies : le coefficient de corrélation intraclasse de 0.52 est ce nombre unique, et l'encadré ci-dessus montre les six corrélations qu'il résume (de 0.43 à 0.57). Une **pente aléatoire** irait plus loin : chaque genou aurait son propre rythme d'évolution en plus de son propre niveau. Ce modèle ne peut pas en avoir : avec la visite en quatre catégories, une pente pour chaque visite donnerait au modèle plus d'effets aléatoires (4 × 330 = 1320) qu'il n'y a de scores (1146), et lme4 s'arrête sur une erreur. Pour vérifier les deux premières hypothèses, tracez les résidus à chaque visite :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3.5
+knee_residuals <- knees |> mutate(residual = residuals(knee_model))   # chaque score moins la valeur ajustée du modèle pour son genou et sa visite
+knee_residuals |> group_by(visit) |> summarise(sd = sd(residual))     # la dispersion des résidus à chaque visite
+ggplot(knee_residuals, aes(visit, residual)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(x = "Visit", y = "Residual (KOOS JR points)")
+```
+
+## Python
+
+```{python}
+knee_residuals = knees.assign(residual=knee_model.resid)                           # chaque score moins la valeur ajustée du modèle pour son genou et sa visite
+print(knee_residuals.groupby("visit", observed=True)["residual"].std().round(2))   # la dispersion des résidus à chaque visite
+fig, ax = plt.subplots(figsize=(7, 3.5))
+boxes = ax.boxplot([knee_residuals.loc[knee_residuals["visit"] == visit, "residual"] for visit in visits], tick_labels=visits)
+ax.axhline(0, linestyle="--")
+ax.set_xlabel("Visit")
+ax.set_ylabel("Residual (KOOS JR points)")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+resid_sd = knee_residuals.groupby("visit", observed=True)["residual"].std()
+chk = {"resid_sd_preop": float(resid_sd["preop"]), "resid_sd_6wk": float(resid_sd["6wk"]), "resid_sd_1yr": float(resid_sd["1yr"])}
+```
+
+```{r}
+#| include: false
+resid_sd <- tapply(knee_residuals$residual, knee_residuals$visit, sd)
+check_agree(list(resid_sd_preop = resid_sd[["preop"]], resid_sd_6wk = resid_sd[["6wk"]], resid_sd_1yr = resid_sd[["1yr"]]),
+            reticulate::py$chk)
+```
+
+Les boîtes sont centrées près de 0 et à peu près symétriques aux quatre visites, et leur dispersion est semblable, sans être identique : les ET des résidus vont de 6.62 points à 6 semaines à 8.16 à 1 an (le tableau affiché).
+
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : degrés de liberté
@@ -362,7 +408,7 @@ emmip(arm_model, arm ~ visit, CIs = TRUE) +            # les deux profils de ré
   labs(x = "Visit", y = "EFAS score")
 
 arm_gaps <- pairs(emmeans(arm_model, ~ arm | visit, lmer.df = "satterthwaite"), reverse = TRUE)   # orthèse moins plâtre
-confint(arm_gaps)                                  # IC à 95%
+confint(arm_gaps)                                  # IC à 95% non ajustés
 summary(arm_gaps, by = NULL, adjust = "holm")      # Holm sur les quatre visites ensemble, pas dans chacune
 ```
 
@@ -442,6 +488,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 
 - **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} comme `DenDF` 309.58 et la [valeur p](../glossary.qmd#p-value){.term} comme `6.924e-15`. Le [test de Wald](../glossary.qmd#wald-test){.term} de Python est un test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le [F](../glossary.qmd#f-statistic){.term} de R est cette [statistique](../glossary.qmd#test-statistic){.term} divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les [erreurs standard](../glossary.qmd#standard-error){.term} des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
 - **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
+- **Les IC des différences** viennent de `confint()`, qui affiche « Confidence level used: 0.95 » et aucun ajustement : ce sont des IC à 95 % non ajustés. `adjust = "holm"`, à la ligne suivante, n'ajuste que les valeurs p.
 
 Deux autres regards sur les données expliquent le paragraphe qui suit : la [dispersion](../glossary.qmd#spread){.term} des scores, et la visite à 12 mois.
 
@@ -563,7 +610,7 @@ Dans cette [cohorte](../glossary.qmd#cohort){.term}, l'intercept au niveau du pa
 
 Pour la comparaison entre une orthèse et un plâtre :
 
-> **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with 95% CIs and Holm-adjusted p-values.
+> **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with unadjusted 95% CIs and Holm-adjusted p-values.
 >
 > **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
 
@@ -642,6 +689,17 @@ stopifnot(
   reticulate::py_eval("float(nested_model.cov_re.iloc[0, 0])") < 0.001^2,
   round(nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"], 1) == 8.8,
   round(14.43 / 3, 2) == 4.81,
+  # numbers and claims added with the content review of 20.11.2026 (Task 3.7)
+  round(resid_sd[["6wk"]], 2) == 6.62, round(resid_sd[["1yr"]], 2) == 8.16,
+  which.min(resid_sd) == 2, which.max(resid_sd) == 4,
+  all(abs(tapply(knee_residuals$residual, knee_residuals$visit, median)) < 0.5),
+  4 * 330 == 1320, nlevels(knees$visit) == 4, max(per_knee$n) == 4,
+  # a random slope per visit: lme4 stops (more random effects than scores)
+  inherits(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e), "error"),
+  # confint() prints "Confidence level used: 0.95" and no adjustment line; Holm adjusts the p-values only
+  "Confidence level used: 0.95" %in% attr(summary(confint(arm_gaps)), "mesg"),
+  !any(grepl("adjustment", attr(summary(confint(arm_gaps)), "mesg"))),
+  "P value adjustment: holm method for 4 tests" %in% attr(arm_gap, "mesg"),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   n_distinct(hips$case_id) == 270, nrow(hips) == 906, sum(table(hips$case_id) == 4) == 136,
   round(hip_emm$emmean, 1) == c(45.5, 68.6, 80.1, 88.2),

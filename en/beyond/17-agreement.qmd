@@ -80,7 +80,7 @@ There are several ICCs, and the right one depends on the design. Three choices d
 - **Type** (`unit`): will the study use one rater's reading (**single**) or the mean of several (**average**)? Usually single.
 - **Definition** (`type`): should a rater who always reads higher count against the measurement (**absolute agreement**) or not (**consistency**)? For angles that feed clinical decisions, it should: choose absolute agreement.
 
-Koo and Li also describe a **one-way random** model (`model = "oneway"`), for designs in which each knee is read by a different set of raters, for example different raters at each center of a multicenter study. It is rarely the right model when the same raters read every knee, as here; pingouin's `ICC(1,1)` row is this ICC.
+Koo and Li also describe a **one-way random** model (`model = "oneway"`), for designs in which each knee is read by a different set of raters, for example different raters at each center of a multicenter study. It does not fit a study in which the same raters read every knee, as here; that design calls for a two-way model. In pingouin's output, the `ICC(1,1)` row is this ICC.
 
 In plain words, the ICC splits the [spread](../glossary.qmd#spread){.term} of all the readings into three parts: real differences between knees, a systematic difference between the raters, and whatever is left, the [measurement error](../glossary.qmd#measurement-error){.term}. Each part is a [variance](../glossary.qmd#variance){.term}. The absolute-agreement ICC is the knees' share of the three together; the consistency ICC leaves the rater difference out. A box under the output below works both out by hand.
 
@@ -245,7 +245,7 @@ Rater 1 agreed with themselves a little better than with rater 2: intra-rater IC
 The [ICC](../glossary.qmd#icc){.term} is a ratio and has no units. To see how far apart two readings can be, in degrees, plot the **difference** between them against their **mean**, one point per knee. Then add three lines:
 
 - **The bias:** the [mean](../glossary.qmd#mean){.term} difference, showing whether one rater reads systematically higher.
-- **The 95% limits of agreement:** bias ± 1.96 × [SD](../glossary.qmd#standard-deviation){.term} of the differences. For 95% of knees, rater 2's reading will fall between these limits relative to rater 1's.
+- **The 95% limits of agreement:** bias ± 1.96 × [SD](../glossary.qmd#standard-deviation){.term} of the differences. For about 95% of knees, if the differences are roughly normal, rater 2's reading will fall between these limits relative to rater 1's.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -265,6 +265,7 @@ limit_cis <- rbind(lower = limits[1] + c(-1, 1) * qt(0.975, n_knees - 1) * se_li
 bias_ci <- t.test(inter_hka$difference)$conf.int                # the CI of the mean difference
 c(bias = bias, bias_ci = bias_ci, sd = sd_diff, limits = limits)
 limit_cis
+sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])   # knees outside the limits
 
 ggplot(inter_hka, aes(mean, difference)) +
   geom_point() +
@@ -290,6 +291,7 @@ bias_ci = stats.ttest_1samp(difference, 0).confidence_interval()
 print(round(bias, 3), round(float(bias_ci.low), 3), round(float(bias_ci.high), 3), round(sd_diff, 3))   # the bias, its 95% CI and the SD of the differences
 for limit in limits:
     print(round(limit, 3), round(limit - t_crit * se_limit, 3), round(limit + t_crit * se_limit, 3))    # each limit with its 95% CI
+print(((difference < limits[0]) | (difference > limits[1])).sum())                                   # knees outside the limits
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.scatter(mean, difference)
@@ -306,20 +308,54 @@ plt.show()
 ```{python}
 #| include: false
 chk = {"bias": float(bias), "bias_low": float(bias_ci.low), "sd": float(sd_diff), "limit_low": float(limits[0]),
-       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit)}
+       "limit_high": float(limits[1]), "limit_high_ci_high": float(limits[1] + t_crit * se_limit),
+       "outside": float(((difference < limits[0]) | (difference > limits[1])).sum())}
 ```
 
 ```{r}
 #| include: false
 check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = limits[1],
-                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2]),
+                 limit_high = limits[2], limit_high_ci_high = limit_cis["upper", 2],
+                 outside = sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2])),
             reticulate::py$chk)
 ```
 
 - **Bias = 0.50°** (95% [CI](../glossary.qmd#confidence-interval){.term} 0.08° to 0.93°): rater 2 reads half a degree higher than rater 1 on average, the same difference [page 7's exercise 2](../catalog/07-two-paired-groups.qmd#exercises) found with a [paired t test](../glossary.qmd#t-test){.term}.
-- **Limits of agreement, −2.74° to 3.74°:** for 95% of knees, rater 2's reading will be between 2.7° below and 3.7° above rater 1's.
+- **Limits of agreement, −2.74° to 3.74°:** for about 95% of knees, if the differences are roughly normal, rater 2's reading will be between 2.7° below and 3.7° above rater 1's. Here 3 of the 60 points (5%) lie outside the dashed lines (the last number printed before the plot).
 - **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; R's last table, and Python's last two lines, where each limit is followed by its CI) show how [precisely](../glossary.qmd#precision){.term} 60 knees pin the limits down.
 - **The plot:** the points scatter evenly around the bias line, with no trend up or down as the mean angle changes. A trend would mean the raters disagree more for some knees (more varus, say) than others, and a single pair of limits wouldn't describe them.
+
+**Standard error of measurement and smallest detectable change.** de Vet and colleagues (2006) describe two more agreement measures in degrees, built from the three variances in [the ICC box](#icc). The **standard error of measurement** (SEM) is the typical size of the error in one reading. For agreement it counts the systematic difference between the raters as error too: SEM = √(rater variance + error variance). The **smallest detectable change** (SDC) is 1.96 × √2 × SEM: the smallest difference between two readings of the same knee that is larger than [measurement error](../glossary.qmd#measurement-error){.term} alone would usually produce. The √2 is there because both readings carry an error, and the 1.96 gives 95%, as in the limits of agreement.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+sem_agreement <- sqrt(parts[["raters"]] + parts[["error"]])   # the rater difference counts as error too
+sdc <- 1.96 * sqrt(2) * sem_agreement                          # the smallest detectable change
+c(sem = sem_agreement, sdc = sdc)
+```
+
+## Python
+
+```{python}
+sem_agreement = np.sqrt(parts["raters"] + parts["error"])     # the rater difference counts as error too
+sdc = 1.96 * np.sqrt(2) * sem_agreement                        # the smallest detectable change
+print(sem_agreement, sdc)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"sem": float(sem_agreement), "sdc": float(sdc)}
+```
+
+```{r}
+#| include: false
+check_agree(list(sem = sem_agreement, sdc = sdc), reticulate::py$chk)
+```
+
+For HKA, SEM = 1.21°, the square root of 0.10 + 1.37, and SDC = 3.36° (the output). A difference of less than about 3.4° between two readings of the same knee is within what measurement error alone could produce.
 
 Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the [reliability](../glossary.qmd#reliability){.term} study, and compare the limits (and their CIs) with them.
 
@@ -415,6 +451,52 @@ check_agree(list(observed = observed, by_chance = by_chance, by_hand = (observed
                  software = cpak_kappa[["kappa"]], class_1_r1 = rowSums(cpak_table)[["I"]],
                  class_1_r2 = colSums(cpak_table)[["I"]]), reticulate::py$chk)
 ```
+
+::: {.callout-warning}
+## ⚠️ Watch out: kappa depends on how common each category is
+Two made-up tables, each of 100 knees that two raters called "varus" or "not varus". The raters agree on 90 knees in both. In the first table half the knees are varus; in the second, each rater calls 90 of the 100 varus.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+balanced <- as.table(matrix(c(45, 5, 5, 45), nrow = 2,
+                            dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+common <- as.table(matrix(c(85, 5, 5, 5), nrow = 2,
+                          dimnames = list(R1 = c("varus", "not varus"), R2 = c("varus", "not varus"))))
+balanced
+common
+c(balanced = sum(diag(balanced)) / 100, common = sum(diag(common)) / 100)       # the same 90% agreement
+c(balanced = DescTools::CohenKappa(balanced), common = DescTools::CohenKappa(common))   # two different kappas
+```
+
+## Python
+
+```{python}
+balanced = np.array([[45, 5], [5, 45]])          # rows: rater 1 (varus, not varus); columns: rater 2
+common = np.array([[85, 5], [5, 5]])
+print(balanced)
+print(common)
+print(np.trace(balanced) / 100, np.trace(common) / 100)                  # the same 90% agreement
+print(cohens_kappa(balanced).kappa, cohens_kappa(common).kappa)          # two different kappas
+```
+:::
+
+```{python}
+#| include: false
+chk = {"agree_balanced": float(np.trace(balanced) / 100), "agree_common": float(np.trace(common) / 100),
+       "kappa_balanced": float(cohens_kappa(balanced).kappa), "kappa_common": float(cohens_kappa(common).kappa)}
+```
+
+```{r}
+#| include: false
+check_agree(list(agree_balanced = sum(diag(balanced)) / 100, agree_common = sum(diag(common)) / 100,
+                 kappa_balanced = DescTools::CohenKappa(balanced), kappa_common = DescTools::CohenKappa(common)),
+            reticulate::py$chk)
+```
+
+Both tables show 90% agreement, but kappa is 0.80 in the first and 0.44 in the second. When one category is common, chance alone already produces much of the agreement: 0.9 × 0.9 + 0.1 × 0.1 = 0.82 in the second table, against 0.5 × 0.5 + 0.5 × 0.5 = 0.50 in the first (the box above shows this step). On Landis and Koch's scale the same raters reach "substantial" agreement in one table and "moderate" agreement in the other; these labels are conventions, not properties of the measurement. Kappa depends on how common each category is, so a kappa from a sample with a different case mix may not be comparable. Report the raw agreement and the table beside kappa, as this page does for CPAK class.
+:::
 
 **Weighted kappa for ordered categories.** Plain kappa treats every disagreement as equally bad. When the categories have an order, a near miss should count less than a big miss. CPAK class has no single order (it's a 3 × 3 grid of two angles), but each axis does. The arithmetic HKA group goes varus, neutral, valgus. A **weighted kappa** gives a disagreement between varus and neutral half the penalty of one between varus and valgus (linear weights):
 
@@ -532,6 +614,14 @@ stopifnot(
   round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
   round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_icc$value - inter_1$value, 4) == 0.0004,
   shifted_icc$lbound < 0,
+  # numbers added with the content review of 20.11.2026 (Task 3.7)
+  sum(inter_hka$difference < limits[1] | inter_hka$difference > limits[2]) == 3, 3 / 60 == 0.05,
+  round(sem_agreement, 2) == 1.21, round(sqrt(0.10 + 1.37), 2) == 1.21, round(sdc, 2) == 3.36, round(sdc, 1) == 3.4,
+  sum(balanced) == 100, sum(common) == 100, sum(diag(balanced)) == 90, sum(diag(common)) == 90,
+  rowSums(balanced)[["varus"]] == 50, colSums(balanced)[["varus"]] == 50,
+  rowSums(common)[["varus"]] == 90, colSums(common)[["varus"]] == 90,
+  round(DescTools::CohenKappa(balanced), 2) == 0.80, round(DescTools::CohenKappa(common), 2) == 0.44,
+  round(0.9 * 0.9 + 0.1 * 0.1, 2) == 0.82, round(0.5 * 0.5 + 0.5 * 0.5, 2) == 0.50,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),

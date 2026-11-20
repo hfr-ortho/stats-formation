@@ -155,7 +155,7 @@ check_agree(list(raw_12 = adjusted$unadjusted[1], raw_34 = adjusted$unadjusted[6
 Follow the ASA 1 vs ASA 2 comparison across the row:
 
 - **Unadjusted, p = 0.022:** "[significant](../glossary.qmd#statistical-significance){.term}" on its own, but it's one of six tests.
-- **Bonferroni, p = 0.132:** multiplies every p-value by the number of tests (here 6). Simple, but the strictest: it often throws away real differences.
+- **Bonferroni, p = 0.132:** multiplies every p-value by the number of tests (here 6). Simple, but the strictest: it often throws away real differences. Papers often adjust the threshold instead: "significance was set at 0.05 / 6 = 0.0083". That is the same decision. ASA 1 vs 2 misses it both ways (0.022 is above 0.0083, and 0.132 is above 0.05), and the four pairs whose unadjusted p-values are below 0.0083 are the four whose Bonferroni p-values are below 0.05.
 - **Holm, p = 0.044:** a step-down version of Bonferroni. It multiplies the smallest p-value by 6, the next smallest by 5, and so on, but an adjusted p-value can't be smaller than the one before it in that order. ASA 1 vs 2 has the fifth smallest of the six p-values, so it's multiplied by 2: 0.022 × 2 = 0.044. ASA 3 vs 4 has the largest unadjusted p-value (0.030), so it's multiplied by 1, but it takes 0.044 from ASA 1 vs 2, the one before it. It controls the [family-wise error rate](../glossary.qmd#family-wise-error-rate){.term} just as well as Bonferroni and is never less [powerful](../glossary.qmd#power){.term}, so **use Holm rather than Bonferroni**.
 - **Benjamini-Hochberg (BH), p = 0.026:** controls something different, the **false discovery rate**: the expected share of [false positives](../glossary.qmd#false-positive){.term} among the results you call significant. It's the most lenient of the three. It suits screening many [outcomes](../glossary.qmd#outcome){.term} for leads, not confirming a claim. To get it, each p-value is multiplied by the number of tests and divided by its [rank](../glossary.qmd#rank){.term}, counted from the smallest: here 0.022 × 6 / 5 = 0.026.
 
@@ -212,7 +212,7 @@ Picking whichever adjustment keeps your favourite result significant is [p-hacki
 
 ## After ANOVA: Tukey's HSD and Games-Howell {#after-anova}
 
-After a [one-way ANOVA](../glossary.qmd#anova){.term}, **Tukey's honestly significant difference** (HSD) compares every pair of group [means](../glossary.qmd#mean){.term}. It adjusts for all the pairs at once, and gives each difference a [CI](../glossary.qmd#confidence-interval){.term} that's adjusted too. It assumes the groups have [similar spreads](../glossary.qmd#equal-variances){.term}, like the ANOVA. When they don't (the largest [SD](../glossary.qmd#standard-deviation){.term} is more than about twice the smallest), use **Games-Howell**, the [Welch](../glossary.qmd#welch-test){.term} version of Tukey's test. For groups of fewer than 50 patients, the GraphPad Statistics Guide recommends a close relative, Dunnett's T3 test, in its place: `PMCMRplus::dunnettT3Test()` in R, `scikit_posthocs.posthoc_dunnett_t3()` in Python.
+After a [one-way ANOVA](../glossary.qmd#anova){.term}, **Tukey's honestly significant difference** (HSD) compares every pair of group [means](../glossary.qmd#mean){.term}. It adjusts for all the pairs at once, and gives each difference a [CI](../glossary.qmd#confidence-interval){.term} that's adjusted too. Tukey's test goes with the classic ANOVA and, like it, assumes the groups have [similar spreads](../glossary.qmd#equal-variances){.term}: judge them from the plot and the [SDs](../glossary.qmd#standard-deviation){.term}, never with a test of the variances (page 8's rule of thumb: the largest SD is no more than about twice the smallest). **Games-Howell**, the [Welch](../glossary.qmd#welch-test){.term} version of Tukey's test, doesn't assume similar spreads. It goes with Welch's ANOVA, the safe default, especially when the group sizes are unequal ([page 8](../catalog/08-three-plus-unmatched.qmd#one-way-anova)). For groups of fewer than 50 patients, the GraphPad Statistics Guide recommends a close relative, Dunnett's T3 test, in its place: `PMCMRplus::dunnettT3Test()` in R, `scikit_posthocs.posthoc_dunnett_t3()` in Python. Two of this example's four classes are under 50 (36 patients in ASA 1 and 18 in ASA 4, the first table below), so that advice would apply to them. Don't confuse T3 with Dunnett's test, a different test that compares each group with one control group, not every pair with every other (`DescTools::DunnettTest()` in R, `scipy.stats.dunnett()` in Python).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -272,6 +272,8 @@ check_agree(list(sd_1 = sd(cohort$age[cohort$asa == 1]), sd_4 = sd(cohort$age[co
 - **Games-Howell** shows the same three things under other names: `estimate`, `conf.low`, `conf.high` and `p.adj` in R; `diff` and `pval` in Python, which prints the [standard error](../glossary.qmd#standard-error){.term} (`se`) in place of a CI.
 
 Four of the six pairs differ clearly (p < 0.001 or, for ASA 2 vs 4 in the Games-Howell test, p = 0.001). Two don't: ASA 2 patients were 3.6 years older than ASA 1 patients (95% CI −0.4 to 7.7, p = 0.096), and ASA 4 patients 5.3 years older than ASA 3 patients (95% CI −0.3 to 10.9, p = 0.072). Both CIs include 0, and both comparisons involve one of the two small classes (ASA 1 with 36 patients and ASA 4 with 18). The SDs are similar (8.7 to 9.3 years: `sd` in R's first table, `std` in Python's), so Games-Howell reaches the same conclusions.
+
+Holm and Tukey disagree about ASA 1 vs 2: p = 0.044 with Holm in [the section above](#adjusting-p-values), p = 0.096 with Tukey here. Holm multiplied this pair's p-value by only 2, because it ranked fifth of the six. Tukey's test treats all six pairs alike: it compares each pair with the largest of the six differences that chance alone would produce, the idea behind the 20% in [the first section](#why-adjust). Both control the [family-wise error rate](../glossary.qmd#family-wise-error-rate){.term}, so neither is wrong, and that is why you choose the method before you look at the p-values.
 
 > **Methods:** Age was compared across ASA classes with one-way ANOVA, followed by Tukey's honestly significant difference test for pairwise comparisons.
 >
@@ -448,6 +450,8 @@ check_agree(list(preop = mean(pf$promis_pf[pf$visit == "preop"]), one_year = mea
 ```
 
 The [mean](../glossary.qmd#mean){.term} [T-score](../glossary.qmd#t-score){.term} was 36.1 before surgery, 39.4 at 6 weeks, 44.9 at 3 months and 48.2 at 1 year (the first output). Every pair of visits differs: all [adjusted p-values](../glossary.qmd#multiple-comparisons){.term} are below 0.001, and the largest is printed as `5.59e-13` in R. R's `statistic` is negative because it subtracts the later visit from the earlier one: pre-op minus 6 weeks gives t = −7.98. Python subtracts the other way round and prints 7.98. With 328 procedures and changes this large, the adjustment changes nothing. It matters most when results sit near p = 0.05.
+
+Like page 9, this section keeps only the 328 procedures measured at all four visits. [Page 16](16-mixed-models.qmd#why-mixed-models) explains why dropping the others is wasteful and can bias the result. A mixed model keeps every score and compares visits with contrasts between its [estimated marginal means](16-mixed-models.qmd#estimated-marginal-means); [page 16's exercise 2](16-mixed-models.qmd#exercises) fits one to PROMIS physical function.
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: which way round
@@ -656,7 +660,7 @@ check_agree(list(chisq = survdiff(Surv(followup_years, revised) ~ implant, data 
                  hr_ab = implant_vs_b_hr["implant_vs_bA", "exp(coef)"]), reticulate::py$chk_overall)
 ```
 
-Implant C differs from both A and B (adjusted p < 0.001 for each). There was no clear evidence of a difference between A and B (p = 0.520; hazard ratio for A against B 1.22, 95% [CI](../glossary.qmd#confidence-interval){.term} 0.67 to 2.24, the first row of the Cox output). Against implant B, implant C's hazard ratio was 3.75 (95% CI 2.14 to 6.58, the second row); against implant A it was 3.07 (95% CI 1.85 to 5.09; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)). R's `exp(-coef)` column is the same ratio the other way round. The first output is the [overall test](../glossary.qmd#overall-test){.term}: [χ²](../glossary.qmd#chi-square-statistic){.term} = 33.5 on 2 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} (Python prints the [statistic](../glossary.qmd#test-statistic){.term} and the [p-value](../glossary.qmd#p-value){.term} only).
+Implant C differs from both A and B (adjusted p < 0.001 for each). There was no clear evidence of a difference between A and B (p = 0.520; hazard ratio for A against B 1.22, 95% [CI](../glossary.qmd#confidence-interval){.term} 0.67 to 2.24, the first row of the Cox output). Against implant B, implant C's hazard ratio was 3.75 (95% CI 2.14 to 6.58, the second row); against implant A it was 3.07 (95% CI 1.85 to 5.09; [page 8](../catalog/08-three-plus-unmatched.qmd#cox)). These are unadjusted 95% CIs: Holm's adjustment changes only the p-values. R's `exp(-coef)` column is the same ratio the other way round. The first output is the [overall test](../glossary.qmd#overall-test){.term}: [χ²](../glossary.qmd#chi-square-statistic){.term} = 33.5 on 2 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term} (Python prints the [statistic](../glossary.qmd#test-statistic){.term} and the [p-value](../glossary.qmd#p-value){.term} only).
 
 > **Results:** The log-rank test for revision-free survival across implants gave χ² = 33.5 (df = 2, p < 0.001). In pairwise log-rank tests with Holm's adjustment, p < 0.001 for implant C against implant A and against implant B, and p = 0.520 for implant A against implant B.
 
@@ -758,6 +762,16 @@ stopifnot(
   round(100 * colMeans(aid[, c("preop", "6wk", "3mo", "1yr")]), 1) == c(34.8, 59.1, 24.4, 10.4),
   which.max(mcnemar_results$p_holm) == 2, format(signif(mcnemar_results$p_holm[2], 3)) == "0.00466",
   round(implant_vs_b_hr["implant_vs_bA", c("exp(coef)", "lower .95", "upper .95")], 2) == c(1.22, 0.67, 2.24),
+  # numbers and claims added with the content review of 20.11.2026 (Task 3.7)
+  round(0.05 / 6, 4) == 0.0083, unadjusted[1] > 0.05 / 6, round(unadjusted[1] * 6, 3) == 0.132,
+  sum(unadjusted < 0.05 / 6) == 4, identical(which(unadjusted < 0.05 / 6), which(p.adjust(unadjusted, "bonferroni") < 0.05)),
+  rank(unadjusted)[1] == 5, sum(table(cohort$asa) < 50) == 2,
+  # Tukey's p-value for every pair comes from the same studentized range distribution for four groups
+  isTRUE(all.equal(ptukey(abs(tukey["2-1", "diff"]) / sqrt(sum(residuals(age_anova)^2) / 596 / 2 * (1 / 36 + 1 / 300)),
+                          nmeans = 4, df = 596, lower.tail = FALSE), tukey["2-1", "p adj"])),
+  # the Cox CIs are the model's own Wald 95% CIs, with no adjustment
+  isTRUE(all.equal(unname(implant_vs_b_hr[, "lower .95"]),
+                   unname(exp(coef(implant_vs_b_model) - qnorm(0.975) * sqrt(diag(vcov(implant_vs_b_model))))))),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   all(tukey_bmi[, "p adj"] < 0.01), round(tukey_bmi["2-1", c("diff", "lwr", "upr")], 1) == c(2.9, 0.6, 5.2),
   round(tukey_bmi["4-3", c("diff", "lwr", "upr")], 1) == c(4.1, 0.9, 7.2),
