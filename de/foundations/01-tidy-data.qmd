@@ -252,6 +252,7 @@ In R rufen wir `janitor::clean_names()` mit dem Package-Namen davor auf, statt j
 ## 🔀 R oder Python: dieselbe Excel-Datei, anders eingelesen
 - **Wiederholte Spaltenköpfe.** R (mit `.name_repair = "minimal"`) behält beide `Date`-Spalten als `Date`. pandas benennt die zweite in `Date.1` um.
 - **Echte Excel-Datumsangaben.** Als Text eingelesen, liefert R die Excel-Seriennummer und pandas einen Datum-Uhrzeit-Text. Vergleichen Sie das erste Datum in den beiden Ausgaben: `42026` in R (22. Januar 2015), `2015-01-22 00:00:00` in pandas. Schritt 5 behandelt beide.
+- **Zellen mit dem Text `None`.** Auch diese lesen R und pandas unterschiedlich ein: Der 🔀-Kasten unter Prüfung 3 weiter unten erklärt, wie.
 :::
 
 ### Schritt 2: Zeilen und Spalten entfernen, die keine Daten sind {#step-2-drop-rows-and-columns-that-arent-data}
@@ -427,7 +428,7 @@ Die rote Füllung markiert 18 revidierte Fälle. Die Spalte `Notes` erwähnt ein
 Nun wandeln wir jede Textspalte in das um, was sie wirklich ist. Eine kleine Funktion kümmert sich um die gemischten Datumsformate. Nicht jede Umcodierung geht gleich mit einer Überraschung um. Merken Sie sich deshalb, welche was tut:
 
 - **Geschlecht, Eingriff und Seite** suchen nach den Werten, die sie erwarten, und machen alles andere zu einem fehlenden Wert. Beim Geschlecht werden die ganzen Schreibweisen verglichen, die im Blatt vorkommen; der Code unten listet sie zuerst auf. So fällt eine Überraschung wie `Mme` als fehlender Wert auf, statt stillschweigend zu «Male» zu werden, wie es geschähe, wenn wir nur den ersten Buchstaben verglichen.
-- **Die ASA-Klasse** wird in R zu einem fehlenden Wert, wenn sich der Text nicht als Zahl (arabisch oder römisch) lesen lässt, und R gibt eine Warnung aus. In Python bricht `pd.to_numeric()` bei solchem Text stattdessen mit einem Fehler ab. Eine falsche Zahl kommt in beiden durch: Ein Tippfehler wie `12` bleibt 12. Prüfen Sie die ASA-Klasse deshalb mit einer Kreuztabelle, wie in [Übung 1](#exercises).
+- **Die ASA-Klasse** wird in R zu einem fehlenden Wert, wenn sich der Text nicht als Zahl (arabisch oder römisch) lesen lässt, und R gibt eine Warnung aus. In Python bricht `pd.to_numeric()` bei solchem Text stattdessen mit einem Fehler ab. Eine falsche ganze Zahl in Ziffern, etwa `12`, kommt in beiden durch und bleibt 12 (`0` dagegen wird in R zu einem fehlenden Wert, ohne Warnung). Prüfen Sie die ASA-Klasse deshalb mit einer Kreuztabelle, wie in [Übung 1](#exercises).
 - **Die drei Komorbiditätsspalten** sind 1, wenn die Zelle die Abkürzung nennt, und 0, wenn sie irgendetwas anderes nennt. Eine unbekannte Schreibweise wie `T2DM` zählt also als «nein», nicht als fehlend. Deshalb stellt Prüfung 3 unten sie in einer Kreuztabelle dar.
 
 ::: {.panel-tabset group="language"}
@@ -485,7 +486,7 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
-print(step3["sex"].value_counts().sort_index())   # jede Schreibweise von sex im Blatt: die Umcodierung unten listet genau diese auf, in Kleinbuchstaben
+print(step3["sex"].value_counts(dropna=False).sort_index())   # jede Schreibweise von sex im Blatt: die Umcodierung unten listet genau diese auf, in Kleinbuchstaben
 
 def number(text):
     # Die erste Zahl in jeder Zelle: «67 yo» -> 67, «BMI 31.2» -> 31.2
@@ -566,6 +567,48 @@ Vergleichen Sie die Ausgabe mit dem, was Sie erwarten: 120 Zeilen und 18 Spalten
 ## 🔀 R oder Python: Datumsangaben
 R braucht für die Excel-Seriennummern einen eigenen Schritt (`janitor::excel_numeric_to_date()`). pandas hat diese Zellen schon in Datum-Uhrzeit-Text (`2015-01-22 00:00:00`) umgewandelt, den seine Funktion `parse_messy_date()` zusammen mit den übrigen ISO-Daten liest. Beide lesen `"14.05.15"` mit dem Tag zuerst: das ist der Schweizer Stil, den die Tabellen am HFR verwenden. Beide lesen ISO-Daten für sich, weil `dayfirst=True` in pandas auch diese vertauschen würde (`2015-11-02` würde zum 11. Februar). pandas speichert ausserdem eine Spalte mit ganzen Zahlen und fehlenden Werten als Dezimalzahlen; die ASA-Klasse 2 erscheint deshalb als `2.0`. Der Wert ist derselbe.
 :::
+
+::: {.callout-warning}
+## ⚠️ Achtung: Dezimalkommas und zweistellige Jahreszahlen
+Die Zahlenfunktionen oben erwarten einen Dezimalpunkt. In einer Tabelle, die mit Dezimalkommas erfasst wurde, liefern sie ohne Warnung falsche Werte, und zwar in jeder Sprache andere: `"31,2"` wird in R zu 312 und in Python zu 31. Ersetzen Sie in beiden Sprachen das Komma vor dem Umwandeln durch einen Punkt: Zellen mit einem Punkt bleiben, wie sie sind, deshalb funktioniert das auch in einer Spalte, die beides mischt, sofern keine Zahl ein Tausendertrennzeichen hat (aus `"1,234.5"` würde 1.234; diese Arbeitsmappe hat keines).
+
+Bei Datumsangaben lauert eine ähnliche Falle: Eine zweistellige Jahreszahl ist eine Vermutung über das Jahrhundert. Beide Sprachen lesen `"13.01.45"` als 13. Januar 2045, was für ein Geburtsdatum falsch ist, und sie ziehen die Grenze zwischen den Jahrhunderten nicht beim selben Jahr: `"13.01.70"` ist in R 1970 und in Python 2070. Erfassen Sie vierstellige Jahreszahlen.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+parse_number("31,2")                                     # das Komma wird als Tausendertrennzeichen gelesen
+parse_number(str_replace(c("31,2", "31.2"), ",", "."))   # das Komma durch einen Punkt ersetzt
+dmy(c("13.01.45", "13.01.70"))                           # das Jahrhundert ist geraten
+```
+
+## Python
+
+```{python}
+print(number(pd.Series(["31,2"])).iloc[0])         # die Hilfsfunktion hört beim Komma auf
+both = pd.Series(["31,2", "31.2"])
+print(number(both.str.replace(",", ".")).tolist())   # das Komma durch einen Punkt ersetzt
+two_digit = parse_messy_date(pd.Series(["13.01.45", "13.01.70"]))
+print(two_digit.dt.strftime("%Y-%m-%d").tolist())    # das Jahrhundert ist geraten
+```
+:::
+:::
+
+```{python}
+#| include: false
+chk = {"comma": float(number(both.str.replace(",", ".")).iloc[0]),
+       "point": float(number(both.str.replace(",", ".")).iloc[1]),
+       "year_45": float(two_digit.iloc[0].year)}
+```
+
+```{r}
+#| include: false
+# "13.01.70" differs by design (1970 in R, 2070 in pandas); the Prose guard pins both.
+check_agree(list(comma = parse_number(str_replace("31,2", ",", ".")),
+                 point = parse_number(str_replace("31.2", ",", ".")),
+                 year_45 = year(dmy("13.01.45"))), reticulate::py$chk)
+```
 
 ## Einen Umfrage-Export umformen {#reshaping}
 
@@ -988,7 +1031,19 @@ stopifnot(
   is.na(as.integer(str_detect(NA_character_, regex("\\bDM\\b", ignore_case = TRUE)))),  # an empty cell: NA in R
   inherits(tryCatch(as.integer(as.roman(str_remove("U", "^ASA "))), warning = identity), "warning"),
   is.na(suppressWarnings(as.integer(as.roman(str_remove("U", "^ASA "))))),
-  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12
+  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12,
+  # numbers and claims added with the content-review fixes (B22, and step 5's list)
+  is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
+  parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
+  parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  parse_number(str_replace("1,234.5", ",", ".")) == 1.234,             # the remedy's limit: a thousands separator
+  reticulate::py_eval("float(number(pd.Series(['1,234.5']).str.replace(',', '.')).iloc[0])") == 1.234,
+  max(select(tidy, where(is.numeric)), na.rm = TRUE) < 1000,           # "this workbook has none"
+  dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
+  reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
+  reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),
+  reticulate::py_eval("two_digit.dt.strftime('%Y-%m-%d').tolist()") == c("2045-01-13", "2070-01-13"),
+  reticulate::py_eval("float(asa_recode(['0']).iloc[0])") == 0
 )
 ```
 

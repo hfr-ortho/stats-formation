@@ -20,7 +20,7 @@ The [decision table](../choose-a-test.qmd) asks two questions: what's your **goa
 
 ## Why the shape of your data matters {#why}
 
-The methods in the first column work with **[means](../glossary.qmd#mean){.term}** and [SDs](../glossary.qmd#standard-deviation){.term} of the values themselves: [t tests](../glossary.qmd#t-test){.term} and [ANOVA](../glossary.qmd#anova){.term} compare means, and [Pearson correlation](../glossary.qmd#pearson-correlation){.term} measures a straight-line association. They assume roughly [normal](../glossary.qmd#normal-distribution){.term} data (for t tests and ANOVA, within each group). The tests in the second column ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) work on **[ranks](../glossary.qmd#rank){.term}**. They don't assume a normal distribution.
+The methods in the first column work with **[means](../glossary.qmd#mean){.term}** and [SDs](../glossary.qmd#standard-deviation){.term} of the values themselves: [t tests](../glossary.qmd#t-test){.term} and [ANOVA](../glossary.qmd#anova){.term} compare means, and [Pearson correlation](../glossary.qmd#pearson-correlation){.term} measures a straight-line association. They assume roughly [normal](../glossary.qmd#normal-distribution){.term} data (for t tests and ANOVA, within each group; for a paired t test, the differences). The tests in the second column ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) work on **[ranks](../glossary.qmd#rank){.term}**. They don't assume a normal distribution.
 
 ::: {.callout-note}
 ## 💡 In plain language
@@ -166,7 +166,7 @@ Packages define skewness in slightly different ways (`scipy.stats.skew()` and th
 
 ## Formal tests: Shapiro-Wilk, and why not to trust it alone {#shapiro}
 
-The **Shapiro-Wilk test** asks: "Could these numbers plausibly come from a [normal distribution](../glossary.qmd#normal-distribution){.term}?" A small p-value means "probably not". It's tempting to let it decide: p < 0.05 → [rank test](../glossary.qmd#nonparametric){.term}, otherwise → [t test](../glossary.qmd#t-test){.term}. That rule fails in both directions.
+The **Shapiro-Wilk test** asks: "Could these numbers plausibly come from a [normal distribution](../glossary.qmd#normal-distribution){.term}?" A small p-value says that numbers like these would be unusual if they did come from a normal distribution; it is not the probability that they do. It's tempting to let it decide: p < 0.05 → [rank test](../glossary.qmd#nonparametric){.term}, otherwise → [t test](../glossary.qmd#t-test){.term}. That rule fails in both directions.
 
 **It's too sensitive with large samples.** Our 600 ages look like a textbook bell curve, yet:
 
@@ -231,7 +231,7 @@ Decide from the plots, from what you know about the measurement (a [bounded](../
 
 ## Check within groups, not the pooled data {#within-groups}
 
-The [normality](../glossary.qmd#normal-distribution){.term} [assumption](../glossary.qmd#assumption){.term} is about the data **within each group** (or, for [regression models](../glossary.qmd#model){.term}, the **[residuals](../glossary.qmd#residual){.term}**: what's left after the model's prediction). Pooling groups with different centers can make perfectly normal data look non-normal.
+The [normality](../glossary.qmd#normal-distribution){.term} [assumption](../glossary.qmd#assumption){.term} is about the data **within each group** (for paired data, the differences between the two measurements of each pair; for [regression models](../glossary.qmd#model){.term}, the **[residuals](../glossary.qmd#residual){.term}**: what's left after the model's prediction). Pooling groups with different centers can make perfectly normal data look non-normal.
 
 Here's an extreme, made-up example: two groups of 200 values, each exactly normal, with [means](../glossary.qmd#mean){.term} of 40 and 60 and an [SD](../glossary.qmd#standard-deviation){.term} of 5, so 4 standard deviations apart.
 
@@ -437,7 +437,7 @@ The decision table's rows also ask whether your groups are **[independent](../gl
 
 - **Unpaired (independent):** different patients in each group. THA vs TKA; Site A vs Site B; men vs women.
 - **Paired:** the same patients measured twice, or natural pairs. Pre-op vs 1-year [PROM](../glossary.qmd#prom){.term} in the same patients; left vs right knee in bilateral patients; two raters measuring the same X-rays.
-- **Matched:** each patient in one group has been chosen to resemble a patient in the other group (by age, sex, BMI…). Treat matched sets like pairs.
+- **Matched:** each patient in one group has their own match, one or more patients in the other group chosen to resemble them (by age, sex, BMI…). Treat such individually matched pairs or sets like pairs.
 
 **Bilateral patients need care.** In our [cohort](../glossary.qmd#cohort){.term}, 80 patients appear twice, once for each side ([page 2](02-demographics.qmd#setup) counts them). Their two procedures share the same person's age, sex and health, so they are not independent. When both fall in the same comparison group, tests that treat every row as a separate patient are a little overconfident ([p-values](../glossary.qmd#p-value){.term} too small, [CIs](../glossary.qmd#confidence-interval){.term} too narrow). Either analyse one procedure per patient (for example, the first), or use methods built for [clustered data](../glossary.qmd#clustered-data){.term}, such as [mixed models](../beyond/16-mixed-models.qmd#bilateral). Say which you did.
 
@@ -459,7 +459,7 @@ flowchart TD
   F --> H
   G --> H
   D --> H
-  H -->|Measurement, roughly normal within groups| I[Gaussian column]
+  H -->|Measurement, roughly normal within groups or, for paired data, the differences| I[Gaussian column]
   H -->|Strongly skewed, piled up at a floor or ceiling, or ordinal| J[Rank column]
   H -->|Yes / no| K[Binomial column]
   H -->|Time until an event| L[Survival column]
@@ -481,10 +481,10 @@ Then find your row and column in the [decision table](../choose-a-test.qmd). Som
 Every test on this site reports three things. They answer different questions, and a good Results section gives all three.
 
 - The **effect size** answers *how big?* For example, the difference between two [means](../glossary.qmd#mean){.term}.
-- The **95% confidence interval (CI)** answers *how sure are we about that size?* It's the range of effect sizes compatible with the data.
+- The **95% [confidence interval](../glossary.qmd#confidence-interval){.term} (CI)** answers *how sure are we about that size?* It's the range of effect sizes compatible with the data. The 95% describes the method, not this one interval: if a study were repeated many times, about 95 of every 100 intervals calculated this way would contain the true effect.
 - The **p-value** answers *how surprising would data like these be if there were really no difference at all?* It doesn't measure the size or importance of an effect.
 
-Here's all three for BMI in TKA vs THA, using the [unpaired (Welch's) t test](../glossary.qmd#welch-test){.term} from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t):
+Here's all three for BMI in TKA vs THA, using the [unpaired (Welch's) t test](../glossary.qmd#welch-test){.term} from [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t). It uses all 600 rows, which include both procedures of the 80 bilateral patients ([see above](#paired)).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -492,10 +492,12 @@ Here's all three for BMI in TKA vs THA, using the [unpaired (Welch's) t test](..
 ```{r}
 bmi_test <- t.test(bmi ~ procedure, data = cohort)   # Welch's t test (R's default)
 bmi_test
+tapply(cohort$bmi, cohort$procedure, sd)                             # the SD of BMI in each group
 
 difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # TKA minus THA
 ci <- -rev(bmi_test$conf.int)                                        # flip to TKA minus THA
-tibble(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value)
+tibble(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+       difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value)
 ```
 
 ## Python
@@ -506,34 +508,41 @@ tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
 
 bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # Welch's t test
 ci = bmi_test.confidence_interval()
+print(cohort.groupby("procedure")["bmi"].std())          # the SD of BMI in each group
 
-print(pd.Series({"difference": tka.mean() - tha.mean(),
+print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
+                 "difference": tka.mean() - tha.mean(),
                  "ci_low": ci.low, "ci_high": ci.high, "p": bmi_test.pvalue}))
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
+chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
+       "sd_tka": float(tka.std()), "sd_tha": float(tha.std()),
+       "difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
        "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
+check_agree(list(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+                 sd_tka = sd(cohort$bmi[cohort$procedure == "TKA"]), sd_tha = sd(cohort$bmi[cohort$procedure == "THA"]),
+                 difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
             reticulate::py$chk)
 ```
 
-Reading the output: the difference is 1.786, so 1.8 to one decimal. The CI runs from 0.924 to 2.647, so 0.9 to 2.6 (R's small table shows 2.65 because it prints three significant figures). R prints p as `5.341e-05`, which is 0.00005 and is written as p < 0.001. R's first printout also shows t and df, the [test statistic](../glossary.qmd#test-statistic){.term} and its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) explains them, and here we need only the difference, its CI and p.
+Reading the output: mean BMI is 31.2 in TKA and 29.5 in THA patients (`mean_tka` and `mean_tha`), with SDs of 5.4 and 5.3 (the line that prints the SD of each group). The difference is 1.786, so 1.8 to one decimal (it comes from the unrounded means, which is why it isn't 31.2 − 29.5 = 1.7). The CI runs from 0.924 to 2.647, so 0.9 to 2.6 (R's small table shows 2.65 because it prints three significant figures). R prints p as `5.341e-05`, which is 0.00005 and is written as p < 0.001. R's first printout also shows t and df, the [test statistic](../glossary.qmd#test-statistic){.term} and its [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}; [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) explains them, and here we need only the two means and SDs, the difference, its CI and p.
 
-> TKA patients had a higher BMI than THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+> Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Is a difference of 1.8 kg/m² *clinically* important? The p-value can't tell you. Ask whether a difference anywhere in the CI (0.9 to 2.6 kg/m²) would change risk or management, for example complication rates. That's clinical judgment, not statistics. **Statistically significant** means only that data like these would be unusual if there were really no difference. It doesn't mean the difference is large or important.
 
 ::: {.callout-warning}
-## ⚠️ Watch out: two classic misreadings
+## ⚠️ Watch out: three classic misreadings
 - **"p = 0.20, so there's no difference."** No. It means the data couldn't rule out zero. Look at the CI: if it runs from "harmful" to "very helpful", the study was too small to say.
 - **"p < 0.001, so the effect is large."** No. With enough patients, tiny differences get tiny p-values. Look at the effect size and CI.
+- **"p = 0.03, so there's a 3% chance that there's no difference."** No. The p-value is calculated *assuming* there is no difference, so it can't be the probability that there is none. It says how unusual data like these would be if there were no difference.
 :::
 
 ::: {.callout-tip}
@@ -579,7 +588,11 @@ stopifnot(
   # the rule of thumb's labels for the three variables
   abs(skewness(cohort$age)) < 0.5,
   abs(skewness(one_year$prom_score)) > 0.5, abs(skewness(one_year$prom_score)) < 1,
-  skewness(cohort$los_days) > 1
+  skewness(cohort$los_days) > 1,
+  # numbers added with the content-review fixes (B5)
+  round(bmi_test$estimate[["mean in group TKA"]], 1) == 31.2, round(bmi_test$estimate[["mean in group THA"]], 1) == 29.5,
+  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8,
+  round(sd(cohort$bmi[cohort$procedure == "TKA"]), 1) == 5.4, round(sd(cohort$bmi[cohort$procedure == "THA"]), 1) == 5.3
 )
 ```
 

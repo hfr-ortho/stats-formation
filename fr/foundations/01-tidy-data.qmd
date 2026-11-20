@@ -252,6 +252,7 @@ En R, nous appelons `janitor::clean_names()` avec le nom du package devant, au l
 ## 🔀 R ou Python : le même fichier Excel, lu différemment
 - **En-têtes répétés.** R (avec `.name_repair = "minimal"`) garde les deux colonnes `Date` sous le nom `Date`. pandas renomme la seconde en `Date.1`.
 - **Vraies dates Excel.** Lues comme du texte, R donne le numéro de série Excel et pandas un texte date-heure. Comparez la première date dans les deux sorties : `42026` dans R (22 janvier 2015), `2015-01-22 00:00:00` dans pandas. L'étape 5 s'occupe des deux.
+- **Cellules qui contiennent `None`.** R et pandas les lisent aussi différemment : l'encadré 🔀 sous le contrôle 3, plus bas, explique comment.
 :::
 
 ### Étape 2 : supprimer les lignes et les colonnes qui ne sont pas des données {#step-2-drop-rows-and-columns-that-arent-data}
@@ -427,7 +428,7 @@ Le remplissage rouge marque 18 cas révisés. La colonne `Notes` ne mentionne un
 Convertissez maintenant chaque colonne de texte en ce qu'elle est réellement. Une petite fonction gère les formats de date mélangés. Les recodages ne traitent pas tous une surprise de la même façon ; sachez donc lequel fait quoi :
 
 - **Le sexe, l'intervention et le côté** cherchent les valeurs attendues et transforment tout le reste en valeur manquante. Le sexe est comparé aux graphies complètes utilisées dans la feuille, que le code ci-dessous liste d'abord : une surprise comme `Mme` apparaît donc comme valeur manquante au lieu de devenir « Male » en silence, comme ce serait le cas si nous ne comparions que la première lettre.
-- **La classe ASA** devient en R une valeur manquante quand le texte ne se lit pas comme un nombre (arabe ou romain), avec un avertissement. En Python, un tel texte arrête plutôt `pd.to_numeric()` sur une erreur. Un nombre erroné passe dans les deux langages : une faute de frappe comme `12` reste 12. Croisez donc la classe ASA avec le texte brut, comme le fait l'[exercice 1](#exercises).
+- **La classe ASA** devient en R une valeur manquante quand le texte ne se lit pas comme un nombre (arabe ou romain), avec un avertissement. En Python, un tel texte arrête plutôt `pd.to_numeric()` sur une erreur. Un nombre entier erroné écrit en chiffres, comme `12`, passe dans les deux langages : il reste 12 (`0`, en revanche, devient une valeur manquante en R, sans avertissement). Croisez donc la classe ASA avec le texte brut, comme le fait l'[exercice 1](#exercises).
 - **Les trois indicateurs de comorbidité** valent 1 quand la cellule mentionne l'abréviation et 0 quand elle mentionne autre chose : une graphie inconnue comme `T2DM` compte donc comme « non », pas comme manquante. C'est pourquoi le contrôle 3 ci-dessous les croise avec le texte brut.
 
 ::: {.panel-tabset group="language"}
@@ -486,7 +487,7 @@ glimpse(tidy)
 ```{python}
 import numpy as np
 
-print(step3["sex"].value_counts().sort_index())   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci, en minuscules
+print(step3["sex"].value_counts(dropna=False).sort_index())   # chaque graphie de sex dans la feuille : le recodage ci-dessous liste exactement celles-ci, en minuscules
 
 def number(text):
     # Le premier nombre de chaque cellule : "67 yo" -> 67, "BMI 31.2" -> 31.2
@@ -569,6 +570,48 @@ Comparez la sortie à ce que vous attendez : 120 lignes et 18 colonnes, les dat
 ## 🔀 R ou Python : les dates
 R a besoin d'une étape séparée pour les numéros de série Excel (`janitor::excel_numeric_to_date()`). pandas a déjà transformé ces cellules en texte date-heure (`2015-01-22 00:00:00`), que sa fonction `parse_messy_date()` lit avec les autres dates ISO. Les deux lisent `"14.05.15"` avec le jour d'abord : c'est le style suisse, celui des feuilles de l'HFR. Les deux lisent les dates ISO séparément, parce que `dayfirst=True` de pandas les inverserait aussi (`2015-11-02` deviendrait le 11 février). pandas stocke aussi une colonne de nombres entiers avec des valeurs manquantes sous forme de nombres décimaux : la classe ASA 2 s'affiche donc comme `2.0`. La valeur est la même.
 :::
+
+::: {.callout-warning}
+## ⚠️ Attention : virgules décimales et années à deux chiffres
+Les fonctions qui lisent les nombres, plus haut, attendent un point décimal. Sur une feuille saisie avec des virgules décimales, elles se trompent sans avertissement, et différemment dans chaque langage : `"31,2"` devient 312 en R et 31 en Python. Dans les deux langages, remplacez la virgule par un point avant la conversion : les cellules saisies avec un point restent telles quelles, donc cela fonctionne aussi sur une colonne qui mélange les deux, à condition qu'aucun nombre n'ait de séparateur de milliers (`"1,234.5"` deviendrait 1.234 ; ce classeur n'en a aucun).
+
+Les dates cachent un piège semblable : une année à deux chiffres est une supposition sur le siècle. Les deux langages lisent `"13.01.45"` comme le 13 janvier 2045, ce qui est faux pour une date de naissance, et ils ne placent pas la limite entre les siècles à la même année : `"13.01.70"` donne 1970 en R et 2070 en Python. Saisissez les années avec quatre chiffres.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+parse_number("31,2")                                     # la virgule est lue comme séparateur de milliers
+parse_number(str_replace(c("31,2", "31.2"), ",", "."))   # la virgule remplacée par un point
+dmy(c("13.01.45", "13.01.70"))                           # le siècle est deviné
+```
+
+## Python
+
+```{python}
+print(number(pd.Series(["31,2"])).iloc[0])         # la fonction s'arrête à la virgule
+both = pd.Series(["31,2", "31.2"])
+print(number(both.str.replace(",", ".")).tolist())   # la virgule remplacée par un point
+two_digit = parse_messy_date(pd.Series(["13.01.45", "13.01.70"]))
+print(two_digit.dt.strftime("%Y-%m-%d").tolist())    # le siècle est deviné
+```
+:::
+:::
+
+```{python}
+#| include: false
+chk = {"comma": float(number(both.str.replace(",", ".")).iloc[0]),
+       "point": float(number(both.str.replace(",", ".")).iloc[1]),
+       "year_45": float(two_digit.iloc[0].year)}
+```
+
+```{r}
+#| include: false
+# "13.01.70" differs by design (1970 in R, 2070 in pandas); the Prose guard pins both.
+check_agree(list(comma = parse_number(str_replace("31,2", ",", ".")),
+                 point = parse_number(str_replace("31.2", ",", ".")),
+                 year_45 = year(dmy("13.01.45"))), reticulate::py$chk)
+```
 
 ## Remodeler l'export d'un questionnaire {#reshaping}
 
@@ -991,7 +1034,19 @@ stopifnot(
   is.na(as.integer(str_detect(NA_character_, regex("\\bDM\\b", ignore_case = TRUE)))),  # an empty cell: NA in R
   inherits(tryCatch(as.integer(as.roman(str_remove("U", "^ASA "))), warning = identity), "warning"),
   is.na(suppressWarnings(as.integer(as.roman(str_remove("U", "^ASA "))))),
-  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12
+  as.integer(as.roman(str_remove("12", "^ASA "))) == 12, as.integer(as.roman(str_remove("ASA 12", "^ASA "))) == 12,
+  # numbers and claims added with the content-review fixes (B22, and step 5's list)
+  is.na(as.integer(as.roman("0"))), !inherits(tryCatch(as.roman("0"), warning = identity), "warning"),
+  parse_number("31,2") == 312, parse_number(str_replace(c("31,2", "31.2"), ",", ".")) == c(31.2, 31.2),
+  parse_number("31.2", locale = locale(decimal_mark = ",")) == 312,   # why the box doesn't offer the comma locale
+  parse_number(str_replace("1,234.5", ",", ".")) == 1.234,             # the remedy's limit: a thousands separator
+  reticulate::py_eval("float(number(pd.Series(['1,234.5']).str.replace(',', '.')).iloc[0])") == 1.234,
+  max(select(tidy, where(is.numeric)), na.rm = TRUE) < 1000,           # "this workbook has none"
+  dmy(c("13.01.45", "13.01.70")) == as.Date(c("2045-01-13", "1970-01-13")),
+  reticulate::py_eval("float(number(pd.Series(['31,2'])).iloc[0])") == 31,
+  reticulate::py_eval("number(both.str.replace(',', '.')).tolist()") == c(31.2, 31.2),
+  reticulate::py_eval("two_digit.dt.strftime('%Y-%m-%d').tolist()") == c("2045-01-13", "2070-01-13"),
+  reticulate::py_eval("float(asa_recode(['0']).iloc[0])") == 0
 )
 ```
 
