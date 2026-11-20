@@ -40,7 +40,7 @@ Wählen Sie den hypothetischen Wert, **bevor** Sie Ihre Daten ansehen, und sagen
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist ein **[Messwert](../glossary.qmd#continuous-variable){.term}** (Minuten, kg/m², Punkte).
 - Sie ist **[ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term}**, oder die [Stichprobe](../glossary.qmd#sample){.term} ist gross (etwa 30 oder mehr) und nicht stark [schief](../glossary.qmd#skewed){.term} ([Seite 3](../foundations/03-distributions.qmd#robustness)).
 - Jede Person wird einmal gezählt, und die Personen sind voneinander [unabhängig](../glossary.qmd#independence){.term}.
-- Sind die Daten schief, häufen sie sich am Boden oder an der Decke ([Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}) oder sind sie [ordinal](../glossary.qmd#ordinal){.term} → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank).
+- Sind die Daten nicht normalverteilt, aber ungefähr [symmetrisch](../glossary.qmd#symmetric){.term} um ihre Mitte verteilt → verwenden Sie den [Wilcoxon-Vorzeichen-Rang-Test](#wilcoxon-signed-rank). Sind sie deutlich schief (oft wegen eines [Decken- oder Bodeneffekts](../glossary.qmd#ceiling-effect){.term}) oder [ordinal](../glossary.qmd#ordinal){.term}, oder bezieht sich Ihre Aussage auf den Median, verwenden Sie den [Vorzeichentest](../glossary.qmd#sign-test){.term}, den derselbe Abschnitt zeigt.
 
 ### Was der Test wirklich macht
 
@@ -89,7 +89,7 @@ plt.show()
 ```
 :::
 
-Ein ungefähr [symmetrischer](../glossary.qmd#symmetric){.term} Hügel, dessen Mitte etwas links der gestrichelten Linie bei 90 Minuten liegt.
+Ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der gestrichelten Linie bei 90 Minuten liegt.
 
 ### Analyse durchführen
 
@@ -226,10 +226,10 @@ Sowohl `t.test(x, mu = 90)` in R als auch `ttest_1samp(x, popmean=90)` in scipy 
 
 ### Wann verwenden
 
-- Die [Zielgrösse](../glossary.qmd#outcome){.term} ist **[schief](../glossary.qmd#skewed){.term}** oder hat einen **[Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}**, sodass ein [Mittelwert](../glossary.qmd#mean){.term} die Daten nicht gut zusammenfasst ([Seite 3](../foundations/03-distributions.qmd#transform)).
+- Die [Zielgrösse](../glossary.qmd#outcome){.term} hat Ausreisser oder schwere Ränder, sodass ein [Mittelwert](../glossary.qmd#mean){.term} die Daten nicht gut zusammenfasst, ist aber ungefähr [symmetrisch](../glossary.qmd#symmetric){.term} um ihre Mitte verteilt. Sind die Scores deutlich **[schief](../glossary.qmd#skewed){.term}**, wie es ein **[Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}** oft bewirkt ([Seite 3](../foundations/03-distributions.qmd#transform)), verwenden Sie den Vorzeichentest unten.
 - Der Test bringt die Abstände aller Personen zum [hypothetischen Wert](../glossary.qmd#hypothetical-value){.term} in eine Rangfolge. Er setzt keine [Normalverteilung](../glossary.qmd#normal-distribution){.term} voraus, braucht aber Abstände, die sich vergleichen lassen; die Zielgrösse muss also ein [Messwert](../glossary.qmd#continuous-variable){.term} sein.
-- Zählen Sie bei einer **[ordinalen](../glossary.qmd#ordinal){.term}** Skala (Zufriedenheit von 1 bis 5) die Personen über und unter dem Wert und vergleichen Sie die beiden Anzahlen mit einem [Binomialtest](#binomial-test). Das heisst **[Vorzeichentest](../glossary.qmd#sign-test){.term}**.
-- Genau genommen prüft der Test den **[Pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (den Hodges-Lehmann-Schätzer unten), der nur bei einer [symmetrischen](../glossary.qmd#symmetric){.term} [Verteilung](../glossary.qmd#distribution){.term} dem [Median](../glossary.qmd#median){.term} entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
+- Der Test setzt voraus, dass die Scores symmetrisch um ihre Mitte verteilt sind, und seine [Nullhypothese](../glossary.qmd#null-hypothesis){.term} lautet, dass diese Mitte der hypothetische Wert ist: Die Hilfeseite von `wilcox.test()` in R nennt das eine [Verteilung](../glossary.qmd#distribution){.term}, die «symmetric about `mu`» ist, also symmetrisch um den hypothetischen Wert. Sein p-Wert und sein Schätzer beziehen sich auf den **[Pseudomedian](../glossary.qmd#hodges-lehmann){.term}** (den Hodges-Lehmann-Schätzer unten), der nur bei einer symmetrischen Verteilung dem [Median](../glossary.qmd#median){.term} entspricht. Bei einem Deckeneffekt weichen die beiden etwas voneinander ab; berichten Sie beide.
+- Wenn sich Ihre Aussage auf den Median selbst bezieht, die Scores deutlich schief sind oder die Skala **[ordinal](../glossary.qmd#ordinal){.term}** ist (Zufriedenheit von 1 bis 5), zählen Sie die Personen über und unter dem Wert und vergleichen Sie die beiden Anzahlen mit einem [Binomialtest](#binomial-test). Das heisst **[Vorzeichentest](../glossary.qmd#sign-test){.term}**, und er braucht keine Symmetrie. Die letzte Zeile unter «Analyse durchführen» wendet ihn auf diese Scores an.
 - Sind die Daten ungefähr normalverteilt → ist der [t-Test für eine Stichprobe](#one-sample-t) vertrauter und etwas [teststärker](../glossary.qmd#power){.term}.
 
 ### Was der Test wirklich macht
@@ -295,7 +295,7 @@ plt.show()
 ```
 :::
 
-260 Personen: 170 liegen über 80 und 90 darunter. 170 + 90 = 260, also hat niemand genau 80 und niemand fällt aus dem Test heraus. Ein Deckeneffekt bei 100 und ein langer Ausläufer nach links: Der [rangbasierte Test](../glossary.qmd#nonparametric){.term} ist die sicherere Wahl.
+260 Personen: 170 liegen über 80 und 90 darunter. 170 + 90 = 260, also hat niemand genau 80 und niemand fällt aus dem Test heraus. Das Histogramm zeigt einen Deckeneffekt bei 100 und einen langen Ausläufer nach links; die Scores sind also nicht symmetrisch, und der Pseudomedian ist nicht der Median: Der p-Wert des Wilcoxon-Vorzeichen-Rang-Tests unten bezieht sich auf den Pseudomedian (84.4, den Hodges-Lehmann-Schätzer unter «Effektstärke und 95%-KI»), und der Vorzeichentest in der letzten Zeile unter «Analyse durchführen» prüft den Median (85.75, die erste Ausgabe unter «Effektstärke und 95%-KI») gegen 80.
 
 ### Analyse durchführen
 
@@ -307,6 +307,8 @@ koos_test <- wilcox.test(koos_1yr, mu = 80,
                          exact = FALSE, correct = FALSE,   # siehe den Kasten «R oder Python»
                          conf.int = TRUE)                  # ergänzt den Hodges-Lehmann-Schätzer und das KI
 koos_test
+
+binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value   # der Vorzeichentest: 170 über 80 von 260
 ```
 
 ## Python
@@ -315,18 +317,22 @@ koos_test
 # pg.wilcoxon() führt den Test von scipy aus und ergänzt die biseriale Rangkorrelation als Effektstärke
 koos_test = pg.wilcoxon(koos_1yr - 80, method="approx", correction=False)   # siehe den Kasten «R oder Python»
 print(koos_test)
+
+print(stats.binomtest(int((koos_1yr > 80).sum()), int((koos_1yr != 80).sum())).pvalue)   # der Vorzeichentest: 170 über 80 von 260
 ```
 :::
 
 ```{python}
 #| include: false
 chk = {"p": float(koos_test["p_val"].iloc[0]),
-       "log_p": float(np.log(koos_test["p_val"].iloc[0]))}   # tiny p-values: compare them on a log scale too
+       "log_p": float(np.log(koos_test["p_val"].iloc[0])),   # tiny p-values: compare them on a log scale too
+       "sign_log_p": float(np.log(stats.binomtest(int((koos_1yr > 80).sum()), int((koos_1yr != 80).sum())).pvalue))}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticulate::py$chk)
+check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value),
+                 sign_log_p = log(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value)), reticulate::py$chk)
 ```
 
 ### Ausgabe lesen
@@ -335,6 +341,7 @@ check_agree(list(p = koos_test$p.value, log_p = log(koos_test$p.value)), reticul
 - **p < 0.001:** Scores, die so weit von 80 entfernt liegen, wären sehr unwahrscheinlich, wenn die typische Person tatsächlich 80 erzielte. R gibt `2.293e-06` aus, das ist 0.000002293; pingouin gibt `0.000002` aus.
 - **(pseudo)median 84.35, 95%-KI 82.7 bis 86.1** (nur R): der Hodges-Lehmann-Schätzer für die Mitte der Scores, mit seinem [KI](../glossary.qmd#confidence-interval){.term}.
 - **RBC = 0.34** (Python): die [biseriale Rangkorrelation](../glossary.qmd#rank-biserial){.term} als Effektstärke, siehe unten.
+- **Die letzte Zeile** (R gibt `7.943109e-07` aus, Python einige Stellen mehr): der p-Wert des Vorzeichentests, 0.0000008, also p < 0.001. Er fragt nur, wie viele Personen über 80 lagen (170) und wie viele darunter (90), und bezieht sich darum auf den Median: 170 von 260 wären sehr unwahrscheinlich, wenn der Median der Scores 80 wäre.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: die Rangsummen von Hand
@@ -825,6 +832,8 @@ stopifnot(
   isTRUE(all.equal(time_difference / time_se, unname(op_test$statistic))), round(time_se, 3) == 0.671,
   round(time_difference, 2) == -5.52, round(-5.52 / 0.671, 2) == -8.23, 4 * 5.5 == 22, signif(op_test$p.value, 4) == 1.204e-15,
   sum(koos_1yr > 80) == 170, sum(koos_1yr < 80) == 90, 170 + 90 == 260,
+  signif(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value, 7) == 7.943109e-07,   # the sign test
+  round(binom.test(sum(koos_1yr > 80), sum(koos_1yr != 80))$p.value, 7) == 0.0000008,
   sum(distance_rank[distance > 0]) == 22698.5, sum(distance_rank[distance < 0]) == 11231.5, 260 * 261 / 2 == 33930,
   round((22698.5 - 11231.5) / 33930, 2) == 0.34,
   mean(distance_rank[distance > 0]) > mean(distance_rank[distance < 0]),

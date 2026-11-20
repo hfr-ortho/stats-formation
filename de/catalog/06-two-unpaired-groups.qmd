@@ -643,9 +643,10 @@ Der Chi-Quadrat-Test behandelt Häufigkeiten so, als könnten sie jeden Wert ann
 
 ### Effektstärke und 95%-KI
 
-Zwei Effektstärken, und es lohnt sich, beide zu berichten:
+Drei Effektstärken sind gebräuchlich; der Results-Satz unten berichtet alle drei:
 
 - Die **[Risikodifferenz](../glossary.qmd#risk-difference){.term}**: die Differenz zwischen den beiden Prozentsätzen, in [Prozentpunkten](../glossary.qmd#percentage-point){.term}. Sie ist für Patientinnen und Patienten wie für Ärztinnen und Ärzte verständlich. Sein [KI](../glossary.qmd#confidence-interval){.term} ist hier das einfache Intervall «[Schätzwert](../glossary.qmd#estimate){.term} ± 1.96 [Standardfehler](../glossary.qmd#standard-error){.term}», das [Wald-KI](../glossary.qmd#wald-interval){.term} heisst: `prop.test(..., correct = FALSE)` in R, `method="wald"` in Python.
+- Das **[relative Risiko](../glossary.qmd#risk-ratio){.term}**: die Versagensrate mit einem Hamstring-Transplantat geteilt durch die Rate mit einem BPTB-Transplantat, also wie viele Male so wahrscheinlich ein Versagen ist. Sein KI ist hier ein Wald-KI auf der [logarithmischen](../glossary.qmd#logarithm){.term} Skala: der Logarithmus des Verhältnisses ± 1.96 Standardfehler, zurückgerechnet in ein Verhältnis.
 - Das **[Odds Ratio](../glossary.qmd#odds-ratio){.term}**: die [Odds](../glossary.qmd#odds){.term} für Versagen mit einem Hamstring-Transplantat geteilt durch die Odds mit einem BPTB-Transplantat. Es ist das, was die [logistische Regression](../glossary.qmd#logistic-regression){.term} berichtet ([Seite 11](11-predict-from-one.qmd#logistic-regression)), und eignet sich daher für den Vergleich mit anderen Studien.
 
 ::: {.panel-tabset group="language"}
@@ -658,6 +659,9 @@ failure_fisher$conf.int                  # sein 95%-KI
 risk <- prop.test(failure_table, correct = FALSE)
 risk$estimate                            # Versagensrate mit jedem Transplantat: Hamstring, dann BPTB
 risk$conf.int                            # 95%-KI für die Risikodifferenz, Hamstring minus BPTB
+
+DescTools::RelRisk(failure_table, conf.level = 0.95,
+                   method = "wald", delta = 0)   # relatives Risiko, Hamstring gegenüber BPTB, und sein 95%-KI: siehe den Kasten «R oder Python»
 ```
 
 ## Python
@@ -671,6 +675,10 @@ bptb_yes, bptb_no = failure_table.loc["BPTB"]
 print(ham_yes / (ham_yes + ham_no), bptb_yes / (bptb_yes + bptb_no))   # Versagensraten
 print(confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes + bptb_no,
                                  method="wald", compare="diff"))       # 95%-KI, Hamstring minus BPTB
+
+print((ham_yes / (ham_yes + ham_no)) / (bptb_yes / (bptb_yes + bptb_no)))   # relatives Risiko, Hamstring gegenüber BPTB
+print(confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes + bptb_no,
+                                 method="log", compare="ratio"))       # sein 95%-KI: siehe den Kasten «R oder Python»
 ```
 :::
 
@@ -681,6 +689,10 @@ rd_ci = confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes
                                    method="wald", compare="diff")
 chk = {"or": float(failure_or.statistic), "or_low": float(or_ci.low), "or_high": float(or_ci.high),
        "rd_low": float(rd_ci[0]), "rd_high": float(rd_ci[1])}
+rr_ci = confint_proportions_2indep(ham_yes, ham_yes + ham_no, bptb_yes, bptb_yes + bptb_no,
+                                   method="log", compare="ratio")
+chk_rr = {"rr": float((ham_yes / (ham_yes + ham_no)) / (bptb_yes / (bptb_yes + bptb_no))),
+          "rr_low": float(rr_ci[0]), "rr_high": float(rr_ci[1])}
 ```
 
 ```{r}
@@ -689,15 +701,20 @@ check_agree(list(or = unname(failure_fisher$estimate), or_low = failure_fisher$c
                  or_high = failure_fisher$conf.int[2], rd_low = risk$conf.int[1], rd_high = risk$conf.int[2]),
             reticulate::py$chk,
             tol = 1e-4)   # both programs find the odds ratio and its CI by root-finding, accurate to about 1e-5
+failure_rr <- DescTools::RelRisk(failure_table, conf.level = 0.95, method = "wald", delta = 0)
+check_agree(list(rr = failure_rr[["rel. risk"]], rr_low = failure_rr[["lwr.ci"]], rr_high = failure_rr[["upr.ci"]]),
+            reticulate::py$chk_rr)
 ```
 
 Die Versagensrate mit einem Hamstring-Transplantat war 0.8 Prozentpunkte tiefer (95%-KI 5.5 Punkte tiefer bis 4.0 Punkte höher), ein Odds Ratio von 0.83 (95%-KI 0.22 bis 3.20). Die beiden Versagensraten sind 3.9 % und 4.7 %, die Risikodifferenz ist also 3.9 − 4.7 = −0.8 Prozentpunkte. Das KI wird als [Anteile](../glossary.qmd#proportion){.term} ausgegeben, −0.055 und 0.040; mal 100 sind das −5.5 bis 4.0 Punkte.
 
+Das relative Risiko ist (6 ÷ 154) ÷ (6 ÷ 129) = 0.84 (95%-KI 0.28 bis 2.53); R gibt es als `rel. risk` aus. Wenn das Ereignis selten ist, wie hier das Transplantatversagen, liegen Odds Ratio und relatives Risiko nahe beieinander: 0.83 und 0.84. Wenn das Ereignis häufig ist, liegt das Odds Ratio weiter von 1 entfernt als das relative Risiko; wer es als relatives Risiko liest, überschätzt also den Effekt. [Übung 3](#exercises) zeigt das.
+
 ### Resultate formulieren
 
-> **Methods:** Graft failure within 2 years was compared between hamstring and BPTB grafts with Fisher's exact test. Effect sizes are reported as risk differences with Wald 95% CIs and as odds ratios with exact 95% CIs.
+> **Methods:** Graft failure within 2 years was compared between hamstring and BPTB grafts with Fisher's exact test. Effect sizes are reported as risk differences with Wald 95% CIs, as risk ratios with Wald 95% CIs on the log scale and as odds ratios with exact 95% CIs.
 >
-> **Results:** Graft failure within 2 years followed 6 of 154 hamstring reconstructions (3.9%) and 6 of 129 BPTB reconstructions (4.7%) (risk difference −0.8 percentage points, 95% CI −5.5 to 4.0; odds ratio 0.83, 95% CI 0.22 to 3.20; p = 0.775).
+> **Results:** Graft failure within 2 years followed 6 of 154 hamstring reconstructions (3.9%) and 6 of 129 BPTB reconstructions (4.7%) (risk difference −0.8 percentage points, 95% CI −5.5 to 4.0; risk ratio 0.84, 95% CI 0.28 to 2.53; odds ratio 0.83, 95% CI 0.22 to 3.20; p = 0.775).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: «Kein Unterschied» braucht ein schmales KI
@@ -705,8 +722,10 @@ Das KI des Odds Ratio reicht von 0.22 bis 3.20: Die Daten sind damit vereinbar, 
 :::
 
 ::: {.callout-tip}
-## 🔀 R oder Python: zwei verschiedene Odds Ratios
+## 🔀 R oder Python: Odds Ratios und relative Risiken
 `fisher_exact()` in scipy gibt das einfache **Stichproben**-Odds-Ratio (a × d) / (b × c) an, hier 0.8311. `fisher.test()` in R gibt das **bedingte [Maximum-Likelihood](../glossary.qmd#maximum-likelihood){.term}**-Odds-Ratio an, 0.8316, das zu seinem exakten KI gehört. Verwenden Sie `scipy.stats.contingency.odds_ratio(..., kind="conditional")`, um die Zahl und das KI von R zu erhalten. Die beiden liegen nahe beieinander, ausser wenn die Häufigkeiten klein sind; geben Sie an, welches Sie berichten. In unserer Tabelle ist das Odds Ratio der Stichprobe (6 × 123) / (148 × 6) = 0.8311.
+
+Beim relativen Risiko gibt `DescTools::RelRisk()` in R kein KI aus, wenn Sie `conf.level` nicht angeben, und sein Standard-KI ist ein Score-Intervall; mit `method = "wald"` addiert es im Standardfehler 0.5 zu jeder Anzahl Versagen, ausser Sie setzen `delta = 0`. `confint_proportions_2indep(..., compare="ratio")` in statsmodels verwendet standardmässig ein angepasstes Log-Intervall. Wir setzen `method = "wald", delta = 0` in R und `method="log"` in Python; so liefern beide das einfache Wald-KI auf der logarithmischen Skala.
 :::
 
 ## Log-Rank-Test {#log-rank}
@@ -1021,6 +1040,8 @@ stopifnot(
   round(unname(failure_fisher$estimate), 2) == 0.83, round(failure_fisher$conf.int, 2) == c(0.22, 3.20),
   round(unname(failure_fisher$estimate), 4) == 0.8316, round(6 * 123 / (148 * 6), 4) == 0.8311,
   round(100 * unname(diff(rev(risk$estimate))), 1) == -0.8, round(100 * risk$conf.int, 1) == c(-5.5, 4.0),
+  round(failure_rr, 2) == c(0.84, 0.28, 2.53), round((6 / 154) / (6 / 129), 2) == 0.84,   # the risk ratio and its CI
+  failure_rr[["rel. risk"]] > failure_fisher$estimate, failure_rr[["rel. risk"]] > (6 * 123) / (148 * 6),   # the odds ratio is further from 1
   implant_logrank$n == c(246, 137), implant_logrank$obs == c(25, 38),
   round(implant_logrank$exp, 1) == c(41.9, 21.1),
   round(implant_logrank$chisq, 1) == 20.5, implant_logrank$pvalue < 0.001,
@@ -1043,7 +1064,11 @@ stopifnot(
   round(100 * prop.table(ex_rts, 1)[, "yes"], 1) == c(53.3, 46.5), round(100 * diff(rev(prop.table(ex_rts, 1)[, "yes"])), 1) == 6.8,
   round(100 * prop.test(ex_rts, correct = FALSE)$conf.int, 1) == c(-3.7, 17.4),
   round(unname(fisher.test(ex_rts)$estimate), 2) == 1.31, round(fisher.test(ex_rts)$conf.int, 2) == c(0.84, 2.05),
-  round(fisher.test(ex_rts)$p.value, 3) == 0.236
+  round(fisher.test(ex_rts)$p.value, 3) == 0.236,
+  sum(ex_rts[, "yes"]) == 173, sum(ex_rts) == 350, round(100 * sum(ex_rts[, "yes"]) / sum(ex_rts)) == 49,   # "about half the patients returned"
+  round(DescTools::RelRisk(ex_rts, conf.level = 0.95, method = "wald", delta = 0), 2) == c(1.15, 0.93, 1.42),
+  round(100 * (DescTools::RelRisk(ex_rts) - 1)) == 15, round(100 * (unname(fisher.test(ex_rts)$estimate) - 1)) == 31,
+  DescTools::RelRisk(ex_rts) < unname(fisher.test(ex_rts)$estimate)
 )
 ```
 
@@ -1124,7 +1149,7 @@ print(efas_12mo.groupby("arm")["efas"].agg(at_24=lambda s: (s == 24).sum(), perc
 Es gibt keinen klaren Hinweis auf einen Unterschied nach 12 Monaten, nach dem Vorsprung von 3.6 Punkten, den der Walker nach 3 Monaten hatte. Beachten Sie auch, dass 18 der 120 Patientinnen und Patienten die Studienvisite nach 12 Monaten verpassten, 5 im Walker-Arm und 13 im Gips-Arm: Wenn ein Arm mehr Personen verliert, sind die verbleibenden Personen womöglich nicht mehr mit denen des anderen Arms vergleichbar. Ob sich die Differenz zwischen den Armen im Zeitverlauf wirklich verändert, ist eine Frage für ein einziges [Modell](../glossary.qmd#model){.term} mit allen Studienvisiten: [Seite 16](../beyond/16-mixed-models.qmd#group-by-time) zeigt, wie das geht. (Die Tabelle zeigt 55 und 47 Personen: 60 − 55 = 5 und 60 − 47 = 13.)
 :::
 
-**3.** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Frauen und Männern? Wählen Sie den Test, führen Sie ihn durch und schreiben Sie den Results-Satz mit der [Risikodifferenz](../glossary.qmd#risk-difference){.term} und dem [Odds Ratio](../glossary.qmd#odds-ratio){.term}.
+**3.** Unterscheidet sich die Rückkehr zum Sport 12 Monate nach einer VKB-Rekonstruktion zwischen Frauen und Männern? Wählen Sie den Test, führen Sie ihn durch und schreiben Sie den Results-Satz mit der [Risikodifferenz](../glossary.qmd#risk-difference){.term}, dem [relativen Risiko](../glossary.qmd#risk-ratio){.term} und dem [Odds Ratio](../glossary.qmd#odds-ratio){.term}.
 
 ::: {.callout-tip collapse="true"}
 ## Lösung
@@ -1140,6 +1165,7 @@ rts_table
 prop.table(rts_table, margin = 1)                 # Zeilenprozente: Rückkehr zum Sport, nach Geschlecht
 fisher.test(rts_table)
 prop.test(rts_table, correct = FALSE)$conf.int
+DescTools::RelRisk(rts_table, conf.level = 0.95, method = "wald", delta = 0)   # relatives Risiko, Frauen gegenüber Männern, und sein 95%-KI
 ```
 
 ## Python
@@ -1155,10 +1181,29 @@ men_yes, men_no = rts_table.loc["Male"]
 print(women_yes / (women_yes + women_no), men_yes / (men_yes + men_no))   # Anteil mit Rückkehr: Frauen, dann Männer
 print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_yes + men_no,
                                  method="wald", compare="diff"))
+print((women_yes / (women_yes + women_no)) / (men_yes / (men_yes + men_no)))   # relatives Risiko, Frauen gegenüber Männern
+print(confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_yes + men_no,
+                                 method="log", compare="ratio"))      # sein 95%-KI
 ```
 :::
 
-> **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
+```{python}
+#| include: false
+rts_rr_ci = confint_proportions_2indep(women_yes, women_yes + women_no, men_yes, men_yes + men_no,
+                                       method="log", compare="ratio")
+chk = {"rr": float((women_yes / (women_yes + women_no)) / (men_yes / (men_yes + men_no))),
+       "rr_low": float(rts_rr_ci[0]), "rr_high": float(rts_rr_ci[1])}
+```
+
+```{r}
+#| include: false
+rts_rr <- DescTools::RelRisk(rts_table, conf.level = 0.95, method = "wald", delta = 0)
+check_agree(list(rr = rts_rr[["rel. risk"]], rr_low = rts_rr[["lwr.ci"]], rr_high = rts_rr[["upr.ci"]]), reticulate::py$chk)
+```
+
+> **Results:** Return to sport at 12 months followed 81 of 152 reconstructions in women (53.3%) and 92 of 198 in men (46.5%) (risk difference 6.8 percentage points, 95% CI −3.7 to 17.4; risk ratio 1.15, 95% CI 0.93 to 1.42; odds ratio 1.31, 95% CI 0.84 to 2.05; p = 0.236).
 
 Die Risikodifferenz ist 53.3 − 46.5 = 6.8 [Prozentpunkte](../glossary.qmd#percentage-point){.term}; die KI-Zeile gibt [Anteile](../glossary.qmd#proportion){.term} aus, also mit 100 multiplizieren.
+
+Die Rückkehr zum Sport ist häufig (etwa die Hälfte der Personen kehrte zurück), deshalb unterscheiden sich die beiden Verhältnisse: Das Odds Ratio, 1.31, liegt weiter von 1 entfernt als das relative Risiko, 1.15. Als relatives Risiko gelesen, würde das Odds Ratio besagen, dass Frauen mit 31 % höherer Wahrscheinlichkeit zum Sport zurückkehrten; das relative Risiko sagt 15 %.
 :::
