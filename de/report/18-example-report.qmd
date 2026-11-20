@@ -113,8 +113,8 @@ tidy <- step3 |>
     site,
     surgery_date = parse_messy_date(dos),
     age          = parse_number(age),
-    sex          = case_when(str_detect(sex, regex("^f", ignore_case = TRUE)) ~ "Female",
-                             str_detect(sex, regex("^m", ignore_case = TRUE)) ~ "Male"),
+    sex          = case_when(str_to_lower(sex) %in% c("f", "female") ~ "Female",
+                             str_to_lower(sex) %in% c("m", "male")   ~ "Male"),     # alles andere -> NA
     bmi          = parse_number(bmi),
     asa          = as.integer(as.roman(str_remove(asa, "^ASA "))),
     diabetes     = as.integer(str_detect(comorbidities, regex("\\bDM\\b", ignore_case = TRUE))),
@@ -204,7 +204,8 @@ tidy = pd.DataFrame({
     "site":         step3["site"],
     "surgery_date": parse_messy_date(step3["dos"]),
     "age":          number(step3["age"]),
-    "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
+    "sex":          step3["sex"].str.lower().map({"f": "Female", "female": "Female",
+                                              "m": "Male", "male": "Male"}),   # alles andere -> fehlend
     "bmi":          number(step3["bmi"]),
     "asa":          pd.to_numeric(step3["asa"].str.replace("ASA ", "").replace(asa_roman)),
     "diabetes":     step3["comorbidities"].str.contains(r"\bDM\b", case=False).astype(int),
@@ -659,7 +660,7 @@ Hedges' g ist [Cohens d](../glossary.qmd#cohens-d){.term}, leicht verkleinert, u
 
 ### Eine Sensitivitätsanalyse: Adjustierung für das Geschlecht {#sensitivity}
 
-[Tabelle 1](../glossary.qmd#table-1){.term} zeigte, dass sich die Gruppen am stärksten im Geschlecht unterscheiden: 71.7 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49.3 % derjenigen mit Knie-TP (Schritt 4). Wenn sich Frauen und Männer unterschiedlich stark verbessern, könnte ein Teil der Differenz von 9 Punkten aus der unterschiedlichen Verteilung der Geschlechter stammen statt aus dem Eingriff. Eine [Sensitivitätsanalyse](../glossary.qmd#sensitivity-analysis){.term} prüft das: Eine [lineare Regression](../glossary.qmd#linear-regression){.term} der Veränderung auf den Eingriff und das Geschlecht gibt die Differenz zwischen den Eingriffen bei Personen gleichen Geschlechts an ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Sie [adjustiert](../glossary.qmd#adjustment){.term} nur für das Geschlecht, weil das Geschlecht der grösste Unterschied in Tabelle 1 ist und bei keiner Person fehlt, sodass alle 93 Personen im Modell bleiben. Der präoperative Score, der andere Unterschied, der für eine Veränderung zählt, ist die Frage von Übung 2. Diese Adjustierung stand nicht im Plan von Schritt 1: Sie wurde gewählt, nachdem Tabelle 1 den Unterschied gezeigt hatte, während ein echtes Protokoll die Variablen, für die es adjustiert, im Voraus nennt ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Deshalb bezeichnet der Methodenteil sie als post hoc: Sie ist eine [explorative Analyse](../glossary.qmd#prespecified){.term}, nach dem Ansehen der Daten gewählt, und ihr Resultat wirft Fragen für spätere Studien auf. Die primäre Analyse bleibt die, die Schritt 1 geplant hat.
+[Tabelle 1](../glossary.qmd#table-1){.term} zeigte, dass sich die Gruppen am stärksten im Geschlecht unterscheiden: 71.7 % der Patientinnen und Patienten mit Hüft-TP waren Frauen, gegenüber 49.3 % derjenigen mit Knie-TP (Schritt 4). Wenn sich Frauen und Männer unterschiedlich stark verbessern, könnte ein Teil der Differenz von 9 Punkten aus der unterschiedlichen Verteilung der Geschlechter stammen statt aus dem Eingriff. Eine [Sensitivitätsanalyse](../glossary.qmd#sensitivity-analysis){.term} prüft das: Eine [lineare Regression](../glossary.qmd#linear-regression){.term} der Veränderung auf den Eingriff und das Geschlecht gibt die Differenz zwischen den Eingriffen bei Personen gleichen Geschlechts an ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Sie [adjustiert](../glossary.qmd#adjustment){.term} nur für das Geschlecht, weil das Geschlecht der grösste Unterschied in Tabelle 1 ist und bei keiner Person fehlt, sodass alle 93 Personen im Modell bleiben. Der präoperative Score, der andere Unterschied, der für eine Veränderung zählt, ist die Frage von Übung 2. Diese Adjustierung stand nicht im Plan von Schritt 1: Sie wurde gewählt, nachdem Tabelle 1 den Unterschied gezeigt hatte, während ein echtes Protokoll die Variablen, für die es adjustiert, im Voraus nennt ([Seite 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). Deshalb bezeichnet der Methodenteil sie als [post hoc](../glossary.qmd#post-hoc-test){.term}, was hier ungeplant heisst, nicht die paarweisen Post-hoc-Tests von [Seite 15](../beyond/15-post-hoc.qmd): Sie ist eine [explorative Analyse](../glossary.qmd#prespecified){.term}, nach dem Ansehen der Daten gewählt, und ihr Resultat wirft Fragen für spätere Studien auf. Die primäre Analyse bleibt die, die Schritt 1 geplant hat.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -801,7 +802,7 @@ Alles von hier bis zu den Übungen ist das Manuskript, und das ist der Inhalt de
 - [Fehlende Daten](../glossary.qmd#missing-data){.term} werden gezählt und berichtet, nicht stillschweigend weggelassen.
 - Jeder [Schätzwert](../glossary.qmd#estimate){.term} hat ein [95%-KI](../glossary.qmd#confidence-interval){.term}, und der Methodenteil nennt jeden Test.
 - Das Manuskript wird aus derselben Datei erzeugt wie die Analyse. Ändern sich die Daten, aktualisieren sich [Tabelle 1](../glossary.qmd#table-1){.term} und Abbildung 1 von selbst, und die versteckte Prüfung hält das Rendern an, bis jede Zahl im Text von Hand angepasst ist.
-- Der Methodenteil berichtet, was die Berichtsleitlinie für das Studiendesign verlangt: [STROBE](https://www.strobe-statement.org/checklists/) für eine [Beobachtungsstudie](../glossary.qmd#observational-study){.term} wie diese, [CONSORT](https://www.consort-spirit.org/) für eine [randomisierte Studie](../glossary.qmd#randomized-trial){.term} (die aktuelle Version ist CONSORT 2025). Diese erfundene Studie kann nicht alles davon liefern: Der nächste Kasten zählt auf, was fehlt.
+- Der Methodenteil berichtet, was die Berichtsleitlinie für das Studiendesign verlangt: [STROBE](https://www.strobe-statement.org/checklists/) für eine [Beobachtungsstudie](../glossary.qmd#observational-study){.term} wie diese, [CONSORT](https://www.consort-spirit.org/) für eine [randomisierte Studie](../glossary.qmd#randomized-trial){.term} (die aktuelle Version ist CONSORT 2025). Diese erfundene Studie kann nicht alles davon liefern: Der nächste Kasten zählt einiges von dem auf, was fehlt.
 :::
 
 ::: {.callout-note}

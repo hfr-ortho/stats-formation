@@ -152,6 +152,9 @@ CORRECTED_ENTRIES = {
     "statistical-significance": {"en": "confidence interval", "de": "Konfidenzintervall", "fr": "intervalle de confiance"},
     "false-negative": {"en": "beta", "de": "Beta", "fr": "bêta"},
     "reverse-kaplan-meier": {"en": "loss to follow-up", "de": "verloren", "fr": "perdu de vue"},
+    # Task 3.10 (F3, F6)
+    "survival": {"en": "On this site", "de": "Auf dieser Website", "fr": "Sur ce site"},
+    "matched": {"en": "usually analyzed", "de": "meist", "fr": "en général"},
 }
 
 
@@ -179,6 +182,23 @@ def test_log_rank_entry_says_what_r_computes_and_what_the_source_says(site):
     assert "presque identiques" not in french, "the guide's distinction is the guide's, not the site's"
     assert "temps d'événement, et on l'appelle aussi test de Mantel-Haenszel pour données de survie" in french
     assert "ce qui explique" not in french
+
+
+def test_survival_entry_says_the_sites_two_names_mean_the_same_estimate(site):
+    """F3: page 4 says survivorship free of revision, pages 3, 6, 8, 13 and 15 revision-free survival."""
+    text = definition("en", "survival")
+    assert "survivorship free of revision" in text and "revision-free survival" in text
+    assert "are two names for the same estimate" in text and "with deaths censored" in text
+    for lang in ["de", "fr"]:
+        translated = definition(lang, "survival")
+        assert "survivorship free of revision" in translated and "revision-free survival" in translated, lang
+
+
+def test_matched_entry_agrees_with_page_7_on_ignoring_the_matching(site):
+    """F6: page 7 says an ordinary Cox model on a matched cohort isn't wrong but answers a different question."""
+    text = definition("en", "matched")
+    assert "Matched data need methods" not in text
+    assert "Matched data are usually analyzed with methods for matched sets, not methods for independent groups." in text
 
 
 def test_t_test_entry_says_how_this_site_uses_students(site):

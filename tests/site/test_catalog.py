@@ -757,3 +757,44 @@ def test_adjusted_cox_shift_is_not_read_as_confounding(site):
     text = text_of(section("catalog/12-predict-from-several.html", "cox"))
     assert "so adjustment shouldn't change much" not in text
     assert "even without confounding" in text and "from 3.07 to 3.19" in text
+
+
+# ---- content review of 20.11.2026, Task 3.10 (cross-page fixes) -----------------------------
+
+@pytest.mark.parametrize("page,anchor", [("catalog/06-two-unpaired-groups.html", "log-rank"),
+                                         ("catalog/11-predict-from-one.html", "cox")])
+def test_python_survival_plots_on_pages_6_and_11_use_the_full_axis(site, page, anchor):
+    """F2: pages 4, 8 and 13 draw the Python Kaplan-Meier axis from 0 to 1, as R does; pages 6 and 11
+    zoomed in on the top. set_ylim()'s result is named, so reticulate doesn't print it (golden rule 10)."""
+    found = section(page, anchor)
+    assert "y_range = ax.set_ylim(0, 1)" in code_of(found)
+    outputs = [out.get_text() for out in found.select(".cell-output")]
+    assert not [out for out in outputs if "(0.0, 1.0)" in out], "set_ylim()'s return value is printed"
+
+
+def test_page_6_shows_rs_two_risk_table_rows_and_says_where_the_counts_differ(site):
+    """F2: as on pages 8 and 13, only the At risk and Events rows; one count differs between the tabs."""
+    page = "catalog/06-two-unpaired-groups.html"
+    found = section(page, "log-rank")
+    assert 'rows_to_show=["At risk", "Events"]' in code_of(found)
+    assert "with implant C at 8 years (12 in R, 11 in Python)" in text_of(found)
+    hrefs = [target(page, a["href"]) for a in found.select("a[href]")]
+    assert "catalog/04-describe-one-group.html#kaplan-meier" in hrefs
+
+
+def test_games_howell_goes_with_welchs_anova_on_page_8(site):
+    """F5: pages 8 and 15 pair Games-Howell with Welch's ANOVA, the safe default, not with a check of the spreads."""
+    page = "catalog/08-three-plus-unmatched.html"
+    anova = section(page, "one-way-anova")
+    assert "glossary.html#games-howell" in [target(page, a["href"]) for a in anova.select("a[href]")]
+    table = text_of(section(page, "which-groups-differ"))
+    assert "Games-Howell after Welch's ANOVA" in table   # text_of() spaces the link out of its parentheses
+    assert "if the spreads differ" not in table
+
+
+def test_page_8_tells_the_cox_score_test_from_the_log_rank_test(site):
+    """S2: the Score (logrank) line is the Cox model's score test (33.48), close to the log-rank statistic
+    (33.47) but not the same when revision times are tied, as the Read the output list says."""
+    text = text_of(section("catalog/08-three-plus-unmatched.html", "cox"))
+    assert "The log-rank test, the" not in text
+    assert "is the Cox model's score test, 33.48, close to the log-rank statistic but not the same" in text

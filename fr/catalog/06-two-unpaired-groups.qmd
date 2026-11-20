@@ -795,13 +795,14 @@ km_a.plot_survival_function(ax=ax)
 km_c.plot_survival_function(ax=ax)
 ax.set_xlabel("Years since surgery")
 ax.set_ylabel("Revision-free survival")
-add_at_risk_counts(km_a, km_c, ax=ax)
+y_range = ax.set_ylim(0, 1)                                                 # tout l'axe, de 0 à 1, comme dans R
+add_at_risk_counts(km_a, km_c, ax=ax, rows_to_show=["At risk", "Events"])   # les deux lignes que R affiche
 plt.tight_layout()
 plt.show()
 ```
 :::
 
-La courbe de l'implant C descend plus vite dès le début, et l'écart ne cesse de grandir.
+La courbe de l'implant C descend plus vite dès le début, et l'écart ne cesse de grandir. Les tableaux sous les deux graphiques diffèrent à un endroit : pour l'implant C à 8 ans (12 dans R, 11 en Python). Une intervention avec l'implant C a été censurée à exactement 8 ans ; R la compte encore parmi les interventions à risque à 8 ans, lifelines non. L'encadré « R ou Python » de la [page 4](04-describe-one-group.qmd#kaplan-meier) en dit plus sur les deux façons de compter.
 
 ### Exécuter l'analyse
 
@@ -985,11 +986,17 @@ jackknife_hl <- c(sapply(seq_along(pain_b), function(i) median(outer(pain_b[-i],
                   sapply(seq_along(pain_c), function(i) median(outer(pain_b, pain_c[-i], "-"))))
 expected_counts <- chisq.test(failure_table)$expected
 km5 <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = 5)
+r_risk <- summary(survfit(Surv(followup_years, revised) ~ implant, data = a_vs_c), times = seq(0, 10, 2), extend = TRUE)$n.risk
+py_risk <- unlist(reticulate::py_eval("[int(f.event_table.assign(at_risk=lambda x: x.at_risk - x.removed).loc[:t, 'at_risk'].iloc[-1]) for f in [km_a, km_c] for t in range(0, 11, 2)]"))   # as add_at_risk_counts() counts
 ex_6wk <- trial |> filter(visit == "6wk", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
 ex_12mo <- trial |> filter(visit == "12mo", !is.na(efas)) |> mutate(arm = factor(arm, levels = c("boot", "cast")))
 ex_rts <- table(factor(acl$sex, levels = c("Female", "Male")),
                 factor(acl$rts_12mo, levels = c(1, 0), labels = c("yes", "no")))
 stopifnot(
+  r_risk == c(246, 210, 133, 83, 39, 16, 137, 104, 72, 34, 12, 1),   # R's table: implants A and C at 0, 2, ..., 10 years
+  sum(r_risk != py_risk) == 1, r_risk[r_risk != py_risk] == 12, py_risk[r_risk != py_risk] == 11,
+  which(r_risk != py_risk) == 11,   # implant C at 8 years
+  sum(a_vs_c$implant == "C" & a_vs_c$followup_years == 8 & a_vs_c$revised == 0) == 1,   # censored at exactly 8 years
   sum(table(cohort$patient_id) == 2) == 80,
   n_distinct(trial$patient_id) == 120, all(table(distinct(trial, patient_id, arm)$arm) == 60),
   nrow(missed_3mo) == 8, as.vector(table(factor(missed_3mo$arm, levels = c("boot", "cast")))) == c(3, 5),

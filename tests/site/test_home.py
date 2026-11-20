@@ -144,3 +144,32 @@ def test_mantel_haenszel_row_says_the_same_in_german_and_french(site):
         for word in words:
             assert word in row, (lang, word)
         assert "anderer Test" not in row and "autre test" not in row, lang
+
+
+# ---- content review of 20.11.2026, Task 3.10 (cross-page fixes) -----------------------------
+
+# S3: methods the review added, each shown in a section with an anchor.
+REVIEW_ROWS = {
+    "Risk ratio": {"catalog/06-two-unpaired-groups.html#fisher-chi-square"},
+    "Sign test": {"catalog/05-one-group-vs-hypothetical.html#wilcoxon-signed-rank",
+                  "catalog/07-two-paired-groups.html#wilcoxon-signed-rank"},
+    "Smallest detectable change (SDC)": {"beyond/17-agreement.html#bland-altman"},
+    "Standard error of measurement (SEM)": {"beyond/17-agreement.html#bland-altman"},
+    "Welch's ANOVA": {"catalog/08-three-plus-unmatched.html#one-way-anova"},
+}
+
+
+def test_index_lists_the_methods_the_content_review_added(site):
+    rows = {name: links for name, _, links in index_rows()}
+    for name, targets in REVIEW_ROWS.items():
+        assert name in rows and targets <= rows[name], name
+    for lang in ["de", "fr"]:
+        soup = BeautifulSoup((SITE_ROOT / lang / A_TO_Z).read_text(encoding="utf-8"), "html.parser")
+        assert len(soup.select("main table tbody tr")) == len(rows), lang
+
+
+def test_games_howell_row_pairs_it_with_welchs_anova(site):
+    """F5: pages 8 and 15 say Games-Howell goes with Welch's ANOVA, the safe default."""
+    row = next(text for name, text, _ in index_rows() if name == "Games-Howell test")
+    assert "after Welch's ANOVA; it doesn't assume similar spreads" in row
+    assert "when the spreads differ" not in row

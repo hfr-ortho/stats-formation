@@ -245,3 +245,32 @@ def test_the_frozen_word_version_matches_the_current_data_and_ships_flextables_f
     frozen = FREEZE / "report" / "18-example-report" / "execute-results" / "docx.json"
     assert f"data-checksum: {current}" in frozen.read_text(encoding="utf-8")
     assert (ROOT / "_freeze" / "site_libs" / "tabwid-1.1.3").is_dir()
+
+
+# ---- content review of 20.11.2026, Task 3.10 (cross-page fixes) -----------------------------
+
+def test_the_tidy_block_recodes_sex_as_page_1_does(site):
+    """F1: the block is "page 1's five steps in one block", and page 1 matches whole spellings, so a
+    surprise like Mme becomes missing instead of Male."""
+    code = code_of(section(REPORT, "tidy"))
+    assert 'regex("^f"' not in code and 'regex("^m"' not in code and ".str[0]" not in code
+    assert 'str_to_lower(sex) %in% c("f", "female") ~ "Female"' in code
+    assert '{"f": "Female", "female": "Female",' in code and '"m": "Male", "male": "Male"}' in code
+
+
+def test_post_hoc_on_page_18_means_unplanned_and_links_the_glossary(site):
+    """F8: page 15 says "post-hoc tests" for planned pairwise comparisons too; page 18's "post hoc" means
+    chosen after looking at the data. The term link stays out of the manuscript."""
+    found = section(REPORT, "sensitivity")
+    assert "which here means unplanned, not the pairwise post-hoc tests of page 15" in text_of(found)
+    hrefs = [target(REPORT, a["href"]) for a in found.select("a[href]")]
+    assert "glossary.html#post-hoc-test" in hrefs and "beyond/15-post-hoc.html" in hrefs
+    for part in ["aim", "methods", "results"]:
+        assert not [a for a in section(REPORT, part).select("a[href]") if "post-hoc-test" in a["href"]], part
+
+
+def test_the_done_box_says_the_next_box_lists_only_some_of_what_is_missing(site):
+    """S1: the next box says it is not the whole checklist."""
+    text = text_of(section(REPORT, "manuscript"))
+    assert "the next box lists some of what is missing" in text
+    assert "the next box lists what is missing" not in text

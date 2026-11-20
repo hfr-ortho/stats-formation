@@ -113,8 +113,8 @@ tidy <- step3 |>
     site,
     surgery_date = parse_messy_date(dos),
     age          = parse_number(age),
-    sex          = case_when(str_detect(sex, regex("^f", ignore_case = TRUE)) ~ "Female",
-                             str_detect(sex, regex("^m", ignore_case = TRUE)) ~ "Male"),
+    sex          = case_when(str_to_lower(sex) %in% c("f", "female") ~ "Female",
+                             str_to_lower(sex) %in% c("m", "male")   ~ "Male"),     # anything else -> NA
     bmi          = parse_number(bmi),
     asa          = as.integer(as.roman(str_remove(asa, "^ASA "))),
     diabetes     = as.integer(str_detect(comorbidities, regex("\\bDM\\b", ignore_case = TRUE))),
@@ -204,7 +204,8 @@ tidy = pd.DataFrame({
     "site":         step3["site"],
     "surgery_date": parse_messy_date(step3["dos"]),
     "age":          number(step3["age"]),
-    "sex":          step3["sex"].str[0].str.lower().map({"f": "Female", "m": "Male"}),
+    "sex":          step3["sex"].str.lower().map({"f": "Female", "female": "Female",
+                                              "m": "Male", "male": "Male"}),   # anything else -> missing
     "bmi":          number(step3["bmi"]),
     "asa":          pd.to_numeric(step3["asa"].str.replace("ASA ", "").replace(asa_roman)),
     "diabetes":     step3["comorbidities"].str.contains(r"\bDM\b", case=False).astype(int),
@@ -659,7 +660,7 @@ Hedges' g is [Cohen's d](../glossary.qmd#cohens-d){.term} shrunk slightly to cor
 
 ### A sensitivity analysis: adjusting for sex {#sensitivity}
 
-[Table 1](../glossary.qmd#table-1){.term} showed that the groups differ most in sex: 71.7% of the THA patients were women against 49.3% of the TKA patients (step 4). If women and men improve by different amounts, part of the 9-point difference could come from the different mix of sexes, not from the procedure. A [sensitivity analysis](../glossary.qmd#sensitivity-analysis){.term} checks this: a [linear regression](../glossary.qmd#linear-regression){.term} of the change on the procedure and sex gives the difference between procedures for patients of the same sex ([page 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). It [adjusts](../glossary.qmd#adjustment){.term} for sex alone, because sex is the largest difference in Table 1 and no patient's sex is missing, so all 93 patients stay in the model. The pre-op score, the other difference that matters for a change, is exercise 2's question. This adjustment was not in step 1's plan: it was chosen after Table 1 showed the difference, while a real protocol names the variables it will adjust for in advance ([page 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). So the Methods label it post hoc: it is an [exploratory analysis](../glossary.qmd#prespecified){.term}, chosen after looking at the data, and its result suggests questions for later studies. The primary analysis stays the one step 1 planned.
+[Table 1](../glossary.qmd#table-1){.term} showed that the groups differ most in sex: 71.7% of the THA patients were women against 49.3% of the TKA patients (step 4). If women and men improve by different amounts, part of the 9-point difference could come from the different mix of sexes, not from the procedure. A [sensitivity analysis](../glossary.qmd#sensitivity-analysis){.term} checks this: a [linear regression](../glossary.qmd#linear-regression){.term} of the change on the procedure and sex gives the difference between procedures for patients of the same sex ([page 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). It [adjusts](../glossary.qmd#adjustment){.term} for sex alone, because sex is the largest difference in Table 1 and no patient's sex is missing, so all 93 patients stay in the model. The pre-op score, the other difference that matters for a change, is exercise 2's question. This adjustment was not in step 1's plan: it was chosen after Table 1 showed the difference, while a real protocol names the variables it will adjust for in advance ([page 12](../catalog/12-predict-from-several.qmd#multiple-linear-regression)). So the Methods label it [post hoc](../glossary.qmd#post-hoc-test){.term}, which here means unplanned, not the pairwise post-hoc tests of [page 15](../beyond/15-post-hoc.qmd): it is an [exploratory analysis](../glossary.qmd#prespecified){.term}, chosen after looking at the data, and its result suggests questions for later studies. The primary analysis stays the one step 1 planned.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -801,7 +802,7 @@ Everything from here to the exercises is the manuscript, and it's what the Word 
 - [Missing data](../glossary.qmd#missing-data){.term} are counted and reported, not dropped silently.
 - Every [estimate](../glossary.qmd#estimate){.term} has a 95% [CI](../glossary.qmd#confidence-interval){.term}, and the Methods name every test.
 - The manuscript is rendered from the same file as the analysis. If the data change, [Table 1](../glossary.qmd#table-1){.term} and Figure 1 update themselves, and the hidden check stops the render until every number in the text is updated by hand.
-- The Methods report what the reporting guideline for the study's design asks for: [STROBE](https://www.strobe-statement.org/checklists/) for an [observational study](../glossary.qmd#observational-study){.term} like this one, [CONSORT](https://www.consort-spirit.org/) for a [randomized trial](../glossary.qmd#randomized-trial){.term} (the current version is CONSORT 2025). This invented study can't supply all of it: the next box lists what is missing.
+- The Methods report what the reporting guideline for the study's design asks for: [STROBE](https://www.strobe-statement.org/checklists/) for an [observational study](../glossary.qmd#observational-study){.term} like this one, [CONSORT](https://www.consort-spirit.org/) for a [randomized trial](../glossary.qmd#randomized-trial){.term} (the current version is CONSORT 2025). This invented study can't supply all of it: the next box lists some of what is missing.
 :::
 
 ::: {.callout-note}

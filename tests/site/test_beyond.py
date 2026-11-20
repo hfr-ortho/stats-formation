@@ -307,7 +307,7 @@ def test_tukey_paragraph_says_what_page_8_says_about_welch_and_the_spreads(site)
     assert "When they don't (the largest" not in text
     assert "Welch's ANOVA, the safe default, especially when the group sizes are unequal" in text
     assert "never with a test of the variances" in text and "page 8's rule of thumb" in text
-    assert "Two of this example's four classes are under 50 (36 patients in ASA 1 and 18 in ASA 4" in text
+    assert "Two of this example's four classes are under 50 (36 procedures in ASA 1 and 18 in ASA 4" in text
 
 
 def test_dividing_the_threshold_is_the_same_decision_as_multiplying_the_p_value(site):
@@ -498,3 +498,12 @@ def test_limit_cis_are_found_by_name_not_by_position(site):
 def test_translations_of_the_round_2_points(site):
     assert "für die vier Studienvisiten adjustiert" in translated("de", MIXED, "group-by-time")
     assert "Ici, un ajustement par statsmodels" in translated("fr", MIXED, "random-intercept")
+
+
+# ---- content review of 20.11.2026, Task 3.10 (cross-page fixes) -----------------------------
+
+def test_asa_class_sizes_count_procedures(site):
+    """F4: the rows of data/cohort.csv are procedures; ASA 4 is 18 procedures in 17 patients."""
+    text = text_of(section(POST_HOC, "after-anova"))
+    assert "(ASA 1 with 36 procedures and ASA 4 with 18)" in text
+    assert "36 patients" not in text

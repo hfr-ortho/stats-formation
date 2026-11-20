@@ -222,6 +222,19 @@ def test_distributions_page_qualifies_pairs_matching_and_rows(site):
     assert "individually matched" in text
     assert "both procedures of the 80 bilateral patients" in text
     assert "had a higher BMI" not in text
-    assert ("Mean BMI was 31.2 kg/m² (SD 5.4) in TKA patients and 29.5 kg/m² (SD 5.3) in THA patients "
+    assert ("Mean BMI was 31.2 kg/m² (SD 5.4) for TKA and 29.5 kg/m² (SD 5.3) for THA "
             "(mean difference 1.8 kg/m²") in text
     assert "here we need only the difference, its CI and p" not in text
+
+
+def test_bmi_and_sex_sentences_count_procedures_and_missing_values_give_no_cause(site):
+    """Task 3.10 (F4, F7): the rows of data/cohort.csv are procedures (the 330 TKA rows are 284 patients,
+    the 270 THA rows 236), and the workbook can't tell why a value is missing (page 18 says so)."""
+    distributions = text_of("foundations/03-distributions.html")
+    assert "in TKA patients" not in distributions and "in THA patients" not in distributions
+    assert "mean BMI is 31.2 for TKA and 29.5 for THA" in distributions
+    demographics = text_of("foundations/02-demographics.html")
+    assert "66% of THA procedures are in women against 50% of TKA procedures" in demographics
+    assert "THA patients are women" not in demographics
+    assert "couldn't find" not in demographics
+    assert "is missing a few BMIs, ASA classes and lengths of stay" in demographics
