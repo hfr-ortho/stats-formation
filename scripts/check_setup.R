@@ -8,8 +8,16 @@ report <- function(label, pass, fix) {
   if (!pass) ok <<- FALSE
 }
 
-report(sprintf("R version %s", getRversion()), getRversion() >= "4.4",
-       "install R 4.4 or newer from https://cloud.r-project.org")
+# The project's packages are locked for one R version (renv.lock, "R": {"Version": ...}).
+# Read it with base R only: this check runs before any package is installed.
+lockfile <- if (file.exists("renv.lock")) paste(readLines("renv.lock", warn = FALSE), collapse = "\n") else ""
+found <- regmatches(lockfile, regexec('"R"\\s*:\\s*\\{[^}]*?"Version"\\s*:\\s*"([0-9]+\\.[0-9]+)', lockfile,
+                                      perl = TRUE))[[1]]
+locked <- if (length(found) == 2) found[2] else NA_character_
+running <- as.character(getRversion()[, 1:2])
+report(sprintf("R version %s", getRversion()), identical(running, locked),
+       if (is.na(locked)) "run this from the stats-formation folder"
+       else sprintf("install R %s (any %s.x) from https://cloud.r-project.org", locked, locked))
 report("project packages switched on (renv)", nzchar(Sys.getenv("RENV_PROJECT")),
        "start R inside the stats-formation folder")
 for (pkg in c("knitr", "rmarkdown", "reticulate", "testthat", "tidyverse", "readxl",

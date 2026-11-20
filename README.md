@@ -21,12 +21,16 @@ Adapted from the [TJS Statistics Tutorials](https://total-joint-specialists.gith
 
 ## Run the examples
 
+You need R 4.6 (the version `renv.lock` was made with) and [uv](https://docs.astral.sh/uv/).
+
 ```bash
 git clone https://github.com/hfr-ortho/stats-formation.git
 cd stats-formation
 Rscript -e 'renv::restore()'
 uv sync
 ```
+
+No Git? Download [the repository as a ZIP file](https://github.com/hfr-ortho/stats-formation/archive/refs/heads/main.zip) and run the last two commands in the unzipped `stats-formation-main` folder. Then check the setup with `Rscript scripts/check_setup.R` and `uv run python scripts/check_setup.py`.
 
 Step-by-step instructions for beginners: [Install & set up](https://hfr-ortho.github.io/stats-formation/en/getting-started/setup.html).
 
@@ -48,7 +52,7 @@ Step-by-step instructions for beginners: [Install & set up](https://hfr-ortho.gi
 
 ## For maintainers
 
-You'll need R, uv, Quarto 1.9.37, [just](https://github.com/casey/just), and [lychee](https://github.com/lycheeverse/lychee).
+You'll need R 4.6, uv, Quarto 1.9.37, [just](https://github.com/casey/just), and [lychee](https://github.com/lycheeverse/lychee).
 
 ```bash
 just setup     # renv::restore() + uv sync

@@ -1,4 +1,8 @@
-from sitelib import load, text_of
+import json
+import re
+
+from bs4 import BeautifulSoup
+from sitelib import LANGS, ROOT, SITE_ROOT, load, text_of
 
 SETUP_COMMANDS = [
     "uv python install 3.13",
@@ -54,6 +58,65 @@ def test_no_clone_instructions_install_packages_and_handle_excel(site):
     assert 'install.packages(c("readr", "readxl"))' in text
     assert "uv run --with pandas --with openpyxl python" in text
     assert 'download.file(url, path, mode = "wb")' in text
+
+
+def built(lang: str, page: str) -> BeautifulSoup:
+    return BeautifulSoup((SITE_ROOT / lang / page).read_text(encoding="utf-8"), "html.parser")
+
+
+def test_setup_page_says_what_you_need_before_you_start(site):
+    """R version (the one renv.lock was made with), disk space and administrator rights, before step 1."""
+    locked = json.loads((ROOT / "renv.lock").read_text(encoding="utf-8"))["R"]["Version"]
+    major_minor = ".".join(locked.split(".")[:2])
+    step_1 = load("getting-started/setup.html").select_one("main section#install-r")
+    before = " ".join(el.get_text(" ") for el in step_1.find_previous_siblings())
+    assert f"R {major_minor}" in before
+    assert "5 GB" in before
+    assert "administrator" in before
+    assert "HFR IT" in before
+
+
+def test_setup_page_uses_no_rstudio_menu(site):
+    """"Session → Restart R" is RStudio's menu. Positron restarts from the Command Palette."""
+    for lang in LANGS:
+        text = built(lang, "getting-started/setup.html").get_text(" ")
+        assert "Session → Restart R" not in text, lang
+        assert "Interpreter: Restart Active Interpreter Session" in text, lang
+
+
+def test_setup_page_uses_positrons_names(site):
+    """Positron's documentation calls the control at the top right the Interpreter picker."""
+    text = load("getting-started/setup.html").get_text(" ")
+    assert "language picker" not in text
+    assert "Interpreter picker" in text and "New Console Session…" in text
+
+
+def test_setup_page_explains_the_r_version_message(site):
+    text = load("getting-started/setup.html").get_text(" ")
+    assert "The lockfile was generated with R" in text
+
+
+def test_setup_page_offers_the_zip_without_git(site):
+    page = load("getting-started/setup.html")
+    zip_url = "https://github.com/hfr-ortho/stats-formation/archive/refs/heads/main.zip"
+    assert any(a.get("href") == zip_url for a in page.select("a"))
+    text = page.get_text(" ")
+    assert "stats-formation-main" in text and "git pull" in text
+
+
+def test_every_python_block_on_the_setup_page_imports_what_it_uses(site):
+    """Readers copy one block at a time, so a block that uses pd imports pandas itself."""
+    for block in load("getting-started/setup.html").select("div.sourceCode pre.python, pre.sourceCode.python"):
+        code = block.get_text()
+        if re.search(r"\bpd\.", code):
+            assert "import pandas as pd" in code, code
+
+
+def test_real_data_page_links_a_git_introduction(site):
+    url = "https://git-scm.com/book/en/v2/Git-Basics-Recording-Changes-to-the-Repository"
+    for lang in LANGS:
+        commit = built(lang, "getting-started/real-data.html").select_one("section#before-commit")
+        assert any(a.get("href") == url for a in commit.select("a")), lang
 
 
 def test_reporting_conventions_cap_large_p_values(site):
