@@ -150,7 +150,7 @@ def test_km_tail_rule_says_the_page_runs_past_it_on_purpose(site):
     warning = text_of(section(KM, "kaplan-meier").select_one("div.callout-warning"))
     assert "A common rule of thumb" in warning
     assert "past that point on purpose" in warning
-    assert "between 8 years (84 at risk) and 10 years (21)" in warning
+    assert "between 8 years (84 at risk in R's count) and 10 years (21)" in warning   # lifelines shows 83 (fix round 1)
     assert "the 7.9-year estimate carried forward" in warning
 
 
@@ -183,7 +183,7 @@ def test_approach_time_point_is_fixed_before_the_plot_is_read(site):
     assert "But look at the plot" not in text
     fixed = text.find("one time point was fixed in advance")
     assert 0 <= fixed < text.find("Now look at the plot")
-    assert "the period of highest dislocation risk after hip replacement" in text
+    assert "the end of the period of highest dislocation risk after hip replacement" in text   # a time point ends a period (fix round 1)
 
 
 def test_events_per_term_is_a_rule_of_thumb(site):
@@ -200,7 +200,12 @@ def test_late_period_hazard_ratio_compares_survivors(site):
     found = section(COX, "remedies")
     text = text_of(found)
     assert "compares only the hips still unrevised at 6 months" in text
-    assert "a hazard ratio below 1 can appear even when the approach has no effect after 6 months" in text
+    assert "a hazard ratio below 1 can then appear even without any late effect" in text
+    # fix round 1: the mechanism is what tends to happen, not a finding about this cohort; the 0.43 rests on
+    # 5 and 16 late revisions and its CI includes 1, so the page doesn't attribute it to selection
+    assert "has by then lost" not in text
+    assert "5 after the posterior approach and 16 after the anterior approach (the second output), and its CI includes 1" in text
+    assert "The alternative this site uses is each group's survival at time points fixed in advance" in text
     assert "adjusted survival curves" in text and "Hernán (2010)" in text
     assert "restricted mean" not in text   # no source for it was opened
     hrefs = [a["href"] for a in found.select("a[href]")]
@@ -208,10 +213,14 @@ def test_late_period_hazard_ratio_compares_survivors(site):
 
 
 def test_bilateral_paragraph_gives_the_real_reason(site):
-    """Review B18: the practice data have no built-in link between a patient's two joints; the robust
-    standard errors printed are mostly slightly smaller, so "too narrow" needs its condition."""
+    """Review B18: the practice data have no hidden patient factor linking a patient's two joints; the robust
+    standard errors printed are about the same, so "too narrow" needs its condition and a "usually"."""
     text = text_of(section(COX, "stratified-cox"))
     assert "so the pairing matters little in this cohort" not in text
-    assert "When a patient's two joints tend to fare alike, treating them as independent makes the" in text
+    assert "When a patient's two joints tend to fare alike, treating them as independent usually makes the" in text
     assert "each joint's revision time was drawn separately" in text
-    assert "slightly larger for implant B (0.311 against 0.310)" in text
+    # fix round 1: bilateral patients have two hips or two knees, and only hips get the posterior approach,
+    # so "nothing makes a patient's two joints fail together" overstated what the generator does
+    assert "nothing makes a patient's two joints fail together" not in text
+    assert "no hidden patient factor, such as bone quality" in text
+    assert "for implant B it is slightly larger (0.311 against 0.310)" in text

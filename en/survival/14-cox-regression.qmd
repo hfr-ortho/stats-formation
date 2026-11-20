@@ -483,6 +483,7 @@ In total hips, with approach as a stratum, implant C's hazard ratio was 2.11 (95
 
 ```{r}
 tha |> filter(revised == 1, followup_years <= 0.5) |> count(approach)   # revisions in the first 6 months
+tha |> filter(revised == 1, followup_years > 0.5) |> count(approach)    # revisions after 6 months
 
 # one row per patient per period: (0, 0.5] years and (0.5, end of follow-up]
 tha_split <- survSplit(Surv(followup_years, revised) ~ ., data = tha, cut = 0.5, episode = "period") |>
@@ -500,6 +501,7 @@ summary(split_model)$conf.int
 from lifelines import CoxTimeVaryingFitter
 
 print(tha[(tha["revised"] == 1) & (tha["followup_years"] <= 0.5)]["approach"].value_counts())   # revisions in the first 6 months
+print(tha[(tha["revised"] == 1) & (tha["followup_years"] > 0.5)]["approach"].value_counts())    # revisions after 6 months
 
 hips = tha.reset_index(drop=True)
 hips["id"] = hips.index                                   # one ID per hip, shared by its rows
@@ -549,11 +551,11 @@ check_agree(list(hr_early = split_hr["posterior_early", "exp(coef)"], low_early 
 
 In the first 6 months, the hazard of revision was 8.47 times as high after the posterior approach (95% CI 1.93 to 37.3). After 6 months the [estimate](../glossary.qmd#estimate){.term} was 0.43 (95% CI 0.16 to 1.16), which is [imprecise](../glossary.qmd#precision){.term}. The CI for the early effect is wide because it rests on 16 early revisions: 14 after the posterior approach and only 2 after the anterior approach (the first output).
 
-The ratio after 6 months has a second problem: it compares only the hips still unrevised at 6 months. The posterior group, at the higher hazard early on, has by then lost more of the hips most prone to revision, so the two groups of survivors are no longer alike, and a hazard ratio below 1 can appear even when the approach has no effect after 6 months. Hernán (2010) calls this the built-in selection bias of period-specific hazard ratios. The practice data were built with no late effect: the posterior approach raises the hazard only in the first 6 months ([above](#proportional-hazards)). So 0.43 doesn't show a late benefit of the posterior approach.
+The ratio after 6 months has a second problem: it compares only the hips still unrevised at 6 months. A group at higher hazard early on tends to lose more of its revision-prone hips, so the survivors of the two groups may no longer be comparable, and a hazard ratio below 1 can then appear even without any late effect. Hernán (2010) calls this the built-in selection bias of period-specific hazard ratios. Here the late estimate rests on 21 revisions, 5 after the posterior approach and 16 after the anterior approach (the second output), and its CI includes 1, so it doesn't show a late benefit of the posterior approach.
 
 Choose the cut point before you look, from clinical reasoning: here, the period of highest dislocation risk after hip replacement. Trying several cut points until one gives a striking result is [data dredging](../glossary.qmd#p-hacking){.term}. R can also let a hazard ratio change smoothly with time (the `tt()` argument of `coxph()`), which avoids choosing a cut point.
 
-A hazard ratio isn't the only way to report an effect that changes over time. Each group's survival at time points fixed in advance needs no hazard ratio: [page 13](13-kaplan-meier.qmd#log-rank) compares the two approaches at 6 months. With covariates, Hernán (2010) suggests adjusted survival curves, which allow for them.
+A hazard ratio isn't the only way to report an effect that changes over time. The alternative this site uses is each group's survival at time points fixed in advance, which needs no hazard ratio: [page 13](13-kaplan-meier.qmd#log-rank) compares the two approaches at 6 months. For analyses with covariates, Hernán (2010) suggests adjusted survival curves.
 
 > **Methods:** Proportional hazards were checked with scaled Schoenfeld residuals. Because the effect of surgical approach changed over time, its hazard ratio was estimated separately for the first 6 months after surgery and thereafter.
 >
@@ -565,7 +567,7 @@ A [Cox model](../glossary.qmd#cox-regression){.term} assumes every row is an [in
 
 **Matched sets.** When each implant C patient is [matched](../glossary.qmd#matched){.term} with similar patients who got other implants, the matched patients belong together. A Cox model **stratified by matched set**, `strata(set_id)`, compares implants only within sets. The decision table calls this *conditional proportional hazards regression*. [Page 7](../catalog/07-two-paired-groups.qmd#stratified-cox) works through matched pairs and [page 9](../catalog/09-three-plus-matched.qmd#stratified-cox) matched sets of three.
 
-**Bilateral patients.** 80 patients in the [cohort](../glossary.qmd#cohort){.term} had both sides replaced. Their two joints share the same patient's bone, activity and surgeon, so their outcomes usually aren't independent. When a patient's two joints tend to fare alike, treating them as independent makes the [CIs](../glossary.qmd#confidence-interval){.term} too narrow. There are three common choices:
+**Bilateral patients.** 80 patients in the [cohort](../glossary.qmd#cohort){.term} had both sides replaced. Their two joints share the same patient's bone, activity and surgeon, so their outcomes usually aren't independent. When a patient's two joints tend to fare alike, treating them as independent usually makes the [CIs](../glossary.qmd#confidence-interval){.term} too narrow. There are three common choices:
 
 - **Keep both joints and use robust standard errors** [clustered](../glossary.qmd#clustered-data){.term} on patient. The [hazard ratios](../glossary.qmd#hazard-ratio){.term} don't change; the CIs allow for the [pairing](../glossary.qmd#paired){.term}. This is the usual choice.
 - **Stratify by patient**, `strata(patient_id)`, to compare the two sides of each patient. Only patients whose two joints differ in the predictor, and who had a revision, contribute anything, so it's rarely [precise](../glossary.qmd#precision){.term} enough.
@@ -628,7 +630,7 @@ check_agree(list(n = nrow(both_sides), revised = sum(both_sides$any_revision)), 
 ```
 
 - **exp(coef):** unchanged: implant C's hazard ratio is still 3.19.
-- **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same: the robust one is slightly smaller for implant C (0.258 against 0.259) and for age, sex and BMI, and slightly larger for implant B (0.311 against 0.310). Implant C's CI barely moves (1.92 to 5.28, against 1.92 to 5.29 without clustering). They are this close because of how the practice data were built: each joint's revision time was drawn separately, and apart from BMI, which is in the model, nothing makes a patient's two joints fail together. (The two numbers the code prints first: 80 patients had both sides replaced, and 20 of them had a revision.) Real patients' two joints share bone, activity and surgeon, so in your data the pairing can matter much more: check, and say in the Methods what you did.
+- **se(coef) / robust se:** R prints both; lifelines prints only the robust one when you cluster. Here they're almost the same: for implant C the robust one is slightly smaller (0.258 against 0.259), so the CI barely moves (1.92 to 5.28, against 1.92 to 5.29 without clustering); for implant B it is slightly larger (0.311 against 0.310). They are this close because of how the practice data were built: each joint's revision time was drawn separately, and the data contain no hidden patient factor, such as bone quality, that would make a patient's two joints fail together. Real patients' two joints usually share such factors, which is why the method is shown: in your data the pairing can matter much more. Check, and say in the Methods what you did. Of the 80 patients who had both sides replaced, 20 had a revision (the two numbers the code prints first).
 - **Pr(>|z|)** (R's table): the [p-values](../glossary.qmd#p-value){.term}, now from the robust [standard errors](../glossary.qmd#standard-error){.term}. R prints them in [scientific notation](../glossary.qmd#scientific-notation){.term}: `5.463870e-01` is 0.546, and `6.743766e-06` is 0.00000674, reported as p < 0.001. The table under [Reporting](#reporting) shows them rounded.
 
 ::: {.callout-tip}
@@ -794,9 +796,10 @@ stopifnot(
   sum(tha$revised == 1 & tha$followup_years <= 0.5) == 16,
   round(clustered_ci["implantC", c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.19, 1.92, 5.28),
   round(summary(clustered_model)$coefficients["implantC", c("se(coef)", "robust se")], 3) == c(0.259, 0.258),
-  # numbers added with Task 3.6 of the content review fixes: robust SEs smaller for four terms, larger for implant B
+  # numbers added with Task 3.6 of the content review fixes: implant B's robust SE is slightly larger
   round(summary(clustered_model)$coefficients["implantB", c("se(coef)", "robust se")], 3) == c(0.310, 0.311),
-  with(as.data.frame(summary(clustered_model)$coefficients), all((`robust se` < `se(coef)`) == c(FALSE, TRUE, TRUE, TRUE, TRUE))),
+  # the late split-model estimate rests on 21 revisions after 6 months: 16 anterior, 5 posterior
+  as.vector(table(tha$approach[tha$revised == 1 & tha$followup_years > 0.5])) == c(16, 5), 16 + 5 == 21,
   n_distinct(bilateral$patient_id) == 80, n_distinct(bilateral$patient_id[bilateral$revised == 1]) == 20,
   nrow(both_sides) == 80, sum(both_sides$any_revision) == 20,
   fg_hr("implantC") == 3.09, fg_ci("implantC") == c(1.86, 5.14),
