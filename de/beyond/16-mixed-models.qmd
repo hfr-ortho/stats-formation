@@ -93,7 +93,7 @@ Patientinnen und Patienten wegzulassen ist nicht nur Verschwendung. Es kann das 
 
 ## Ein zufälliger Achsenabschnitt für jedes Knie {#random-intercept}
 
-Scores desselben Knies hängen zusammen: Ein Knie, das tief beginnt, bleibt tendenziell unter dem Mittelwert. Ein [gemischtes Modell](../glossary.qmd#mixed-model){.term} berücksichtigt das mit einem **zufälligen Achsenabschnitt (Random Intercept)**: Jedes Knie erhält sein eigenes Ausgangsniveau, das gegenüber dem Mittelwert nach oben oder unten verschoben ist. Die **festen Effekte** (hier die Kontrollen) beschreiben die durchschnittliche Person; die zufälligen Achsenabschnitte beschreiben, wie stark sich die Knie von diesem Mittelwert unterscheiden.
+Scores desselben Knies hängen zusammen: Ein Knie, das tief beginnt, bleibt tendenziell unter dem Mittelwert. Ein [gemischtes Modell](../glossary.qmd#mixed-model){.term} berücksichtigt das mit einem **zufälligen Achsenabschnitt (Random Intercept)**: Jedes Knie erhält sein eigenes Gesamtniveau, bei jeder Kontrolle: Alle vier seiner Scores sind um denselben Betrag gegenüber dem Mittelwert nach oben oder unten verschoben. Die **festen Effekte** (hier die Kontrollen) beschreiben die durchschnittliche Person; die zufälligen Achsenabschnitte beschreiben, wie stark sich die Knie von diesem Mittelwert unterscheiden.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -129,14 +129,14 @@ check_agree(list(intercept = fixef(knee_model)[["(Intercept)"]], visit_6wk = fix
 check_agree(list(sd_knee = knee_sd[1], sd_residual = knee_sd[2]), reticulate::py$chk_sd, tol = 1e-5)
 # The standard errors differ in the fourth significant figure: lme4 computes them with the variances
 # held fixed, statsmodels from the whole likelihood's Hessian (checked by hand while writing this
-# page). See the R vs Python box.
+# page). See the R vs Python box on degrees of freedom.
 check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_se, tol = 1e-3)
 ```
 
 Ausgabe lesen:
 
 - **Feste Effekte:** Der mittlere KOOS JR lag vor der Operation bei 50.0 (der [Achsenabschnitt](../glossary.qmd#intercept){.term}) und war um 12.5 Punkte höher nach 6 Wochen, um 24.2 nach 3 Monaten und um 33.9 nach 1 Jahr. Der [Koeffizient](../glossary.qmd#coefficient){.term} jeder Kontrolle ist ihre Differenz zur präoperativen Kontrolle.
-- **Zufällige Effekte:** Die Ausgangsniveaus der Knie streuen um den Mittelwert mit einer [Standardabweichung (SD)](../glossary.qmd#standard-deviation){.term} von 8.8 Punkten (die Zeile «case_id (Intercept)» in R; die Zeile «case_id Var» in Python gibt die [Varianz](../glossary.qmd#variance){.term} an, 8.84² = 78.1). Die Scores streuen ausserdem von Kontrolle zu Kontrolle innerhalb eines Knies mit einer [Residual-SD](../glossary.qmd#residual){.term} von 8.6 Punkten (Zeile «Residual» in R: Varianz 73.45, SD 8.570; Python gibt nur die Varianz aus, als «Scale: 73.4507» im Kopf der Ausgabe, und √73.45 = 8.57).
+- **Zufällige Effekte:** Die Gesamtniveaus der Knie streuen um den Mittelwert mit einer [Standardabweichung (SD)](../glossary.qmd#standard-deviation){.term} von 8.8 Punkten (die Zeile «case_id (Intercept)» in R; die Zeile «case_id Var» in Python gibt die [Varianz](../glossary.qmd#variance){.term} an, 8.84² = 78.1). Die Scores streuen ausserdem von Kontrolle zu Kontrolle innerhalb eines Knies mit einer [Residual-SD](../glossary.qmd#residual){.term} von 8.6 Punkten (Zeile «Residual» in R: Varianz 73.45, SD 8.570; Python gibt nur die Varianz aus, als «Scale: 73.4507» im Kopf der Ausgabe, und √73.45 = 8.57).
 - **Wie viel der Variation zwischen den Knien liegt:** die Varianz der Knie geteilt durch die Varianz der Knie plus die Residualvarianz, 78.1 / (78.1 + 73.5) = 0.52, der [Intraklassenkorrelationskoeffizient](../glossary.qmd#icc){.term} (ICC; [Seite 17](17-agreement.qmd#icc) verwendet dieselbe Idee für Beurteilende). Etwa die Hälfte der [Streuung](../glossary.qmd#spread){.term} der Scores kommt daher, dass sich die Knie voneinander unterscheiden; deshalb dürfen die Scores nicht als [unabhängig](../glossary.qmd#independence){.term} behandelt werden.
 - **REML:** Beide Programme passen das [Modell](../glossary.qmd#model){.term} mit der [restringierten Maximum-Likelihood-Methode](../glossary.qmd#reml){.term} (Restricted Maximum Likelihood) an, der üblichen Wahl für die Schätzung dieses Modells.
 
@@ -192,6 +192,76 @@ chk = {"total": float(around["from_visit_mean"].var()), "first_last": float(alik
 alike <- cor(side_by_side[, c("preop", "6wk", "3mo", "1yr")], use = "pairwise.complete.obs")
 check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop", "1yr"],
                  first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
+```
+
+**Was das Modell voraussetzt.** Das Modell mit zufälligem Achsenabschnitt, wie es formuliert ist, enthält drei Annahmen, auf die es hier ankommt. Die Residuen sind ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term}. Sie haben bei jeder Kontrolle dieselbe Streuung: Das Modell schätzt eine einzige Residual-SD, 8.6 Punkte, für alle vier Kontrollen. Und weil das eigene Niveau eines Knies alle vier seiner Scores um denselben Betrag verschiebt, sind sich zwei Scores desselben Knies gleich ähnlich, welche zwei Kontrollen Sie auch nehmen: Der Intraklassenkorrelationskoeffizient von 0.52 ist diese eine Zahl, und der Kasten oben zeigt die sechs Korrelationen, für die er steht (0.43 bis 0.57). Um die ersten zwei Annahmen zu prüfen, stellen Sie die Residuen bei jeder Kontrolle dar:
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3.5
+knee_residuals <- knees |> mutate(residual = residuals(knee_model))   # jeder Score minus die Modellanpassung für sein Knie und seine Kontrolle
+knee_residuals |> group_by(visit) |> summarise(sd = sd(residual))     # die Streuung der Residuen bei jeder Kontrolle
+ggplot(knee_residuals, aes(visit, residual)) +
+  geom_boxplot() +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(x = "Visit", y = "Residual (KOOS JR points)")
+```
+
+## Python
+
+```{python}
+knee_residuals = knees.assign(residual=knee_model.resid)                           # jeder Score minus die Modellanpassung für sein Knie und seine Kontrolle
+print(knee_residuals.groupby("visit", observed=True)["residual"].std().round(2))   # die Streuung der Residuen bei jeder Kontrolle
+fig, ax = plt.subplots(figsize=(7, 3.5))
+boxes = ax.boxplot([knee_residuals.loc[knee_residuals["visit"] == visit, "residual"] for visit in visits], tick_labels=visits)
+ax.axhline(0, linestyle="--")
+ax.set_xlabel("Visit")
+ax.set_ylabel("Residual (KOOS JR points)")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+```{python}
+#| include: false
+resid_sd = knee_residuals.groupby("visit", observed=True)["residual"].std()
+chk = {"resid_sd_preop": float(resid_sd["preop"]), "resid_sd_6wk": float(resid_sd["6wk"]), "resid_sd_1yr": float(resid_sd["1yr"])}
+```
+
+```{r}
+#| include: false
+resid_sd <- tapply(knee_residuals$residual, knee_residuals$visit, sd)
+check_agree(list(resid_sd_preop = resid_sd[["preop"]], resid_sd_6wk = resid_sd[["6wk"]], resid_sd_1yr = resid_sd[["1yr"]]),
+            reticulate::py$chk)
+```
+
+Die Boxen liegen bei allen vier Kontrollen um 0 und sind ungefähr symmetrisch, und die Streuung der Residuen bei jeder Kontrolle ist ähnlich, wenn auch nicht gleich: von 6.62 Punkten nach 6 Wochen bis 8.16 nach 1 Jahr (die ausgegebene Tabelle). Vergleichen Sie diese vier miteinander, nicht mit der Residual-SD des Modells von 8.6: Hier sind alle vier kleiner.
+
+Eine **zufällige Steigung (Random Slope)** ginge weiter: Jedes Knie erhielte neben seinem eigenen Niveau auch seine eigene Veränderungsrate. In lme4 kann dieses Modell keine haben: Mit der Kontrolle als vier Kategorien ergäbe eine Steigung für jede Kontrolle mehr zufällige Effekte (4 × 330 = 1320), als es Scores gibt (1146), und lme4 bricht mit einer Fehlermeldung ab.
+
+::: {.callout-tip}
+## 🔀 R oder Python: eine zufällige Steigung pro Kontrolle
+lme4 lehnt `lmer(prom_score ~ visit + (visit | case_id), data = knees)` hier ab, mit der Meldung «number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable». statsmodels bricht nicht ab: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` liefert eine Anpassung, die Konvergenz meldet, ohne Warnung. Eine Anpassung durch statsmodels ist hier kein Grund, einer zufälligen Steigung zu trauen: Die Meldung von lme4 nennt den Grund.
+:::
+
+```{python}
+#| include: false
+import warnings
+with warnings.catch_warnings(record=True) as slope_warnings:
+    warnings.simplefilter("always")
+    slope_fit = smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)
+chk_slope = {"converged": float(slope_fit.converged), "warnings": float(len(slope_warnings))}
+```
+
+```{r}
+#| include: false
+# statsmodels fits a random slope per visit and reports convergence without a warning; lme4 refuses it (the box above)
+lme4_slope <- tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e)
+stopifnot(inherits(lme4_slope, "error"),
+          grepl("number of observations (=1146) <= number of random effects (=1320)", conditionMessage(lme4_slope), fixed = TRUE),
+          reticulate::py$chk_slope$converged == 1, reticulate::py$chk_slope$warnings == 0)
 ```
 
 ::: {.callout-tip}
@@ -362,7 +432,7 @@ emmip(arm_model, arm ~ visit, CIs = TRUE) +            # die beiden Erholungsmus
   labs(x = "Visit", y = "EFAS score")
 
 arm_gaps <- pairs(emmeans(arm_model, ~ arm | visit, lmer.df = "satterthwaite"), reverse = TRUE)   # Walker minus Gips
-confint(arm_gaps)                                  # 95%-KI
+confint(arm_gaps)                                  # unadjustierte 95%-KI
 summary(arm_gaps, by = NULL, adjust = "holm")      # Holm über alle vier Studienvisiten, nicht innerhalb jeder
 ```
 
@@ -440,8 +510,9 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. R gibt die zweiten [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} als `DenDF` 309.58 und den [p-Wert](../glossary.qmd#p-value){.term} als `6.924e-15` aus. Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python ist ein [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} mit 3 Freiheitsgraden: 77.15, ebenfalls p < 0.001. Das [F](../glossary.qmd#f-statistic){.term} von R ist diese [Statistik](../glossary.qmd#test-statistic){.term} geteilt durch ihre 3 Freiheitsgrade: 77.15 / 3 = 25.72, gegenüber 25.73 in R, weil sich die [Standardfehler](../glossary.qmd#standard-error){.term} der beiden Programme leicht unterscheiden (der erste Kasten «R oder Python»).
+- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. R gibt die zweiten [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} als `DenDF` 309.58 und den [p-Wert](../glossary.qmd#p-value){.term} als `6.924e-15` aus. Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python ist ein [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} mit 3 Freiheitsgraden: 77.15, ebenfalls p < 0.001. Das [F](../glossary.qmd#f-statistic){.term} von R ist diese [Statistik](../glossary.qmd#test-statistic){.term} geteilt durch ihre 3 Freiheitsgrade: 77.15 / 3 = 25.72, gegenüber 25.73 in R, weil sich die [Standardfehler](../glossary.qmd#standard-error){.term} der beiden Programme leicht unterscheiden (der Kasten «R oder Python: Freiheitsgrade»).
 - **Die EMMs und die Differenzen (Walker minus Gips)** zeigen, auf welche Weise. Nach 6 Wochen lag der Walker um 3.0 Punkte vorn, und nach 3 Monaten lag der Walker um 3.6 Punkte vorn (17.34 gegenüber 13.78). Nach 6 Monaten betrug der Abstand 0.4 Punkte, und nach 12 Monaten −0.4 Punkte (95%-KI −1.5 bis 0.7): Der Abstand hatte sich geschlossen.
+- **Die KI der Differenzen** sind in beiden Reitern unadjustierte 95%-KI: `confint()` in R gibt «Confidence level used: 0.95» und keine Zeile zur Adjustierung aus, und Python berechnet jede Differenz ± 1.96 × se. Nur die p-Werte werden für die vier Studienvisiten adjustiert: mit `adjust = "holm"` in R und mit `multipletests(..., method="holm")` in Python.
 
 Zwei weitere Blicke auf die Daten erklären den folgenden Absatz: die [Streuung](../glossary.qmd#spread){.term} der Scores und die Studienvisite nach 12 Monaten.
 
@@ -563,7 +634,7 @@ In dieser [Kohorte](../glossary.qmd#cohort){.term} liegt der Achsenabschnitt auf
 
 Für den Vergleich zwischen einem Walker und einem Gips:
 
-> **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with 95% CIs and Holm-adjusted p-values.
+> **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with unadjusted 95% CIs and Holm-adjusted p-values.
 >
 > **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
 
@@ -642,6 +713,18 @@ stopifnot(
   reticulate::py_eval("float(nested_model.cov_re.iloc[0, 0])") < 0.001^2,
   round(nested_vc$sdcor[nested_vc$grp == "case_id:patient_id"], 1) == 8.8,
   round(14.43 / 3, 2) == 4.81,
+  # numbers and claims added with the content review of 20.11.2026 (Task 3.7)
+  round(resid_sd[["6wk"]], 2) == 6.62, round(resid_sd[["1yr"]], 2) == 8.16,
+  which.min(resid_sd) == 2, which.max(resid_sd) == 4,
+  all(abs(tapply(knee_residuals$residual, knee_residuals$visit, median)) < 0.5),
+  4 * 330 == 1320, nlevels(knees$visit) == 4, max(per_knee$n) == 4,
+  # a random slope per visit: lme4 stops (more random effects than scores)
+  grepl("number of observations", conditionMessage(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e))),
+  all(resid_sd < sigma(knee_model)), round(sigma(knee_model), 1) == 8.6,
+  # confint() prints "Confidence level used: 0.95" and no adjustment line; Holm adjusts the p-values only
+  "Confidence level used: 0.95" %in% attr(summary(confint(arm_gaps)), "mesg"),
+  !any(grepl("adjustment", attr(summary(confint(arm_gaps)), "mesg"))),
+  "P value adjustment: holm method for 4 tests" %in% attr(arm_gap, "mesg"),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   n_distinct(hips$case_id) == 270, nrow(hips) == 906, sum(table(hips$case_id) == 4) == 136,
   round(hip_emm$emmean, 1) == c(45.5, 68.6, 80.1, 88.2),
@@ -760,7 +843,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python liefert 14.43 mit 3 [Freiheitsgraden](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. Es ist dieselbe [Statistik](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. Die [p-Werte](../glossary.qmd#p-value){.term} unterscheiden sich in der dritten Dezimalstelle, weil der [F-Test](../glossary.qmd#f-statistic){.term} von R [Satterthwaite-Freiheitsgrade](../glossary.qmd#satterthwaite){.term} verwendet (317) und der [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} von Python sie als unendlich behandelt, wie im ersten Kasten «R oder Python». Berichten Sie den Wert von R.
+Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python liefert 14.43 mit 3 [Freiheitsgraden](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. Es ist dieselbe [Statistik](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. Die [p-Werte](../glossary.qmd#p-value){.term} unterscheiden sich in der dritten Dezimalstelle, weil der [F-Test](../glossary.qmd#f-statistic){.term} von R [Satterthwaite-Freiheitsgrade](../glossary.qmd#satterthwaite){.term} verwendet (317) und der [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} von Python sie als unendlich behandelt, wie im Kasten «R oder Python: Freiheitsgrade». Berichten Sie den Wert von R.
 
 Der Schmerz ist ein ganzzahliger Score, ein lineares Modell ist hier daher eine Näherung; bei vier Studienvisiten und 120 Patientinnen und Patienten ist es eine vernünftige.
 :::
