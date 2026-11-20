@@ -532,3 +532,50 @@ def test_setup_page_links_every_data_file_and_codebook():
         missing = [f for f in files if f"[`{f}`]({DOWNLOAD}{f})" not in text]
         missing += [c for c in codebooks if f"]({VIEW}{c})" not in text]
         assert missing == [], f"{lang}/getting-started/setup.qmd doesn't link: {missing}"
+
+
+LIST_ITEM = re.compile(r"^(?:- |\d+\. )")
+NOT_PARAGRAPH = re.compile(r"^(?:\s|#|\||:::)")
+
+
+def list_glued_to_paragraph(text: str) -> list[int]:
+    """Line numbers (from 1) of list items that follow a paragraph line with no blank line between.
+
+    Quarto's Markdown then reads the items as more of the paragraph, and the page shows one run-on
+    paragraph with literal hyphens. Front matter and fenced code are skipped. A line before an item
+    is fine when it is blank, another item, an indented continuation, a heading, a table row or a
+    `:::` line.
+    """
+    lines = text.splitlines()
+    start = 0
+    if lines and lines[0] == "---":
+        start = next((i for i in range(1, len(lines)) if lines[i] == "---"), 0) + 1
+    glued, in_code, previous = [], False, ""
+    for number, line in enumerate(lines[start:], start=start + 1):
+        if line.startswith("```"):
+            in_code = not in_code
+            previous = line
+            continue
+        if in_code:
+            continue
+        if (LIST_ITEM.match(line) and previous.strip() and not LIST_ITEM.match(previous)
+                and not NOT_PARAGRAPH.match(previous) and not previous.startswith("```")):
+            glued.append(number)
+        previous = line
+    return glued
+
+
+def test_rule_catches_a_list_glued_to_its_paragraph():
+    assert list_glued_to_paragraph("How to read it:\n- one\n- two\n") == [2]
+    assert list_glued_to_paragraph("How to read it:\n\n- one\n- two\n") == []
+    assert list_glued_to_paragraph("Steps:\n1. one\n2. two\n") == [2]
+    assert list_glued_to_paragraph("---\ntitle: x\n---\n\n## Heading\n- one\n\n::: {.callout}\n- two\n:::\n") == []
+    assert list_glued_to_paragraph("Text\n\n```r\nx <- 1\n- 1\n```\n") == []
+
+
+def test_every_list_is_separated_from_the_paragraph_above():
+    """A list needs a blank line above it, or it renders as part of the paragraph (review U1)."""
+    offenders = [f"{path.relative_to(ROOT)}:{n}"
+                 for lang in LANGS for path in sorted((ROOT / lang).rglob("*.qmd"))
+                 for n in list_glued_to_paragraph(path.read_text(encoding="utf-8"))]
+    assert offenders == [], "Add a blank line before the list at: " + ", ".join(offenders)

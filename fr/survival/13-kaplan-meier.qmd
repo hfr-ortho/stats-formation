@@ -19,6 +19,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 « Combien de temps les implants durent-ils ? » est la question centrale de la recherche sur les prothèses articulaires, et elle demande ses propres méthodes. Les patients entrent dans l'étude sur plusieurs années, ils sont suivis pendant des durées différentes, et la plupart ne sont jamais révisés. L'**[analyse de survie](../glossary.qmd#time-to-event){.term}** utilise le [suivi](../glossary.qmd#follow-up){.term} de chaque patient aussi longtemps qu'il dure.
 
 Les pages [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalog/06-two-unpaired-groups.qmd#log-rank) et [8](../catalog/08-three-plus-unmatched.qmd#cox) ont chacune montré une méthode de survie en quelques étapes. Cette page présente la méthode en entier :
+
 - ce qu'est la [censure](../glossary.qmd#censored){.term}
 - comment préparer les données
 - comment lire et rapporter une [courbe de Kaplan-Meier](../glossary.qmd#kaplan-meier){.term}
@@ -51,6 +52,7 @@ Imaginez six patients, suivis chacun de l'opération jusqu'à une révision ou j
 Les patients B, D et F sont **[censurés](../glossary.qmd#censored){.term}**. Nous savons qu'ils sont restés *au moins* aussi longtemps sans révision, mais pas ce qui s'est passé ensuite. La censure n'est pas une [donnée manquante](../glossary.qmd#missing-data){.term} : c'est une information partielle, et les méthodes de survie l'utilisent en entier.
 
 Deux résumés simples se trompent tous les deux :
+
 - **« 3 patients sur 6 (50 %) ont été révisés »** ignore la durée. Le patient B n'a été suivi que 2 ans : son implant n'a jamais eu la possibilité d'échouer à 4 ou 5 ans.
 - **Écarter les patients censurés** (« 3 sur 3 ont été révisés ») jette les années que B, D et F ont passées sans révision.
 
@@ -112,6 +114,7 @@ check_agree(list(surv_1 = toy_summary$surv[1], surv_3 = toy_summary$surv[2], sur
 Le tableau de R n'a une ligne que pour les temps où une révision a lieu. Celui de Python a une ligne pour chaque temps, avec les patients à risque juste avant.
 
 Lecture du résultat, une révision à la fois :
+
 - **Année 1 :** 6 patients à risque, 1 révisé. [Survie](../glossary.qmd#survival){.term} = 5/6 = 0.833.
 - **Année 2 :** B est censuré. Rien ne change pour la courbe, mais le groupe à risque passe de 5 à 4 avant la révision suivante.
 - **Année 3 :** 4 à risque, 1 révisé. Survie = 0.833 × 3/4 = 0.625.
@@ -277,9 +280,10 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 ```
 
 Comment la lire :
+
 - **Les marches :** la courbe part de 100 % et descend à chaque révision. Les descentes deviennent plus grandes par la suite, parce que chaque révision représente alors une plus grande part des patients encore [à risque](../glossary.qmd#at-risk){.term}, qui sont moins nombreux.
 - **Les traits** marquent les patients [censurés](../glossary.qmd#censored){.term}. Ils ne font pas bouger la courbe ; ils quittent le groupe à risque.
-- **La bande ombrée** est l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %. Elle s'élargit à mesure que les patients sortent.
+- **La bande ombrée** est l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %. Elle s'élargit à chaque révision, et d'autant plus que peu d'interventions restent à risque. Entre deux révisions, sa largeur ne change pas, quel que soit le nombre de patients qui sortent.
 - **Le tableau sous le graphique** donne le nombre d'interventions encore suivies (**à risque**) à chaque temps, 600 à l'opération, 332 à 4 ans et 84 à 8 ans dans R (lifelines affiche 331 et 83 ; l'encadré « R ou Python » ci-dessous explique pourquoi), ainsi que les révisions jusque-là. Publiez toujours les effectifs à risque avec la courbe : ils disent au lecteur dans quelle mesure faire confiance à chaque partie de la courbe.
 
 ::: {.callout-warning}
@@ -334,7 +338,7 @@ check_agree(list(surv_2 = km_2_5_10$surv[1], low_2 = km_2_5_10$lower[1], high_2 
 ```
 
 - **survival :** 0.939 à 2 ans, 0.863 à 5 ans et 0.780 à 10 ans.
-- **lower 95% CI / upper 95% CI :** l'[IC](../glossary.qmd#confidence-interval){.term} autour de chaque estimation. L'IC à 10 ans (0.725 à 0.826) est le plus large.
+- **lower 95% CI / upper 95% CI :** l'[IC](../glossary.qmd#confidence-interval){.term} autour de chaque estimation. Aucune révision n'a eu lieu après 7.9 ans : l'estimation à 10 ans et son IC (0.725 à 0.826) sont donc les valeurs à 7.9 ans, reportées telles quelles, alors que l'effectif à risque passe de 92 à 21 (les effectifs de R ; les dernières révisions figurent dans l'encadré « Sous le capot » de la section [Risques concurrents](#competing-risks)). Une bande plate n'est pas une bande précise.
 - **n.risk :** 496 interventions encore [suivies](../glossary.qmd#follow-up){.term} à 2 ans, 263 à 5 ans et seulement 21 à 10 ans.
 - **n.event :** les révisions *depuis le temps précédent affiché*, et non le total cumulé.
 - **Python** affiche les mêmes nombres sur une ligne par temps : années, survie, [limite inférieure, limite supérieure] et l'effectif à risque. Il n'a pas de n.event.
@@ -641,6 +645,7 @@ check_agree(list(cif_2 = revision_rows$estimate[1], cif_5 = revision_rows$estima
 ```
 
 Lecture :
+
 - **La courbe de révision** est l'incidence cumulée de révision : 5.9 % à 2 ans (R affiche 0.0595, soit 0.05949 avant arrondi), 12.8 % à 5 ans et 19.3 % à 10 ans.
 - **La courbe de décès** finit plus haut : 24.0 % des patients étaient décédés sans révision à 10 ans (la ligne `death` à 10 ans).
 - **1 − Kaplan-Meier** donne 22.0 % à 10 ans, contre une incidence cumulée de 19.3 %. Cela fait 22.0 − 19.3 = 2.7 [points de pourcentage](../glossary.qmd#percentage-point){.term} de trop, parce qu'il fait comme si les patients décédés pouvaient encore être révisés.
@@ -737,6 +742,7 @@ L'incidence cumulée de révision différait selon les implants (test de Gray :
 ::: {.callout-warning}
 ## ⚠️ Attention : quel nombre répond à votre question ?
 Les deux [estimations](../glossary.qmd#estimate){.term} sont utiles, mais elles répondent à des questions différentes :
+
 - **1 − Kaplan-Meier** répond à « quelle est la performance de l'implant tant que les patients sont en vie ? » C'est la mesure habituelle pour comparer des implants, et les [registres](../glossary.qmd#registry){.term} la rapportent.
 - **L'incidence cumulée** répond à « quelle proportion de patients sera réellement révisée ? » Utilisez-la pour conseiller les patients ou planifier les services, surtout pour les patients âgés.
 
@@ -754,6 +760,7 @@ Dites laquelle vous rapportez. N'appelez jamais 1 − Kaplan-Meier « la propor
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 km_toy <- summary(toy_km, times = c(1, 3, 5))
+km_7_10 <- summary(km, times = c(7.9, 10))
 approach_6m <- summary(survfit(Surv(followup_years, revised) ~ approach, data = tha, conf.type = "log-log"), times = 0.5)
 one_minus_km <- 1 - summary(km, times = 10)$surv
 gray <- glance(cif_by_implant)
@@ -806,6 +813,10 @@ stopifnot(
   format(signif(gray$p.value_1, 3), scientific = FALSE) == "0.000000142", gray$df_2 == 2,
   round(procedure_logrank$chisq, 4) == 0.0062, sum(old$event_status == 0) == 46, 46 + 13 + 41 == 100,
   round(16.5 / 13.9, 1) == 1.2,
+  # numbers added with the content review of 20.11.2026
+  max(cohort$followup_years[cohort$revised == 1]) == 7.9, km_7_10$n.risk == c(92, 21),
+  km_7_10$surv[1] == km_7_10$surv[2], km_7_10$lower[1] == km_7_10$lower[2],
+  km_7_10$upper[1] == km_7_10$upper[2],
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

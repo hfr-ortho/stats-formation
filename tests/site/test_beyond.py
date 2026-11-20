@@ -103,6 +103,13 @@ def test_icc_form_is_named_and_interpreted_with_koo_and_li(site):
         assert phrase in text, phrase
 
 
+def test_icc_box_says_random_and_mixed_give_the_same_number(site):
+    """Two-way random and two-way mixed share one formula (Koo and Li 2016); only who the result applies to differs (review A9)."""
+    box = next(c for c in section(AGREEMENT, "icc").select("div.callout-warning") if "always say which ICC" in text_of(c))
+    assert "give the same number" in text_of(box)
+    assert "for every model" not in text_of(load(AGREEMENT))
+
+
 def test_inter_and_intra_rater_reliability_are_both_measured(site):
     assert "inter-rater" in text_of(section(AGREEMENT, "icc"))
     text = text_of(section(AGREEMENT, "inter-intra-rater"))

@@ -26,7 +26,8 @@ Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Bl�
 ## Reliabilität oder Übereinstimmung? {#reliability-vs-agreement}
 
 Die beiden Wörter werden oft verwendet, als bedeuteten sie dasselbe. Das tun sie nicht:
-- **Reliabilität** fragt, ob eine Messung Patientinnen und Patienten voneinander unterscheiden kann: Sind die echten Unterschiede zwischen den Knien gross im Vergleich zur Abweichung zwischen den Messungen? Sie wird mit dem **Intraklassenkorrelationskoeffizienten** (ICC) gemessen, einer Zahl von 0 bis 1. Weil der ICC die Abweichung damit vergleicht, wie stark sich die Knie unterscheiden, wirken dieselben Beurteilenden in einer [Kohorte](../glossary.qmd#cohort){.term} mit einem breiteren Spektrum an Fehlstellungen reliabler.
+
+- **Reliabilität** fragt, ob eine Messung Patientinnen und Patienten voneinander unterscheiden kann: Sind die echten Unterschiede zwischen den Knien gross im Vergleich zur Abweichung zwischen den Messungen? Sie wird mit dem **Intraklassenkorrelationskoeffizienten** (ICC) gemessen, meist einer Zahl zwischen 0 und 1. Ein Schätzwert oder eine KI-Grenze kann unter 0 fallen, wie in [Übung 3](#exercises); ein Wert unter 0 bedeutet keine Reliabilität. Weil der ICC die Abweichung damit vergleicht, wie stark sich die Knie unterscheiden, wirken dieselben Beurteilenden in einer [Kohorte](../glossary.qmd#cohort){.term} mit einem breiteren Spektrum an Fehlstellungen reliabler.
 - **Übereinstimmung** fragt, wie nahe zwei Messungen beieinanderliegen, in den Einheiten der Messung selbst. Misst Person 2 jedes Knie 3° höher als Person 1, ist das eine schlechte Übereinstimmung, auch wenn beide die Knie in genau dieselbe Reihenfolge bringen. Sie wird mit den **[Bland-Altman-Übereinstimmungsgrenzen](../glossary.qmd#bland-altman){.term}** (Limits of Agreement) gemessen, in Grad.
 
 Berichten Sie beides. Wer eine Osteotomie plant, muss die Übereinstimmung in Grad kennen und nicht nur wissen, dass der [ICC](../glossary.qmd#icc){.term} 0.9 betrug.
@@ -73,10 +74,13 @@ Die Daten liegen im [Langformat](../glossary.qmd#long-format){.term} vor: eine Z
 
 ## Der Intraklassenkorrelationskoeffizient {#icc}
 
-Es gibt mehrere ICC, und welcher der richtige ist, hängt vom Studiendesign ab. Drei Entscheidungen legen ihn fest (Koo & Li, 2016):
-- **Modell:** Sind die Beurteilenden eine Zufallsstichprobe aus allen, die diese Messung verwenden könnten (**zweifaktoriell, zufällige Effekte**, *two-way random*), oder die einzigen, die Sie interessieren (**zweifaktoriell, gemischte Effekte**, *two-way mixed*)? Für eine Messung, die auch andere Chirurginnen und Chirurgen verwenden werden, wählen Sie zufällige Effekte.
-- **Typ:** Soll es gegen die Messung zählen, wenn eine beurteilende Person immer höher misst (**absolute Übereinstimmung**, *absolute agreement*), oder nicht (**Konsistenz**, *consistency*)? Bei Winkeln, die in klinische Entscheidungen einfliessen, soll es zählen: Wählen Sie die absolute Übereinstimmung.
-- **Einheit:** Verwendet die Studie die Messung einer einzelnen beurteilenden Person (**einzeln**, *single*) oder den Mittelwert mehrerer (**Mittelwert**, *average*)? Meist einzeln.
+Es gibt mehrere ICC, und welcher der richtige ist, hängt vom Studiendesign ab. Drei Entscheidungen legen ihn fest; Koo & Li (2016) nennen sie Modell (*Model*), Typ (*Type*) und Definition (*Definition*). `irr::icc()` benennt seine Argumente anders, deshalb steht jedes in Klammern:
+
+- **Modell** (`model = "twoway"` für beide): Sind die Beurteilenden eine Zufallsstichprobe aus allen, die diese Messung verwenden könnten (**zweifaktoriell, zufällige Effekte**, *two-way random*), oder die einzigen, die Sie interessieren (**zweifaktoriell, gemischte Effekte**, *two-way mixed*)? Für eine Messung, die auch andere Chirurginnen und Chirurgen verwenden werden, wählen Sie zufällige Effekte.
+- **Typ** (`unit`): Verwendet die Studie die Messung einer einzelnen beurteilenden Person (**einzeln**, *single*) oder den Mittelwert mehrerer (**Mittelwert**, *average*)? Meist einzeln.
+- **Definition** (`type`): Soll es gegen die Messung zählen, wenn eine beurteilende Person immer höher misst (**absolute Übereinstimmung**, *absolute agreement*), oder nicht (**Konsistenz**, *consistency*)? Bei Winkeln, die in klinische Entscheidungen einfliessen, soll es zählen: Wählen Sie die absolute Übereinstimmung.
+
+Koo und Li beschreiben auch ein Modell **einfaktoriell, zufällige Effekte** (*one-way random*), in dem nur die Knie zufällige Effekte sind (`model = "oneway"`); die Zeile `ICC(1,1)` von pingouin ist dieser ICC.
 
 In einfachen Worten teilt der ICC die [Streuung](../glossary.qmd#spread){.term} aller Messungen in drei Teile: echte Unterschiede zwischen den Knien, einen systematischen Unterschied zwischen den Beurteilenden und den Rest, den [Messfehler](../glossary.qmd#measurement-error){.term}. Jeder Teil ist eine [Varianz](../glossary.qmd#variance){.term}. Der ICC für die absolute Übereinstimmung ist der Anteil der Knie an allen drei zusammen; der ICC für die Konsistenz lässt den Unterschied zwischen den Beurteilenden weg. Ein Kasten unter der Ausgabe unten berechnet beide von Hand.
 
@@ -171,7 +175,8 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
        "agreement": float(parts["knees"] / parts.sum()),
        "software": float(inter_icc.set_index("Type").loc["ICC(A,1)", "ICC"]),
        "consistency": float(parts["knees"] / (parts["knees"] + parts["error"])),
-       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"])}
+       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"]),
+       "oneway": float(inter_icc.set_index("Type").loc["ICC(1,1)", "ICC"])}
 ```
 
 ```{r}
@@ -179,13 +184,14 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
 check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = parts[["error"]],
                  agreement = parts[["knees"]] / sum(parts), software = inter_icc$value,
                  consistency = parts[["knees"]] / (parts[["knees"]] + parts[["error"]]),
-                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value),
+                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value,
+                 oneway = irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")$value),
             reticulate::py$chk)
 ```
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Nennen Sie immer, welcher ICC gemeint ist
-Dieselben Daten ergeben für jedes Modell, jeden Typ und jede Einheit einen anderen ICC: hier 0.889 für die absolute Übereinstimmung, 0.896 für die Konsistenz (Zeile `ICC(C,1)` in Python) und 0.94 für den Mittelwert der beiden Beurteilenden (Zeile `ICC(A,k)` in Python). In R führen Sie `irr::icc()` nochmals mit `type = "consistency"` oder `unit = "average"` aus. «ICC = 0.94» ohne Angabe der Form lässt sich nicht interpretieren. Schreiben Sie die Form im Methodenteil aus.
+Dieselben Daten ergeben für jede Definition und jeden Typ einen anderen ICC, und auch für ein einfaktorielles Modell: hier 0.889 für die absolute Übereinstimmung, 0.896 für die Konsistenz (Zeile `ICC(C,1)` in Python), 0.94 für den Mittelwert der beiden Beurteilenden (Zeile `ICC(A,k)` in Python) und beim einfaktoriellen Modell einen Unterschied erst in der vierten Dezimalstelle (Zeile `ICC(1,1)` in Python, 0.888950, gegenüber 0.889383 in der Zeile `ICC(A,1)`). Das zweifaktorielle Modell mit zufälligen Effekten und das mit gemischten Effekten ergeben dieselbe Zahl; sie unterscheiden sich darin, für welche Beurteilenden das Resultat gilt. In R führen Sie `irr::icc()` nochmals mit `type = "consistency"`, `unit = "average"` oder `model = "oneway"` aus. «ICC = 0.94» ohne Angabe der Form lässt sich nicht interpretieren. Schreiben Sie die Form im Methodenteil aus.
 :::
 
 ::: {.callout-tip}
@@ -237,6 +243,7 @@ Person 1 stimmte mit sich selbst etwas besser überein als mit Person 2: Intra-R
 ## Bland-Altman: Wie weit liegen die Messungen auseinander? {#bland-altman}
 
 Der [ICC](../glossary.qmd#icc){.term} ist ein Verhältnis und hat keine Einheit. Um zu sehen, wie weit zwei Messungen in Grad auseinanderliegen können, tragen Sie die **Differenz** der beiden gegen ihren **Mittelwert** auf, ein Punkt pro Knie. Zeichnen Sie dann drei Linien ein:
+
 - **Die systematische Abweichung (Bias):** die [mittlere](../glossary.qmd#mean){.term} Differenz. Sie zeigt, ob eine Person systematisch höher misst.
 - **Die 95%-Übereinstimmungsgrenzen:** Bias ± 1.96 × [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) der Differenzen. Bei 95 % der Knie liegt die Messung von Person 2, bezogen auf die von Person 1, zwischen diesen Grenzen.
 
@@ -484,6 +491,7 @@ Die Gewichte hängen von der Reihenfolge der Kategorien ab. Legen Sie sie selbst
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 inter_c <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")
 inter_k <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "average")
+inter_1 <- irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")
 irr_weighted <- irr::kappa2(data.frame(hka_group(cpak$R1), hka_group(cpak$R2)), weight = "equal")
 mpta <- readings |> filter(session == 1) |> select(knee_id, rater, mpta_deg) |> pivot_wider(names_from = rater, values_from = mpta_deg)
 mpta_icc <- irr::icc(mpta[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "single")
@@ -520,6 +528,10 @@ stopifnot(
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
   diag(hka_table) == c(16, 23, 9), 16 + 23 + 9 == 48,
   round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
+  # numbers added with the content review of 20.11.2026
+  round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
+  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_1$value, 4) != round(inter_icc$value, 4),
+  shifted_icc$lbound < 0,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),

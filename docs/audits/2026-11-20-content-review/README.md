@@ -15,6 +15,77 @@ Every finding has an ID. The one-line version is here; the quoted sentence, the 
 3. **Three things are broken for readers today:** 15 bullet lists per language display as run-on paragraphs on pages 13 to 18; the decision table falls apart on a narrow screen; the setup page has gaps that will stop some beginners.
 4. **The site teaches "run and report an analysis" very well, and two of your three goals only in passing.** Critical reading of papers and study design have no pages of their own: nothing on study designs, bias, sample size, or reporting guidelines. The pages are also long (40 to 60 minutes each to read) with no stated objectives, times, summaries or suggested path.
 
+## Status
+
+Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-review-fixes.md`](../../superpowers/plans/2026-11-20-content-review-fixes.md)) stands. Task is the plan task that fixes it; a finding listed under several tasks is fixed page by page.
+
+| ID | Task | Status | Pull request |
+|---|---|---|---|
+| A1 | 1.3 | open |  |
+| A2 | 1.3 | open |  |
+| A3 | 1.3 | open |  |
+| A4 | 1.3 | open |  |
+| A5 | 1.3 | open |  |
+| A6 | 1.4 | open |  |
+| A7 | 1.1 | done | pending |
+| A8 | 1.1 | done | pending |
+| A9 | 1.1 | done | pending |
+| A10 | 1.2 | open |  |
+| A11 | 1.2 | open |  |
+| A12 | 1.2 | open |  |
+| A13 | 1.2 | open |  |
+| A14 | 1.2 | open |  |
+| A15 | 1.1 | done | pending |
+| U1 | 1.1 | done | pending |
+| U2 | 2.1 | open |  |
+| U3 | 2.2 | open |  |
+| U4 | 2.2 | open |  |
+| U5 | 2.2 | open |  |
+| U6 | 2.2 | open |  |
+| U7 | 4.1 to 4.6 | open |  |
+| B1 | 3.8 | open |  |
+| B2 | 3.5 | open |  |
+| B3 | 3.8 | open |  |
+| B4 | 3.8 | open |  |
+| B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | open |  |
+| B6 | 3.3 | open |  |
+| B7 | 3.3 | open |  |
+| B8 | 3.2 | open |  |
+| B9 | 3.5 | open |  |
+| B10 | 3.2, 3.3 | open |  |
+| B11 | 3.7 | open |  |
+| B12 | 3.3, 3.4, 3.6 | open |  |
+| B13 | 3.3, 3.5 | open |  |
+| B14 | 3.5 | open |  |
+| B15 | 3.5, 3.7 | open |  |
+| B16 | 3.7 | open |  |
+| B17 | 3.6 | open |  |
+| B18 | 3.2, 3.6 | open |  |
+| B19 | 3.7 | open |  |
+| B20 | 3.7 | open |  |
+| B21 | 3.4 | open |  |
+| B22 | 3.2 | open |  |
+| B23 | 3.2 | open |  |
+| B24 | 3.4, 3.5, 3.6 | open |  |
+| B25 | 3.9 | open |  |
+| C1 | 3.4, 3.7 | open |  |
+| C2 | 3.3 | open |  |
+| C3 | 3.5 | open |  |
+| C4 | 3.5 | open |  |
+| C5 | 3.5 | open |  |
+| C6 | 3.6 | open |  |
+| C7 | 3.6 | open |  |
+| C8 | 3.9 | open |  |
+| C9 | 3.9 | open |  |
+| C10 | 3.9 | open |  |
+| C11 | 3.2 | open |  |
+| C12 | 3.2, 3.3 | open |  |
+| C13 | 3.7 | open |  |
+| C14 | 3.2 | open |  |
+| L2 | 4.1 to 4.6 | open |  |
+
+U1: the test that now guards against it (`tests/site/test_sources.py`) found 19 such lists per language on pages 13 to 18, not 15; all 57 are fixed.
+
 ## Urgency 1: inaccurate statements (fix first)
 
 | ID | Page | What is wrong |

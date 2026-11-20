@@ -26,7 +26,8 @@ Run the code blocks in order, from the top: later blocks use the packages and da
 ## Reliability or agreement? {#reliability-vs-agreement}
 
 The two words are often used as if they meant the same thing. They don't:
-- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), a number from 0 to 1. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a [cohort](../glossary.qmd#cohort){.term} with a wider range of deformities.
+
+- **Reliability** asks whether a measurement can tell patients apart: are the real differences between knees large compared with the disagreement between readings? It's measured with the **intraclass correlation coefficient** (ICC), usually a number between 0 and 1. An estimate or a CI limit can fall below 0, as in [exercise 3](#exercises); a value below 0 means no reliability. Because it compares the disagreement with how much the knees differ, the same raters look more reliable in a [cohort](../glossary.qmd#cohort){.term} with a wider range of deformities.
 - **Agreement** asks how close two readings are, in the measurement's own units. If rater 2 reads every knee 3° higher than rater 1, that's poor agreement, even though the two raters put the knees in exactly the same order. It's measured with the **[Bland-Altman limits of agreement](../glossary.qmd#bland-altman){.term}**, in degrees.
 
 Report both. A surgeon planning an osteotomy needs to know the agreement in degrees, not only that the [ICC](../glossary.qmd#icc){.term} was 0.9.
@@ -73,10 +74,13 @@ The data are [long](../glossary.qmd#long-format){.term}: one row per knee, rater
 
 ## The intraclass correlation coefficient {#icc}
 
-There are several ICCs, and the right one depends on the design. Three choices define it (Koo & Li, 2016):
-- **Model:** are the raters a random sample of the raters who might use this measurement (**two-way random**), or the only raters you care about (**two-way mixed**)? For a measurement other surgeons will use, choose random.
-- **Type:** should a rater who always reads higher count against the measurement (**absolute agreement**) or not (**consistency**)? For angles that feed clinical decisions, it should: choose absolute agreement.
-- **Unit:** will the study use one rater's reading (**single**) or the average of several (**average**)? Usually single.
+There are several ICCs, and the right one depends on the design. Three choices define it, which Koo & Li (2016) call Model, Type and Definition. `irr::icc()` names its arguments differently, so each is given in parentheses:
+
+- **Model** (`model = "twoway"` for both): are the raters a random sample of the raters who might use this measurement (**two-way random**), or the only raters you care about (**two-way mixed**)? For a measurement other surgeons will use, choose random.
+- **Type** (`unit`): will the study use one rater's reading (**single**) or the mean of several (**average**)? Usually single.
+- **Definition** (`type`): should a rater who always reads higher count against the measurement (**absolute agreement**) or not (**consistency**)? For angles that feed clinical decisions, it should: choose absolute agreement.
+
+Koo and Li also describe a **one-way random** model, in which only the knees are random effects (`model = "oneway"`); pingouin's `ICC(1,1)` row is this ICC.
 
 In plain words, the ICC splits the [spread](../glossary.qmd#spread){.term} of all the readings into three parts: real differences between knees, a systematic difference between the raters, and whatever is left, the [measurement error](../glossary.qmd#measurement-error){.term}. Each part is a [variance](../glossary.qmd#variance){.term}. The absolute-agreement ICC is the knees' share of the three together; the consistency ICC leaves the rater difference out. A box under the output below works both out by hand.
 
@@ -171,7 +175,8 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
        "agreement": float(parts["knees"] / parts.sum()),
        "software": float(inter_icc.set_index("Type").loc["ICC(A,1)", "ICC"]),
        "consistency": float(parts["knees"] / (parts["knees"] + parts["error"])),
-       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"])}
+       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"]),
+       "oneway": float(inter_icc.set_index("Type").loc["ICC(1,1)", "ICC"])}
 ```
 
 ```{r}
@@ -179,13 +184,14 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
 check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = parts[["error"]],
                  agreement = parts[["knees"]] / sum(parts), software = inter_icc$value,
                  consistency = parts[["knees"]] / (parts[["knees"]] + parts[["error"]]),
-                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value),
+                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value,
+                 oneway = irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")$value),
             reticulate::py$chk)
 ```
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: always say which ICC
-The same data give a different ICC for every model, type and unit: here 0.889 for absolute agreement and 0.896 for consistency (Python's `ICC(C,1)` row), and 0.94 for the average of the two raters (Python's `ICC(A,k)` row). In R, run `irr::icc()` again with `type = "consistency"` or `unit = "average"`. "ICC = 0.94" with no form named can't be interpreted. Write the form out in the Methods.
+The same data give a different ICC for each definition and type, and for a one-way model: here 0.889 for absolute agreement and 0.896 for consistency (Python's `ICC(C,1)` row), 0.94 for the average of the two raters (Python's `ICC(A,k)` row), and for the one-way model a difference only in the fourth decimal (Python's `ICC(1,1)` row, 0.888950, against 0.889383 in the `ICC(A,1)` row). Two-way random and two-way mixed give the same number; they differ in who the result applies to. In R, run `irr::icc()` again with `type = "consistency"`, `unit = "average"` or `model = "oneway"`. "ICC = 0.94" with no form named can't be interpreted. Write the form out in the Methods.
 :::
 
 ::: {.callout-tip}
@@ -237,6 +243,7 @@ Rater 1 agreed with themselves a little better than with rater 2: intra-rater IC
 ## Bland-Altman: how far apart are the readings? {#bland-altman}
 
 The [ICC](../glossary.qmd#icc){.term} is a ratio and has no units. To see how far apart two readings can be, in degrees, plot the **difference** between them against their **mean**, one point per knee. Then add three lines:
+
 - **The bias:** the [mean](../glossary.qmd#mean){.term} difference, showing whether one rater reads systematically higher.
 - **The 95% limits of agreement:** bias ± 1.96 × [SD](../glossary.qmd#standard-deviation){.term} of the differences. For 95% of knees, rater 2's reading will fall between these limits relative to rater 1's.
 
@@ -484,6 +491,7 @@ DescTools' `CohenKappa()` and statsmodels' `cohens_kappa()` give the same kappa 
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 inter_c <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")
 inter_k <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "average")
+inter_1 <- irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")
 irr_weighted <- irr::kappa2(data.frame(hka_group(cpak$R1), hka_group(cpak$R2)), weight = "equal")
 mpta <- readings |> filter(session == 1) |> select(knee_id, rater, mpta_deg) |> pivot_wider(names_from = rater, values_from = mpta_deg)
 mpta_icc <- irr::icc(mpta[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "single")
@@ -520,6 +528,10 @@ stopifnot(
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
   diag(hka_table) == c(16, 23, 9), 16 + 23 + 9 == 48,
   round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
+  # numbers added with the content review of 20.11.2026
+  round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
+  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_1$value, 4) != round(inter_icc$value, 4),
+  shifted_icc$lbound < 0,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),

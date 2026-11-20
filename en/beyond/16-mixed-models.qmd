@@ -86,6 +86,7 @@ check_agree(list(knees = nrow(per_knee), complete = sum(per_knee$n == 4), scores
 All 330 knees have at least one score (4 + 28 + 106 + 192 = 330), 1146 scores in all (4 × 1 + 28 × 2 + 106 × 3 + 192 × 4 = 1146), but only 192 knees have all four. [Repeated-measures ANOVA](../glossary.qmd#repeated-measures-anova){.term} would drop the other 138 knees (138 / 330 = 42%) together with every score they did give. A [mixed model](../glossary.qmd#mixed-model){.term} keeps all 1146 scores.
 
 Dropping patients isn't only wasteful. It can [bias](../glossary.qmd#bias){.term} the result, and that depends on why scores are [missing](../glossary.qmd#missing-data){.term}:
+
 - **Missing completely at random:** a missed visit has nothing to do with the patient's recovery (the clinic rescheduled, the patient moved). Both methods are unbiased; the mixed model is more [precise](../glossary.qmd#precision){.term} because it uses more data.
 - **Missing at random:** missing depends on things you measured, such as an earlier score. A patient who scored badly at 6 weeks is less likely to return at 3 months. Repeated-measures ANOVA is then biased, because the patients it keeps recovered better; a mixed model is still unbiased, as long as the [model](../glossary.qmd#model){.term} describes how a knee's scores are related, because it uses the earlier scores to fill the picture in.
 - **Missing not at random:** missing depends on the score that wasn't collected (patients stay away *because* their knee is worse that week). Nothing fixes this from the data alone. Say so as a limitation.
@@ -133,6 +134,7 @@ check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_s
 ```
 
 Reading the output:
+
 - **Fixed effects:** the average KOOS JR was 50.0 before surgery (the [intercept](../glossary.qmd#intercept){.term}), and higher by 12.5 points at 6 weeks, 24.2 at 3 months and 33.9 at 1 year. Each visit's [coefficient](../glossary.qmd#coefficient){.term} is its difference from pre-op.
 - **Random effects:** knees' own baseline levels vary around the average with an [SD](../glossary.qmd#standard-deviation){.term} of 8.8 points (R's "case_id (Intercept)" row; Python's "case_id Var" row gives the [variance](../glossary.qmd#variance){.term}, 8.84² = 78.1). The scores also vary from visit to visit within a knee with a [residual](../glossary.qmd#residual){.term} SD of 8.6 points (R's "Residual" row: variance 73.45, SD 8.570; Python prints only the variance, as "Scale: 73.4507" in the header, and √73.45 = 8.57).
 - **How much of the variation is between knees:** the knee variance divided by the knee variance plus the residual variance, 78.1 / (78.1 + 73.5) = 0.52, the [intraclass correlation](../glossary.qmd#icc){.term} ([page 17](17-agreement.qmd#icc) uses the same idea for raters). About half of the [spread](../glossary.qmd#spread){.term} in scores comes from knees differing from each other; that's why the scores can't be treated as [independent](../glossary.qmd#independence){.term}.

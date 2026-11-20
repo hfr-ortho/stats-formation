@@ -121,3 +121,10 @@ def test_results_give_every_estimate_its_ci_and_every_count_its_percentage(site)
     assert "24.0% (95% CI 19.3% to 29.0%)" in km_results
     cox_results = " ".join(text_of(q) for q in section(COX, "reporting").select("blockquote"))
     assert "81 of 600 procedures (13.5%)" in cox_results
+
+
+def test_cox_page_never_calls_one_minus_km_the_proportion_revised(site):
+    """Page 13 warns never to call 1 − Kaplan-Meier the proportion revised when patients die (review A8)."""
+    text = text_of(load(COX))
+    assert "had been revised" not in text, "1 − Kaplan-Meier is an estimate with deaths censored, not the share revised"
+    assert "estimate of revision (1 − Kaplan-Meier, with deaths censored)" in text

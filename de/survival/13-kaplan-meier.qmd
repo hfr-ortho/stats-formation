@@ -19,6 +19,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 «Wie lange halten die Implantate?» ist die zentrale Frage der Forschung zum Gelenkersatz, und sie braucht eigene Methoden. Patientinnen und Patienten werden über mehrere Jahre in die Studie aufgenommen und unterschiedlich lange nachbeobachtet, und die meisten von ihnen werden nie revidiert. Die **[Überlebenszeitanalyse](../glossary.qmd#time-to-event){.term}** nutzt die [Nachbeobachtung](../glossary.qmd#follow-up){.term} jeder Person, so lange sie dauert.
 
 Die Seiten [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalog/06-two-unpaired-groups.qmd#log-rank) und [8](../catalog/08-three-plus-unmatched.qmd#cox) zeigten je eine Methode der Überlebenszeitanalyse in wenigen Schritten. Diese Seite behandelt die ganze Methode:
+
 - was [Zensierung](../glossary.qmd#censored){.term} ist
 - wie Sie die Daten aufbereiten
 - wie Sie eine [Kaplan-Meier-Kurve](../glossary.qmd#kaplan-meier){.term} lesen und berichten
@@ -51,6 +52,7 @@ Stellen Sie sich sechs Patientinnen und Patienten vor, die jeweils von der Opera
 Die Patientinnen und Patienten B, D und F sind **[zensiert](../glossary.qmd#censored){.term}**. Wir wissen, dass sie *mindestens* so lange ohne Revision blieben, aber nicht, was danach geschah. Zensierung bedeutet nicht [fehlende Daten](../glossary.qmd#missing-data){.term}, sondern Teilinformation, und die Methoden der Überlebenszeitanalyse nutzen sie vollständig.
 
 Zwei einfache Zusammenfassungen führen in die Irre:
+
 - **«3 von 6 (50 %) wurden revidiert»** ignoriert die Zeit. B wurde nur 2 Jahre nachbeobachtet, das Implantat von B hatte also nie die Gelegenheit, nach 4 oder 5 Jahren zu versagen.
 - **Das Weglassen der zensierten Patientinnen und Patienten** («3 von 3 wurden revidiert») wirft die Jahre weg, die B, D und F ohne Revision verbracht haben.
 
@@ -112,6 +114,7 @@ check_agree(list(surv_1 = toy_summary$surv[1], surv_3 = toy_summary$surv[2], sur
 Die Tabelle von R hat nur für die Zeitpunkte mit einer Revision eine Zeile. Die Tabelle von Python hat für jeden Zeitpunkt eine Zeile, mit den Personen, die unmittelbar davor unter Risiko stehen.
 
 So lesen Sie die Ausgabe, Revision für Revision:
+
 - **Jahr 1:** 6 Personen unter Risiko, 1 revidiert. [Überleben](../glossary.qmd#survival){.term} = 5/6 = 0.833.
 - **Jahr 2:** B wird zensiert. Für die Kurve ändert sich nichts, aber die Gruppe unter Risiko schrumpft vor der nächsten Revision von 5 auf 4.
 - **Jahr 3:** 4 unter Risiko, 1 revidiert. Überleben = 0.833 × 3/4 = 0.625.
@@ -277,9 +280,10 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 ```
 
 So lesen Sie die Kurve:
+
 - **Die Stufen:** Die Kurve beginnt bei 100 % und fällt bei jeder Revision. Die Stufen werden später grösser, weil jede Revision dann einen grösseren Anteil der wenigen Personen ausmacht, die noch [unter Risiko](../glossary.qmd#at-risk){.term} sind.
 - **Die Striche** markieren [zensierte](../glossary.qmd#censored){.term} Personen. Diese Personen verschieben die Kurve nicht; sie verlassen die Gruppe unter Risiko.
-- **Das schattierte Band** ist das 95%-KI ([Konfidenzintervall](../glossary.qmd#confidence-interval){.term}). Es wird breiter, wenn Personen ausscheiden.
+- **Das schattierte Band** ist das 95%-KI ([Konfidenzintervall](../glossary.qmd#confidence-interval){.term}). Es wird bei jeder Revision breiter, und umso mehr, je weniger Eingriffe noch unter Risiko stehen. Zwischen zwei Revisionen bleibt seine Breite gleich, egal wie viele Personen ausscheiden.
 - **Die Tabelle unter der Abbildung** zeigt die Anzahl Eingriffe, die zu jedem Zeitpunkt noch nachbeobachtet werden (**unter Risiko**): 600 bei der Operation, 332 nach 4 Jahren und 84 nach 8 Jahren in R (lifelines zeigt 331 und 83; der Kasten «R oder Python» unten erklärt, warum), und die bisherigen Revisionen. Veröffentlichen Sie die Anzahl Personen unter Risiko immer zusammen mit der Kurve: Sie zeigt den Lesenden, wie viel Vertrauen jeder Teil der Kurve verdient.
 
 ::: {.callout-warning}
@@ -334,7 +338,7 @@ check_agree(list(surv_2 = km_2_5_10$surv[1], low_2 = km_2_5_10$lower[1], high_2 
 ```
 
 - **survival:** 0.939 nach 2 Jahren, 0.863 nach 5 Jahren und 0.780 nach 10 Jahren.
-- **lower 95% CI / upper 95% CI:** das [KI](../glossary.qmd#confidence-interval){.term} um jeden Wert. Das KI nach 10 Jahren (0.725 bis 0.826) ist das breiteste.
+- **lower 95% CI / upper 95% CI:** das [KI](../glossary.qmd#confidence-interval){.term} um jeden Wert. Nach 7.9 Jahren gab es keine Revision mehr. Der Schätzwert nach 10 Jahren und sein KI (0.725 bis 0.826) sind deshalb die Werte nach 7.9 Jahren, unverändert fortgeschrieben, während die Anzahl unter Risiko von 92 auf 21 sinkt (die Zahlen von R; die letzten Revisionen stehen im Kasten «Unter der Haube» im Abschnitt [Konkurrierende Risiken](#competing-risks)). Ein flaches Band ist kein präzises Band.
 - **n.risk:** 496 Eingriffe werden nach 2 Jahren noch [nachbeobachtet](../glossary.qmd#follow-up){.term}, 263 nach 5 Jahren und nur 21 nach 10 Jahren.
 - **n.event:** die Revisionen *seit dem vorherigen angezeigten Zeitpunkt*, nicht die laufende Summe.
 - **Python** gibt dieselben Zahlen in einer Zeile pro Zeitpunkt aus: Jahre, **survival**, [untere, obere Grenze] und die Anzahl unter Risiko. Ein n.event gibt es dort nicht.
@@ -641,6 +645,7 @@ check_agree(list(cif_2 = revision_rows$estimate[1], cif_5 = revision_rows$estima
 ```
 
 So lesen Sie die Ausgabe:
+
 - **Die Revisionskurve** ist die kumulative Inzidenz der Revision: 5.9 % nach 2 Jahren (R gibt 0.0595 aus, vor dem Runden 0.05949), 12.8 % nach 5 Jahren und 19.3 % nach 10 Jahren.
 - **Die Todeskurve** endet höher: 24.0 % der Patientinnen und Patienten waren nach 10 Jahren ohne Revision verstorben (die Zeile `death` bei 10 Jahren).
 - **1 − Kaplan-Meier** gibt 22.0 % nach 10 Jahren an, gegenüber einer kumulativen Inzidenz von 19.3 %. Das sind 22.0 − 19.3 = 2.7 [Prozentpunkte](../glossary.qmd#percentage-point){.term} zu viel, weil es so tut, als hätten die verstorbenen Personen noch revidiert werden können.
@@ -737,6 +742,7 @@ Die kumulative Inzidenz der Revision unterschied sich zwischen den Implantaten (
 ::: {.callout-warning}
 ## ⚠️ Achtung: Welche Zahl beantwortet Ihre Frage?
 Beide [Schätzwerte](../glossary.qmd#estimate){.term} sind nützlich, beantworten aber verschiedene Fragen:
+
 - **1 − Kaplan-Meier** beantwortet die Frage «Wie gut funktioniert das Implantat, solange die Patientinnen und Patienten leben?» Es ist die übliche Messgrösse, um Implantate zu vergleichen, und [Register](../glossary.qmd#registry){.term} berichten es.
 - **Die kumulative Inzidenz** beantwortet die Frage «Welcher Anteil der Patientinnen und Patienten wird tatsächlich revidiert?» Verwenden Sie sie zur Beratung von Patientinnen und Patienten oder zur Planung von Leistungen, besonders bei älteren Personen.
 
@@ -754,6 +760,7 @@ Geben Sie an, welche Sie berichten. Nennen Sie 1 − Kaplan-Meier nie «den Ante
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 km_toy <- summary(toy_km, times = c(1, 3, 5))
+km_7_10 <- summary(km, times = c(7.9, 10))
 approach_6m <- summary(survfit(Surv(followup_years, revised) ~ approach, data = tha, conf.type = "log-log"), times = 0.5)
 one_minus_km <- 1 - summary(km, times = 10)$surv
 gray <- glance(cif_by_implant)
@@ -806,6 +813,10 @@ stopifnot(
   format(signif(gray$p.value_1, 3), scientific = FALSE) == "0.000000142", gray$df_2 == 2,
   round(procedure_logrank$chisq, 4) == 0.0062, sum(old$event_status == 0) == 46, 46 + 13 + 41 == 100,
   round(16.5 / 13.9, 1) == 1.2,
+  # numbers added with the content review of 20.11.2026
+  max(cohort$followup_years[cohort$revised == 1]) == 7.9, km_7_10$n.risk == c(92, 21),
+  km_7_10$surv[1] == km_7_10$surv[2], km_7_10$lower[1] == km_7_10$lower[2],
+  km_7_10$upper[1] == km_7_10$upper[2],
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

@@ -19,6 +19,7 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 "How long do the implants last?" is the central question of arthroplasty research, and it needs its own methods. Patients join the study over several years and are followed for different lengths of time, and most of them are never revised. **[Survival analysis](../glossary.qmd#time-to-event){.term}** uses every patient's [follow-up](../glossary.qmd#follow-up){.term} for as long as it lasts.
 
 Pages [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalog/06-two-unpaired-groups.qmd#log-rank) and [8](../catalog/08-three-plus-unmatched.qmd#cox) each showed one survival method in a few steps. This page covers the whole method:
+
 - what [censoring](../glossary.qmd#censored){.term} is
 - how to set up the data
 - how to read and report a [Kaplan-Meier curve](../glossary.qmd#kaplan-meier){.term}
@@ -51,6 +52,7 @@ Picture six patients, each followed from surgery until either a revision or the 
 Patients B, D and F are **[censored](../glossary.qmd#censored){.term}**. We know they went *at least* that long without a revision, but not what happened afterwards. Censoring isn't [missing data](../glossary.qmd#missing-data){.term}: it's partial information, and survival methods use all of it.
 
 Two simple summaries both get this wrong:
+
 - **"3 of 6 (50%) were revised"** ignores time. Patient B was followed for only 2 years, so B's implant never had the chance to fail at 4 or 5 years.
 - **Dropping the censored patients** ("3 of 3 were revised") throws away the years B, D and F spent without a revision.
 
@@ -112,6 +114,7 @@ check_agree(list(surv_1 = toy_summary$surv[1], surv_3 = toy_summary$surv[2], sur
 R's table has a row only for the times when a revision happens. Python's has a row for every time, with the patients at risk just before it.
 
 Reading the output, one revision at a time:
+
 - **Year 1:** 6 patients at risk, 1 revised. [Survival](../glossary.qmd#survival){.term} = 5/6 = 0.833.
 - **Year 2:** B is censored. Nothing happens to the curve, but the at-risk group shrinks from 5 to 4 before the next revision.
 - **Year 3:** 4 at risk, 1 revised. Survival = 0.833 × 3/4 = 0.625.
@@ -277,9 +280,10 @@ check_agree(list(at_risk_4 = km_4_8$n.risk[1], at_risk_8 = km_4_8$n.risk[2],
 ```
 
 How to read it:
+
 - **The steps:** the curve starts at 100% and drops at each revision. The drops get bigger later on, because each revision is then a bigger share of the fewer patients still [at risk](../glossary.qmd#at-risk){.term}.
 - **The ticks** mark [censored](../glossary.qmd#censored){.term} patients. They don't move the curve; they leave the at-risk group.
-- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens as patients leave.
+- **The shaded band** is the 95% [CI](../glossary.qmd#confidence-interval){.term}. It widens at each revision, and widens more when few procedures remain at risk. Between revisions its width doesn't change, however many patients leave.
 - **The table below the plot** gives the number of procedures still being followed (**at risk**) at each time, 600 at surgery, 332 at 4 years and 84 at 8 years in R (lifelines shows 331 and 83; the R vs Python box below explains why), and the revisions so far. Always publish the numbers at risk with the curve: they tell the reader how much to trust each part of it.
 
 ::: {.callout-warning}
@@ -334,7 +338,7 @@ check_agree(list(surv_2 = km_2_5_10$surv[1], low_2 = km_2_5_10$lower[1], high_2 
 ```
 
 - **survival:** 0.939 at 2 years, 0.863 at 5 years and 0.780 at 10 years.
-- **lower 95% CI / upper 95% CI:** the [CI](../glossary.qmd#confidence-interval){.term} around each one. The 10-year CI (0.725 to 0.826) is the widest.
+- **lower 95% CI / upper 95% CI:** the [CI](../glossary.qmd#confidence-interval){.term} around each one. No revision happened after 7.9 years, so the 10-year estimate and its CI (0.725 to 0.826) are the 7.9-year values carried forward, while the number at risk falls from 92 to 21 (R's counts; the last revisions are listed in the "Under the hood" box under [Competing risks](#competing-risks)). A flat band is not a precise one.
 - **n.risk:** 496 procedures still [followed](../glossary.qmd#follow-up){.term} at 2 years, 263 at 5 years and only 21 at 10 years.
 - **n.event:** the revisions *since the previous time shown*, not the running total.
 - **Python** prints the same numbers in one row per time: years, survival, [lower, upper] and the number at risk. It has no n.event.
@@ -641,6 +645,7 @@ check_agree(list(cif_2 = revision_rows$estimate[1], cif_5 = revision_rows$estima
 ```
 
 Reading it:
+
 - **The revision curve** is the cumulative incidence of revision: 5.9% at 2 years (R prints 0.0595, which is 0.05949 before rounding), 12.8% at 5 years and 19.3% at 10 years.
 - **The death curve** ends higher: 24.0% of patients had died without a revision by 10 years (the `death` row at 10 years).
 - **1 − Kaplan-Meier** says 22.0% by 10 years, against a cumulative incidence of 19.3%. That is 22.0 − 19.3 = 2.7 [percentage points](../glossary.qmd#percentage-point){.term} too many, because it pretends the patients who died could still have been revised.
@@ -737,6 +742,7 @@ The cumulative incidence of revision differed between implants (Gray's test: `st
 ::: {.callout-warning}
 ## ⚠️ Watch out: which number answers your question?
 Both [estimates](../glossary.qmd#estimate){.term} are useful, but they answer different questions:
+
 - **1 − Kaplan-Meier** answers "how well does the implant perform while patients are alive?" It's the usual measure for comparing implants, and [registries](../glossary.qmd#registry){.term} report it.
 - **The cumulative incidence** answers "what proportion of patients will actually be revised?" Use it to counsel patients or plan services, especially for older patients.
 
@@ -754,6 +760,7 @@ Say which one you report. Never call 1 − Kaplan-Meier "the proportion of patie
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 km_toy <- summary(toy_km, times = c(1, 3, 5))
+km_7_10 <- summary(km, times = c(7.9, 10))
 approach_6m <- summary(survfit(Surv(followup_years, revised) ~ approach, data = tha, conf.type = "log-log"), times = 0.5)
 one_minus_km <- 1 - summary(km, times = 10)$surv
 gray <- glance(cif_by_implant)
@@ -806,6 +813,10 @@ stopifnot(
   format(signif(gray$p.value_1, 3), scientific = FALSE) == "0.000000142", gray$df_2 == 2,
   round(procedure_logrank$chisq, 4) == 0.0062, sum(old$event_status == 0) == 46, 46 + 13 + 41 == 100,
   round(16.5 / 13.9, 1) == 1.2,
+  # numbers added with the content review of 20.11.2026
+  max(cohort$followup_years[cohort$revised == 1]) == 7.9, km_7_10$n.risk == c(92, 21),
+  km_7_10$surv[1] == km_7_10$surv[2], km_7_10$lower[1] == km_7_10$lower[2],
+  km_7_10$upper[1] == km_7_10$upper[2],
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

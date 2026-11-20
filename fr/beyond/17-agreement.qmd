@@ -26,7 +26,8 @@ Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants u
 ## Fiabilité ou concordance ? {#reliability-vs-agreement}
 
 On emploie souvent ces deux mots comme s'ils voulaient dire la même chose. Ce n'est pas le cas :
-- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), un nombre de 0 à 1. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une [cohorte](../glossary.qmd#cohort){.term} où les déformations sont plus variées.
+
+- **La fiabilité** demande si une mesure permet de distinguer les patients les uns des autres : les vraies différences entre les genoux sont-elles grandes par rapport au désaccord entre les lectures ? On la mesure avec le **coefficient de corrélation intraclasse** (CCI), en général un nombre entre 0 et 1. Une estimation ou une borne de l'IC peut passer sous 0, comme dans l'[exercice 3](#exercises) ; une valeur sous 0 signifie une absence de fiabilité. Comme il compare le désaccord à l'étendue des différences entre les genoux, les mêmes évaluateurs paraissent plus fiables dans une [cohorte](../glossary.qmd#cohort){.term} où les déformations sont plus variées.
 - **La concordance** demande à quel point deux lectures sont proches, dans l'unité propre de la mesure. Si l'évaluateur 2 mesure chaque genou 3° de plus que l'évaluateur 1, la concordance est mauvaise, même si les deux évaluateurs classent les genoux exactement dans le même ordre. On la mesure avec les **[limites de concordance de Bland-Altman](../glossary.qmd#bland-altman){.term}**, en degrés.
 
 Rapportez les deux. Un chirurgien qui planifie une ostéotomie doit connaître la concordance en degrés, pas seulement savoir que le [CCI](../glossary.qmd#icc){.term} valait 0.9.
@@ -73,10 +74,13 @@ Les données sont en [format long](../glossary.qmd#long-format){.term} : une li
 
 ## Le coefficient de corrélation intraclasse {#icc}
 
-Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le définissent (Koo & Li, 2016) :
-- **Le modèle :** les évaluateurs sont-ils un échantillon aléatoire de ceux qui pourraient utiliser cette mesure (**à deux facteurs, à effets aléatoires**, *two-way random*), ou les seuls évaluateurs qui vous intéressent (**à effets mixtes**, *two-way mixed*) ? Pour une mesure que d'autres chirurgiens utiliseront, choisissez le modèle aléatoire.
-- **Le type :** un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
-- **L'unité :** l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
+Il existe plusieurs CCI, et le bon dépend du plan d'étude. Trois choix le définissent, que Koo & Li (2016) appellent modèle (*Model*), type (*Type*) et définition (*Definition*). `irr::icc()` nomme ses arguments autrement, d'où les parenthèses :
+
+- **Le modèle** (`model = "twoway"` pour les deux) : les évaluateurs sont-ils un échantillon aléatoire de ceux qui pourraient utiliser cette mesure (**à deux facteurs, à effets aléatoires**, *two-way random*), ou les seuls évaluateurs qui vous intéressent (**à effets mixtes**, *two-way mixed*) ? Pour une mesure que d'autres chirurgiens utiliseront, choisissez le modèle aléatoire.
+- **Le type** (`unit`) : l'étude utilisera-t-elle la lecture d'un seul évaluateur (**unique**, *single*) ou la moyenne de plusieurs (**moyenne**, *average*) ? En général, unique.
+- **La définition** (`type`) : un évaluateur qui lit toujours plus haut doit-il être pénalisé dans la mesure (**concordance absolue**, *absolute agreement*) ou non (**cohérence**, *consistency*) ? Pour des angles qui guident des décisions cliniques, il le doit : choisissez la concordance absolue.
+
+Koo et Li décrivent aussi un modèle **à un facteur, à effets aléatoires** (*one-way random*), dans lequel seuls les genoux sont des effets aléatoires (`model = "oneway"`) ; la ligne `ICC(1,1)` de pingouin est ce CCI.
 
 En termes simples, le CCI répartit la [dispersion](../glossary.qmd#spread){.term} de toutes les lectures en trois parts : les vraies différences entre les genoux, une différence systématique entre les évaluateurs, et ce qui reste, l'[erreur de mesure](../glossary.qmd#measurement-error){.term}. Chaque part est une [variance](../glossary.qmd#variance){.term}. Le CCI de concordance absolue est la part des genoux dans le total des trois ; le CCI de cohérence laisse de côté la différence entre les évaluateurs. Un encadré sous la sortie ci-dessous calcule les deux à la main.
 
@@ -171,7 +175,8 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
        "agreement": float(parts["knees"] / parts.sum()),
        "software": float(inter_icc.set_index("Type").loc["ICC(A,1)", "ICC"]),
        "consistency": float(parts["knees"] / (parts["knees"] + parts["error"])),
-       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"])}
+       "software_consistency": float(inter_icc.set_index("Type").loc["ICC(C,1)", "ICC"]),
+       "oneway": float(inter_icc.set_index("Type").loc["ICC(1,1)", "ICC"])}
 ```
 
 ```{r}
@@ -179,13 +184,14 @@ chk = {"knees": float(parts["knees"]), "raters": float(parts["raters"]), "error"
 check_agree(list(knees = parts[["knees"]], raters = parts[["raters"]], error = parts[["error"]],
                  agreement = parts[["knees"]] / sum(parts), software = inter_icc$value,
                  consistency = parts[["knees"]] / (parts[["knees"]] + parts[["error"]]),
-                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value),
+                 software_consistency = irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")$value,
+                 oneway = irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")$value),
             reticulate::py$chk)
 ```
 
 ::: {.callout-warning}
 ## ⚠️ Attention : toujours dire de quel CCI il s'agit
-Les mêmes données donnent un CCI différent pour chaque modèle, type et unité : ici 0.889 pour la concordance absolue et 0.896 pour la cohérence (ligne `ICC(C,1)` de Python), et 0.94 pour la moyenne des deux évaluateurs (ligne `ICC(A,k)` de Python). Dans R, exécutez de nouveau `irr::icc()` avec `type = "consistency"` ou `unit = "average"`. « CCI = 0.94 » sans que la forme soit nommée ne peut pas s'interpréter. Écrivez la forme en toutes lettres dans les Méthodes.
+Les mêmes données donnent un CCI différent pour chaque définition et chaque type, et pour un modèle à un facteur : ici 0.889 pour la concordance absolue et 0.896 pour la cohérence (ligne `ICC(C,1)` de Python), 0.94 pour la moyenne des deux évaluateurs (ligne `ICC(A,k)` de Python) et, pour le modèle à un facteur, une différence seulement à la quatrième décimale (ligne `ICC(1,1)` de Python, 0.888950, contre 0.889383 dans la ligne `ICC(A,1)`). Les modèles à deux facteurs à effets aléatoires et à effets mixtes donnent le même nombre ; ils diffèrent par les évaluateurs auxquels le résultat s'applique. Dans R, exécutez de nouveau `irr::icc()` avec `type = "consistency"`, `unit = "average"` ou `model = "oneway"`. « CCI = 0.94 » sans que la forme soit nommée ne peut pas s'interpréter. Écrivez la forme en toutes lettres dans les Méthodes.
 :::
 
 ::: {.callout-tip}
@@ -237,6 +243,7 @@ L'évaluateur 1 concorde un peu mieux avec lui-même qu'avec l'évaluateur 2 : 
 ## Bland-Altman : quel écart entre les lectures ? {#bland-altman}
 
 Le [CCI](../glossary.qmd#icc){.term} est un rapport et n'a pas d'unité. Pour voir à quelle distance peuvent se trouver deux lectures, en degrés, tracez la **différence** entre elles en fonction de leur **moyenne**, un point par genou. Ajoutez ensuite trois lignes :
+
 - **Le biais :** la différence [moyenne](../glossary.qmd#mean){.term}, qui montre si un évaluateur mesure systématiquement des angles plus grands.
 - **Les limites de concordance à 95 % :** biais ± 1.96 × [écart-type](../glossary.qmd#standard-deviation){.term} (ET) des différences. Pour 95 % des genoux, la différence entre la lecture de l'évaluateur 2 et celle de l'évaluateur 1 se situera entre ces limites.
 
@@ -484,6 +491,7 @@ Les poids dépendent de l'ordre des catégories. Placez-les vous-même dans leur
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
 inter_c <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "consistency", unit = "single")
 inter_k <- irr::icc(inter_hka[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "average")
+inter_1 <- irr::icc(inter_hka[, c("R1", "R2")], model = "oneway", unit = "single")
 irr_weighted <- irr::kappa2(data.frame(hka_group(cpak$R1), hka_group(cpak$R2)), weight = "equal")
 mpta <- readings |> filter(session == 1) |> select(knee_id, rater, mpta_deg) |> pivot_wider(names_from = rater, values_from = mpta_deg)
 mpta_icc <- irr::icc(mpta[, c("R1", "R2")], model = "twoway", type = "agreement", unit = "single")
@@ -520,6 +528,10 @@ stopifnot(
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
   diag(hka_table) == c(16, 23, 9), 16 + 23 + 9 == 48,
   round(mpta_icc$value, 4) == 0.9348, format(round(mean(retest), 3), nsmall = 3) == "-0.265",
+  # numbers added with the content review of 20.11.2026
+  round(inter_1$value, 6) == 0.888950, round(inter_icc$value, 6) == 0.889383,
+  round(inter_1$value, 3) == round(inter_icc$value, 3), round(inter_1$value, 4) != round(inter_icc$value, 4),
+  shifted_icc$lbound < 0,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(mpta_icc$value, 2) == 0.93, round(c(mpta_icc$lbound, mpta_icc$ubound), 2) == c(0.89, 0.96),
   round(c(mean(retest), t.test(retest)$conf.int), 2) == c(-0.26, -0.65, 0.12),
