@@ -116,3 +116,13 @@ def test_stylesheet_shows_only_the_footer_in_the_language_of_the_page():
     assert shown + " { display: inline; }" in css
     # The hiding rule has to come first: the two have different weights, but the order keeps that plain.
     assert css.index(".nav-footer span[lang] { display: none; }") < css.index(shown)
+
+
+def test_decision_table_columns_cannot_collapse():
+    # U2: with no minimum width the last column shrank to 31 pixels at a window 488 pixels wide.
+    css = " ".join((ROOT / "styles.css").read_text(encoding="utf-8").split())
+    every_cell = re.search(r"\.decision-table td,\s*\.decision-table th\s*\{([^}]*)\}", css)
+    assert every_cell, "no rule for every td and th of .decision-table"
+    assert "min-width: 8.5rem;" in every_cell.group(1)
+    first_column = re.search(r"\.decision-table td:first-child,\s*\.decision-table th:first-child\s*\{([^}]*)\}", css)
+    assert first_column and "min-width: 11rem;" in first_column.group(1)
