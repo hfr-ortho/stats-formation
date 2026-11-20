@@ -418,6 +418,58 @@ def test_bootstrap_cis_are_seeded():
     assert offenders == [], "Call set.seed() before (or pass ci = NULL to) a bootstrap CI in: " + ", ".join(offenders)
 
 
+# ---- effect sizes that can't be negative get two-sided CIs -----------------
+# effectsize's default for these is a one-sided CI (upper limit fixed at 1), which
+# isn't comparable with the other 95% CIs on the site (review A6, decision D1).
+
+NONNEGATIVE_EFFECT_SIZE = re.compile(
+    r"\b(omega_squared|eta_squared|cramers_v|phi|pearsons_c|rank_epsilon_squared|kendalls_w)\(")
+
+
+def call_arguments(code, start):
+    """The text between the opening parenthesis at code[start] and its matching close."""
+    depth = 0
+    for i in range(start, len(code)):
+        depth += {"(": 1, ")": -1}.get(code[i], 0)
+        if depth == 0:
+            return code[start + 1:i]
+    return code[start + 1:]
+
+
+def one_sided_effect_size_cis(text):
+    """Calls that print an effectsize CI without alternative = "two.sided", or a bootstrap CI
+    without iterations = 2000, in any R chunk."""
+    found = []
+    for code in R_CHUNK.findall(text):
+        code = "\n".join(line.split("#", 1)[0] for line in code.splitlines())   # comments don't count
+        for match in NONNEGATIVE_EFFECT_SIZE.finditer(code):
+            args = call_arguments(code, match.end() - 1)
+            if "ci = NULL" in args:
+                continue
+            if 'alternative = "two.sided"' not in args or (
+                    match.group(1) in ("rank_epsilon_squared", "kendalls_w") and "iterations = 2000" not in args):
+                found.append(f"{match.group(1)}({args})")
+    return found
+
+
+def test_rule_catches_a_one_sided_effect_size_ci():
+    assert one_sided_effect_size_cis("```{r}\neffectsize::omega_squared(fit, partial = FALSE)\n```")
+    assert one_sided_effect_size_cis("```{r}\nx <- effectsize::eta_squared(aov(y ~ g, data = d),\n  partial = TRUE)\n```")
+    assert one_sided_effect_size_cis('```{r}\neffectsize::kendalls_w(y ~ v | id, data = d, alternative = "two.sided")\n```')
+    assert one_sided_effect_size_cis('```{r}\neffectsize::phi(tab)   # alternative = "two.sided"\n```')
+    assert not one_sided_effect_size_cis('```{r}\neffectsize::cramers_v(tab, adjust = FALSE, alternative = "two.sided")\n```')
+    assert not one_sided_effect_size_cis(
+        '```{r}\neffectsize::rank_epsilon_squared(y ~ g, data = d, alternative = "two.sided", iterations = 2000)\n```')
+    assert not one_sided_effect_size_cis("```{r}\neffectsize::rank_epsilon_squared(y ~ g, data = d, ci = NULL)\n```")
+    assert not one_sided_effect_size_cis("```{r}\n# kendalls_w() warns about ties\nx <- 1\n```")
+
+
+def test_effect_size_cis_are_two_sided():
+    offenders = {str(f.relative_to(ROOT)): calls for f in qmd_files()
+                 if (calls := one_sided_effect_size_cis(f.read_text(encoding="utf-8")))}
+    assert offenders == {}, 'Pass alternative = "two.sided" (and iterations = 2000 to a bootstrap CI): ' + str(offenders)
+
+
 # ---- jitter is random too ----------------------------------------------------
 # geom_jitter() moves each point by a random amount, so an unseeded jitter redraws the
 # figure differently on every render and the frozen figure changes for no reason.

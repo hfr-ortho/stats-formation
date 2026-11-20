@@ -41,7 +41,7 @@ L'[ANOVA à mesures répétées](../glossary.qmd#repeated-measures-anova){.term}
 - Les changements entre les visites sont [à peu près normaux](../glossary.qmd#normal-distribution){.term}, ou les patients sont nombreux.
 - **Sphéricité :** la [dispersion](../glossary.qmd#spread){.term} des changements est semblable pour chaque paire de visites. Le [test de Mauchly](../glossary.qmd#sphericity){.term} la vérifie ; s'il échoue, la correction de **[Greenhouse-Geisser](../glossary.qmd#greenhouse-geisser){.term}** ajuste les [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}. Les deux programmes ci-dessous donnent les deux.
 - Seuls les patients mesurés à **chaque** visite sont inclus (voir l'avertissement ci-dessus).
-- Si le [critère](../glossary.qmd#outcome){.term} est [asymétrique](../glossary.qmd#skewed){.term}, [borné](../glossary.qmd#bounded-scale){.term} ou [ordinal](../glossary.qmd#ordinal){.term} → le [test de Friedman](#friedman).
+- Si le [critère](../glossary.qmd#outcome){.term} est [asymétrique](../glossary.qmd#skewed){.term}, s'accumule au [plancher ou au plafond](../glossary.qmd#ceiling-effect){.term} ou est [ordinal](../glossary.qmd#ordinal){.term} → le [test de Friedman](#friedman).
 
 La fonction physique PROMIS est un [score T](../glossary.qmd#t-score){.term} : 50 est la moyenne de la population générale des États-Unis. La version à quatre questions de PROMIS-29+2 va de 22.5 à 57.0, et 57.0 est le meilleur score qu'elle puisse enregistrer.
 
@@ -150,7 +150,7 @@ chk = {"f": float(row["F"]), "df_effect": float(row["DF"]), "df_error": float(pf
 #| include: false
 pf_aov <- summary(aov(promis_pf ~ visit + Error(case_id / visit), data = pf))[["Error: case_id:visit"]][[1]]
 pf_pes <- effectsize::eta_squared(aov(promis_pf ~ visit + Error(case_id / visit), data = pf),
-                                   partial = TRUE, verbose = FALSE)
+                                   partial = TRUE, verbose = FALSE, alternative = "two.sided")
 check_agree(list(f = pf_aov["visit", "F value"], df_effect = pf_aov["visit", "Df"],
                  df_error = pf_aov["Residuals", "Df"], pes = pf_pes$Eta2_partial), reticulate::py$chk[c("f", "df_effect", "df_error", "pes")])
 check_agree(list(gg_eps = pf_anova$`Sphericity Corrections`$GGe, mauchly_w = pf_anova$`Mauchly's Test for Sphericity`$W,
@@ -226,7 +226,7 @@ Un intervalle de confiance (IC) accompagne la taille d'effet. L'**êta carré pa
 
 ```{r}
 pf_model <- aov(promis_pf ~ visit + Error(case_id / visit), data = pf)   # la même ANOVA en R de base
-effectsize::eta_squared(pf_model, partial = TRUE)                         # avec un IC à 95 %
+effectsize::eta_squared(pf_model, partial = TRUE, alternative = "two.sided")   # avec un IC à 95 %
 ```
 
 ## Python
@@ -236,13 +236,13 @@ print(pf_anova.loc[0, "np2"])    # pingouin n'en calcule pas l'IC
 ```
 :::
 
-η²~p~ = 0.50 : un effet très grand. Les visites expliquent environ la moitié de la variation des scores de chaque patient au cours de l'année. R affiche aussi un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % [unilatéral](../glossary.qmd#two-sided){.term}, de 0.47 à 1.00 : η²~p~ ne peut pas être négatif, donc R ne donne qu'une borne inférieure et fixe la borne supérieure à 1.00. pingouin ne calcule pas d'IC. Les titres des sorties de R mentionnent « type III » et « Type I » : ce sont des façons de répartir la variation quand un [modèle](../glossary.qmd#model){.term} a plusieurs [prédicteurs](../glossary.qmd#predictor){.term} ; avec un seul prédicteur, elles donnent le même résultat.
+η²~p~ = 0.50 : un effet très grand. Les visites expliquent environ la moitié de la variation des scores de chaque patient au cours de l'année. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.46 à 0.54. Par défaut, effectsize donne pour η²~p~ un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test F unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. pingouin ne calcule pas d'IC. Les titres des sorties de R mentionnent « type III » et « Type I » : ce sont des façons de répartir la variation quand un [modèle](../glossary.qmd#model){.term} a plusieurs [prédicteurs](../glossary.qmd#predictor){.term} ; avec un seul prédicteur, elles donnent le même résultat.
 
 ### Rédiger les résultats
 
 > **Methods:** PROMIS-29+2 physical function T-scores across the four visits were compared with one-way repeated-measures ANOVA in patients with all four measurements. Sphericity was assessed with Mauchly's test, with the Greenhouse-Geisser correction planned if it was violated. Partial eta squared (η²~p~) is reported as the effect size.
 >
-> **Results:** Of 574 procedures with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, one-sided 95% CI 0.47 to 1.00; Mauchly's test of sphericity p = 0.903).
+> **Results:** Of 574 procedures with a pre-op PROMIS physical function score, 328 had all four measurements. Their mean T-score was 36.1 (SD 5.4) before surgery, 39.4 (SD 5.5) at 6 weeks, 44.9 (SD 5.5) at 3 months and 48.2 (SD 5.6) at 1 year (F(3, 981) = 326.1, p < 0.001; η²~p~ = 0.50, 95% CI 0.46 to 0.54; Mauchly's test of sphericity p = 0.903).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un F significatif ne dit pas quelles visites diffèrent
@@ -442,7 +442,7 @@ Le **W de Kendall** mesure à quel point les scores des patients classent les vi
 #| warning: false
 # kendalls_w() avertit quand un patient a le même score à deux visites ; la correction des ex æquo en tient déjà compte
 set.seed(2026)   # son IC vient d'un bootstrap (rééchantillonnage aléatoire) ; une graine le rend reproductible
-effectsize::kendalls_w(efas ~ visit | patient_id, data = efas_boot)
+effectsize::kendalls_w(efas ~ visit | patient_id, data = efas_boot, alternative = "two.sided", iterations = 2000)
 by_patient <- efas_boot |> pivot_wider(names_from = visit, values_from = efas)   # une ligne par patient, une colonne par visite
 sum(by_patient$`3mo` > by_patient$`6wk`)      # patients avec un score plus élevé à 3 mois qu'à 6 semaines
 sum(by_patient$`12mo` > by_patient$`3mo`)     # ... et plus élevé à 12 mois qu'à 3 mois
@@ -466,17 +466,17 @@ chk = {"w": float(efas_test["W"].iloc[0])}
 ```{r}
 #| include: false
 set.seed(2026)
-efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, data = efas_boot))
+efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, data = efas_boot, alternative = "two.sided", iterations = 2000))
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % [unilatéral](../glossary.qmd#two-sided){.term}, de 0.78 à 1.00 : W ne peut pas être négatif, donc R ne donne qu'une borne inférieure. L'IC vient d'un [bootstrap](../glossary.qmd#bootstrap){.term}, ce qui explique la graine dans le code ; pingouin n'en calcule pas.
+W = 0.85 : un grand effet. 45 des 50 patients avaient un score plus élevé à 3 mois qu'à 6 semaines, et 42 un score plus élevé à 12 mois qu'à 3 mois. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.75 à 0.94. Par défaut, effectsize donne pour W un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test de Friedman unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. L'IC vient d'un [bootstrap](../glossary.qmd#bootstrap){.term} de 2,000 rééchantillonnages (`iterations = 2000` ; la valeur par défaut est 200), ce qui explique la graine dans le code ; pingouin n'en calcule pas.
 
 ### Rédiger les résultats
 
 > **Methods:** Because EFAS scores crowd toward the ceiling of the scale, scores at 6 weeks, 3 months and 12 months in the boot arm were compared with the Friedman test in patients with all three measurements, with Kendall's W as the effect size.
 >
-> **Results:** Among 50 of the 60 patients randomized to a boot, those with all three measurements, the median EFAS score was 12.5 (IQR 11 to 14) at 6 weeks, 17 (IQR 16 to 20) at 3 months and 20 (IQR 19 to 22) at 12 months (Friedman χ² = 84.9, df = 2, p < 0.001; Kendall's W = 0.85, one-sided 95% CI 0.78 to 1.00).
+> **Results:** Among 50 of the 60 patients randomized to a boot, those with all three measurements, the median EFAS score was 12.5 (IQR 11 to 14) at 6 weeks, 17 (IQR 16 to 20) at 3 months and 20 (IQR 19 to 22) at 12 months (Friedman χ² = 84.9, df = 2, p < 0.001; Kendall's W = 0.85, 95% CI 0.75 to 0.94).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : le test de Friedman ignore l'ampleur des changements
@@ -899,13 +899,13 @@ complete_cases <- function(data, value, visits) {   # long data, patients measur
 ex_hips <- complete_cases(filter(proms, instrument == "HOOS JR"), "promis_pf", c("preop", "6wk", "3mo", "1yr"))
 ex_hips_model <- aov(promis_pf ~ visit + Error(case_id / visit), data = ex_hips)
 ex_hips_aov <- summary(ex_hips_model)[["Error: case_id:visit"]][[1]]
-ex_hips_eta <- effectsize::eta_squared(ex_hips_model, partial = TRUE, verbose = FALSE)
+ex_hips_eta <- effectsize::eta_squared(ex_hips_model, partial = TRUE, verbose = FALSE, alternative = "two.sided")
 ex_hips_rstatix <- rstatix::anova_test(data = ex_hips, dv = promis_pf, wid = case_id, within = visit)
 ex_pain <- trial |> filter(arm == "boot", visit %in% c("6wk", "3mo", "12mo")) |> select(patient_id, visit, pain_nrs) |>
   group_by(patient_id) |> filter(all(!is.na(pain_nrs))) |> ungroup() |> mutate(visit = factor(visit, levels = c("6wk", "3mo", "12mo")))
 ex_after <- complete_cases(proms, "walking_aid", c("6wk", "3mo", "1yr"))
 set.seed(2026)
-ex_pain_w <- suppressWarnings(effectsize::kendalls_w(pain_nrs ~ visit | patient_id, data = ex_pain))   # as in exercise 2's solution
+ex_pain_w <- suppressWarnings(effectsize::kendalls_w(pain_nrs ~ visit | patient_id, data = ex_pain, alternative = "two.sided", iterations = 2000))   # as in exercise 2's solution
 stopifnot(
   sum(table(distinct(proms, case_id, patient_id)$patient_id) == 2) == 80,
   sum(proms$visit == "preop" & !is.na(proms$promis_pf)) == 574, n_distinct(pf$case_id) == 328,
@@ -916,7 +916,7 @@ stopifnot(
   pf_anova$`Mauchly's Test for Sphericity`$W == 0.995, pf_anova$`Mauchly's Test for Sphericity`$p == 0.903,
   pf_anova$`Sphericity Corrections`$GGe == 0.997, pf_anova$`Sphericity Corrections`$`p[GG]` < 0.001,
   pf_anova$ANOVA$pes == 0.499, pf_anova$ANOVA$ges == 0.417,
-  round(pf_pes$Eta2_partial, 2) == 0.50, round(pf_pes$CI_low, 2) == 0.47,
+  round(pf_pes$Eta2_partial, 2) == 0.50, round(pf_pes$CI_low, 2) == 0.46, round(pf_pes$CI_high, 2) == 0.54,
   sum(pf$promis_pf[pf$visit == "1yr"] == 57) == 28,
   min(proms$promis_pf, na.rm = TRUE) == 22.5, max(proms$promis_pf, na.rm = TRUE) == 57,
   n_distinct(efas_boot$patient_id) == 50, n_distinct(filter(trial, arm == "boot")$patient_id) == 60,
@@ -924,7 +924,8 @@ stopifnot(
   round(efas_quartiles$q1, 1) == c(11, 16, 19), round(efas_quartiles$q3, 1) == c(14, 20, 22),
   sum(efas_boot$efas[efas_boot$visit == "12mo"] == 24) == 6,
   round(unname(efas_test$statistic), 1) == 84.9, unname(efas_test$parameter) == 2, efas_test$p.value < 0.001,
-  round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.78,
+  round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.75, round(efas_w$CI_high, 2) == 0.94,
+  formals(effectsize::kendalls_w)$iterations == 200,   # the default the text names; the page asks for 2,000
   n_distinct(aid$case_id) == 328, aid_by_visit$procedures == c(328, 328, 328, 328),
   round(aid_percent, 1) == c(34.8, 59.1, 24.4, 10.4),
   round(100 * aid_ci[1, ], 1) == c(29.8, 53.8, 20.1, 7.5), round(100 * aid_ci[2, ], 1) == c(40.1, 64.3, 29.3, 14.1),
@@ -941,12 +942,12 @@ stopifnot(
   # the by-hand boxes, and the numbers added with them
   round(c(ss_visits, ss_cases, ss_left)) == c(28578, 11327, 28655), round(ss_visits / 3) == 9526, round(ss_left / 981, 2) == 29.21,
   isTRUE(all.equal((ss_visits / 3) / (ss_left / 981), pf_aov["visit", "F value"])),
-  round(ss_visits / (ss_visits + ss_left), 3) == 0.499, round(28578 / (28578 + 28655), 3) == 0.499, pf_pes$CI_high == 1,
+  round(ss_visits / (ss_visits + ss_left), 3) == 0.499, round(28578 / (28578 + 28655), 3) == 0.499,
   round(mean_ranks, 2) == c(1.08, 2.04, 2.88), round(q_no_ties, 2) == 81.12, round(tie_correction, 3) == 0.955, sum(tied > 0) == 9,
   isTRUE(all.equal(q_no_ties / tie_correction, unname(efas_test$statistic))), round(unname(efas_test$statistic), 2) == 84.94,
   round(84.94 / (50 * 2), 2) == 0.85,
   efas_scores[2, ] == c(13, 13, 19), efas_ranks[2, ] == c(1.5, 1.5, 3), efas_ranks[3, ] == c(1, 2.5, 2.5),
-  sum(by_patient$`3mo` > by_patient$`6wk`) == 45, sum(by_patient$`12mo` > by_patient$`3mo`) == 42, efas_w$CI_high == 1,
+  sum(by_patient$`3mo` > by_patient$`6wk`) == 45, sum(by_patient$`12mo` > by_patient$`3mo`) == 42,
   abs(reticulate::py_eval("float(efas_test['p_unc'].iloc[0])") / 3.589140e-19 - 1) < 1e-6,
   abs(reticulate::py_eval("float(aid_test['p_unc'].iloc[0])") / 3.008880e-40 - 1) < 1e-6,
   aid_by_visit$using == c(114, 194, 80, 34), 194 - 114 == 80, 114 - 34 == 80, round(100 * 80 / 328, 1) == 24.4,
@@ -967,13 +968,13 @@ stopifnot(
   round(tapply(ex_hips$promis_pf, ex_hips$visit, mean), 1) == c(36.8, 38.7, 45.5, 47.9),
   round(tapply(ex_hips$promis_pf, ex_hips$visit, sd), 1) == c(5.8, 5.3, 5.2, 5.8),
   round(ex_hips_aov["visit", "F value"], 1) == 128.4, ex_hips_aov["visit", "Df"] == 3, ex_hips_aov["Residuals", "Df"] == 405,
-  ex_hips_aov["visit", "Pr(>F)"] < 0.001, round(ex_hips_eta$Eta2_partial, 2) == 0.49, round(ex_hips_eta$CI_low, 2) == 0.43,
+  ex_hips_aov["visit", "Pr(>F)"] < 0.001, round(ex_hips_eta$Eta2_partial, 2) == 0.49, round(ex_hips_eta$CI_low, 2) == 0.42, round(ex_hips_eta$CI_high, 2) == 0.54,
   ex_hips_rstatix$`Mauchly's Test for Sphericity`$p == 0.247,
   n_distinct(ex_pain$patient_id) == 50, round(tapply(ex_pain$pain_nrs, ex_pain$visit, median), 1) == c(3.5, 2, 1),
   round(tapply(ex_pain$pain_nrs, ex_pain$visit, quantile, 0.25), 1) == c(3, 1, 0),
   round(tapply(ex_pain$pain_nrs, ex_pain$visit, quantile, 0.75), 1) == c(4, 3, 2),
   round(unname(friedman.test(pain_nrs ~ visit | patient_id, data = ex_pain)$statistic), 1) == 53.9,
-  round(ex_pain_w$Kendalls_W, 2) == 0.54, round(ex_pain_w$CI_low, 2) == 0.42,
+  round(ex_pain_w$Kendalls_W, 2) == 0.54, round(ex_pain_w$CI_low, 2) == 0.38, round(ex_pain_w$CI_high, 2) == 0.70,
   n_distinct(ex_after$case_id) == 345, tapply(ex_after$walking_aid, ex_after$visit, sum) == c(203, 87, 37),
   round(100 * tapply(ex_after$walking_aid, ex_after$visit, mean), 1) == c(58.8, 25.2, 10.7),
   round(100 * sapply(c(203, 87, 37), function(k) prop.test(k, 345, correct = FALSE)$conf.int), 1) == c(53.6, 63.9, 20.9, 30.1, 7.9, 14.4),
@@ -1004,7 +1005,7 @@ pf_hips <- proms |>
 
 n_distinct(pf_hips$case_id)
 rstatix::anova_test(data = pf_hips, dv = promis_pf, wid = case_id, within = visit, effect.size = "pes")
-effectsize::eta_squared(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_hips), partial = TRUE, verbose = FALSE)
+effectsize::eta_squared(aov(promis_pf ~ visit + Error(case_id / visit), data = pf_hips), partial = TRUE, verbose = FALSE, alternative = "two.sided")
 pf_hips |> group_by(visit) |> summarise(mean = mean(promis_pf), sd = sd(promis_pf))
 ```
 
@@ -1019,7 +1020,7 @@ print(pf_hips.groupby("visit")["promis_pf"].agg(["mean", "std"]).loc[["preop", "
 ```
 :::
 
-> **Results:** Among 136 hip replacements with all four measurements, mean PROMIS physical function was 36.8 (SD 5.8) before surgery, 38.7 (SD 5.3) at 6 weeks, 45.5 (SD 5.2) at 3 months and 47.9 (SD 5.8) at 1 year (F(3, 405) = 128.4, p < 0.001; η²~p~ = 0.49, one-sided 95% CI 0.43 to 1.00; Mauchly's test of sphericity p = 0.247).
+> **Results:** Among 136 hip replacements with all four measurements, mean PROMIS physical function was 36.8 (SD 5.8) before surgery, 38.7 (SD 5.3) at 6 weeks, 45.5 (SD 5.2) at 3 months and 47.9 (SD 5.8) at 1 year (F(3, 405) = 128.4, p < 0.001; η²~p~ = 0.49, 95% CI 0.42 to 0.54; Mauchly's test of sphericity p = 0.247).
 :::
 
 **2.** Un collègue veut savoir si la douleur continue de changer entre 6 semaines, 3 mois et 12 mois avec une orthèse. Quel test utiliseriez-vous, et que trouvez-vous ?
@@ -1044,7 +1045,7 @@ pain_boot <- trial |>
 n_distinct(pain_boot$patient_id)
 friedman.test(pain_nrs ~ visit | patient_id, data = pain_boot)
 set.seed(2026)
-effectsize::kendalls_w(pain_nrs ~ visit | patient_id, data = pain_boot)
+effectsize::kendalls_w(pain_nrs ~ visit | patient_id, data = pain_boot, alternative = "two.sided", iterations = 2000)
 pain_boot |> group_by(visit) |> summarise(median = median(pain_nrs), q1 = quantile(pain_nrs, 0.25), q3 = quantile(pain_nrs, 0.75))
 ```
 
@@ -1059,7 +1060,7 @@ print(pain_boot.groupby("visit")["pain_nrs"].describe()[["25%", "50%", "75%"]].l
 ```
 :::
 
-> **Results:** Among 50 patients in the boot arm with all three scores, median pain was 3.5 (IQR 3 to 4) at 6 weeks, 2 (IQR 1 to 3) at 3 months and 1 (IQR 0 to 2) at 12 months (Friedman χ² = 53.9, df = 2, p < 0.001; Kendall's W = 0.54, one-sided 95% CI 0.42 to 1.00).
+> **Results:** Among 50 patients in the boot arm with all three scores, median pain was 3.5 (IQR 3 to 4) at 6 weeks, 2 (IQR 1 to 3) at 3 months and 1 (IQR 0 to 2) at 12 months (Friedman χ² = 53.9, df = 2, p < 0.001; Kendall's W = 0.54, 95% CI 0.38 to 0.70).
 :::
 
 **3.** Sans la visite préopératoire, l'utilisation d'une aide à la marche change-t-elle entre 6 semaines, 3 mois et 1 an ? Faites le test et rédigez la phrase de Résultats.

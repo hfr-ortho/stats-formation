@@ -35,7 +35,7 @@ Damit der Code kurz bleibt, verwenden die Beispiele zum Gelenkersatz alle Fälle
 - Die [Zielgrösse](../glossary.qmd#outcome){.term} ist ein **[Messwert](../glossary.qmd#continuous-variable){.term}**, der zwischen **drei oder mehr [unabhängigen](../glossary.qmd#independence){.term} Gruppen** verglichen wird.
 - Innerhalb **jeder Gruppe** ist sie [ungefähr normalverteilt](../glossary.qmd#normal-distribution){.term}, oder jede Gruppe ist ausreichend gross und nicht stark [schief](../glossary.qmd#skewed){.term} ([Seite 3](../foundations/03-distributions.qmd#within-groups)).
 - Die Gruppen haben **[ähnliche Streuungen](../glossary.qmd#equal-variances){.term}**: Als Faustregel ist die grösste [Standardabweichung](../glossary.qmd#standard-deviation){.term} (SD) höchstens etwa doppelt so gross wie die kleinste. Ist das nicht der Fall, verwenden Sie die **[Welch-ANOVA](../glossary.qmd#welch-test){.term}** (siehe den Kasten «R oder Python»), besonders bei ungleich grossen Gruppen.
-- Ist die Zielgrösse schief, [begrenzt](../glossary.qmd#bounded-scale){.term} oder [ordinal](../glossary.qmd#ordinal){.term} → verwenden Sie den [Kruskal-Wallis-Test](#kruskal-wallis).
+- Ist die Zielgrösse schief, häuft sie sich am Boden oder an der Decke ([Decken- oder Bodeneffekt](../glossary.qmd#ceiling-effect){.term}) oder ist sie [ordinal](../glossary.qmd#ordinal){.term} → verwenden Sie den [Kruskal-Wallis-Test](#kruskal-wallis).
 
 ### Was der Test wirklich macht
 
@@ -185,7 +185,7 @@ check_agree(list(between_ss = between_ss, within_ss = within_ss, f = between_ms 
 ## R
 
 ```{r}
-effectsize::omega_squared(age_anova, partial = FALSE)   # einfaches (nicht partielles) Omega-Quadrat
+effectsize::omega_squared(age_anova, partial = FALSE, alternative = "two.sided")   # einfaches (nicht partielles) Omega-Quadrat
 ```
 
 ## Python
@@ -206,17 +206,17 @@ chk = {"omega2": float(omega2)}
 
 ```{r}
 #| include: false
-age_omega <- effectsize::omega_squared(age_anova, partial = FALSE)
+age_omega <- effectsize::omega_squared(age_anova, partial = FALSE, alternative = "two.sided")
 check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 ```
 
-ω² = 0.10: Die ASA-Klasse erklärt etwa ein Zehntel der Variation des Alters, ein mittlerer Effekt. R gibt ausserdem ein [einseitiges](../glossary.qmd#two-sided){.term} [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus (0.06 bis 1.00): ω² kann nicht negativ sein, daher ist nur die untere Grenze aussagekräftig. scipy und pingouin berechnen dieses KI nicht. Die ANOVA sagt nicht, *welche* Klassen sich unterscheiden: siehe [Welche Gruppen unterscheiden sich?](#which-groups-differ).
+ω² = 0.10: Die ASA-Klasse erklärt etwa ein Zehntel der Variation des Alters, ein mittlerer Effekt. R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus, 0.06 bis 0.15. Standardmässig gibt effectsize für ω² ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, das dem einseitigen F-Test entspricht; `alternative = "two.sided"` verlangt das übliche Intervall, vergleichbar mit den anderen 95%-KI dieser Website. scipy und pingouin berechnen dieses KI nicht. Die ANOVA sagt nicht, *welche* Klassen sich unterscheiden: siehe [Welche Gruppen unterscheiden sich?](#which-groups-differ).
 
 ### Resultate formulieren
 
 > **Methods:** Age was compared across ASA classes with one-way analysis of variance (ANOVA), with omega squared (ω²) as the effect size.
 >
-> **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, one-sided 95% CI 0.06 to 1.00).
+> **Results:** Mean age was 59.8 years (SD 8.7) in ASA 1 and 73.7 years (SD 9.3) in ASA 4 (one-way ANOVA, F(3, 596) = 23.9, p < 0.001; ω² = 0.10, 95% CI 0.06 to 0.15).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Die ANOVA sagt nicht, welche Gruppen sich unterscheiden
@@ -414,7 +414,7 @@ check_agree(list(h_no_ties = h_no_ties, tie_correction = tie_correction, h = h_n
 
 ```{r}
 set.seed(2026)   # sein KI stammt aus einem Bootstrap (zufälliges Neuziehen); mit einem Seed ist es wiederholbar
-effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied)
+effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied, alternative = "two.sided", iterations = 2000)
 ```
 
 ## Python
@@ -433,17 +433,17 @@ chk = {"epsilon2": float(epsilon2)}
 ```{r}
 #| include: false
 set.seed(2026)
-satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied)
+satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon, data = satisfied, alternative = "two.sided", iterations = 2000)
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H geteilt durch n − 1 ist 0.677 ÷ 501 = 0.00135. R gibt das als `1.35e-03` aus, die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} derselben Zahl: Der Dezimalpunkt rückt 3 Stellen nach links. Die Chirurgin oder der Chirurg erklärt im Wesentlichen nichts von der Variation der Zufriedenheit. Das [einseitige](../glossary.qmd#two-sided){.term} [KI](../glossary.qmd#confidence-interval){.term} von R reicht von 0.00 bis 1.00; es stammt aus einem [Bootstrap](../glossary.qmd#bootstrap){.term}, weshalb der Code einen Seed setzt. scipy hat dafür keine Funktion.
+[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H geteilt durch n − 1 ist 0.677 ÷ 501 = 0.00135. R gibt das als `1.35e-03` aus, die [wissenschaftliche Schreibweise](../glossary.qmd#scientific-notation){.term} derselben Zahl: Der Dezimalpunkt rückt 3 Stellen nach links. Die Chirurgin oder der Chirurg erklärt im Wesentlichen nichts von der Variation der Zufriedenheit. Das [95%-KI](../glossary.qmd#confidence-interval){.term} von R reicht von 0.00 bis 0.02. Standardmässig gibt effectsize für ε² ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, das dem einseitigen Kruskal-Wallis-Test entspricht; `alternative = "two.sided"` verlangt das übliche Intervall, vergleichbar mit den anderen 95%-KI dieser Website. Das KI stammt aus einem [Bootstrap](../glossary.qmd#bootstrap){.term} mit 2,000 Wiederholungen (`iterations = 2000`; der Standardwert ist 200), weshalb der Code einen Seed setzt. scipy hat dafür keine Funktion.
 
 ### Resultate formulieren
 
 > **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) as the effect size.
 >
-> **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year: 192 of 232 for surgeon S1, 177 of 211 for S2 and 133 of 157 for S3. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+> **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year: 192 of 232 for surgeon S1, 177 of 211 for S2 and 133 of 157 for S3. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, 95% CI 0.00 to 0.02).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Fehlende Antworten fehlen nicht zufällig
@@ -597,8 +597,8 @@ check_agree(list(by_hand = sum(chisq_parts), bptb_yes = unname(chisq_parts["BPTB
 ## R
 
 ```{r}
-effectsize::cramers_v(rts_table, adjust = FALSE)   # siehe den Kasten «R oder Python»
-effectsize::cramers_v(rts_table)                   # die Standardeinstellung, mit einer Korrektur: etwas kleiner
+effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sided")   # siehe den Kasten «R oder Python»
+effectsize::cramers_v(rts_table, alternative = "two.sided")                   # die Standardeinstellung, mit einer Korrektur: etwas kleiner
 ```
 
 ## Python
@@ -615,17 +615,17 @@ chk = {"v": float(association(rts_table, method="cramer"))}
 
 ```{r}
 #| include: false
-rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE)
+rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sided")
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, ein Zusammenhang zwischen [klein](../glossary.qmd#cohen-benchmarks){.term} und mittel (die zweite Ausgabe von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python»). R gibt ausserdem ein [einseitiges](../glossary.qmd#two-sided){.term} [95%-KI](../glossary.qmd#confidence-interval){.term} aus, 0.16 bis 1.00; scipy berechnet keines. Bei Ja/Nein-Zielgrössen ist die Rate in jeder Gruppe (mit ihrem KI, wie auf [Seite 4](04-describe-one-group.qmd#proportion)) meist aussagekräftiger als V. Und bedenken Sie, was der Test nicht sagt: welche Transplantate sich unterscheiden (siehe unten [Welche Gruppen unterscheiden sich?](#which-groups-differ)) und warum. Die Transplantate wurden nicht zufällig zugeteilt, ein Unterschied kann also von den Patientinnen und Patienten statt vom Transplantat kommen; [Seite 12](12-predict-from-several.qmd#multiple-logistic-regression) zeigt, wie Sie für andere Faktoren [adjustieren](../glossary.qmd#adjustment){.term}.
+V = 0.25, ein Zusammenhang zwischen [klein](../glossary.qmd#cohen-benchmarks){.term} und mittel (die zweite Ausgabe von R, mit dem Titel `Cramer's V (adj.)`, erklärt der Kasten «R oder Python»). R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} aus, 0.14 bis 0.35. Standardmässig gibt effectsize für V ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, das dem einseitigen Chi-Quadrat-Test entspricht; `alternative = "two.sided"` verlangt das übliche Intervall, vergleichbar mit den anderen 95%-KI dieser Website. scipy berechnet keines. Bei Ja/Nein-Zielgrössen ist die Rate in jeder Gruppe (mit ihrem KI, wie auf [Seite 4](04-describe-one-group.qmd#proportion)) meist aussagekräftiger als V. Und bedenken Sie, was der Test nicht sagt: welche Transplantate sich unterscheiden (siehe unten [Welche Gruppen unterscheiden sich?](#which-groups-differ)) und warum. Die Transplantate wurden nicht zufällig zugeteilt, ein Unterschied kann also von den Patientinnen und Patienten statt vom Transplantat kommen; [Seite 12](12-predict-from-several.qmd#multiple-logistic-regression) zeigt, wie Sie für andere Faktoren [adjustieren](../glossary.qmd#adjustment){.term}.
 
 ### Resultate formulieren
 
 > **Methods:** Return to sport at 12 months was compared across graft types with the chi-square test, with Cramér's V as the effect size.
 >
-> **Results:** Return to sport at 12 months followed 84 of 129 BPTB reconstructions (65.1%), 67 of 154 hamstring reconstructions (43.5%) and 22 of 67 quadriceps reconstructions (32.8%) (χ² = 22.24, df = 2, p < 0.001; Cramér's V = 0.25, one-sided 95% CI 0.16 to 1.00).
+> **Results:** Return to sport at 12 months followed 84 of 129 BPTB reconstructions (65.1%), 67 of 154 hamstring reconstructions (43.5%) and 22 of 67 quadriceps reconstructions (32.8%) (χ² = 22.24, df = 2, p < 0.001; Cramér's V = 0.25, 95% CI 0.14 to 0.35).
 
 ::: {.callout-warning}
 ## ⚠️ Achtung: Hier gibt es keine Yates-Korrektur, und prüfen Sie die erwarteten Häufigkeiten
@@ -887,7 +887,7 @@ ex_failure <- table(factor(acl$graft, levels = c("BPTB", "hamstring", "quadricep
                     factor(acl$failure_2y, levels = c(1, 0), labels = c("yes", "no")))
 ex_expected <- suppressWarnings(chisq.test(ex_failure))$expected
 set.seed(2026)
-los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)   # as in exercise 2's solution
+los_eps <- effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, alternative = "two.sided", iterations = 2000)   # as in exercise 2's solution
 sat_quartiles <- satisfied |> group_by(surgeon) |>
   summarise(median = median(satisfaction_1yr), q1 = quantile(satisfaction_1yr, 0.25), q3 = quantile(satisfaction_1yr, 0.75))
 answered_by <- cohort |> group_by(surgeon) |> summarise(procedures = n(), answered = sum(!is.na(satisfaction_1yr)))
@@ -901,7 +901,7 @@ stopifnot(
   age_table[1, "Df"] == 3, round(age_table[1, "Sum Sq"]) == 5727, age_table[2, "Df"] == 596,
   round(age_table[1, "F value"], 1) == 23.9, age_table[1, "Pr(>F)"] < 0.001,
   signif(age_table[1, "Pr(>F)"], 3) == 1.28e-14,
-  round(age_omega$Omega2, 2) == 0.10, round(age_omega$CI_low, 2) == 0.06,
+  round(age_omega$Omega2, 2) == 0.10, round(age_omega$CI_low, 2) == 0.06, round(age_omega$CI_high, 2) == 0.15,
   round(unname(welch$statistic), 1) == 23.5, welch$p.value < 0.001,
   satisfied_n == 502, sum(is.na(cohort$satisfaction_1yr)) == 98,
   round(unname(satisfaction_test$statistic), 2) == 0.68, unname(satisfaction_test$parameter) == 2,
@@ -912,13 +912,14 @@ stopifnot(
   round(100 * prop.table(rts_table, 1)[, "yes"], 1) == c(65.1, 43.5, 32.8),
   round(min(rts_test$expected), 1) == 33.1,
   round(unname(rts_test$statistic), 2) == 22.24, unname(rts_test$parameter) == 2, rts_test$p.value < 0.001,
-  round(rts_v$Cramers_v, 2) == 0.25, round(rts_v$CI_low, 2) == 0.16, rts_v$CI_high == 1,
-  round(effectsize::cramers_v(rts_table)$Cramers_v, 2) == 0.24,
+  round(rts_v$Cramers_v, 2) == 0.25, round(rts_v$CI_low, 2) == 0.14, round(rts_v$CI_high, 2) == 0.35,
+  round(effectsize::cramers_v(rts_table, alternative = "two.sided")$Cramers_v, 2) == 0.24,
   round(implant_hr[, "exp(coef)"], 2) == c(0.82, 3.07),
   round(implant_hr["implantB", c("lower .95", "upper .95")], 2) == c(0.45, 1.50),
   round(implant_hr["implantC", c("lower .95", "upper .95")], 2) == c(1.85, 5.09),
   round(summary(implant_cox)$coefficients[, "Pr(>|z|)"], 3)[1] == 0.514, round(implant_logrank$chisq, 1) == 33.5,
-  round(satisfaction_eps$CI_low, 2) == 0,
+  round(satisfaction_eps$CI_low, 2) == 0, round(satisfaction_eps$CI_high, 2) == 0.02,
+  formals(effectsize::rank_epsilon_squared)$iterations == 200,   # the default the text names; the page asks for 2,000
   summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
   round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
   round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,
@@ -960,13 +961,14 @@ stopifnot(
   observed[["C"]] / expected[["C"]] > 2,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][1, "F value"], 1) == 31.1,
-  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE)$Omega2, 2) == 0.13,
+  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$Omega2, 2) == 0.13,
   round(tapply(cohort$bmi, cohort$asa, mean)[c(1, 4)], 1) == c(26.3, 36.2), round(tapply(cohort$bmi, cohort$asa, sd)[c(1, 4)], 1) == c(4.9, 3.3),
   summary(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))))[[1]][, "Df"] == c(3, 596),
-  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE)$CI_low, 2) == 0.09,
+  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$CI_low, 2) == 0.08,
+  round(effectsize::omega_squared(aov(bmi ~ asa, data = mutate(cohort, asa = factor(asa))), partial = FALSE, alternative = "two.sided")$CI_high, 2) == 0.18,
   round(kruskal.test(los_days ~ surgeon, data = cohort)$p.value, 3) == 0.694,
   round(unname(kruskal.test(los_days ~ surgeon, data = cohort)$statistic), 2) == 0.73,
-  round(los_eps$CI_low, 2) == 0,
+  round(los_eps$CI_low, 2) == 0, round(los_eps$CI_high, 2) == 0.02,
   round(effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, ci = NULL)$rank_epsilon_squared, 3) == 0.001,
   ex_failure[, "yes"] == c(6, 6, 3), rowSums(ex_failure) == c(129, 154, 67),
   round(100 * prop.table(ex_failure, 1)[, "yes"], 1) == c(4.7, 3.9, 4.5),
@@ -995,7 +997,7 @@ Die Lösungen verwenden die Packages und Daten, die in den obigen Abschnitten ge
 bmi_data <- cohort |> mutate(asa = factor(asa))
 bmi_anova <- aov(bmi ~ asa, data = bmi_data)
 summary(bmi_anova)
-effectsize::omega_squared(bmi_anova, partial = FALSE)
+effectsize::omega_squared(bmi_anova, partial = FALSE, alternative = "two.sided")
 bmi_data |> group_by(asa) |> summarise(mean = mean(bmi), sd = sd(bmi))
 ```
 
@@ -1010,7 +1012,7 @@ print(cohort.groupby("asa")["bmi"].agg(["mean", "std"]))
 ```
 :::
 
-> **Results:** Mean BMI was 26.3 kg/m² (SD 4.9) in ASA 1 and 36.2 kg/m² (SD 3.3) in ASA 4 (F(3, 596) = 31.1, p < 0.001; ω² = 0.13, one-sided 95% CI 0.09 to 1.00).
+> **Results:** Mean BMI was 26.3 kg/m² (SD 4.9) in ASA 1 and 36.2 kg/m² (SD 3.3) in ASA 4 (F(3, 596) = 31.1, p < 0.001; ω² = 0.13, 95% CI 0.08 to 0.18).
 
 Das überrascht nicht: Adipositas ist einer der Faktoren, die Anästhesistinnen und Anästhesisten bei der Vergabe einer ASA-Klasse berücksichtigen.
 :::
@@ -1030,7 +1032,7 @@ cohort |>
   summarise(n = n(), median = median(los_days), q1 = quantile(los_days, 0.25), q3 = quantile(los_days, 0.75))
 kruskal.test(los_days ~ surgeon, data = cohort)
 set.seed(2026)
-effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort)
+effectsize::rank_epsilon_squared(los_days ~ surgeon, data = cohort, alternative = "two.sided", iterations = 2000)
 ```
 
 ## Python
@@ -1043,7 +1045,7 @@ print(los_test, los_test.statistic / (len(cohort) - 1))
 ```
 :::
 
-> **Results:** Median length of stay was 0 days (IQR 0 to 1) for surgeon S1, 1 day (IQR 0 to 1) for S2 and 0 days (IQR 0 to 1) for S3 (Kruskal-Wallis H = 0.73, df = 2, p = 0.694; ε² = 0.001, one-sided 95% CI 0.00 to 1.00).
+> **Results:** Median length of stay was 0 days (IQR 0 to 1) for surgeon S1, 1 day (IQR 0 to 1) for S2 and 0 days (IQR 0 to 1) for S3 (Kruskal-Wallis H = 0.73, df = 2, p = 0.694; ε² = 0.001, 95% CI 0.00 to 0.02).
 
 Es gibt keinen klaren Hinweis darauf, dass sich die Aufenthaltsdauer zwischen den Chirurginnen und Chirurgen unterscheidet. R gibt [ε²](../glossary.qmd#epsilon-squared){.term} als `1.22e-03` aus, also 0.00122, gerundet 0.001.
 :::

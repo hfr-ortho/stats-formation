@@ -288,6 +288,14 @@ def test_describe_pages_do_not_send_bounded_scores_to_ranks(site):
         assert "floor or ceiling" in text_of(section(page, anchor)), page
 
 
+def test_three_group_pages_do_not_send_bounded_scores_to_ranks(site):
+    """Review A13 on pages 8 and 9: the rank test is for values piled up at a floor or ceiling, not any bounded scale."""
+    for page, anchor in [("catalog/08-three-plus-unmatched.html", "one-way-anova"),
+                         ("catalog/09-three-plus-matched.html", "repeated-measures-anova")]:
+        assert "bounded" not in text_of(load(page)), page
+        assert "piles up at a floor or ceiling" in text_of(section(page, anchor)), page
+
+
 def test_two_odds_ratios_are_close_only_with_large_counts(site):
     """Review A4: for the table 3, 1 / 1, 3 the sample odds ratio is 9 and fisher.test() gives 6.41."""
     text = text_of(section("catalog/06-two-unpaired-groups.html", "fisher-chi-square"))
@@ -327,6 +335,16 @@ def test_reports_never_turn_no_evidence_into_no_difference(site, page):
     for text in reports:
         found = NO_EVIDENCE_AS_NO_DIFFERENCE.findall(text)
         assert not found, f"{page}: {found}"
+
+
+@pytest.mark.parametrize("page", ["catalog/08-three-plus-unmatched.html", "catalog/09-three-plus-matched.html",
+                                  "catalog/10-association.html"])
+def test_no_results_sentence_reports_a_one_sided_ci(site, page):
+    """Review A6, decision D1: effect sizes that can't be negative are reported with a two-sided 95% CI."""
+    results = [text_of(p) for p in load(page).select("blockquote p") if text_of(p).startswith("Results:")]
+    assert results, f"{page} has no Results sentence"
+    for text in results:
+        assert "one-sided" not in text and "to 1.00)" not in text, text
 
 
 def test_unmatched_page_counts_procedures_not_patients(site):

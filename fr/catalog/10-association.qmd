@@ -565,9 +565,9 @@ check_agree(list(v = sqrt(chi_square / (n_procedures * (2 - 1))), c = sqrt(chi_s
 ## R
 
 ```{r}
-effectsize::cramers_v(asa_hypertension, adjust = FALSE)   # voir l'encadré R ou Python
-effectsize::cramers_v(asa_hypertension)                    # le réglage par défaut, avec la correction pour petits échantillons : un peu plus petit
-effectsize::pearsons_c(asa_hypertension)
+effectsize::cramers_v(asa_hypertension, adjust = FALSE, alternative = "two.sided")   # voir l'encadré R ou Python
+effectsize::cramers_v(asa_hypertension, alternative = "two.sided")                    # le réglage par défaut, avec la correction pour petits échantillons : un peu plus petit
+effectsize::pearsons_c(asa_hypertension, alternative = "two.sided")
 ```
 
 ## Python
@@ -586,18 +586,18 @@ chk = {"v": float(stats.contingency.association(asa_hypertension, method="cramer
 
 ```{r}
 #| include: false
-asa_v <- effectsize::cramers_v(asa_hypertension, adjust = FALSE)
-asa_c <- effectsize::pearsons_c(asa_hypertension)
+asa_v <- effectsize::cramers_v(asa_hypertension, adjust = FALSE, alternative = "two.sided")
+asa_c <- effectsize::pearsons_c(asa_hypertension, alternative = "two.sided")
 check_agree(list(v = asa_v$Cramers_v, c = asa_c$Pearsons_c), reticulate::py$chk)
 ```
 
-**V de Cramér = 0.20**, une [association](../glossary.qmd#association){.term} de petite à moyenne (comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term} pour les tableaux à deux lignes ou deux colonnes, 0.1 est petit, 0.3 moyen et 0.5 grand). R affiche aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % [unilatéral](../glossary.qmd#two-sided){.term} (0.12 à 1.00) : V ne peut pas être négatif, donc seule sa borne inférieure est informative. scipy ne calcule pas cet IC. Le deuxième résultat de R, intitulé `Cramer's V (adj.)`, est expliqué dans l'encadré R ou Python. Le C de Pearson vaut ici 0.19, mais son plafond pour ce tableau est de 0.71, et non de 1 : le même nombre en dit donc plus qu'il n'y paraît, une raison de plus de rapporter V.
+**V de Cramér = 0.20**, une [association](../glossary.qmd#association){.term} entre petite et moyenne (comme [repère approximatif](../glossary.qmd#cohen-benchmarks){.term} pour les tableaux à deux lignes ou deux colonnes, 0.1 est petit, 0.3 moyen et 0.5 grand). R affiche aussi l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %, de 0.10 à 0.27 : il va du repère d'une petite association jusqu'à un peu moins que celui d'une association moyenne, et ne permet donc pas de qualifier l'association de moyenne. Par défaut, effectsize donne pour V un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test du khi-deux unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. scipy ne calcule pas cet IC. Le deuxième résultat de R, intitulé `Cramer's V (adj.)`, est expliqué dans l'encadré R ou Python. Le C de Pearson vaut ici 0.19, mais son plafond pour ce tableau est de 0.71, et non de 1 : le même nombre en dit donc plus qu'il n'y paraît, une raison de plus de rapporter V.
 
 ### Rédiger les résultats
 
 > **Methods:** The association between ASA class and hypertension was tested with the chi-square test, with Cramér's V as the effect size.
 >
-> **Results:** Hypertension was present in 12 of 36 procedures (33.3%) in ASA 1 and 16 of 18 (88.9%) in ASA 4 (χ² = 23.2, df = 3, p < 0.001; Cramér's V = 0.20, one-sided 95% CI 0.12 to 1.00).
+> **Results:** Hypertension was present in 12 of 36 procedures (33.3%) in ASA 1 and 16 of 18 (88.9%) in ASA 4 (χ² = 23.2, df = 3, p < 0.001; Cramér's V = 0.20, 95% CI 0.10 to 0.27).
 
 ::: {.callout-warning}
 ## ⚠️ Attention : V donne la force du lien, pas son profil
@@ -617,7 +617,7 @@ change_medians <- change |> group_by(satisfaction_1yr) |> summarise(n = n(), med
 los_rho <- cor.test(cohort$los_days, cohort$age, method = "spearman", exact = FALSE)
 los_ci <- DescTools::SpearmanRho(cohort$los_days, cohort$age, conf.level = 0.95)
 apnea_table <- table(sex = cohort$sex, sleep_apnea = cohort$sleep_apnea)
-apnea_phi <- effectsize::phi(apnea_table, adjust = FALSE)
+apnea_phi <- effectsize::phi(apnea_table, adjust = FALSE, alternative = "two.sided")
 budin_minus_ct <- imaging$torsion_budin_deg - imaging$torsion_ct_deg
 alpha_corr <- cor.test(imaging$alpha_dunn45_deg, imaging$alpha_frogleg_deg)
 stopifnot(
@@ -641,9 +641,9 @@ stopifnot(
   round(unname(asa_test$statistic), 2) == 23.18, round(unname(asa_test$statistic), 1) == 23.2,
   unname(asa_test$parameter) == 3, asa_test$p.value < 0.001, signif(asa_test$p.value, 4) == 3.702e-05,
   round(min(asa_test$expected), 2) == 7.83, which.min(asa_test$expected) == 4,   # row ASA 4, column 0
-  round(asa_v$Cramers_v, 2) == 0.20, round(asa_v$CI_low, 2) == 0.12, round(asa_c$Pearsons_c, 2) == 0.19,
+  round(asa_v$Cramers_v, 2) == 0.20, round(asa_v$CI_low, 2) == 0.10, round(asa_v$CI_high, 2) == 0.27, round(asa_c$Pearsons_c, 2) == 0.19,
   round(sqrt(1 / 2), 2) == 0.71,
-  round(effectsize::cramers_v(asa_hypertension)$Cramers_v, 2) == 0.18,
+  round(effectsize::cramers_v(asa_hypertension, alternative = "two.sided")$Cramers_v, 2) == 0.18,
   # the by-hand boxes, and the numbers added with them
   isTRUE(all.equal(r_by_hand, unname(torsion_corr$estimate))),
   isTRUE(all.equal(r_by_hand * sqrt(80 - 2) / sqrt(1 - r_by_hand^2), unname(torsion_corr$statistic))),
@@ -671,7 +671,7 @@ stopifnot(
   round(100 * prop.table(apnea_table, 1)[, "1"], 1) == c(12.5, 26.8),
   round(unname(chisq.test(apnea_table, correct = FALSE)$statistic), 1) == 19.8,
   chisq.test(apnea_table, correct = FALSE)$p.value < 0.001,
-  round(apnea_phi$phi, 2) == 0.18, round(apnea_phi$CI_low, 2) == 0.11
+  round(apnea_phi$phi, 2) == 0.18, round(apnea_phi$CI_low, 2) == 0.10, round(apnea_phi$CI_high, 2) == 0.26
 )
 ```
 
@@ -747,7 +747,7 @@ apnea <- table(sex = cohort$sex, sleep_apnea = cohort$sleep_apnea)
 apnea
 round(100 * prop.table(apnea, margin = 1), 1)
 chisq.test(apnea, correct = FALSE)   # sans correction de continuité, pour correspondre à phi
-effectsize::phi(apnea, adjust = FALSE)
+effectsize::phi(apnea, adjust = FALSE, alternative = "two.sided")
 ```
 
 ## Python
@@ -762,7 +762,7 @@ print(stats.contingency.association(apnea, method="cramer"))   # phi sans son si
 ```
 :::
 
-> **Results:** Sleep apnea was present in 69 of 257 men (26.8%) and 43 of 343 women (12.5%) (χ² = 19.8, df = 1, p < 0.001; φ = 0.18, one-sided 95% CI 0.11 to 1.00).
+> **Results:** Sleep apnea was present in 69 of 257 men (26.8%) and 43 of 343 women (12.5%) (χ² = 19.8, df = 1, p < 0.001; φ = 0.18, 95% CI 0.10 to 0.26).
 
 Chaque ligne du premier tableau donne son groupe : 300 + 43 = 343 femmes et 188 + 69 = 257 hommes. Le second tableau donne les pourcentages.
 :::
