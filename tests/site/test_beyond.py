@@ -344,7 +344,7 @@ def test_hazard_ratio_cis_beside_holm_p_values_are_called_unadjusted(site):
 
 def test_mixed_model_cis_beside_holm_p_values_are_called_unadjusted(site):
     """B5: confint() prints "Confidence level used: 0.95" with no adjustment line."""
-    assert "they are unadjusted 95% CIs" in text_of(section(MIXED, "group-by-time"))
+    assert "The CIs of the differences are unadjusted 95% CIs in both tabs" in text_of(section(MIXED, "group-by-time"))
     methods = [text_of(q) for q in section(MIXED, "reporting").select("blockquote") if "Methods:" in text_of(q)]
     assert any("reported with unadjusted 95% CIs and Holm-adjusted p-values" in m for m in methods)
 
@@ -400,6 +400,7 @@ def test_kappa_box_shows_that_kappa_depends_on_prevalence(site):
     assert "may not be comparable" in text and "Report the raw agreement and the table beside kappa" in text
     assert "conventions" in text
     assert "DescTools::CohenKappa(common)" in code_of(box) and "cohens_kappa(common)" in code_of(box)
+    assert "the same raters reach" not in text and "two made-up pairs of raters" in text
 
 
 def test_standard_error_of_measurement_and_smallest_detectable_change(site):
@@ -408,3 +409,61 @@ def test_standard_error_of_measurement_and_smallest_detectable_change(site):
     assert "smallest detectable change" in text and "1.96 × √2 × SEM" in text
     assert "SEM = 1.21°" in text and "SDC = 3.36°" in text
     assert "routinely" not in text
+
+
+# ---- content review of 20.11.2026, Task 3.7, review fix round 1 -------------------------
+
+def test_threshold_sentence_says_what_stays_above_it(site):
+    assert "stays above the threshold either way" in text_of(section(POST_HOC, "adjusting-p-values"))
+
+
+def test_tukey_paragraph_points_to_page_8s_plot(site):
+    found = section(POST_HOC, "after-anova")
+    assert "judge them from page 8's plot" in text_of(found)
+    links = [target(POST_HOC, a["href"]) for a in found.select("a[href]") if "plot" in a.get_text()]
+    assert links == ["catalog/08-three-plus-unmatched.html#one-way-anova"]
+
+
+def test_residual_spread_is_compared_across_visits_not_with_the_model_sd(site):
+    text = text_of(section(MIXED, "random-intercept"))
+    assert "three assumptions that matter here" in text
+    assert "Compare these four with each other, not with the model's residual SD of 8.6" in text
+
+
+def test_random_slope_box_says_statsmodels_fits_what_lme4_refuses(site):
+    found = section(MIXED, "random-intercept")
+    box = next(c for c in found.select(".callout") if "a random slope per visit" in text_of(c))
+    text = text_of(box)
+    assert "number of observations (=1146) <= number of random effects (=1320)" in text
+    assert "no reason to trust a random slope" in text
+
+
+def test_unadjusted_cis_bullet_names_what_each_language_does(site):
+    text = text_of(section(MIXED, "group-by-time"))
+    assert "± 1.96 × se" in text and "multipletests" in text
+
+
+def test_cpak_cross_table_is_printed_and_reported(site):
+    found = section(AGREEMENT, "kappa")
+    first = found.select("div.panel-tabset")[0]
+    assert "table(R1 = cpak$R1, R2 = cpak$R2)" in code_of(first) and "print(cpak_table)" in code_of(first)
+    results = " ".join(text_of(q) for q in section(AGREEMENT, "reporting").select("blockquote"))
+    assert "40 of 60 knees (66.7%)" in results
+
+
+def test_sem_is_told_apart_from_the_standard_error_of_the_mean(site):
+    found = section(AGREEMENT, "bland-altman")
+    text = text_of(found)
+    assert "not the standard error of the mean" in text
+    assert "catalog/04-describe-one-group.html#mean-sd" in [target(AGREEMENT, a["href"]) for a in found.select("a[href]")]
+    assert "by different raters" in text and "in the measurement's own units (here degrees)" in text
+
+
+def test_limits_conclusion_comes_before_the_sem_paragraph(site):
+    text = text_of(section(AGREEMENT, "bland-altman"))
+    assert text.index("Whether limits of −2.7° to 3.7° are good enough") < text.index("Standard error of measurement and smallest")
+
+
+def test_sem_and_sdc_are_printed_rounded_in_python(site):
+    shown = " ".join(pre.get_text() for pre in section(AGREEMENT, "bland-altman").select(".cell-output pre"))
+    assert "1.21284788823662" not in shown and "1.212848 3.361843" in shown

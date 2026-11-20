@@ -325,7 +325,9 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 - **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; R's last table, and Python's last two lines, where each limit is followed by its CI) show how [precisely](../glossary.qmd#precision){.term} 60 knees pin the limits down.
 - **The plot:** the points scatter evenly around the bias line, with no trend up or down as the mean angle changes. A trend would mean the raters disagree more for some knees (more varus, say) than others, and a single pair of limits wouldn't describe them.
 
-**Standard error of measurement and smallest detectable change.** de Vet and colleagues (2006) describe two more agreement measures in degrees, built from the three variances in [the ICC box](#icc). The **standard error of measurement** (SEM) is the typical size of the error in one reading. For agreement it counts the systematic difference between the raters as error too: SEM = √(rater variance + error variance). The **smallest detectable change** (SDC) is 1.96 × √2 × SEM: the smallest difference between two readings of the same knee that is larger than [measurement error](../glossary.qmd#measurement-error){.term} alone would usually produce. The √2 is there because both readings carry an error, and the 1.96 gives 95%, as in the limits of agreement.
+Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the [reliability](../glossary.qmd#reliability){.term} study, and compare the limits (and their CIs) with them.
+
+**Standard error of measurement and smallest detectable change.** de Vet and colleagues (2006) describe two more agreement measures, in the measurement's own units (here degrees), built from the three variances in [the ICC box](#icc). The **standard error of measurement** (SEM; not the standard error of the mean, which [page 4](../catalog/04-describe-one-group.qmd#mean-sd) also shortens to SEM) is the typical size of the error in one reading. For agreement it counts the systematic difference between the raters as error too: SEM = √(rater variance + error variance). The **smallest detectable change** (SDC) is 1.96 × √2 × SEM: the smallest difference between two readings of the same knee by different raters that is larger than [measurement error](../glossary.qmd#measurement-error){.term} alone would usually produce. The √2 is there because both readings carry an error, and the 1.96 gives 95%, as in the limits of agreement.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -341,7 +343,7 @@ c(sem = sem_agreement, sdc = sdc)
 ```{python}
 sem_agreement = np.sqrt(parts["raters"] + parts["error"])     # the rater difference counts as error too
 sdc = 1.96 * np.sqrt(2) * sem_agreement                        # the smallest detectable change
-print(sem_agreement, sdc)
+print(round(sem_agreement, 6), round(sdc, 6))
 ```
 :::
 
@@ -355,9 +357,7 @@ chk = {"sem": float(sem_agreement), "sdc": float(sdc)}
 check_agree(list(sem = sem_agreement, sdc = sdc), reticulate::py$chk)
 ```
 
-For HKA, SEM = 1.21°, the square root of 0.10 + 1.37, and SDC = 3.36° (the output). A difference of less than about 3.4° between two readings of the same knee is within what measurement error alone could produce.
-
-Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the [reliability](../glossary.qmd#reliability){.term} study, and compare the limits (and their CIs) with them.
+For HKA, SEM = 1.21°, the square root of 0.10 + 1.37, and SDC = 3.36° (the output). A difference of less than about 3.4° between two readings of the same knee by different raters is within what measurement error alone could produce.
 
 ## Kappa for categories {#kappa}
 
@@ -374,6 +374,7 @@ cpak <- readings |>
   pivot_wider(names_from = rater, values_from = cpak_class) |>
   mutate(R1 = factor(R1, levels = cpak_levels), R2 = factor(R2, levels = cpak_levels))
 
+table(R1 = cpak$R1, R2 = cpak$R2)                            # the two raters' classes, side by side
 mean(cpak$R1 == cpak$R2)                                     # simple percentage agreement
 cpak_kappa <- DescTools::CohenKappa(cpak$R1, cpak$R2, conf.level = 0.95)
 cpak_kappa
@@ -384,10 +385,11 @@ cpak_kappa
 ```{python}
 cpak_levels = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 cpak = first_session.pivot(index="knee_id", columns="rater", values="cpak_class")
+cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
+                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False, rownames=["R1"], colnames=["R2"])
+print(cpak_table)                                              # the two raters' classes, side by side
 print((cpak["R1"] == cpak["R2"]).mean())                       # simple percentage agreement
 
-cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
-                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False)
 cpak_kappa = cohens_kappa(cpak_table.to_numpy())
 print(cpak_kappa.kappa, cpak_kappa.kappa_low, cpak_kappa.kappa_upp)
 ```
@@ -406,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-The raters gave the same CPAK class to 40 of the 60 knees (66.7%; the output prints 0.667, and 0.667 × 60 = 40). But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.44 to 0.73): moderate agreement at its [point estimate](../glossary.qmd#estimate){.term} on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the [ICC](../glossary.qmd#icc){.term}, judge it by the CI: moderate to substantial.
+The raters gave the same CPAK class to 40 of the 60 knees (66.7%; the output prints 0.667, and 0.667 × 60 = 40). They lie on the diagonal of the first table, which has rater 1's classes in its rows and rater 2's in its columns. But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.44 to 0.73): moderate agreement at its [point estimate](../glossary.qmd#estimate){.term} on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the [ICC](../glossary.qmd#icc){.term}, judge it by the CI: moderate to substantial.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: kappa by hand
@@ -495,7 +497,7 @@ check_agree(list(agree_balanced = sum(diag(balanced)) / 100, agree_common = sum(
             reticulate::py$chk)
 ```
 
-Both tables show 90% agreement, but kappa is 0.80 in the first and 0.44 in the second. When one category is common, chance alone already produces much of the agreement: 0.9 × 0.9 + 0.1 × 0.1 = 0.82 in the second table, against 0.5 × 0.5 + 0.5 × 0.5 = 0.50 in the first (the box above shows this step). On Landis and Koch's scale the same raters reach "substantial" agreement in one table and "moderate" agreement in the other; these labels are conventions, not properties of the measurement. Kappa depends on how common each category is, so a kappa from a sample with a different case mix may not be comparable. Report the raw agreement and the table beside kappa, as this page does for CPAK class.
+Both tables show 90% agreement, but kappa is 0.80 in the first and 0.44 in the second. When one category is common, chance alone already produces much of the agreement: 0.9 × 0.9 + 0.1 × 0.1 = 0.82 in the second table, against 0.5 × 0.5 + 0.5 × 0.5 = 0.50 in the first (the box above shows this step). On Landis and Koch's scale, these two made-up pairs of raters, with the same 90% agreement, reach "substantial" agreement in one table and "moderate" agreement in the other; these labels are conventions, not properties of the measurement. Kappa depends on how common each category is, so a kappa from a sample with a different case mix may not be comparable. Report the raw agreement and the table beside kappa, as this page does for CPAK class.
 :::
 
 **Weighted kappa for ordered categories.** Plain kappa treats every disagreement as equally bad. When the categories have an order, a near miss should count less than a big miss. CPAK class has no single order (it's a 3 × 3 grid of two angles), but each axis does. The arithmetic HKA group goes varus, neutral, valgus. A **weighted kappa** gives a disagreement between varus and neutral half the penalty of one between varus and valgus (linear weights):
@@ -566,7 +568,7 @@ DescTools' `CohenKappa()` and statsmodels' `cohens_kappa()` give the same kappa 
 
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
-> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
 
 ```{r}
 #| include: false

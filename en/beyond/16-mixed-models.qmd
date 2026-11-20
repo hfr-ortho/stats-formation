@@ -194,7 +194,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
                  first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
 ```
 
-**What the model assumes.** The random-intercept model, as written here, builds in three assumptions. The residuals are roughly [normal](../glossary.qmd#normal-distribution){.term}. They have the same spread at every visit: the model fits one residual SD, 8.6 points, for all four. And because a knee's own level shifts all four of its scores by the same amount, any two scores from the same knee are equally alike, whichever two visits they come from: the intraclass correlation of 0.52 is that one number, and the box above shows the six correlations it stands for (0.43 to 0.57). A **random slope** would go further: each knee would get its own rate of change as well as its own level. This model can't have one: with visit as four categories, a slope for each visit would give the model more random effects (4 × 330 = 1320) than there are scores (1146), and lme4 stops with an error. To check the first two assumptions, plot the residuals at each visit:
+**What the model assumes.** The random-intercept model, as written, builds in three assumptions that matter here. The residuals are roughly [normal](../glossary.qmd#normal-distribution){.term}. They have the same spread at every visit: the model estimates one residual SD, 8.6 points, for all four visits. And because a knee's own level shifts all four of its scores by the same amount, any two scores from the same knee are equally alike, whichever two visits they come from: the intraclass correlation of 0.52 is that one number, and the box above shows the six correlations it stands for (0.43 to 0.57). To check the first two assumptions, plot the residuals at each visit:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -237,7 +237,32 @@ check_agree(list(resid_sd_preop = resid_sd[["preop"]], resid_sd_6wk = resid_sd[[
             reticulate::py$chk)
 ```
 
-The boxes are centered near 0 and roughly symmetric at all four visits, and their spread is similar, though not identical: the residual SDs run from 6.62 points at 6 weeks to 8.16 at 1 year (the printed table).
+The boxes are centered near 0 and roughly symmetric at all four visits, and the spread of the residuals at each visit is similar, though not identical: from 6.62 points at 6 weeks to 8.16 at 1 year (the printed table). Compare these four with each other, not with the model's residual SD of 8.6: here all four are smaller than it.
+
+A **random slope** would go further: each knee would get its own rate of change as well as its own level. This model can't have one in lme4: with visit as four categories, a slope for each visit would give the model more random effects (4 × 330 = 1320) than there are scores (1146), and lme4 stops with an error.
+
+::: {.callout-tip}
+## 🔀 R vs Python: a random slope per visit
+lme4 refuses `(visit | case_id)` here, with the message "number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable". statsmodels doesn't stop: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` returns a fit that reports convergence, with no warning. A fit from statsmodels here is no reason to trust a random slope: lme4's message gives the reason.
+:::
+
+```{python}
+#| include: false
+import warnings
+with warnings.catch_warnings(record=True) as slope_warnings:
+    warnings.simplefilter("always")
+    slope_fit = smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)
+chk_slope = {"converged": float(slope_fit.converged), "warnings": float(len(slope_warnings))}
+```
+
+```{r}
+#| include: false
+# statsmodels fits a random slope per visit and reports convergence without a warning; lme4 refuses it (the box above)
+lme4_slope <- tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e)
+stopifnot(inherits(lme4_slope, "error"),
+          grepl("number of observations (=1146) <= number of random effects (=1320)", conditionMessage(lme4_slope), fixed = TRUE),
+          reticulate::py$chk_slope$converged == 1, reticulate::py$chk_slope$warnings == 0)
+```
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: degrees of freedom
@@ -487,7 +512,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 
 - **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. R prints the second [df](../glossary.qmd#degrees-of-freedom){.term} as `DenDF` 309.58 and the [p-value](../glossary.qmd#p-value){.term} as `6.924e-15`. Python's [Wald test](../glossary.qmd#wald-test){.term} is a [chi-square](../glossary.qmd#chi-square-statistic){.term} test on 3 degrees of freedom: 77.15, also p < 0.001. R's [F](../glossary.qmd#f-statistic){.term} is that [statistic](../glossary.qmd#test-statistic){.term} divided by its 3 degrees of freedom: 77.15 / 3 = 25.72, against R's 25.73, because the two programs' [standard errors](../glossary.qmd#standard-error){.term} differ slightly (the first R vs Python box).
 - **The EMMs and the differences (boot minus cast)** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.
-- **The CIs of the differences** come from `confint()`, which prints "Confidence level used: 0.95" and no adjustment: they are unadjusted 95% CIs. `adjust = "holm"` in the next line adjusts only the p-values.
+- **The CIs of the differences** are unadjusted 95% CIs in both tabs: R's `confint()` prints "Confidence level used: 0.95" and no adjustment line, and Python computes each difference ± 1.96 × se. Only the p-values are adjusted for the four visits: by `adjust = "holm"` in R and by `multipletests(..., method="holm")` in Python.
 
 Two more looks at the data explain the paragraph that follows: the [spread](../glossary.qmd#spread){.term} of the scores, and the 12-month visit.
 
@@ -694,7 +719,8 @@ stopifnot(
   all(abs(tapply(knee_residuals$residual, knee_residuals$visit, median)) < 0.5),
   4 * 330 == 1320, nlevels(knees$visit) == 4, max(per_knee$n) == 4,
   # a random slope per visit: lme4 stops (more random effects than scores)
-  inherits(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e), "error"),
+  grepl("number of observations", conditionMessage(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e))),
+  all(resid_sd < sigma(knee_model)), round(sigma(knee_model), 1) == 8.6,
   # confint() prints "Confidence level used: 0.95" and no adjustment line; Holm adjusts the p-values only
   "Confidence level used: 0.95" %in% attr(summary(confint(arm_gaps)), "mesg"),
   !any(grepl("adjustment", attr(summary(confint(arm_gaps)), "mesg"))),

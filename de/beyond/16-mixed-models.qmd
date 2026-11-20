@@ -194,7 +194,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
                  first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
 ```
 
-**Was das Modell voraussetzt.** Das Modell mit zufälligem Achsenabschnitt, wie es hier formuliert ist, enthält drei Annahmen. Die Residuen sind ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term}. Sie haben bei jeder Kontrolle dieselbe Streuung: Das Modell passt eine einzige Residual-SD an, 8.6 Punkte, für alle vier. Und weil das eigene Niveau eines Knies alle vier seiner Scores um denselben Betrag verschiebt, sind sich zwei Scores desselben Knies gleich ähnlich, welche zwei Kontrollen Sie auch nehmen: Der Intraklassenkorrelationskoeffizient von 0.52 ist diese eine Zahl, und der Kasten oben zeigt die sechs Korrelationen, für die er steht (0.43 bis 0.57). Eine **zufällige Steigung (Random Slope)** ginge weiter: Jedes Knie erhielte neben seinem eigenen Niveau auch seine eigene Veränderungsrate. Dieses Modell kann keine haben: Mit der Kontrolle als vier Kategorien ergäbe eine Steigung für jede Kontrolle mehr zufällige Effekte (4 × 330 = 1320), als es Scores gibt (1146), und lme4 bricht mit einer Fehlermeldung ab. Um die ersten zwei Annahmen zu prüfen, stellen Sie die Residuen bei jeder Kontrolle dar:
+**Was das Modell voraussetzt.** Das Modell mit zufälligem Achsenabschnitt, wie es formuliert ist, enthält drei Annahmen, auf die es hier ankommt. Die Residuen sind ungefähr [normalverteilt](../glossary.qmd#normal-distribution){.term}. Sie haben bei jeder Kontrolle dieselbe Streuung: Das Modell schätzt eine einzige Residual-SD, 8.6 Punkte, für alle vier Kontrollen. Und weil das eigene Niveau eines Knies alle vier seiner Scores um denselben Betrag verschiebt, sind sich zwei Scores desselben Knies gleich ähnlich, welche zwei Kontrollen Sie auch nehmen: Der Intraklassenkorrelationskoeffizient von 0.52 ist diese eine Zahl, und der Kasten oben zeigt die sechs Korrelationen, für die er steht (0.43 bis 0.57). Um die ersten zwei Annahmen zu prüfen, stellen Sie die Residuen bei jeder Kontrolle dar:
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -237,8 +237,32 @@ check_agree(list(resid_sd_preop = resid_sd[["preop"]], resid_sd_6wk = resid_sd[[
             reticulate::py$chk)
 ```
 
-Die Boxen liegen bei allen vier Kontrollen um 0 und sind ungefähr symmetrisch, und ihre Streuung ist ähnlich, wenn auch nicht gleich: Die Residual-SDs reichen von 6.62 Punkten nach 6 Wochen bis 8.16 nach 1 Jahr (die ausgegebene Tabelle).
+Die Boxen liegen bei allen vier Kontrollen um 0 und sind ungefähr symmetrisch, und die Streuung der Residuen bei jeder Kontrolle ist ähnlich, wenn auch nicht gleich: von 6.62 Punkten nach 6 Wochen bis 8.16 nach 1 Jahr (die ausgegebene Tabelle). Vergleichen Sie diese vier miteinander, nicht mit der Residual-SD des Modells von 8.6: Hier sind alle vier kleiner.
 
+Eine **zufällige Steigung (Random Slope)** ginge weiter: Jedes Knie erhielte neben seinem eigenen Niveau auch seine eigene Veränderungsrate. In lme4 kann dieses Modell keine haben: Mit der Kontrolle als vier Kategorien ergäbe eine Steigung für jede Kontrolle mehr zufällige Effekte (4 × 330 = 1320), als es Scores gibt (1146), und lme4 bricht mit einer Fehlermeldung ab.
+
+::: {.callout-tip}
+## 🔀 R oder Python: eine zufällige Steigung pro Kontrolle
+lme4 lehnt `(visit | case_id)` hier ab, mit der Meldung «number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable». statsmodels bricht nicht ab: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` liefert eine Anpassung, die Konvergenz meldet, ohne Warnung. Eine Anpassung durch statsmodels ist hier kein Grund, einer zufälligen Steigung zu trauen: Die Meldung von lme4 nennt den Grund.
+:::
+
+```{python}
+#| include: false
+import warnings
+with warnings.catch_warnings(record=True) as slope_warnings:
+    warnings.simplefilter("always")
+    slope_fit = smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)
+chk_slope = {"converged": float(slope_fit.converged), "warnings": float(len(slope_warnings))}
+```
+
+```{r}
+#| include: false
+# statsmodels fits a random slope per visit and reports convergence without a warning; lme4 refuses it (the box above)
+lme4_slope <- tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e)
+stopifnot(inherits(lme4_slope, "error"),
+          grepl("number of observations (=1146) <= number of random effects (=1320)", conditionMessage(lme4_slope), fixed = TRUE),
+          reticulate::py$chk_slope$converged == 1, reticulate::py$chk_slope$warnings == 0)
+```
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Freiheitsgrade
@@ -488,7 +512,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 
 - **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. R gibt die zweiten [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} als `DenDF` 309.58 und den [p-Wert](../glossary.qmd#p-value){.term} als `6.924e-15` aus. Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python ist ein [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} mit 3 Freiheitsgraden: 77.15, ebenfalls p < 0.001. Das [F](../glossary.qmd#f-statistic){.term} von R ist diese [Statistik](../glossary.qmd#test-statistic){.term} geteilt durch ihre 3 Freiheitsgrade: 77.15 / 3 = 25.72, gegenüber 25.73 in R, weil sich die [Standardfehler](../glossary.qmd#standard-error){.term} der beiden Programme leicht unterscheiden (der erste Kasten «R oder Python»).
 - **Die EMMs und die Differenzen (Walker minus Gips)** zeigen, auf welche Weise. Nach 6 Wochen lag der Walker um 3.0 Punkte vorn, und nach 3 Monaten lag der Walker um 3.6 Punkte vorn (17.34 gegenüber 13.78). Nach 6 Monaten betrug der Abstand 0.4 Punkte, und nach 12 Monaten −0.4 Punkte (95%-KI −1.5 bis 0.7): Der Abstand hatte sich geschlossen.
-- **Die KI der Differenzen** stammen aus `confint()`, das «Confidence level used: 0.95» und keine Adjustierung ausgibt: Es sind unadjustierte 95%-KI. `adjust = "holm"` in der nächsten Zeile adjustiert nur die p-Werte.
+- **Die KI der Differenzen** sind in beiden Reitern unadjustierte 95%-KI: `confint()` in R gibt «Confidence level used: 0.95» und keine Zeile zur Adjustierung aus, und Python berechnet jede Differenz ± 1.96 × se. Nur die p-Werte werden für die vier Kontrollen adjustiert: mit `adjust = "holm"` in R und mit `multipletests(..., method="holm")` in Python.
 
 Zwei weitere Blicke auf die Daten erklären den folgenden Absatz: die [Streuung](../glossary.qmd#spread){.term} der Scores und die Studienvisite nach 12 Monaten.
 
@@ -695,7 +719,8 @@ stopifnot(
   all(abs(tapply(knee_residuals$residual, knee_residuals$visit, median)) < 0.5),
   4 * 330 == 1320, nlevels(knees$visit) == 4, max(per_knee$n) == 4,
   # a random slope per visit: lme4 stops (more random effects than scores)
-  inherits(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e), "error"),
+  grepl("number of observations", conditionMessage(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e))),
+  all(resid_sd < sigma(knee_model)), round(sigma(knee_model), 1) == 8.6,
   # confint() prints "Confidence level used: 0.95" and no adjustment line; Holm adjusts the p-values only
   "Confidence level used: 0.95" %in% attr(summary(confint(arm_gaps)), "mesg"),
   !any(grepl("adjustment", attr(summary(confint(arm_gaps)), "mesg"))),

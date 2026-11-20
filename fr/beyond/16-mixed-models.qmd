@@ -194,7 +194,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
                  first_second = alike["preop", "6wk"], middle = alike["6wk", "3mo"]), reticulate::py$chk)
 ```
 
-**Ce que le modèle suppose.** Le modèle à intercept aléatoire, tel qu'il est écrit ici, repose sur trois hypothèses. Les résidus suivent à peu près une [loi normale](../glossary.qmd#normal-distribution){.term}. Ils ont la même dispersion à chaque visite : le modèle ajuste un seul ET résiduel, 8.6 points, pour les quatre. Et comme le niveau propre d'un genou décale ses quatre scores de la même quantité, deux scores d'un même genou se ressemblent autant, quelles que soient les deux visites choisies : le coefficient de corrélation intraclasse de 0.52 est ce nombre unique, et l'encadré ci-dessus montre les six corrélations qu'il résume (de 0.43 à 0.57). Une **pente aléatoire** irait plus loin : chaque genou aurait son propre rythme d'évolution en plus de son propre niveau. Ce modèle ne peut pas en avoir : avec la visite en quatre catégories, une pente pour chaque visite donnerait au modèle plus d'effets aléatoires (4 × 330 = 1320) qu'il n'y a de scores (1146), et lme4 s'arrête sur une erreur. Pour vérifier les deux premières hypothèses, tracez les résidus à chaque visite :
+**Ce que le modèle suppose.** Le modèle à intercept aléatoire, tel qu'il est écrit, repose sur trois hypothèses qui comptent ici. Les résidus suivent à peu près une [loi normale](../glossary.qmd#normal-distribution){.term}. Ils ont la même dispersion à chaque visite : le modèle estime un seul ET résiduel, 8.6 points, pour les quatre visites. Et comme le niveau propre d'un genou décale ses quatre scores de la même quantité, deux scores d'un même genou se ressemblent autant, quelles que soient les deux visites choisies : le coefficient de corrélation intraclasse de 0.52 est ce nombre unique, et l'encadré ci-dessus montre les six corrélations qu'il résume (de 0.43 à 0.57). Pour vérifier les deux premières hypothèses, tracez les résidus à chaque visite :
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -237,8 +237,32 @@ check_agree(list(resid_sd_preop = resid_sd[["preop"]], resid_sd_6wk = resid_sd[[
             reticulate::py$chk)
 ```
 
-Les boîtes sont centrées près de 0 et à peu près symétriques aux quatre visites, et leur dispersion est semblable, sans être identique : les ET des résidus vont de 6.62 points à 6 semaines à 8.16 à 1 an (le tableau affiché).
+Les boîtes sont centrées près de 0 et à peu près symétriques aux quatre visites, et la dispersion des résidus à chaque visite est semblable, sans être identique : de 6.62 points à 6 semaines à 8.16 à 1 an (le tableau affiché). Comparez ces quatre valeurs entre elles, pas avec l'ET résiduel du modèle de 8.6 : ici, toutes les quatre sont plus petites.
 
+Une **pente aléatoire** irait plus loin : chaque genou aurait son propre rythme d'évolution en plus de son propre niveau. Dans lme4, ce modèle ne peut pas en avoir : avec la visite en quatre catégories, une pente pour chaque visite donnerait au modèle plus d'effets aléatoires (4 × 330 = 1320) qu'il n'y a de scores (1146), et lme4 s'arrête sur une erreur.
+
+::: {.callout-tip}
+## 🔀 R ou Python : une pente aléatoire par visite
+lme4 refuse `(visit | case_id)` ici, avec le message « number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable ». statsmodels ne s'arrête pas : `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` renvoie un ajustement qui annonce la convergence, sans avertissement. Un ajustement par statsmodels n'est donc pas une raison de faire confiance à une pente aléatoire : le message de lme4 en donne la raison.
+:::
+
+```{python}
+#| include: false
+import warnings
+with warnings.catch_warnings(record=True) as slope_warnings:
+    warnings.simplefilter("always")
+    slope_fit = smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)
+chk_slope = {"converged": float(slope_fit.converged), "warnings": float(len(slope_warnings))}
+```
+
+```{r}
+#| include: false
+# statsmodels fits a random slope per visit and reports convergence without a warning; lme4 refuses it (the box above)
+lme4_slope <- tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e)
+stopifnot(inherits(lme4_slope, "error"),
+          grepl("number of observations (=1146) <= number of random effects (=1320)", conditionMessage(lme4_slope), fixed = TRUE),
+          reticulate::py$chk_slope$converged == 1, reticulate::py$chk_slope$warnings == 0)
+```
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : degrés de liberté
@@ -488,7 +512,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
 
 - **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} comme `DenDF` 309.58 et la [valeur p](../glossary.qmd#p-value){.term} comme `6.924e-15`. Le [test de Wald](../glossary.qmd#wald-test){.term} de Python est un test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le [F](../glossary.qmd#f-statistic){.term} de R est cette [statistique](../glossary.qmd#test-statistic){.term} divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les [erreurs standard](../glossary.qmd#standard-error){.term} des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
 - **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
-- **Les IC des différences** viennent de `confint()`, qui affiche « Confidence level used: 0.95 » et aucun ajustement : ce sont des IC à 95 % non ajustés. `adjust = "holm"`, à la ligne suivante, n'ajuste que les valeurs p.
+- **Les IC des différences** sont des IC à 95 % non ajustés dans les deux onglets : `confint()` de R affiche « Confidence level used: 0.95 » et aucune ligne d'ajustement, et Python calcule chaque différence ± 1.96 × se. Seules les valeurs p sont ajustées, afin de tenir compte des quatre visites : par `adjust = "holm"` en R et par `multipletests(..., method="holm")` en Python.
 
 Deux autres regards sur les données expliquent le paragraphe qui suit : la [dispersion](../glossary.qmd#spread){.term} des scores, et la visite à 12 mois.
 
@@ -695,7 +719,8 @@ stopifnot(
   all(abs(tapply(knee_residuals$residual, knee_residuals$visit, median)) < 0.5),
   4 * 330 == 1320, nlevels(knees$visit) == 4, max(per_knee$n) == 4,
   # a random slope per visit: lme4 stops (more random effects than scores)
-  inherits(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e), "error"),
+  grepl("number of observations", conditionMessage(tryCatch(lmer(prom_score ~ visit + (visit | case_id), data = knees), error = function(e) e))),
+  all(resid_sd < sigma(knee_model)), round(sigma(knee_model), 1) == 8.6,
   # confint() prints "Confidence level used: 0.95" and no adjustment line; Holm adjusts the p-values only
   "Confidence level used: 0.95" %in% attr(summary(confint(arm_gaps)), "mesg"),
   !any(grepl("adjustment", attr(summary(confint(arm_gaps)), "mesg"))),

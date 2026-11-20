@@ -325,7 +325,9 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 - **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; le dernier tableau de R, et les deux dernières lignes de Python, où chaque limite est suivie de son IC) montrent avec quelle [précision](../glossary.qmd#precision){.term} 60 genoux fixent les limites.
 - **Le graphique :** les points se répartissent régulièrement autour de la ligne du biais, sans tendance à la hausse ni à la baisse quand l'angle moyen change. Une tendance voudrait dire que les évaluateurs sont plus en désaccord pour certains genoux (plus en varus, par exemple) que pour d'autres, et une seule paire de limites ne les décrirait pas.
 
-**Erreur standard de mesure et plus petite variation détectable.** de Vet et al. (2006) décrivent deux autres mesures de la concordance, en degrés, construites à partir des trois variances de [l'encadré sur le CCI](#icc). L'**erreur standard de mesure** (*standard error of measurement*, SEM) est la taille typique de l'erreur d'une lecture. Pour la concordance, elle compte aussi comme erreur la différence systématique entre les évaluateurs : SEM = √(variance des évaluateurs + variance de l'erreur). La **plus petite variation détectable** (*smallest detectable change*, SDC) vaut 1.96 × √2 × SEM : la plus petite différence entre deux lectures d'un même genou qui dépasse ce que l'[erreur de mesure](../glossary.qmd#measurement-error){.term} seule produirait habituellement. Le √2 vient de ce que les deux lectures comportent chacune une erreur, et 1.96 donne 95 %, comme pour les limites de concordance.
+Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de [fiabilité](../glossary.qmd#reliability){.term}, puis comparez-y les limites (et leurs IC).
+
+**Erreur standard de mesure et plus petite variation détectable.** de Vet et al. (2006) décrivent deux autres mesures de la concordance, dans les unités de la mesure elle-même (ici des degrés), construites à partir des trois variances de [l'encadré sur le CCI](#icc). L'**erreur standard de mesure** (*standard error of measurement*, SEM ; à ne pas confondre avec l'erreur standard de la moyenne, que la [page 4](../catalog/04-describe-one-group.qmd#mean-sd) abrège en ESM) est la taille typique de l'erreur d'une lecture. Pour la concordance, elle compte aussi comme erreur la différence systématique entre les évaluateurs : SEM = √(variance des évaluateurs + variance de l'erreur). La **plus petite variation détectable** (*smallest detectable change*, SDC) vaut 1.96 × √2 × SEM : la plus petite différence entre deux lectures d'un même genou par des évaluateurs différents qui dépasse ce que l'[erreur de mesure](../glossary.qmd#measurement-error){.term} seule produirait habituellement. Le √2 vient de ce que les deux lectures comportent chacune une erreur, et 1.96 donne 95 %, comme pour les limites de concordance.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -341,7 +343,7 @@ c(sem = sem_agreement, sdc = sdc)
 ```{python}
 sem_agreement = np.sqrt(parts["raters"] + parts["error"])     # la différence entre évaluateurs compte aussi comme erreur
 sdc = 1.96 * np.sqrt(2) * sem_agreement                        # la plus petite variation détectable
-print(sem_agreement, sdc)
+print(round(sem_agreement, 6), round(sdc, 6))
 ```
 :::
 
@@ -355,9 +357,7 @@ chk = {"sem": float(sem_agreement), "sdc": float(sdc)}
 check_agree(list(sem = sem_agreement, sdc = sdc), reticulate::py$chk)
 ```
 
-Pour le HKA, SEM = 1.21°, la racine carrée de 0.10 + 1.37, et SDC = 3.36° (la sortie). Une différence de moins d'environ 3.4° entre deux lectures d'un même genou reste dans ce que l'erreur de mesure seule pourrait produire.
-
-Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de [fiabilité](../glossary.qmd#reliability){.term}, puis comparez-y les limites (et leurs IC).
+Pour le HKA, SEM = 1.21°, la racine carrée de 0.10 + 1.37, et SDC = 3.36° (la sortie). Une différence de moins d'environ 3.4° entre deux lectures d'un même genou par des évaluateurs différents reste dans ce que l'erreur de mesure seule pourrait produire.
 
 ## Le kappa pour les catégories {#kappa}
 
@@ -374,6 +374,7 @@ cpak <- readings |>
   pivot_wider(names_from = rater, values_from = cpak_class) |>
   mutate(R1 = factor(R1, levels = cpak_levels), R2 = factor(R2, levels = cpak_levels))
 
+table(R1 = cpak$R1, R2 = cpak$R2)                            # les classes des deux évaluateurs, croisées
 mean(cpak$R1 == cpak$R2)                                     # pourcentage de concordance simple
 cpak_kappa <- DescTools::CohenKappa(cpak$R1, cpak$R2, conf.level = 0.95)
 cpak_kappa
@@ -384,10 +385,11 @@ cpak_kappa
 ```{python}
 cpak_levels = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"]
 cpak = first_session.pivot(index="knee_id", columns="rater", values="cpak_class")
+cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
+                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False, rownames=["R1"], colnames=["R2"])
+print(cpak_table)                                              # les classes des deux évaluateurs, croisées
 print((cpak["R1"] == cpak["R2"]).mean())                       # pourcentage de concordance simple
 
-cpak_table = pd.crosstab(pd.Categorical(cpak["R1"], categories=cpak_levels),
-                         pd.Categorical(cpak["R2"], categories=cpak_levels), dropna=False)
 cpak_kappa = cohens_kappa(cpak_table.to_numpy())
 print(cpak_kappa.kappa, cpak_kappa.kappa_low, cpak_kappa.kappa_upp)
 ```
@@ -406,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; la sortie affiche 0.667, et 0.667 × 60 = 40). Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.44 à 0.73) : concordance modérée selon l'[estimation](../glossary.qmd#estimate){.term} seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le [CCI](../glossary.qmd#icc){.term}, jugez-la d'après l'IC : modérée à substantielle.
+Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; la sortie affiche 0.667, et 0.667 × 60 = 40). Ils se trouvent sur la diagonale du premier tableau, qui donne les classes de l'évaluateur 1 en lignes et celles de l'évaluateur 2 en colonnes. Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.44 à 0.73) : concordance modérée selon l'[estimation](../glossary.qmd#estimate){.term} seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le [CCI](../glossary.qmd#icc){.term}, jugez-la d'après l'IC : modérée à substantielle.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : le kappa à la main
@@ -495,7 +497,7 @@ check_agree(list(agree_balanced = sum(diag(balanced)) / 100, agree_common = sum(
             reticulate::py$chk)
 ```
 
-Les deux tableaux montrent 90 % de concordance, mais le kappa vaut 0.80 dans le premier et 0.44 dans le second. Quand une catégorie est fréquente, le hasard seul produit déjà une grande part de la concordance : 0.9 × 0.9 + 0.1 × 0.1 = 0.82 dans le second tableau, contre 0.5 × 0.5 + 0.5 × 0.5 = 0.50 dans le premier (l'encadré ci-dessus montre cette étape). Sur l'échelle de Landis et Koch, les mêmes évaluateurs obtiennent une concordance « substantielle » dans un tableau et « modérée » dans l'autre ; ces libellés sont des conventions, pas des propriétés de la mesure. Le kappa dépend de la fréquence de chaque catégorie : un kappa issu d'un échantillon où les cas se répartissent autrement n'est donc peut-être pas comparable. Indiquez la concordance brute et le tableau à côté du kappa, comme le fait cette page pour la classe CPAK.
+Les deux tableaux montrent 90 % de concordance, mais le kappa vaut 0.80 dans le premier et 0.44 dans le second. Quand une catégorie est fréquente, le hasard seul produit déjà une grande part de la concordance : 0.9 × 0.9 + 0.1 × 0.1 = 0.82 dans le second tableau, contre 0.5 × 0.5 + 0.5 × 0.5 = 0.50 dans le premier (l'encadré ci-dessus montre cette étape). Sur l'échelle de Landis et Koch, ces deux paires inventées d'évaluateurs, avec la même concordance de 90 %, obtiennent une concordance « substantielle » dans un tableau et « modérée » dans l'autre ; ces libellés sont des conventions, pas des propriétés de la mesure. Le kappa dépend de la fréquence de chaque catégorie : un kappa issu d'un échantillon où les cas se répartissent autrement n'est donc peut-être pas comparable. Indiquez la concordance brute et le tableau à côté du kappa, comme le fait cette page pour la classe CPAK.
 :::
 
 **Le kappa pondéré pour des catégories ordonnées.** Le kappa non pondéré traite tout désaccord comme également grave. Quand les catégories ont un ordre, un écart d'une catégorie doit compter moins qu'un grand écart. La classe CPAK n'a pas d'ordre unique (c'est une grille de 3 × 3 pour deux angles), mais chaque axe en a un. Le groupe HKA arithmétique va de varus à neutre puis à valgus. Un **kappa pondéré** pénalise de moitié un désaccord entre varus et neutre par rapport à un désaccord entre varus et valgus (pondération linéaire) :
@@ -566,7 +568,7 @@ Les poids dépendent de l'ordre des catégories. Placez-les vous-même dans leur
 
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
-> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+> **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
 
 ```{r}
 #| include: false
