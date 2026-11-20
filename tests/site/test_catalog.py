@@ -541,7 +541,10 @@ def test_multiple_regression_says_which_coefficients_are_findings(site):
     # "When to use it" must not promise each predictor's own effect, which the effect-size step then takes back.
     assert "the effect of each of several predictors" not in text_of(load(page))
     assert "you want the effect of one predictor with the others taken into account" in text_of(linear)
-    assert "you want one predictor's hazard ratio" in text_of(section(page, "cox"))
+    assert "you want the hazard ratio of one predictor" in text_of(section(page, "cox"))
+    description = text_of(load(page).select_one("div.description"))   # the front-matter description, under the title
+    assert "the effect of each predictor" not in description
+    assert "one predictor's effect with the others taken into account, and prediction from several" in description
 
 
 def test_multiple_linear_regression_names_the_equal_slopes_assumption(site):
