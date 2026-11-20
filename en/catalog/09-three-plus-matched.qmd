@@ -236,7 +236,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin doesn't compute a CI for it
 ```
 :::
 
-η²~p~ = 0.50: a very large effect. The visits account for about half of the variation in each patient's scores over the year. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.46 to 0.54. effectsize's default for η²~p~ is a [one-sided](../glossary.qmd#two-sided){.term} interval, which mirrors the one-tailed F test; `alternative = "two.sided"` asks for the usual interval, comparable with the other 95% CIs on this site. pingouin doesn't compute a CI. R's headings mention "type III" and "Type I": these are ways of dividing up the variation when a [model](../glossary.qmd#model){.term} has several [predictors](../glossary.qmd#predictor){.term}, and with one predictor they give the same result.
+η²~p~ = 0.50: a very large effect. The visits account for about half of the variation in each patient's scores over the year. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.46 to 0.54. effectsize's default for η²~p~ is a [one-sided](../glossary.qmd#two-sided){.term} interval, a lower limit only: the F test asks only whether the effect is larger than zero, and a one-sided interval gives the same decision as that test. `alternative = "two.sided"` asks for the usual two-sided interval, comparable with the other 95% CIs on this site. pingouin doesn't compute a CI. R's headings mention "type III" and "Type I": these are ways of dividing up the variation when a [model](../glossary.qmd#model){.term} has several [predictors](../glossary.qmd#predictor){.term}, and with one predictor they give the same result.
 
 ### How to report it
 
@@ -470,11 +470,11 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85: a large effect. 45 of the 50 patients scored higher at 3 months than at 6 weeks, and 42 scored higher at 12 months than at 3 months. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.75 to 0.94. effectsize's default for W is a [one-sided](../glossary.qmd#two-sided){.term} interval, which mirrors the one-tailed Friedman test; `alternative = "two.sided"` asks for the usual interval, comparable with the other 95% CIs on this site. The CI comes from a [bootstrap](../glossary.qmd#bootstrap){.term} of 2,000 resamples (`iterations = 2000`; the default is 200), which is why the code sets a seed; pingouin doesn't compute one.
+W = 0.85: a large effect. 45 of the 50 patients scored higher at 3 months than at 6 weeks, and 42 scored higher at 12 months than at 3 months. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.75 to 0.94. effectsize's default here is a [one-sided](../glossary.qmd#two-sided){.term} interval (`alternative = "greater"`); `alternative = "two.sided"` asks for a two-sided one. The CI is a percentile [bootstrap](../glossary.qmd#bootstrap){.term}: R recomputes W on 2,000 resamples of the data (`iterations = 2000`; the default is 200) and keeps the middle 95% of the results, which is why the code sets a seed. Because W can't be negative, this interval can't fall below 0, and in practice it never reaches 0, so don't read it as a test of whether there is any effect at all; the Friedman test does that. pingouin doesn't compute this CI.
 
 ### How to report it
 
-> **Methods:** Because EFAS scores crowd toward the ceiling of the scale, scores at 6 weeks, 3 months and 12 months in the boot arm were compared with the Friedman test in patients with all three measurements, with Kendall's W as the effect size.
+> **Methods:** Because EFAS scores crowd toward the ceiling of the scale, scores at 6 weeks, 3 months and 12 months in the boot arm were compared with the Friedman test in patients with all three measurements, with Kendall's W and its percentile bootstrap 95% CI (2,000 resamples) as the effect size.
 >
 > **Results:** Among 50 of the 60 patients randomized to a boot, those with all three measurements, the median EFAS score was 12.5 (IQR 11 to 14) at 6 weeks, 17 (IQR 16 to 20) at 3 months and 20 (IQR 19 to 22) at 12 months (Friedman χ² = 84.9, df = 2, p < 0.001; Kendall's W = 0.85, 95% CI 0.75 to 0.94).
 
@@ -926,6 +926,8 @@ stopifnot(
   round(unname(efas_test$statistic), 1) == 84.9, unname(efas_test$parameter) == 2, efas_test$p.value < 0.001,
   round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.75, round(efas_w$CI_high, 2) == 0.94,
   formals(effectsize::kendalls_w)$iterations == 200,   # the default the text names; the page asks for 2,000
+  formals(effectsize::kendalls_w)$alternative == "greater", attr(efas_w, "ci_method")$method == "percentile bootstrap",
+  attr(efas_w, "ci_method")$iterations == 2000, efas_w$CI_low > 0,
   n_distinct(aid$case_id) == 328, aid_by_visit$procedures == c(328, 328, 328, 328),
   round(aid_percent, 1) == c(34.8, 59.1, 24.4, 10.4),
   round(100 * aid_ci[1, ], 1) == c(29.8, 53.8, 20.1, 7.5), round(100 * aid_ci[2, ], 1) == c(40.1, 64.3, 29.3, 14.1),

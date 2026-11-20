@@ -210,7 +210,7 @@ age_omega <- effectsize::omega_squared(age_anova, partial = FALSE, alternative =
 check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 ```
 
-ω² = 0.10: ASA class accounts for about a tenth of the variation in age, a medium effect. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.06 to 0.15. effectsize's default for ω² is a [one-sided](../glossary.qmd#two-sided){.term} interval, which mirrors the one-tailed F test; `alternative = "two.sided"` asks for the usual interval, comparable with the other 95% CIs on this site. scipy and pingouin don't compute this CI. The ANOVA doesn't say *which* classes differ: see [Which groups differ?](#which-groups-differ).
+ω² = 0.10: ASA class accounts for about a tenth of the variation in age, a medium effect. R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.06 to 0.15. effectsize's default for ω² is a [one-sided](../glossary.qmd#two-sided){.term} interval, a lower limit only: the F test asks only whether the effect is larger than zero, and a one-sided interval gives the same decision as that test. `alternative = "two.sided"` asks for the usual two-sided interval, comparable with the other 95% CIs on this site. scipy and pingouin don't compute this CI. The ANOVA doesn't say *which* classes differ: see [Which groups differ?](#which-groups-differ).
 
 ### How to report it
 
@@ -437,11 +437,11 @@ satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon,
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H divided by n − 1 is 0.677 ÷ 501 = 0.00135. R prints it as `1.35e-03`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for the same number: the decimal point moves 3 places to the left. Surgeon accounts for essentially none of the variation in satisfaction. R's 95% [CI](../glossary.qmd#confidence-interval){.term} runs from 0.00 to 0.02. effectsize's default for ε² is a [one-sided](../glossary.qmd#two-sided){.term} interval, which mirrors the one-tailed Kruskal-Wallis test; `alternative = "two.sided"` asks for the usual interval, comparable with the other 95% CIs on this site. The CI comes from a [bootstrap](../glossary.qmd#bootstrap){.term} of 2,000 resamples (`iterations = 2000`; the default is 200), which is why the code sets a seed. scipy has no function for it.
+[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001: H divided by n − 1 is 0.677 ÷ 501 = 0.00135. R prints it as `1.35e-03`, which is [scientific notation](../glossary.qmd#scientific-notation){.term} for the same number: the decimal point moves 3 places to the left. Surgeon accounts for essentially none of the variation in satisfaction. R's 95% [CI](../glossary.qmd#confidence-interval){.term} runs from 0.00 to 0.02. effectsize's default here is a [one-sided](../glossary.qmd#two-sided){.term} interval (`alternative = "greater"`); `alternative = "two.sided"` asks for a two-sided one. The CI is a percentile [bootstrap](../glossary.qmd#bootstrap){.term}: R recomputes ε² on 2,000 resamples of the data (`iterations = 2000`; the default is 200) and keeps the middle 95% of the results, which is why the code sets a seed. Because ε² can't be negative, this interval can't fall below 0, and in practice it never reaches 0 (the 0.00 is rounded: the limit is just above 0). So don't read it as a test of whether there is any effect at all; the Kruskal-Wallis test does that. scipy has no function for it.
 
 ### How to report it
 
-> **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) as the effect size.
+> **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) and its percentile bootstrap 95% CI (2,000 resamples) as the effect size.
 >
 > **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year: 192 of 232 for surgeon S1, 177 of 211 for S2 and 133 of 157 for S3. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, 95% CI 0.00 to 0.02).
 
@@ -598,7 +598,7 @@ check_agree(list(by_hand = sum(chisq_parts), bptb_yes = unname(chisq_parts["BPTB
 
 ```{r}
 effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sided")   # see the R vs Python box
-effectsize::cramers_v(rts_table, alternative = "two.sided")                   # the default, with a bias correction: a little smaller
+effectsize::cramers_v(rts_table, alternative = "two.sided")                   # adjust at its default, with a bias correction: a little smaller
 ```
 
 ## Python
@@ -619,7 +619,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sid
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, between a [small](../glossary.qmd#cohen-benchmarks){.term} and a medium association (R's second output, headed `Cramer's V (adj.)`, is explained in the R vs Python box). R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.14 to 0.35. effectsize's default for V is a [one-sided](../glossary.qmd#two-sided){.term} interval, which mirrors the one-tailed chi-square test; `alternative = "two.sided"` asks for the usual interval, comparable with the other 95% CIs on this site. scipy doesn't compute one. For yes/no outcomes, the rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V. And remember what the test doesn't tell you: which grafts differ ([Which groups differ?](#which-groups-differ) below), or why. The grafts weren't assigned at random, so a difference could come from the patients rather than the graft; [page 12](12-predict-from-several.qmd#multiple-logistic-regression) shows how to [adjust for](../glossary.qmd#adjustment){.term} other factors.
+V = 0.25, between a [small](../glossary.qmd#cohen-benchmarks){.term} and a medium association (R's second output, headed `Cramer's V (adj.)`, is explained in the R vs Python box). R also prints its 95% [CI](../glossary.qmd#confidence-interval){.term}, 0.14 to 0.35. effectsize's default for V is a [one-sided](../glossary.qmd#two-sided){.term} interval, a lower limit only: the chi-square test asks only whether the association is larger than zero, and a one-sided interval gives the same decision as that test. `alternative = "two.sided"` asks for the usual two-sided interval, comparable with the other 95% CIs on this site. scipy doesn't compute one. For yes/no outcomes, the rate in each group (with its CI, as on [page 4](04-describe-one-group.qmd#proportion)) is usually more informative than V. And remember what the test doesn't tell you: which grafts differ ([Which groups differ?](#which-groups-differ) below), or why. The grafts weren't assigned at random, so a difference could come from the patients rather than the graft; [page 12](12-predict-from-several.qmd#multiple-logistic-regression) shows how to [adjust for](../glossary.qmd#adjustment){.term} other factors.
 
 ### How to report it
 
@@ -920,6 +920,8 @@ stopifnot(
   round(summary(implant_cox)$coefficients[, "Pr(>|z|)"], 3)[1] == 0.514, round(implant_logrank$chisq, 1) == 33.5,
   round(satisfaction_eps$CI_low, 2) == 0, round(satisfaction_eps$CI_high, 2) == 0.02,
   formals(effectsize::rank_epsilon_squared)$iterations == 200,   # the default the text names; the page asks for 2,000
+  formals(effectsize::rank_epsilon_squared)$alternative == "greater", attr(satisfaction_eps, "ci_method")$method == "percentile bootstrap",
+  attr(satisfaction_eps, "ci_method")$iterations == 2000, satisfaction_eps$CI_low > 0,
   summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
   round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
   round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,

@@ -210,7 +210,7 @@ age_omega <- effectsize::omega_squared(age_anova, partial = FALSE, alternative =
 check_agree(list(omega2 = age_omega$Omega2), reticulate::py$chk)
 ```
 
-ω² = 0.10 : la classe ASA explique environ un dixième de la variation de l'âge, un effet moyen. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.06 à 0.15. Par défaut, effectsize donne pour ω² un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test F unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. scipy et pingouin ne calculent pas cet IC. L'ANOVA ne dit pas *quelles* classes diffèrent : voir [Quels groupes diffèrent ?](#which-groups-differ).
+ω² = 0.10 : la classe ASA explique environ un dixième de la variation de l'âge, un effet moyen. R affiche aussi l'[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %, de 0.06 à 0.15. Par défaut, effectsize donne pour ω² un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, avec une borne inférieure seulement : le test F demande seulement si l'effet est supérieur à zéro, et un intervalle unilatéral mène à la même décision que ce test. `alternative = "two.sided"` demande l'intervalle bilatéral habituel, comparable aux autres IC à 95 % de ce site. scipy et pingouin ne calculent pas cet IC. L'ANOVA ne dit pas *quelles* classes diffèrent : voir [Quels groupes diffèrent ?](#which-groups-differ).
 
 ### Rédiger les résultats
 
@@ -437,11 +437,11 @@ satisfaction_eps <- effectsize::rank_epsilon_squared(satisfaction_1yr ~ surgeon,
 check_agree(list(epsilon2 = satisfaction_eps$rank_epsilon_squared), reticulate::py$chk)
 ```
 
-[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001 : H divisé par n − 1 vaut 0.677 ÷ 501 = 0.00135. R l'affiche sous la forme `1.35e-03`, la [notation scientifique](../glossary.qmd#scientific-notation){.term} du même nombre : le point décimal recule de 3 rangs vers la gauche. Le chirurgien n'explique pratiquement rien de la variation de la satisfaction. L'[IC](../glossary.qmd#confidence-interval){.term} à 95 % de R va de 0.00 à 0.02. Par défaut, effectsize donne pour ε² un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test de Kruskal-Wallis unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. L'IC vient d'un [bootstrap](../glossary.qmd#bootstrap){.term} de 2,000 rééchantillonnages (`iterations = 2000` ; la valeur par défaut est 200), ce qui explique la graine dans le code. scipy n'a pas de fonction pour cela.
+[ε²](../glossary.qmd#epsilon-squared){.term} = 0.001 : H divisé par n − 1 vaut 0.677 ÷ 501 = 0.00135. R l'affiche sous la forme `1.35e-03`, la [notation scientifique](../glossary.qmd#scientific-notation){.term} du même nombre : le point décimal recule de 3 rangs vers la gauche. Le chirurgien n'explique pratiquement rien de la variation de la satisfaction. L'[IC](../glossary.qmd#confidence-interval){.term} à 95 % de R va de 0.00 à 0.02. Par défaut, effectsize donne ici un intervalle [unilatéral](../glossary.qmd#two-sided){.term} (`alternative = "greater"`) ; `alternative = "two.sided"` demande un intervalle bilatéral. L'IC est un [bootstrap](../glossary.qmd#bootstrap){.term} par percentiles : R recalcule ε² sur 2,000 rééchantillonnages des données (`iterations = 2000` ; la valeur par défaut est 200) et garde les 95 % centraux des résultats, ce qui explique la graine dans le code. Comme ε² ne peut pas être négatif, cet intervalle ne peut pas descendre sous 0, et en pratique il n'atteint jamais 0 (le 0.00 est arrondi : la borne est juste au-dessus de 0). Ne le lisez donc pas comme un test de l'existence d'un effet ; c'est le rôle du test de Kruskal-Wallis. scipy n'a pas de fonction pour cela.
 
 ### Rédiger les résultats
 
-> **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) as the effect size.
+> **Methods:** Satisfaction at 1 year (a 5-point ordinal scale) was compared across surgeons with the Kruskal-Wallis test, with epsilon squared (ε²) and its percentile bootstrap 95% CI (2,000 resamples) as the effect size.
 >
 > **Results:** Of 600 procedures, 502 had a satisfaction score at 1 year: 192 of 232 for surgeon S1, 177 of 211 for S2 and 133 of 157 for S3. The median was 4 (IQR 4 to 5) for surgeon S1 and 5 (IQR 4 to 5) for surgeons S2 and S3 (Kruskal-Wallis H = 0.68, df = 2, p = 0.713; ε² = 0.001, 95% CI 0.00 to 0.02).
 
@@ -598,7 +598,7 @@ Le **V de Cramér** mesure la force de l'[association](../glossary.qmd#associati
 
 ```{r}
 effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sided")   # voir l'encadré R ou Python
-effectsize::cramers_v(rts_table, alternative = "two.sided")                   # le réglage par défaut, avec une correction du biais : un peu plus petit
+effectsize::cramers_v(rts_table, alternative = "two.sided")                   # adjust à sa valeur par défaut, avec une correction du biais : un peu plus petit
 ```
 
 ## Python
@@ -619,7 +619,7 @@ rts_v <- effectsize::cramers_v(rts_table, adjust = FALSE, alternative = "two.sid
 check_agree(list(v = rts_v$Cramers_v), reticulate::py$chk)
 ```
 
-V = 0.25, une association entre [petite](../glossary.qmd#cohen-benchmarks){.term} et moyenne (la seconde sortie de R, intitulée `Cramer's V (adj.)`, est expliquée dans l'encadré R ou Python). R affiche aussi l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %, de 0.14 à 0.35. Par défaut, effectsize donne pour V un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, qui correspond au test du khi-deux unilatéral ; `alternative = "two.sided"` demande l'intervalle habituel, comparable aux autres IC à 95 % de ce site. scipy n'en calcule pas. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment [ajuster sur](../glossary.qmd#adjustment){.term} d'autres facteurs.
+V = 0.25, une association entre [petite](../glossary.qmd#cohen-benchmarks){.term} et moyenne (la seconde sortie de R, intitulée `Cramer's V (adj.)`, est expliquée dans l'encadré R ou Python). R affiche aussi l'[IC](../glossary.qmd#confidence-interval){.term} à 95 %, de 0.14 à 0.35. Par défaut, effectsize donne pour V un intervalle [unilatéral](../glossary.qmd#two-sided){.term}, avec une borne inférieure seulement : le test du khi-deux demande seulement si l'association est supérieure à zéro, et un intervalle unilatéral mène à la même décision que ce test. `alternative = "two.sided"` demande l'intervalle bilatéral habituel, comparable aux autres IC à 95 % de ce site. scipy n'en calcule pas. Pour un critère oui/non, le taux dans chaque groupe (avec son IC, comme à la [page 4](04-describe-one-group.qmd#proportion)) est en général plus informatif que V. Et rappelez-vous ce que le test ne dit pas : quels greffons diffèrent ([Quels groupes diffèrent ?](#which-groups-differ) ci-dessous), ni pourquoi. Les greffons n'ont pas été attribués au hasard : une différence peut donc venir des patients plutôt que du greffon ; la [page 12](12-predict-from-several.qmd#multiple-logistic-regression) montre comment [ajuster sur](../glossary.qmd#adjustment){.term} d'autres facteurs.
 
 ### Rédiger les résultats
 
@@ -920,6 +920,8 @@ stopifnot(
   round(summary(implant_cox)$coefficients[, "Pr(>|z|)"], 3)[1] == 0.514, round(implant_logrank$chisq, 1) == 33.5,
   round(satisfaction_eps$CI_low, 2) == 0, round(satisfaction_eps$CI_high, 2) == 0.02,
   formals(effectsize::rank_epsilon_squared)$iterations == 200,   # the default the text names; the page asks for 2,000
+  formals(effectsize::rank_epsilon_squared)$alternative == "greater", attr(satisfaction_eps, "ci_method")$method == "percentile bootstrap",
+  attr(satisfaction_eps, "ci_method")$iterations == 2000, satisfaction_eps$CI_low > 0,
   summary(implant_cox)$coefficients["implantC", "Pr(>|z|)"] < 0.001,
   round(unname(summary(implant_cox)$logtest["test"]), 1) == 27.6, summary(implant_cox)$logtest["pvalue"] < 0.001,
   round(unname(summary(implant_cox)$sctest["test"]), 1) == 33.5,

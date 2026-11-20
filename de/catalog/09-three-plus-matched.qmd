@@ -236,7 +236,7 @@ print(pf_anova.loc[0, "np2"])    # pingouin berechnet dafür kein KI
 ```
 :::
 
-η²~p~ = 0.50: ein sehr grosser Effekt. Die Kontrollen erklären etwa die Hälfte der Variation in den Scores jeder Person über das Jahr. R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus, 0.46 bis 0.54. Standardmässig gibt effectsize für η²~p~ ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, das dem einseitigen F-Test entspricht; `alternative = "two.sided"` verlangt das übliche Intervall, vergleichbar mit den anderen 95%-KI dieser Website. pingouin berechnet kein KI. In den Überschriften von R stehen «type III» und «Type I»: Das sind Arten, die Variation aufzuteilen, wenn ein [Modell](../glossary.qmd#model){.term} mehrere [Prädiktoren](../glossary.qmd#predictor){.term} hat; bei einem einzigen Prädiktor liefern sie dasselbe Resultat.
+η²~p~ = 0.50: ein sehr grosser Effekt. Die Kontrollen erklären etwa die Hälfte der Variation in den Scores jeder Person über das Jahr. R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus, 0.46 bis 0.54. Standardmässig gibt effectsize für η²~p~ ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, nur mit einer unteren Grenze: Der F-Test fragt nur, ob der Effekt grösser als null ist, und ein einseitiges Intervall führt zum selben Entscheid wie dieser Test. `alternative = "two.sided"` verlangt das übliche zweiseitige Intervall, vergleichbar mit den anderen 95%-KI dieser Website. pingouin berechnet kein KI. In den Überschriften von R stehen «type III» und «Type I»: Das sind Arten, die Variation aufzuteilen, wenn ein [Modell](../glossary.qmd#model){.term} mehrere [Prädiktoren](../glossary.qmd#predictor){.term} hat; bei einem einzigen Prädiktor liefern sie dasselbe Resultat.
 
 ### Resultate formulieren
 
@@ -470,11 +470,11 @@ efas_w <- suppressWarnings(effectsize::kendalls_w(efas ~ visit | patient_id, dat
 check_agree(list(w = efas_w$Kendalls_W), reticulate::py$chk)
 ```
 
-W = 0.85: ein grosser Effekt. 45 der 50 Personen hatten nach 3 Monaten einen höheren Score als nach 6 Wochen, und 42 nach 12 Monaten einen höheren als nach 3 Monaten. R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus, 0.75 bis 0.94. Standardmässig gibt effectsize für W ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus, das dem einseitigen Friedman-Test entspricht; `alternative = "two.sided"` verlangt das übliche Intervall, vergleichbar mit den anderen 95%-KI dieser Website. Das KI stammt aus einem [Bootstrap](../glossary.qmd#bootstrap){.term} mit 2,000 Wiederholungen (`iterations = 2000`; der Standardwert ist 200), weshalb der Code einen Seed setzt; pingouin berechnet keines.
+W = 0.85: ein grosser Effekt. 45 der 50 Personen hatten nach 3 Monaten einen höheren Score als nach 6 Wochen, und 42 nach 12 Monaten einen höheren als nach 3 Monaten. R gibt ausserdem das [95%-KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall) aus, 0.75 bis 0.94. Standardmässig gibt effectsize hier ein [einseitiges](../glossary.qmd#two-sided){.term} Intervall aus (`alternative = "greater"`); `alternative = "two.sided"` verlangt ein zweiseitiges. Das KI ist ein Perzentil-[Bootstrap](../glossary.qmd#bootstrap){.term}: R berechnet W auf 2,000 Wiederholungsstichproben der Daten neu (`iterations = 2000`; der Standardwert ist 200) und behält die mittleren 95 % der Resultate, weshalb der Code einen Seed setzt. Weil W nicht negativ sein kann, kann dieses Intervall nicht unter 0 fallen, und in der Praxis erreicht es 0 nie. Lesen Sie es daher nicht als Test, ob es überhaupt einen Effekt gibt; das prüft der Friedman-Test. pingouin berechnet dieses KI nicht.
 
 ### Resultate formulieren
 
-> **Methods:** Because EFAS scores crowd toward the ceiling of the scale, scores at 6 weeks, 3 months and 12 months in the boot arm were compared with the Friedman test in patients with all three measurements, with Kendall's W as the effect size.
+> **Methods:** Because EFAS scores crowd toward the ceiling of the scale, scores at 6 weeks, 3 months and 12 months in the boot arm were compared with the Friedman test in patients with all three measurements, with Kendall's W and its percentile bootstrap 95% CI (2,000 resamples) as the effect size.
 >
 > **Results:** Among 50 of the 60 patients randomized to a boot, those with all three measurements, the median EFAS score was 12.5 (IQR 11 to 14) at 6 weeks, 17 (IQR 16 to 20) at 3 months and 20 (IQR 19 to 22) at 12 months (Friedman χ² = 84.9, df = 2, p < 0.001; Kendall's W = 0.85, 95% CI 0.75 to 0.94).
 
@@ -926,6 +926,8 @@ stopifnot(
   round(unname(efas_test$statistic), 1) == 84.9, unname(efas_test$parameter) == 2, efas_test$p.value < 0.001,
   round(efas_w$Kendalls_W, 3) == 0.849, round(efas_w$Kendalls_W, 2) == 0.85, round(efas_w$CI_low, 2) == 0.75, round(efas_w$CI_high, 2) == 0.94,
   formals(effectsize::kendalls_w)$iterations == 200,   # the default the text names; the page asks for 2,000
+  formals(effectsize::kendalls_w)$alternative == "greater", attr(efas_w, "ci_method")$method == "percentile bootstrap",
+  attr(efas_w, "ci_method")$iterations == 2000, efas_w$CI_low > 0,
   n_distinct(aid$case_id) == 328, aid_by_visit$procedures == c(328, 328, 328, 328),
   round(aid_percent, 1) == c(34.8, 59.1, 24.4, 10.4),
   round(100 * aid_ci[1, ], 1) == c(29.8, 53.8, 20.1, 7.5), round(100 * aid_ci[2, ], 1) == c(40.1, 64.3, 29.3, 14.1),
