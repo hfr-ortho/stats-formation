@@ -17,7 +17,7 @@ For translating an English page into French (sub-project 3) or German (sub-proje
 - Chunk options, fenced-div attributes, and every explicit `{#id}`. The page keeps its file name, its folder, `engine: knitr`, `toc-depth` and `format`.
 - Instrument names (Oxford Hip Score, KOOS JR) and `THA`/`TKA` in code.
 - Display code blocks (` ```bash `, ` ```powershell `, ` ```python `, ` ```r `) are identical except for comments. A `{mermaid}` diagram keeps its ids and arrows; its node and edge labels are prose and translate.
-- The two results sentences that carry no **Results:** label (`en/foundations/03-distributions.qmd` after "TKA patients had a higher BMI", and `en/getting-started/using-this-site.qmd` after "KOOS JR at 1 year was a median") stay in English too.
+- The two results sentences that carry no **Results:** label (`en/foundations/03-distributions.qmd` starting "Mean BMI was 31.2 kg/m² in TKA patients", and `en/getting-started/using-this-site.qmd` after "KOOS JR at 1 year was a median") stay in English too.
 - Headings and bold leads must differ from the English ones (`## R`, `## Python`, `## Solution`, and names such as Windows or Kaplan-Meier excepted). Page 18's manuscript headings stay English; everything outside its `.content-visible when-format="html"` blocks is byte-identical to the English page.
 - The `:::` fence lines (including `collapse="true"` and `group="language"`), the `## R` / `## Python` / `## Solution` headings (`## Lösung` in German) and the position of every chunk match the English page.
 

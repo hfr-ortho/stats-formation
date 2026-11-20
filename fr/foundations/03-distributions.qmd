@@ -166,7 +166,7 @@ Les packages définissent l'asymétrie de façons légèrement différentes (`sc
 
 ## Tests formels : Shapiro-Wilk, et pourquoi ne pas s'y fier seul {#shapiro}
 
-Le **test de Shapiro-Wilk** pose la question : « Ces nombres pourraient-ils venir d'une [distribution normale](../glossary.qmd#normal-distribution){.term} ? » Une petite valeur p veut dire « probablement pas ». La tentation est de le laisser décider : p < 0.05 → [test basé sur les rangs](../glossary.qmd#nonparametric){.term}, sinon → [test t](../glossary.qmd#t-test){.term}. Cette règle échoue dans les deux sens.
+Le **test de Shapiro-Wilk** pose la question : « Ces nombres pourraient-ils venir d'une [distribution normale](../glossary.qmd#normal-distribution){.term} ? » Une petite valeur p dit que de tels nombres seraient inhabituels s'ils venaient bien d'une distribution normale ; ce n'est pas la probabilité qu'ils en viennent. La tentation est de le laisser décider : p < 0.05 → [test basé sur les rangs](../glossary.qmd#nonparametric){.term}, sinon → [test t](../glossary.qmd#t-test){.term}. Cette règle échoue dans les deux sens.
 
 **Il est trop sensible avec de grands échantillons.** Nos 600 âges ont la forme d'une belle cloche, comme dans les manuels, et pourtant :
 
@@ -231,7 +231,7 @@ Décidez à partir des graphiques, de ce que vous savez de la mesure (un score [
 
 ## Vérifier dans les groupes, pas sur les données regroupées {#within-groups}
 
-La [condition](../glossary.qmd#assumption){.term} de [normalité](../glossary.qmd#normal-distribution){.term} porte sur les données **de chaque groupe** (ou, pour les [modèles de régression](../glossary.qmd#model){.term}, sur les **[résidus](../glossary.qmd#residual){.term}** : ce qui reste après la prédiction du modèle). Regrouper des groupes dont les moyennes diffèrent peut faire paraître non normales des données parfaitement normales.
+La [condition](../glossary.qmd#assumption){.term} de [normalité](../glossary.qmd#normal-distribution){.term} porte sur les données **de chaque groupe** (pour des données appariées, sur les différences entre les deux mesures de chaque paire ; pour les [modèles de régression](../glossary.qmd#model){.term}, sur les **[résidus](../glossary.qmd#residual){.term}** : ce qui reste après la prédiction du modèle). Regrouper des groupes dont les moyennes diffèrent peut faire paraître non normales des données parfaitement normales.
 
 Voici un exemple extrême, inventé : deux groupes de 200 valeurs, chacun exactement normal, avec des [moyennes](../glossary.qmd#mean){.term} de 40 et 60 et un [écart-type](../glossary.qmd#standard-deviation){.term} de 5, donc distants de 4 écarts-types.
 
@@ -437,7 +437,7 @@ Les lignes du tableau de décision demandent aussi si vos groupes sont **[indép
 
 - **Non appariés (indépendants)** : des patients différents dans chaque groupe. PTH et PTG ; site A et site B ; hommes et femmes.
 - **Appariés** : les mêmes patients mesurés deux fois, ou des paires naturelles. [PROM](../glossary.qmd#prom){.term} avant l'opération et à 1 an chez les mêmes patients ; genou gauche et genou droit chez les patients opérés des deux côtés ; deux évaluateurs qui mesurent les mêmes radiographies.
-- **Appariés par sélection (*matched*)** : chaque patient d'un groupe a été choisi pour ressembler à un patient de l'autre groupe (selon l'âge, le sexe, l'IMC…). Traitez ces ensembles comme des paires.
+- **Appariés par sélection (*matched*)** : chaque patient d'un groupe a son propre appariement, un ou plusieurs patients de l'autre groupe choisis pour lui ressembler (selon l'âge, le sexe, l'IMC…). Traitez ces paires ou ces ensembles appariés individuellement comme des paires.
 
 **Les patients opérés des deux côtés demandent de l'attention.** Dans notre [cohorte](../glossary.qmd#cohort){.term}, 80 patients apparaissent deux fois, une fois pour chaque côté ([page 2](02-demographics.qmd#setup) les compte). Leurs deux interventions partagent l'âge, le sexe et l'état de santé de la même personne, donc elles ne sont pas indépendantes. Quand les deux tombent dans le même groupe de comparaison, les tests qui traitent chaque ligne comme un patient distinct sont un peu trop optimistes ([valeurs p](../glossary.qmd#p-value){.term} trop petites, [IC](../glossary.qmd#confidence-interval){.term} trop étroits). Soit vous analysez une seule intervention par patient (par exemple la première), soit vous utilisez des méthodes conçues pour les [données en grappes](../glossary.qmd#clustered-data){.term} (*clustered*), comme les [modèles mixtes](../beyond/16-mixed-models.qmd#bilateral). Dites ce que vous avez fait.
 
@@ -459,7 +459,7 @@ flowchart TD
   F --> H
   G --> H
   D --> H
-  H -->|Mesure, à peu près normale dans les groupes| I[Colonne gaussienne]
+  H -->|Mesure, à peu près normale dans les groupes ou, pour des données appariées, les différences| I[Colonne gaussienne]
   H -->|Très asymétrique, accumulée au plancher ou au plafond, ou ordinale| J[Colonne des rangs]
   H -->|Oui / non| K[Colonne binomiale]
   H -->|Délai jusqu'à un événement| L[Colonne de survie]
@@ -481,10 +481,10 @@ Trouvez ensuite votre ligne et votre colonne dans le [tableau de décision](../c
 Chaque test de ce site rapporte trois choses. Elles répondent à des questions différentes, et de bons Résultats donnent les trois.
 
 - La **taille d'effet** répond à *de quelle ampleur ?* Par exemple, la différence entre deux [moyennes](../glossary.qmd#mean){.term}.
-- L'**intervalle de confiance (IC) à 95 %** répond à *quelle est notre certitude sur cette ampleur ?* C'est l'étendue des tailles d'effet compatibles avec les données.
+- L'**[intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 %** répond à *quelle est notre certitude sur cette ampleur ?* C'est l'étendue des tailles d'effet compatibles avec les données. Les 95 % décrivent la méthode, pas cet intervalle-ci : si une étude était répétée de nombreuses fois, environ 95 intervalles sur 100 calculés de cette façon contiendraient le vrai effet.
 - La **valeur p** répond à *à quel point des données comme celles-ci seraient-elles surprenantes s'il n'y avait vraiment aucune différence ?* Elle ne mesure ni l'ampleur ni l'importance d'un effet.
 
-Voici les trois pour l'IMC des patients PTG et PTH, avec le [test t pour échantillons indépendants (de Welch)](../glossary.qmd#welch-test){.term} de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) :
+Voici les trois pour l'IMC des patients PTG et PTH, avec le [test t pour échantillons indépendants (de Welch)](../glossary.qmd#welch-test){.term} de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t). Il utilise les 600 lignes, qui comprennent les deux interventions des 80 patients opérés des deux côtés ([voir plus haut](#paired)).
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -495,7 +495,8 @@ bmi_test
 
 difference <- unname(bmi_test$estimate[2] - bmi_test$estimate[1])   # PTG moins PTH
 ci <- -rev(bmi_test$conf.int)                                        # inverser pour obtenir PTG moins PTH
-tibble(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value)
+tibble(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+       difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value)
 ```
 
 ## Python
@@ -507,33 +508,37 @@ tha = cohort.loc[cohort["procedure"] == "THA", "bmi"]
 bmi_test = stats.ttest_ind(tka, tha, equal_var=False)   # test t de Welch
 ci = bmi_test.confidence_interval()
 
-print(pd.Series({"difference": tka.mean() - tha.mean(),
+print(pd.Series({"mean_tka": tka.mean(), "mean_tha": tha.mean(),
+                 "difference": tka.mean() - tha.mean(),
                  "ci_low": ci.low, "ci_high": ci.high, "p": bmi_test.pvalue}))
 ```
 :::
 
 ```{python}
 #| include: false
-chk = {"difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
+chk = {"mean_tka": float(tka.mean()), "mean_tha": float(tha.mean()),
+       "difference": float(tka.mean() - tha.mean()), "ci_low": float(ci.low),
        "ci_high": float(ci.high), "p": float(bmi_test.pvalue)}
 ```
 
 ```{r}
 #| include: false
-check_agree(list(difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
+check_agree(list(mean_tka = unname(bmi_test$estimate[2]), mean_tha = unname(bmi_test$estimate[1]),
+                 difference = difference, ci_low = ci[1], ci_high = ci[2], p = bmi_test$p.value),
             reticulate::py$chk)
 ```
 
-Lecture de la sortie : la différence est de 1.786, donc 1.8 à une décimale. L'IC va de 0.924 à 2.647, donc de 0.9 à 2.6 (le petit tableau de R affiche 2.65 parce qu'il donne trois chiffres significatifs). R affiche p comme `5.341e-05`, soit 0.00005, que l'on écrit p < 0.001. La première sortie de R montre aussi t et df, la [statistique de test](../glossary.qmd#test-statistic){.term} et ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) les explique, et ici nous n'avons besoin que de la différence, de son IC et de p.
+Lecture de la sortie : l'IMC moyen est de 31.2 pour les PTG et de 29.5 pour les PTH (`mean_tka` et `mean_tha`). La différence est de 1.786, donc 1.8 à une décimale (elle vient des moyennes non arrondies, c'est pourquoi elle ne vaut pas 31.2 − 29.5 = 1.7). L'IC va de 0.924 à 2.647, donc de 0.9 à 2.6 (le petit tableau de R affiche 2.65 parce qu'il donne trois chiffres significatifs). R affiche p comme `5.341e-05`, soit 0.00005, que l'on écrit p < 0.001. La première sortie de R montre aussi t et df, la [statistique de test](../glossary.qmd#test-statistic){.term} et ses [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} ; la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t) les explique, et ici nous n'avons besoin que de la différence, de son IC et de p.
 
-> TKA patients had a higher BMI than THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
+> Mean BMI was 31.2 kg/m² in TKA patients and 29.5 kg/m² in THA patients (mean difference 1.8 kg/m², 95% CI 0.9 to 2.6; p < 0.001).
 
 Une différence de 1.8 kg/m² est-elle *cliniquement* importante ? La valeur p ne peut pas vous le dire. Demandez-vous si une différence située n'importe où dans l'IC (0.9 à 2.6 kg/m²) changerait le risque ou la prise en charge, par exemple le taux de complications. C'est un jugement clinique, pas de la statistique. **Statistiquement significatif** veut dire seulement que des données comme celles-ci seraient inhabituelles s'il n'y avait vraiment aucune différence. Cela ne veut pas dire que la différence est grande ou importante.
 
 ::: {.callout-warning}
-## ⚠️ Attention : deux erreurs de lecture classiques
+## ⚠️ Attention : trois erreurs de lecture classiques
 - **« p = 0.20, donc il n'y a pas de différence. »** Non. Cela veut dire que les données n'ont pas pu exclure zéro. Regardez l'IC : s'il va de « nocif » à « très utile », l'étude était trop petite pour conclure.
 - **« p < 0.001, donc l'effet est grand. »** Non. Avec assez de patients, de minuscules différences obtiennent de minuscules valeurs p. Regardez la taille d'effet et l'IC.
+- **« p = 0.03, donc il y a 3 % de chances qu'il n'y ait pas de différence. »** Non. La valeur p est calculée *en supposant* qu'il n'y a pas de différence : elle ne peut donc pas être la probabilité qu'il n'y en ait pas. Elle dit à quel point de telles données seraient inhabituelles s'il n'y avait pas de différence.
 :::
 
 ::: {.callout-tip}
@@ -579,7 +584,10 @@ stopifnot(
   # the rule of thumb's labels for the three variables
   abs(skewness(cohort$age)) < 0.5,
   abs(skewness(one_year$prom_score)) > 0.5, abs(skewness(one_year$prom_score)) < 1,
-  skewness(cohort$los_days) > 1
+  skewness(cohort$los_days) > 1,
+  # numbers added with the content-review fixes (B5)
+  round(bmi_test$estimate[["mean in group TKA"]], 1) == 31.2, round(bmi_test$estimate[["mean in group THA"]], 1) == 29.5,
+  isTRUE(all.equal(31.2 - 29.5, 1.7)), round(difference, 1) == 1.8
 )
 ```
 

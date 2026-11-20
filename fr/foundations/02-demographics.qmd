@@ -25,7 +25,7 @@ Le tableau 1 *décrit* vos patients. Il ne répond pas à votre question de rech
 
 ## Charger les données et choisir les variables {#setup}
 
-Nous allons décrire la [cohorte](../glossary.qmd#cohort){.term} d'exercice : 600 prothèses primaires de hanche et de genou (PTH et PTG). Dans le code, elles s'appellent THA et TKA. Le tableau 1 contient en général les caractéristiques mesurées *avant* l'opération.
+Nous allons décrire la [cohorte](../glossary.qmd#cohort){.term} d'exercice : 600 prothèses primaires de hanche et de genou (PTH et PTG). Dans le code, elles s'appellent THA et TKA. Le tableau 1 contient en général les caractéristiques mesurées *avant* l'opération. La durée de séjour, elle, est un critère de jugement, mesuré après l'opération : elle ne figure dans les tableaux de cette page que comme exemple de variable asymétrique, et les sections sur l'équilibre des groupes la laissent de côté.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -232,15 +232,59 @@ check_agree(as.list(setNames(p_r$p.value, p_r$variable)), reticulate::py$chk)
 
 Chaque [valeur p](../glossary.qmd#p-value){.term} vient d'un test que vous retrouverez dans le catalogue : le [test t de Welch](../catalog/06-two-unpaired-groups.qmd#unpaired-t) pour les [variables continues](../glossary.qmd#continuous-variable){.term} [symétriques](../glossary.qmd#symmetric){.term}, un [test basé sur les rangs](../catalog/06-two-unpaired-groups.qmd#mann-whitney) pour la durée de séjour (avec deux groupes, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term} revient au [test de Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}) et le [test du khi-deux](../catalog/06-two-unpaired-groups.qmd#fisher-chi-square) pour les [catégories](../glossary.qmd#categorical-variable){.term}. Pour le diabète, R affiche `>0.999` et Python `1.000`. C'est la même valeur p : tableone l'arrondit à trois décimales. Rapportez-la comme p > 0.999, selon les conventions de ce site.
 
+La classe ASA a un ordre (1 à 4), et le test du khi-deux ignore cet ordre : il traite les classes comme des catégories non ordonnées. C'est acceptable ici, où le but est de décrire les groupes ; pour comparer un critère de jugement ordonné entre des groupes, utilisez un test basé sur les rangs ([page 3](03-distributions.qmd#ordinal)). Chaque test compte aussi les 600 lignes comme autant de patients distincts, alors qu'elles comprennent les deux interventions des 80 patients opérés des deux côtés (voir l'[avertissement](#setup) en haut de la page). La section suivante montre ce que cela change pour une valeur p.
+
 ## Valeurs p ou différences moyennes standardisées ? {#smd}
 
 Regardez le sexe dans le tableau ci-dessus : 66 % des patients PTH sont des femmes, contre 50 % des patients PTG, p < 0.001. Est-ce une vraie différence entre les patients de hanche et de genou ?
 
-Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au seul hasard. (Dans les vraies [cohortes](../glossary.qmd#cohort){.term} de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.) C'est le premier problème des [valeurs p](../glossary.qmd#p-value){.term} dans le [tableau 1](../glossary.qmd#table-1){.term} : sur un long tableau, des différences dues au hasard apparaissent.
+Dans ce jeu de données d'exercice, nous connaissons la réponse, puisque nous avons écrit le programme qui l'a fabriqué : le sexe a été tiré **de façon totalement indépendante** de l'intervention. La différence est due au hasard, et c'est un hasard rare, propre à ce tirage aléatoire particulier. (Dans les vraies [cohortes](../glossary.qmd#cohort){.term} de prothèses, les patients PTG sont plutôt *plus souvent* des femmes.)
+
+Une partie de la petite valeur p vient de ce que les 80 patients opérés des deux côtés sont comptés deux fois. Refaites le même test avec une ligne par patient, en gardant la première intervention de chacun :
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+patients <- cohort |> distinct(patient_id, .keep_all = TRUE)   # une ligne par patient, sa première intervention
+nrow(patients)
+
+sex_test <- chisq.test(table(patients$sex, patients$procedure),
+                       correct = TRUE)   # correction de continuité de Yates, comme dans le tableau ci-dessus
+sex_test
+```
+
+## Python
+
+```{python}
+from scipy import stats
+
+patients = cohort.drop_duplicates("patient_id")   # une ligne par patient, sa première intervention
+print(len(patients))
+
+sex_test = stats.chi2_contingency(pd.crosstab(patients["sex"], patients["procedure"]),
+                                  correction=True)   # correction de continuité de Yates, comme dans le tableau ci-dessus
+print(sex_test.pvalue)
+```
+:::
+
+```{python}
+#| include: false
+chk = {"patients": float(len(patients)), "p": float(sex_test.pvalue)}
+```
+
+```{r}
+#| include: false
+check_agree(list(patients = nrow(patients), p = sex_test$p.value), reticulate::py$chk)
+```
+
+p = 0.002 pour les 520 patients, contre p < 0.001 pour les 600 interventions. C'est encore petit : le hasard produit aussi des résultats rares, et sur un long tableau de tests, certains apparaissent. C'est le premier problème des [valeurs p](../glossary.qmd#p-value){.term} dans le [tableau 1](../glossary.qmd#table-1){.term}.
 
 Le second problème est qu'une valeur p mélange *la taille* d'une différence et *le nombre de patients*. Avec 6,000 patients, une différence négligeable (minime) donne p < 0.001. Avec 30, une grande différence ne le donne pas.
 
-La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'[écart-type](../glossary.qmd#standard-deviation){.term}, quelle que soit la [taille de l'échantillon](../glossary.qmd#sample-size){.term}. Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable.
+La **différence moyenne standardisée (SMD)** mesure seulement la taille du déséquilibre, en unités d'[écart-type](../glossary.qmd#standard-deviation){.term}, quelle que soit la [taille de l'échantillon](../glossary.qmd#sample-size){.term}. Pour un nombre comme l'âge, c'est la différence entre les moyennes des deux groupes divisée par leur écart-type regroupé : la racine carrée de la moyenne des [variances](../glossary.qmd#variance){.term} des deux groupes. Pour une variable oui/non comme le sexe, les moyennes sont les proportions des deux groupes (ici, la part de femmes), et la variance d'une proportion p vaut p(1 − p) ; pour le sexe, cela donne le 0.31 du tableau ci-dessous. Pour une variable à plus de deux catégories, comme la classe ASA ou le tabagisme, les deux packages combinent les différences de toutes les catégories en une seule distance entre les groupes, toujours positive.
+
+Règle empirique courante : une |SMD| inférieure à 0.1 est négligeable. Prenez-la comme un repère approximatif, pas comme une frontière entre « équilibré » et « déséquilibré » : avec quelques centaines de patients, le hasard seul peut produire des SMD au-dessus, même quand les groupes ont été formés au hasard. L'[exercice 1](#exercises) le montre.
 
 ::: {.panel-tabset group="language"}
 ## R
@@ -290,7 +334,7 @@ smd_r <- balance$table_body |> filter(row_type == "label")
 check_agree(as.list(setNames(abs(smd_r$estimate), smd_r$variable)), reticulate::py$chk, tol = 0.005)
 ```
 
-En laissant les signes de côté pour l'instant (l'encadré ci-dessous les explique), le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète et la durée de séjour sont négligeables. Le tableau de R donne aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % (intervalle de confiance) pour chaque SMD ; tableone n'en calcule pas.
+En laissant les signes de côté pour l'instant (l'encadré ci-dessous les explique), le sexe (SMD 0.31) et l'IMC (0.33) présentent des déséquilibres nets. L'âge (0.10), la classe ASA (0.12) et le tabagisme (0.15) dépassent à peine 0.1 : ils méritent une phrase, pas l'alarme. Le diabète est négligeable. La durée de séjour est laissée de côté : c'est un critère de jugement, et sa SMD ne dit donc rien de la ressemblance des groupes avant l'opération. Le tableau de R donne aussi un [IC](../glossary.qmd#confidence-interval){.term} à 95 % (intervalle de confiance) pour chaque SMD ; tableone n'en calcule pas.
 
 Les deux packages concordent à trois décimales. Pour voir où ils se séparent, affichez la SMD de l'âge avec plus de chiffres :
 
@@ -329,6 +373,7 @@ check_agree(list(age = abs(smd::smd(cohort$age, cohort$procedure)$estimate)), re
 **Laquelle faut-il rapporter ?**
 
 - **Cohortes appariées ou pondérées** (études avec [score de propension](../glossary.qmd#propensity-score){.term}, par exemple une étude [appariée](../glossary.qmd#matched){.term} portant sur les patients de plus de 80 ans) : SMD seulement. L'appariement a rendu les groupes semblables exprès, donc un test « ont-ils différé ? » n'a aucun sens.
+- **Essais randomisés** : pas de valeurs p pour les différences initiales. Dans un essai randomisé, toute différence initiale est due au hasard par construction ; une valeur p à son sujet ne répond donc à aucune question. La recommandation CONSORT pour la publication des essais déconseille ces tests.
 - **Autres comparaisons observationnelles** : beaucoup de revues attendent encore des valeurs p. Ajoutez les SMD, et discutez les différences selon leur taille, pas selon leur valeur p.
 
 ## Données manquantes {#missing}
@@ -456,7 +501,20 @@ stopifnot(
   abs(site_smd[["smoker"]] - 0.23) < 0.005, abs(site_smd[["los_days"]] - 0.225) < 0.005,
   all(site_smd[setdiff(names(site_smd), c("smoker", "los_days"))] < 0.11),
   round(abs(smd_r$estimate[smd_r$variable == "sex"]), 2) == 0.31,
-  round(abs(smd_r$estimate[smd_r$variable == "bmi"]), 2) == 0.33
+  round(abs(smd_r$estimate[smd_r$variable == "bmi"]), 2) == 0.33,
+  # numbers and claims added with the content-review fixes (B23, C11, C14)
+  nrow(patients) == 520, round(sex_test$p.value, 3) == 0.002, sex_test$p.value > 0.001,
+  n_distinct(cohort$patient_id) == nrow(distinct(cohort, patient_id, sex, procedure)),   # sex, procedure: one per patient
+  local({ p1 <- mean(cohort$sex[cohort$procedure == "THA"] == "Female"); p2 <- mean(cohort$sex[cohort$procedure == "TKA"] == "Female")
+    isTRUE(all.equal(abs(smd_r$estimate[smd_r$variable == "sex"]), abs(p1 - p2) / sqrt((p1 * (1 - p1) + p2 * (1 - p2)) / 2))) }),
+  all(smd_r$estimate[smd_r$variable %in% c("sex", "asa", "smoker")] > 0),
+  reticulate::py_eval("all(balance.smd_table.iloc[:, 0][['sex', 'asa', 'smoker']] > 0)"),
+  isTRUE(all.equal(chisq.test(table(cohort$asa, cohort$procedure))$p.value,
+                   chisq.test(table(factor(cohort$asa, levels = c(3, 1, 4, 2)), cohort$procedure))$p.value)),   # order ignored
+  site_smd[["smoker"]] > 0.1, round(site_smd[["asa"]], 2) == 0.10, site_smd[["asa"]] > 0.1,
+  round(site_smd[["smoker"]], 2) == 0.23, round(site_smd[["los_days"]], 2) == 0.22,
+  round(site_rows$conf.low[site_rows$variable == "smoker"], 2) == 0.07, round(site_rows$conf.high[site_rows$variable == "smoker"], 2) == 0.39,
+  sum(names(site_smd) != "los_days") == 6
 )
 ```
 
@@ -465,6 +523,10 @@ stopifnot(
 # Prose guard (Python side): the quartile tableone displays.
 assert by_procedure.tableone.loc[("Length of stay, days, median [Q1,Q3]", ""),
                                  ("Grouped by procedure", "THA")] == "1.0 [0.0,1.8]"
+# The ASA SMD that exercise 1's Python output prints (the same call as the solution).
+site_check = TableOne(cohort, columns=table1_vars, categorical=categorical,
+                      nonnormal=["los_days"], groupby="site", smd=True, rename=labels)
+assert f"{site_check.smd_table.loc['asa'].iloc[0]:.6f}" == "0.103498"
 ```
 
 ## Exercices {#exercises}
@@ -497,7 +559,9 @@ print(by_site.smd_table)
 ```
 :::
 
-Le tabagisme (0.23) et la durée de séjour (0.22 ; Python affiche −0.22, voir l'encadré sur les signes) diffèrent le plus entre les sites. Dans le tableau de R, leurs [intervalles de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % (0.07 à 0.39 et 0.06 à 0.39) excluent zéro ; tableone ne donne pas d'IC. Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec sept variables, il faut s'attendre à quelques déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « [significative](../glossary.qmd#statistical-significance){.term} ».
+Le tabagisme (0.23) est la caractéristique initiale qui diffère le plus entre les sites. Dans le tableau de R, son [intervalle de confiance](../glossary.qmd#confidence-interval){.term} (IC) à 95 % (0.07 à 0.39) exclut zéro ; tableone ne donne pas d'IC. La classe ASA dépasse elle aussi à peine 0.1 (R affiche 0.10, Python 0.103498). Pourtant, le site a été attribué totalement au hasard dans ce jeu de données, indépendamment de tout le reste. Avec six caractéristiques initiales, il faut s'attendre à un ou deux déséquilibres dus au hasard au-dessus de 0.1 : jugez chaque SMD sur sa taille et sur son importance clinique plausible, pas sur le fait qu'elle soit « [significative](../glossary.qmd#statistical-significance){.term} ».
+
+La durée de séjour a elle aussi une SMD élevée (0.22 ; Python affiche −0.22, voir l'encadré sur les signes), mais c'est un critère de jugement, mesuré après l'opération : elle n'entre donc pas dans le jugement de la ressemblance des patients des deux sites avant l'opération. (Le programme qui a fabriqué les données ne donne au site aucun effet sur la durée de séjour : cette différence aussi est due au hasard.)
 :::
 
 **2.** Un fellow compare des patients de 80 ans ou plus à des patients plus jeunes, [appariés](../glossary.qmd#matched){.term} sur le sexe, l'IMC et la classe ASA. Le tableau [de départ](../glossary.qmd#baseline){.term} doit-il montrer des [valeurs p](../glossary.qmd#p-value){.term} ou des SMD ? Pourquoi ?
