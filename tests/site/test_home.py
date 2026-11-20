@@ -120,3 +120,10 @@ def test_index_finds_tests_under_their_other_names(site):
                           ("Welch's t test", "catalog/06-two-unpaired-groups.html#unpaired-t"),
                           ("Conditional proportional hazards regression", "survival/14-cox-regression.html#stratified-cox")]:
         assert alias in rows and target in rows[alias], alias
+
+
+def test_mantel_haenszel_row_tells_the_survival_test_from_the_stratified_one(site):
+    """R's mantelhaen.test() is the Cochran-Mantel-Haenszel test on stratified 2 x 2 tables (C8)."""
+    row = next(text for name, text, _ in index_rows() if name == "Mantel-Haenszel test (survival)")
+    assert "Same as the log-rank test" in row
+    assert "2 × 2 tables" in row and "not on this site" in row

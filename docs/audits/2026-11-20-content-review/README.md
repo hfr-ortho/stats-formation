@@ -49,8 +49,8 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | B4 | 3.8 | open |  |
 | B5 | 3.2, 3.3, 3.4, 3.6, 3.7, 3.8 | open |  |
 | B6 | 3.3 | open |  |
-| B7 | 3.3 | open |  |
-| B8 | 3.2 | open |  |
+| B7 | 3.3 | partly (3.9 done) | pending |
+| B8 | 3.2 | partly (3.9 done) | pending |
 | B9 | 3.5 | open |  |
 | B10 | 3.2, 3.3 | open |  |
 | B11 | 3.7 | open |  |
@@ -67,7 +67,7 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | B22 | 3.2 | open |  |
 | B23 | 3.2 | open |  |
 | B24 | 3.4, 3.5, 3.6 | open |  |
-| B25 | 3.9 | open |  |
+| B25 | 3.9 | partly (3.9 done) | pending |
 | C1 | 3.4, 3.7 | open |  |
 | C2 | 3.3 | open |  |
 | C3 | 3.5 | open |  |
@@ -75,9 +75,9 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | C5 | 3.5 | open |  |
 | C6 | 3.6 | open |  |
 | C7 | 3.6 | open |  |
-| C8 | 3.9 | open |  |
-| C9 | 3.9 | open |  |
-| C10 | 3.9 | open |  |
+| C8 | 3.9 | done | pending |
+| C9 | 3.9 | done | pending |
+| C10 | 3.9 | done | pending |
 | C11 | 3.2 | open |  |
 | C12 | 3.2, 3.3 | open |  |
 | C13 | 3.7 | open |  |
