@@ -17,7 +17,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-Une [corrélation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) dit à quel point deux choses vont ensemble. La **régression** dit **de combien le [critère de jugement](../glossary.qmd#outcome){.term} change pour chaque unité du [prédicteur](../glossary.qmd#predictor){.term}**, et permet de prédire le critère pour un nouveau patient. Le type de régression dépend du critère : une [mesure](../glossary.qmd#continuous-variable){.term} qui suit une droite ou une courbe, une mesure qui n'est pas [normale](../glossary.qmd#normal-distribution){.term}, un [critère oui/non](../glossary.qmd#binary){.term}, ou un délai jusqu'à un [événement](../glossary.qmd#event){.term}. Pour plusieurs prédicteurs à la fois, voir la [page 12](12-predict-from-several.qmd).
+Une [corrélation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) dit à quel point deux choses vont ensemble. La **régression** dit **de combien le [critère de jugement](../glossary.qmd#outcome){.term} change pour chaque unité du [prédicteur](../glossary.qmd#predictor){.term}**, et permet de prédire le critère pour un nouveau patient. Le type de régression dépend du critère : une [mesure](../glossary.qmd#continuous-variable){.term} qui suit une droite ou une courbe, une mesure dont les résidus autour d'une droite ne sont pas à peu près [normaux](../glossary.qmd#normal-distribution){.term}, un [critère oui/non](../glossary.qmd#binary){.term}, ou un délai jusqu'à un [événement](../glossary.qmd#event){.term}. Pour plusieurs prédicteurs à la fois, voir la [page 12](12-predict-from-several.qmd).
 
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
@@ -35,7 +35,7 @@ Pour garder le code court, les exemples de prothèses articulaires utilisent tou
 - Le [critère](../glossary.qmd#outcome){.term} est une **[mesure](../glossary.qmd#continuous-variable){.term}**, et vous voulez savoir de combien il change **par unité d'un [prédicteur](../glossary.qmd#predictor){.term}**, ou le prédire.
 - La relation est à peu près une **droite**, et le critère de chaque patient est [indépendant](../glossary.qmd#independence){.term} de celui des autres.
 - Les **[résidus](../glossary.qmd#residual){.term}** (la distance de chaque patient à la droite) sont à peu près [normaux](../glossary.qmd#normal-distribution){.term}, avec une [dispersion](../glossary.qmd#spread){.term} semblable tout le long de la droite. Vérifiez-les après l'ajustement.
-- Si la relation est courbe → [régression non linéaire](#nonlinear-regression). Si le critère est [asymétrique](../glossary.qmd#skewed){.term} ou a un [plafond](../glossary.qmd#ceiling-effect){.term} → [régression non paramétrique](#nonparametric-regression). S'il est [oui/non](../glossary.qmd#binary){.term} → [régression logistique](#logistic-regression).
+- Si la relation est courbe → [régression non linéaire](#nonlinear-regression). Si les résidus d'une droite ajustée ne sont pas à peu près normaux, souvent parce que le critère est [asymétrique](../glossary.qmd#skewed){.term}, a un [plafond](../glossary.qmd#ceiling-effect){.term} ou des [valeurs atypiques](../glossary.qmd#outlier){.term} → [régression non paramétrique](#nonparametric-regression). Si le critère est [oui/non](../glossary.qmd#binary){.term} → [régression logistique](#logistic-regression).
 
 ### Ce que fait vraiment le test
 
@@ -211,9 +211,79 @@ plt.show()
 
 C'est le cas ici : une bande régulière, sans courbe ni forme d'entonnoir.
 
+Vérifiez ensuite que les résidus sont à peu près normaux avec un [graphique QQ](../glossary.qmd#qq-plot){.term}, comme à la [page 3](../foundations/03-distributions.qmd#look) : les points doivent se trouver près de la droite.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(residual = resid(bmi_model)) |>
+  ggplot(aes(sample = residual)) +
+  geom_qq(alpha = 0.4) +
+  geom_qq_line() +
+  labs(x = "Normal quantiles", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+from scipy import stats
+
+fig, ax = plt.subplots(figsize=(6, 3))
+qq = stats.probplot(bmi_model.resid, plot=ax)   # donner un nom au résultat garde ses nombres hors de la sortie
+ax.set_title("")                                # probplot ajoute un titre ; le graphique R n'en a pas
+ax.set_xlabel("Normal quantiles")
+ax.set_ylabel("Residual, minutes")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+C'est le cas ici : les points sont sur la droite, sauf les résidus les plus extrêmes à chaque bout, qui s'infléchissent un peu vers 0. C'est le signe de queues un peu plus courtes que celles d'une distribution normale, pas d'une asymétrie.
+
 ### Taille d'effet et IC à 95 %
 
 La **pente** avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 % est la [taille d'effet](../glossary.qmd#effect-size){.term} : 1.37 minute par kg/m² (IC à 95 % de 1.15 à 1.58). Ramenez-la à une différence qui compte cliniquement : 5 kg/m² d'IMC vont avec 5 × 1.368 = 6.8 minutes de plus (IC à 95 % de 5 × 1.151 = 5.8 à 5 × 1.585 = 7.9). La pente et les deux bornes de son IC sont multipliées par 5, avec les nombres non arrondis de la sortie. **R² = 0.20** dit quelle part de la variation la droite explique.
+
+La droite répond aussi à deux questions différentes sur les patients qui ont un IMC donné, ici 30 kg/m². L'**IC à 95 % de la moyenne**, de 82.7 à 85.1 minutes, indique où l'on estime que se situe la durée opératoire moyenne de tous ces patients. L'**intervalle de prédiction à 95 %**, de 55.0 à 112.7 minutes, indique où l'on s'attend à trouver la durée opératoire d'un nouveau patient : il est bien plus large, parce qu'il ajoute à l'incertitude sur la droite elle-même la dispersion propre de ce patient autour de la droite. R affiche les deux sous `lwr` et `upr` ; Python sous `mean_ci_lower` et `mean_ci_upper`, puis `obs_ci_lower` et `obs_ci_upper`.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_30 <- tibble(bmi = 30)                                # l'IMC pour lequel on prédit
+predict(bmi_model, bmi_30, interval = "confidence")       # IC à 95 % de la durée opératoire moyenne pour un IMC de 30
+predict(bmi_model, bmi_30, interval = "prediction")       # intervalle de prédiction à 95 % pour un patient avec un IMC de 30
+mean(abs(resid(bmi_model)) <= sigma(bmi_model))           # part des patients à moins d'une erreur standard résiduelle de la droite
+```
+
+## Python
+
+```{python}
+at_30 = bmi_model.get_prediction(pd.DataFrame({"bmi": [30]})).summary_frame(alpha=0.05)   # prédictions pour un IMC de 30
+print(at_30[["mean", "mean_ci_lower", "mean_ci_upper"]])   # IC à 95 % de la durée opératoire moyenne
+print(at_30[["obs_ci_lower", "obs_ci_upper"]])             # intervalle de prédiction à 95 % pour un patient
+print((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())   # part des patients à moins d'une erreur standard résiduelle de la droite
+```
+:::
+
+```{python}
+#| include: false
+chk = {"fit": float(at_30["mean"].iloc[0]), "mean_low": float(at_30["mean_ci_lower"].iloc[0]),
+       "mean_high": float(at_30["mean_ci_upper"].iloc[0]), "obs_low": float(at_30["obs_ci_lower"].iloc[0]),
+       "obs_high": float(at_30["obs_ci_upper"].iloc[0]),
+       "within": float((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())}
+```
+
+```{r}
+#| include: false
+mean_30 <- predict(bmi_model, bmi_30, interval = "confidence")
+one_30 <- predict(bmi_model, bmi_30, interval = "prediction")
+check_agree(list(fit = mean_30[1, "fit"], mean_low = mean_30[1, "lwr"], mean_high = mean_30[1, "upr"],
+                 obs_low = one_30[1, "lwr"], obs_high = one_30[1, "upr"],
+                 within = mean(abs(resid(bmi_model)) <= sigma(bmi_model))), reticulate::py$chk)
+```
 
 ### Rédiger les résultats
 
@@ -223,7 +293,7 @@ La **pente** avec son [IC](../glossary.qmd#confidence-interval){.term} à 95 % 
 
 ::: {.callout-warning}
 ## ⚠️ Attention : la droite est une moyenne, et seulement à l'intérieur de vos données
-La droite prédit la durée opératoire **moyenne** pour chaque IMC. Les patients pris un à un s'écartent d'environ 15 minutes de part et d'autre (l'erreur standard résiduelle) : c'est donc un mauvais outil pour planifier l'intervention d'un patient. Et l'IMC va ici de 18.0 à 44.5 (affiché sous « Regarder d'abord les données ») : n'utilisez pas la droite pour prédire hors de cette étendue.
+La droite prédit la durée opératoire **moyenne** pour chaque IMC. Les patients pris un à un s'en écartent : l'erreur standard résiduelle, 14.7 minutes, est l'écart-type des résidus, si bien que seuls deux tiers environ des patients (ici 67.2 %, le dernier nombre affiché sous « Taille d'effet et IC à 95 % ») se trouvent à moins de 14.7 minutes de la droite. Pour un patient avec un IMC de 30, l'intervalle de prédiction va de 55.0 à 112.7 minutes : la droite est donc un mauvais outil pour planifier l'intervention d'un patient. Et l'IMC va ici de 18.0 à 44.5 (affiché sous « Regarder d'abord les données ») : n'utilisez pas la droite pour prédire hors de cette étendue.
 :::
 
 ## Régression non linéaire {#nonlinear-regression}
@@ -429,7 +499,7 @@ Le KOOS JR est passé d'environ 49.8 points (IC à 95 % de 48.5 à 51.2) le jou
 
 ### Rédiger les résultats
 
-> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery.
+> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery. The up to four scores from each knee were treated as independent, so the CIs do not account for the correlation between scores from the same knee and are illustrative only.
 >
 > **Results:** In 330 knees (1146 scores), the fitted curve gave an estimated KOOS JR of 49.8 points (95% CI 48.5 to 51.2) at surgery and a plateau of 84.2 points (95% CI 82.6 to 85.9); half of the change was reached at about 56 days (95% CI 49 to 64).
 
@@ -450,7 +520,7 @@ Chaque genou a jusqu'à quatre scores (avant l'opération, à 6 semaines, à 3 m
 
 ### Quand l'utiliser
 
-- Le [critère](../glossary.qmd#outcome){.term} est une [mesure](../glossary.qmd#continuous-variable){.term} qui **n'est pas [normale](../glossary.qmd#normal-distribution){.term}** : elle a un [plafond](../glossary.qmd#ceiling-effect){.term}, une [asymétrie](../glossary.qmd#skewed){.term} ou des [valeurs atypiques](../glossary.qmd#outlier){.term}, si bien que les [résidus](../glossary.qmd#residual){.term} d'une droite ne seront pas normaux.
+- Le [critère](../glossary.qmd#outcome){.term} est une [mesure](../glossary.qmd#continuous-variable){.term}, et les **[résidus](../glossary.qmd#residual){.term} d'une droite ajustée ne sont pas à peu près [normaux](../glossary.qmd#normal-distribution){.term}**, souvent parce que le critère a un [plafond](../glossary.qmd#ceiling-effect){.term}, une [asymétrie](../glossary.qmd#skewed){.term} ou des [valeurs atypiques](../glossary.qmd#outlier){.term}. Ce sont les résidus qui comptent, pas la forme du critère lui-même.
 - Le **LOWESS** (lissage localement pondéré) dessine la forme sans formule : il ajuste de nombreuses petites droites, chacune aux points proches d'elle, et les relie en une courbe lisse. Il donne une image, pas une valeur p.
 - La **pente de Theil-Sen** est la médiane des [pentes](../glossary.qmd#slope){.term} entre toutes les paires de patients. Quelques patients extrêmes la déplacent à peine, et son [IC](../glossary.qmd#confidence-interval){.term} vient des [rangs](../glossary.qmd#rank){.term}, pas de résidus normaux.
 - Si les résidus sont à peu près normaux → [régression linéaire](#linear-regression).
@@ -646,7 +716,7 @@ Theil-Sen résiste aux valeurs atypiques, mais rien ne peut voir au-dessus d'un 
 
 - Le [critère](../glossary.qmd#outcome){.term} est **[oui/non](../glossary.qmd#binary){.term}** (décédé ou non), et vous voulez l'**odds ratio** par unité d'un [prédicteur](../glossary.qmd#predictor){.term}.
 - Elle suppose que le [logarithme des odds](../glossary.qmd#odds){.term} change en ligne droite avec le prédicteur : chaque jour de retard en plus multiplie les odds par le même facteur.
-- Il faut assez de patients avec l'événement : une règle empirique courante est d'au moins 10 par prédicteur.
+- Il faut assez de patients dans le plus petit des deux groupes définis par le critère (ici les décès) : une règle empirique courante est d'au moins 10 par coefficient estimé par le modèle. Un prédicteur mesuré ou un prédicteur oui/non prend un coefficient ; un prédicteur à trois catégories en prend deux. Certaines études jugent cette règle trop stricte.
 - Si le critère est un délai jusqu'à un [événement](../glossary.qmd#event){.term} → [régression de Cox](#cox).
 
 ### Ce que fait vraiment le test
@@ -1028,7 +1098,7 @@ check_agree(list(hr5 = exp(5 * coef(slope_cox))[["tibial_slope_deg"]], low5 = ex
 
 ::: {.callout-warning}
 ## ⚠️ Attention : un hazard ratio n'est pas un effet du traitement
-La pente n'a pas été attribuée aux patients : ceux qui ont une pente forte peuvent différer par d'autres aspects. Un hazard ratio de 1.27 par degré ne montre pas qu'une ostéotomie qui réduit la pente de 1° abaisserait le hazard d'autant. Seule une étude de l'ostéotomie elle-même peut le montrer. À raison d'environ 10 échecs par terme, les 31 échecs permettent ici environ trois termes ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+La pente n'a pas été attribuée aux patients : ceux qui ont une pente forte peuvent différer par d'autres aspects. Un hazard ratio de 1.27 par degré ne montre pas qu'une ostéotomie qui réduit la pente de 1° abaisserait le hazard d'autant. Seule une étude de l'ostéotomie elle-même peut le montrer. Selon une règle empirique courante d'environ 10 échecs par terme, c'est-à-dire par coefficient estimé par le modèle (certaines études jugent cette règle trop stricte), les 31 échecs permettent ici environ trois termes ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
 :::
 
 ::: {.callout-tip}
@@ -1058,6 +1128,9 @@ stopifnot(
   round(bmi_ci["bmi", ], 2) == c(1.15, 1.58), round(bmi_fit$r.squared, 2) == 0.20, round(bmi_fit$sigma, 1) == 14.7,
   round(5 * coef(bmi_model)[["bmi"]], 1) == 6.8, round(5 * bmi_ci["bmi", ], 1) == c(5.8, 7.9),
   range(cohort$bmi) == c(18.0, 44.5),
+  round(mean_30[1, c("lwr", "upr")], 1) == c(82.7, 85.1), round(one_30[1, c("lwr", "upr")], 1) == c(55.0, 112.7),
+  round(100 * mean(abs(resid(bmi_model)) <= sigma(bmi_model)), 1) == 67.2,
+  abs(mean(scale(resid(bmi_model))^3)) < 0.1, mean(scale(resid(bmi_model))^4) - 3 < 0,   # the QQ plot: no skew, slightly short tails
   range(proms$visit_days[proms$visit == "preop"], na.rm = TRUE) == c(-27, -1),
   nrow(koos) == 1146, n_distinct(koos$case_id) == 330,
   round(recovery_coef[, "Estimate"], 1) == c(84.2, 49.8, 80.9), round(summary(recovery)$sigma, 2) == 12.33,

@@ -17,7 +17,7 @@ source("R/check_agree.R")
 cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.md5"))))
 ```
 
-A [correlation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) says how strongly two things go together. **Regression** says **how much the [outcome](../glossary.qmd#outcome){.term} changes for each unit of the [predictor](../glossary.qmd#predictor){.term}**, and lets you predict the outcome for a new patient. Which regression depends on the outcome: a [measurement](../glossary.qmd#continuous-variable){.term} on a straight line or a curve, a measurement that isn't [normal](../glossary.qmd#normal-distribution){.term}, a [yes/no outcome](../glossary.qmd#binary){.term}, or time until an [event](../glossary.qmd#event){.term}. With several predictors at once, see [page 12](12-predict-from-several.qmd).
+A [correlation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) says how strongly two things go together. **Regression** says **how much the [outcome](../glossary.qmd#outcome){.term} changes for each unit of the [predictor](../glossary.qmd#predictor){.term}**, and lets you predict the outcome for a new patient. Which regression depends on the outcome: a [measurement](../glossary.qmd#continuous-variable){.term} on a straight line or a curve, a measurement whose residuals around a straight line aren't roughly [normal](../glossary.qmd#normal-distribution){.term}, a [yes/no outcome](../glossary.qmd#binary){.term}, or time until an [event](../glossary.qmd#event){.term}. With several predictors at once, see [page 12](12-predict-from-several.qmd).
 
 ::: {.callout-note}
 ## 💡 How every section on this page works
@@ -35,7 +35,7 @@ To keep the code short, the joint replacement examples use every case, including
 - The [outcome](../glossary.qmd#outcome){.term} is a **[measurement](../glossary.qmd#continuous-variable){.term}**, and you want to know how much it changes **per unit of one [predictor](../glossary.qmd#predictor){.term}**, or to predict it.
 - The relationship is roughly a **straight line**, and each patient's outcome is [independent](../glossary.qmd#independence){.term} of the others'.
 - The **[residuals](../glossary.qmd#residual){.term}** (each patient's distance from the line) are [roughly normal](../glossary.qmd#normal-distribution){.term}, with a similar [spread](../glossary.qmd#spread){.term} all along the line. Check them after fitting.
-- If the relationship curves → [nonlinear regression](#nonlinear-regression). If the outcome is [skewed](../glossary.qmd#skewed){.term} or has a [ceiling](../glossary.qmd#ceiling-effect){.term} → [nonparametric regression](#nonparametric-regression). If it's [yes/no](../glossary.qmd#binary){.term} → [logistic regression](#logistic-regression).
+- If the relationship curves → [nonlinear regression](#nonlinear-regression). If the residuals of a straight-line fit aren't roughly normal, often because the outcome is [skewed](../glossary.qmd#skewed){.term}, has a [ceiling](../glossary.qmd#ceiling-effect){.term} or has [outliers](../glossary.qmd#outlier){.term} → [nonparametric regression](#nonparametric-regression). If the outcome is [yes/no](../glossary.qmd#binary){.term} → [logistic regression](#logistic-regression).
 
 ### What the test really does
 
@@ -211,9 +211,79 @@ plt.show()
 
 They do here: an even band, with no curve and no funnel shape.
 
+Then check that the residuals are roughly normal with a [QQ plot](../glossary.qmd#qq-plot){.term}, as on [page 3](../foundations/03-distributions.qmd#look): the points should lie close to the line.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+#| fig-height: 3
+tibble(residual = resid(bmi_model)) |>
+  ggplot(aes(sample = residual)) +
+  geom_qq(alpha = 0.4) +
+  geom_qq_line() +
+  labs(x = "Normal quantiles", y = "Residual, minutes")
+```
+
+## Python
+
+```{python}
+from scipy import stats
+
+fig, ax = plt.subplots(figsize=(6, 3))
+qq = stats.probplot(bmi_model.resid, plot=ax)   # naming the result keeps its numbers out of the output
+ax.set_title("")                                # probplot adds a title; the R plot has none
+ax.set_xlabel("Normal quantiles")
+ax.set_ylabel("Residual, minutes")
+plt.tight_layout()
+plt.show()
+```
+:::
+
+They are here: the points lie on the line, except that the most extreme residuals at each end bend a little toward 0. That is a sign of slightly shorter tails than a normal distribution has, not of skew.
+
 ### Effect size and 95% CI
 
 The **slope** with its 95% [CI](../glossary.qmd#confidence-interval){.term} is the [effect size](../glossary.qmd#effect-size){.term}: 1.37 minutes per kg/m² (95% CI 1.15 to 1.58). Scale it to a difference that matters clinically: 5 kg/m² of BMI goes with 5 × 1.368 = 6.8 more minutes (95% CI 5 × 1.151 = 5.8 to 5 × 1.585 = 7.9). The slope and both ends of its CI are multiplied by 5, using the unrounded numbers in the output. **R² = 0.20** says how much of the variation the line explains.
+
+The line also answers two different questions about patients with a given BMI, here 30 kg/m². The **95% CI for the mean**, 82.7 to 85.1 minutes, is where the average operative time of all such patients is estimated to lie. The **95% prediction interval**, 55.0 to 112.7 minutes, is where one new patient's operative time is expected to fall: it is far wider, because it adds that patient's own scatter around the line to the uncertainty about the line itself. R prints the two as `lwr` and `upr`; Python as `mean_ci_lower` and `mean_ci_upper`, then `obs_ci_lower` and `obs_ci_upper`.
+
+::: {.panel-tabset group="language"}
+## R
+
+```{r}
+bmi_30 <- tibble(bmi = 30)                                # the BMI to predict at
+predict(bmi_model, bmi_30, interval = "confidence")       # 95% CI for the mean operative time at a BMI of 30
+predict(bmi_model, bmi_30, interval = "prediction")       # 95% prediction interval for one patient with a BMI of 30
+mean(abs(resid(bmi_model)) <= sigma(bmi_model))           # share of patients within one residual standard error of the line
+```
+
+## Python
+
+```{python}
+at_30 = bmi_model.get_prediction(pd.DataFrame({"bmi": [30]})).summary_frame(alpha=0.05)   # predictions at a BMI of 30
+print(at_30[["mean", "mean_ci_lower", "mean_ci_upper"]])   # 95% CI for the mean operative time
+print(at_30[["obs_ci_lower", "obs_ci_upper"]])             # 95% prediction interval for one patient
+print((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())   # share of patients within one residual standard error of the line
+```
+:::
+
+```{python}
+#| include: false
+chk = {"fit": float(at_30["mean"].iloc[0]), "mean_low": float(at_30["mean_ci_lower"].iloc[0]),
+       "mean_high": float(at_30["mean_ci_upper"].iloc[0]), "obs_low": float(at_30["obs_ci_lower"].iloc[0]),
+       "obs_high": float(at_30["obs_ci_upper"].iloc[0]),
+       "within": float((bmi_model.resid.abs() <= np.sqrt(bmi_model.scale)).mean())}
+```
+
+```{r}
+#| include: false
+mean_30 <- predict(bmi_model, bmi_30, interval = "confidence")
+one_30 <- predict(bmi_model, bmi_30, interval = "prediction")
+check_agree(list(fit = mean_30[1, "fit"], mean_low = mean_30[1, "lwr"], mean_high = mean_30[1, "upr"],
+                 obs_low = one_30[1, "lwr"], obs_high = one_30[1, "upr"],
+                 within = mean(abs(resid(bmi_model)) <= sigma(bmi_model))), reticulate::py$chk)
+```
 
 ### How to report it
 
@@ -223,7 +293,7 @@ The **slope** with its 95% [CI](../glossary.qmd#confidence-interval){.term} is t
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: the line is an average, and only inside your data
-The line predicts the **average** operative time at each BMI. Individual patients scatter around it by about 15 minutes either way (the residual standard error), so it's a poor tool for scheduling one patient's case. And BMI here runs from 18.0 to 44.5 (printed under "Look at the data first"): don't use the line to predict outside that range.
+The line predicts the **average** operative time at each BMI. Individual patients scatter around it: the residual standard error, 14.7 minutes, is the standard deviation of the residuals, so only about two-thirds of patients (here 67.2%, the last number printed under "Effect size and 95% CI") lie within 14.7 minutes of the line. For one patient with a BMI of 30, the prediction interval runs from 55.0 to 112.7 minutes, so the line is a poor tool for scheduling one patient's case. And BMI here runs from 18.0 to 44.5 (printed under "Look at the data first"): don't use the line to predict outside that range.
 :::
 
 ## Nonlinear regression {#nonlinear-regression}
@@ -429,7 +499,7 @@ KOOS JR rose from about 49.8 points (95% CI 48.5 to 51.2) on the day of surgery 
 
 ### How to report it
 
-> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery.
+> **Methods:** KOOS JR was modeled against days since surgery with an exponential recovery curve fitted by nonlinear least squares, counting the pre-op score as the score on the day of surgery. The up to four scores from each knee were treated as independent, so the CIs do not account for the correlation between scores from the same knee and are illustrative only.
 >
 > **Results:** In 330 knees (1146 scores), the fitted curve gave an estimated KOOS JR of 49.8 points (95% CI 48.5 to 51.2) at surgery and a plateau of 84.2 points (95% CI 82.6 to 85.9); half of the change was reached at about 56 days (95% CI 49 to 64).
 
@@ -450,7 +520,7 @@ Each knee has up to four scores (pre-op, 6 weeks, 3 months and 1 year). Nonlinea
 
 ### When to use it
 
-- The [outcome](../glossary.qmd#outcome){.term} is a [measurement](../glossary.qmd#continuous-variable){.term} that **isn't [normal](../glossary.qmd#normal-distribution){.term}**: it has a [ceiling](../glossary.qmd#ceiling-effect){.term}, a [skew](../glossary.qmd#skewed){.term} or [outliers](../glossary.qmd#outlier){.term}, so the [residuals](../glossary.qmd#residual){.term} of a straight line won't be normal.
+- The [outcome](../glossary.qmd#outcome){.term} is a [measurement](../glossary.qmd#continuous-variable){.term}, and the **[residuals](../glossary.qmd#residual){.term} of a straight-line fit aren't roughly [normal](../glossary.qmd#normal-distribution){.term}**, often because the outcome has a [ceiling](../glossary.qmd#ceiling-effect){.term}, a [skew](../glossary.qmd#skewed){.term} or [outliers](../glossary.qmd#outlier){.term}. It's the residuals that matter, not the outcome's own shape.
 - **LOWESS** (locally weighted smoothing) draws the shape without a formula: it fits many small lines, each to the points near it, and joins them into a smooth curve. It gives a picture, not a p-value.
 - The **Theil-Sen slope** is the median of the [slopes](../glossary.qmd#slope){.term} between every pair of patients. A few extreme patients barely move it, and its [CI](../glossary.qmd#confidence-interval){.term} comes from [ranks](../glossary.qmd#rank){.term}, not from normal residuals.
 - If the residuals are roughly normal → [linear regression](#linear-regression).
@@ -646,7 +716,7 @@ Theil-Sen resists outliers, but nothing can see above a ceiling: the 37 knees at
 
 - The [outcome](../glossary.qmd#outcome){.term} is **[yes/no](../glossary.qmd#binary){.term}** (died or not), and you want the **odds ratio** per unit of one [predictor](../glossary.qmd#predictor){.term}.
 - It assumes the [log odds](../glossary.qmd#odds){.term} change in a straight line with the predictor: each extra day of delay multiplies the odds by the same amount.
-- You need enough patients with the outcome: a common rule of thumb is at least 10 per predictor.
+- You need enough patients in the smaller outcome group (here the deaths): a common rule of thumb is at least 10 per coefficient the model estimates. A measured predictor or a yes/no one takes one coefficient; a predictor with three categories takes two. Some studies find the rule too strict.
 - If the outcome is time until an [event](../glossary.qmd#event){.term} → [Cox regression](#cox).
 
 ### What the test really does
@@ -1028,7 +1098,7 @@ check_agree(list(hr5 = exp(5 * coef(slope_cox))[["tibial_slope_deg"]], low5 = ex
 
 ::: {.callout-warning}
 ## ⚠️ Watch out: a hazard ratio isn't a treatment effect
-Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. At about 10 failures per term, the 31 failures here allow about three terms ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
+Slope wasn't assigned: patients with a steep slope may differ in other ways. A hazard ratio of 1.27 per degree doesn't show that an osteotomy reducing the slope by 1° would lower the hazard by that much. Only a study of the osteotomy itself can show that. By a common rule of thumb of about 10 failures per term, that is per coefficient the model estimates (some studies find the rule too strict), the 31 failures here allow about three terms ([page 14](../survival/14-cox-regression.qmd#choosing-covariates)).
 :::
 
 ::: {.callout-tip}
@@ -1058,6 +1128,9 @@ stopifnot(
   round(bmi_ci["bmi", ], 2) == c(1.15, 1.58), round(bmi_fit$r.squared, 2) == 0.20, round(bmi_fit$sigma, 1) == 14.7,
   round(5 * coef(bmi_model)[["bmi"]], 1) == 6.8, round(5 * bmi_ci["bmi", ], 1) == c(5.8, 7.9),
   range(cohort$bmi) == c(18.0, 44.5),
+  round(mean_30[1, c("lwr", "upr")], 1) == c(82.7, 85.1), round(one_30[1, c("lwr", "upr")], 1) == c(55.0, 112.7),
+  round(100 * mean(abs(resid(bmi_model)) <= sigma(bmi_model)), 1) == 67.2,
+  abs(mean(scale(resid(bmi_model))^3)) < 0.1, mean(scale(resid(bmi_model))^4) - 3 < 0,   # the QQ plot: no skew, slightly short tails
   range(proms$visit_days[proms$visit == "preop"], na.rm = TRUE) == c(-27, -1),
   nrow(koos) == 1146, n_distinct(koos$case_id) == 330,
   round(recovery_coef[, "Estimate"], 1) == c(84.2, 49.8, 80.9), round(summary(recovery)$sigma, 2) == 12.33,
