@@ -322,7 +322,7 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 
 - **Bias = 0.50°** ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.08° à 0.93°) : l'évaluateur 2 mesure en moyenne un demi-degré de plus que l'évaluateur 1, la même différence que celle trouvée avec un [test t pour échantillons appariés](../glossary.qmd#t-test){.term} à la [page 7, exercice 2](../catalog/07-two-paired-groups.qmd#exercises).
 - **Limites de concordance, −2.74° à 3.74° :** pour environ 95 % des genoux, si les différences suivent à peu près une loi normale, la lecture de l'évaluateur 2 sera comprise entre 2.7° en dessous et 3.7° au-dessus de celle de l'évaluateur 1. Ici, 3 des 60 points (5 %) se trouvent hors des lignes pointillées (le dernier nombre affiché avant le graphique).
-- **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; le dernier tableau de R, et les deux dernières lignes de Python, où chaque limite est suivie de son IC) montrent avec quelle [précision](../glossary.qmd#precision){.term} 60 genoux fixent les limites.
+- **Les IC des limites** (−3.48° à −2.00° et 3.00° à 4.48° ; les lignes `lower` et `upper` dans R, et les deux lignes de Python où chaque limite est suivie de son IC) montrent avec quelle [précision](../glossary.qmd#precision){.term} 60 genoux fixent les limites.
 - **Le graphique :** les points se répartissent régulièrement autour de la ligne du biais, sans tendance à la hausse ni à la baisse quand l'angle moyen change. Une tendance voudrait dire que les évaluateurs sont plus en désaccord pour certains genoux (plus en varus, par exemple) que pour d'autres, et une seule paire de limites ne les décrirait pas.
 
 Savoir si des limites de −2.7° à 3.7° sont suffisantes est une question clinique, pas statistique. Si une différence de 3° changeait la correction planifiée dans votre étude, elle est pertinente. Fixez les limites acceptables **avant** de mener l'étude de [fiabilité](../glossary.qmd#reliability){.term}, puis comparez-y les limites (et leurs IC).
@@ -408,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; la sortie affiche 0.667, et 0.667 × 60 = 40). Ils se trouvent sur la diagonale du premier tableau, qui donne les classes de l'évaluateur 1 en lignes et celles de l'évaluateur 2 en colonnes. Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.44 à 0.73) : concordance modérée selon l'[estimation](../glossary.qmd#estimate){.term} seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le [CCI](../glossary.qmd#icc){.term}, jugez-la d'après l'IC : modérée à substantielle.
+Les évaluateurs ont donné la même classe CPAK à 40 des 60 genoux (66.7 % ; R affiche 0.6666667 et Python 0.6666666666666666, soit deux tiers, et deux tiers de 60 font 40). Ces 40 genoux se trouvent sur la diagonale du premier tableau (8 + 13 + 3 + 3 + 9 + 4), qui donne les classes de l'évaluateur 1 en lignes et celles de l'évaluateur 2 en colonnes. Mais une part de cette concordance s'observerait par hasard : 20.1 % ici, comme le calcule l'encadré ci-dessous. Kappa = 0.58 ([IC](../glossary.qmd#confidence-interval){.term} à 95 % de 0.44 à 0.73) : concordance modérée selon l'[estimation](../glossary.qmd#estimate){.term} seule, sur l'échelle de Landis et Koch (de 0.41 à 0.60, modérée ; de 0.61 à 0.80, substantielle ; au-dessus de 0.80, quasi parfaite). Comme pour le [CCI](../glossary.qmd#icc){.term}, jugez-la d'après l'IC : modérée à substantielle.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Sous le capot : le kappa à la main
@@ -606,7 +606,9 @@ stopifnot(
   isTRUE(all.equal(parts[["knees"]] / sum(parts), inter_icc$value)),
   isTRUE(all.equal(parts[["knees"]] / (parts[["knees"]] + parts[["error"]]), inter_c$value)),
   round(intra_icc$value, 4) == 0.9148,
-  round(mean(cpak$R1 == cpak$R2), 3) == 0.667, round(0.667 * 60) == 40,
+  format(mean(cpak$R1 == cpak$R2), digits = 7) == "0.6666667",
+  reticulate::py_eval('repr(float((cpak["R1"] == cpak["R2"]).mean()))') == "0.6666666666666666",
+  isTRUE(all.equal(2 / 3 * 60, 40)), diag(table(cpak$R1, cpak$R2))[1:6] == c(8, 13, 3, 3, 9, 4), 8 + 13 + 3 + 3 + 9 + 4 == 40,
   rowSums(cpak_table)[["I"]] == 15, colSums(cpak_table)[["I"]] == 12, 15 / 60 * 12 / 60 == 0.05,
   round(100 * by_chance, 1) == 20.1, round((0.667 - 0.201) / (1 - 0.201), 2) == 0.58,
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),

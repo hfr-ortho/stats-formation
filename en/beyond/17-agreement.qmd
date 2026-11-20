@@ -322,7 +322,7 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 
 - **Bias = 0.50°** (95% [CI](../glossary.qmd#confidence-interval){.term} 0.08° to 0.93°): rater 2 reads half a degree higher than rater 1 on average, the same difference [page 7's exercise 2](../catalog/07-two-paired-groups.qmd#exercises) found with a [paired t test](../glossary.qmd#t-test){.term}.
 - **Limits of agreement, −2.74° to 3.74°:** for about 95% of knees, if the differences are roughly normal, rater 2's reading will be between 2.7° below and 3.7° above rater 1's. Here 3 of the 60 points (5%) lie outside the dashed lines (the last number printed before the plot).
-- **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; R's last table, and Python's last two lines, where each limit is followed by its CI) show how [precisely](../glossary.qmd#precision){.term} 60 knees pin the limits down.
+- **The CIs of the limits** (−3.48° to −2.00° and 3.00° to 4.48°; the `lower` and `upper` rows in R, and the two Python lines in which each limit is followed by its CI) show how [precisely](../glossary.qmd#precision){.term} 60 knees pin the limits down.
 - **The plot:** the points scatter evenly around the bias line, with no trend up or down as the mean angle changes. A trend would mean the raters disagree more for some knees (more varus, say) than others, and a single pair of limits wouldn't describe them.
 
 Whether limits of −2.7° to 3.7° are good enough is a clinical question, not a statistical one. If a 3° difference would change the planned correction in your study, it matters. Decide the acceptable limits **before** you run the [reliability](../glossary.qmd#reliability){.term} study, and compare the limits (and their CIs) with them.
@@ -408,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-The raters gave the same CPAK class to 40 of the 60 knees (66.7%; the output prints 0.667, and 0.667 × 60 = 40). They lie on the diagonal of the first table, which has rater 1's classes in its rows and rater 2's in its columns. But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.44 to 0.73): moderate agreement at its [point estimate](../glossary.qmd#estimate){.term} on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the [ICC](../glossary.qmd#icc){.term}, judge it by the CI: moderate to substantial.
+The raters gave the same CPAK class to 40 of the 60 knees (66.7%; R prints 0.6666667 and Python 0.6666666666666666, which is two-thirds, and two-thirds of 60 is 40). Those 40 knees lie on the diagonal of the first table (8 + 13 + 3 + 3 + 9 + 4), which has rater 1's classes in its rows and rater 2's in its columns. But some of that would happen by chance: 20.1% here, as the box below works out. Kappa = 0.58 (95% [CI](../glossary.qmd#confidence-interval){.term} 0.44 to 0.73): moderate agreement at its [point estimate](../glossary.qmd#estimate){.term} on Landis and Koch's scale (0.41 to 0.60 moderate, 0.61 to 0.80 substantial, above 0.80 almost perfect). As with the [ICC](../glossary.qmd#icc){.term}, judge it by the CI: moderate to substantial.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Under the hood: kappa by hand
@@ -606,7 +606,9 @@ stopifnot(
   isTRUE(all.equal(parts[["knees"]] / sum(parts), inter_icc$value)),
   isTRUE(all.equal(parts[["knees"]] / (parts[["knees"]] + parts[["error"]]), inter_c$value)),
   round(intra_icc$value, 4) == 0.9148,
-  round(mean(cpak$R1 == cpak$R2), 3) == 0.667, round(0.667 * 60) == 40,
+  format(mean(cpak$R1 == cpak$R2), digits = 7) == "0.6666667",
+  reticulate::py_eval('repr(float((cpak["R1"] == cpak["R2"]).mean()))') == "0.6666666666666666",
+  isTRUE(all.equal(2 / 3 * 60, 40)), diag(table(cpak$R1, cpak$R2))[1:6] == c(8, 13, 3, 3, 9, 4), 8 + 13 + 3 + 3 + 9 + 4 == 40,
   rowSums(cpak_table)[["I"]] == 15, colSums(cpak_table)[["I"]] == 12, 15 / 60 * 12 / 60 == 0.05,
   round(100 * by_chance, 1) == 20.1, round((0.667 - 0.201) / (1 - 0.201), 2) == 0.58,
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),

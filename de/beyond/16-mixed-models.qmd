@@ -129,7 +129,7 @@ check_agree(list(intercept = fixef(knee_model)[["(Intercept)"]], visit_6wk = fix
 check_agree(list(sd_knee = knee_sd[1], sd_residual = knee_sd[2]), reticulate::py$chk_sd, tol = 1e-5)
 # The standard errors differ in the fourth significant figure: lme4 computes them with the variances
 # held fixed, statsmodels from the whole likelihood's Hessian (checked by hand while writing this
-# page). See the R vs Python box.
+# page). See the R vs Python box on degrees of freedom.
 check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_se, tol = 1e-3)
 ```
 
@@ -243,7 +243,7 @@ Eine **zufällige Steigung (Random Slope)** ginge weiter: Jedes Knie erhielte ne
 
 ::: {.callout-tip}
 ## 🔀 R oder Python: eine zufällige Steigung pro Kontrolle
-lme4 lehnt `(visit | case_id)` hier ab, mit der Meldung «number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable». statsmodels bricht nicht ab: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` liefert eine Anpassung, die Konvergenz meldet, ohne Warnung. Eine Anpassung durch statsmodels ist hier kein Grund, einer zufälligen Steigung zu trauen: Die Meldung von lme4 nennt den Grund.
+lme4 lehnt `lmer(prom_score ~ visit + (visit | case_id), data = knees)` hier ab, mit der Meldung «number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable». statsmodels bricht nicht ab: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` liefert eine Anpassung, die Konvergenz meldet, ohne Warnung. Eine Anpassung durch statsmodels ist hier kein Grund, einer zufälligen Steigung zu trauen: Die Meldung von lme4 nennt den Grund.
 :::
 
 ```{python}
@@ -510,9 +510,9 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. R gibt die zweiten [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} als `DenDF` 309.58 und den [p-Wert](../glossary.qmd#p-value){.term} als `6.924e-15` aus. Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python ist ein [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} mit 3 Freiheitsgraden: 77.15, ebenfalls p < 0.001. Das [F](../glossary.qmd#f-statistic){.term} von R ist diese [Statistik](../glossary.qmd#test-statistic){.term} geteilt durch ihre 3 Freiheitsgrade: 77.15 / 3 = 25.72, gegenüber 25.73 in R, weil sich die [Standardfehler](../glossary.qmd#standard-error){.term} der beiden Programme leicht unterscheiden (der erste Kasten «R oder Python»).
+- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** Die Muster unterscheiden sich. R gibt die zweiten [Freiheitsgrade](../glossary.qmd#degrees-of-freedom){.term} als `DenDF` 309.58 und den [p-Wert](../glossary.qmd#p-value){.term} als `6.924e-15` aus. Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python ist ein [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} mit 3 Freiheitsgraden: 77.15, ebenfalls p < 0.001. Das [F](../glossary.qmd#f-statistic){.term} von R ist diese [Statistik](../glossary.qmd#test-statistic){.term} geteilt durch ihre 3 Freiheitsgrade: 77.15 / 3 = 25.72, gegenüber 25.73 in R, weil sich die [Standardfehler](../glossary.qmd#standard-error){.term} der beiden Programme leicht unterscheiden (der Kasten «R oder Python: Freiheitsgrade»).
 - **Die EMMs und die Differenzen (Walker minus Gips)** zeigen, auf welche Weise. Nach 6 Wochen lag der Walker um 3.0 Punkte vorn, und nach 3 Monaten lag der Walker um 3.6 Punkte vorn (17.34 gegenüber 13.78). Nach 6 Monaten betrug der Abstand 0.4 Punkte, und nach 12 Monaten −0.4 Punkte (95%-KI −1.5 bis 0.7): Der Abstand hatte sich geschlossen.
-- **Die KI der Differenzen** sind in beiden Reitern unadjustierte 95%-KI: `confint()` in R gibt «Confidence level used: 0.95» und keine Zeile zur Adjustierung aus, und Python berechnet jede Differenz ± 1.96 × se. Nur die p-Werte werden für die vier Kontrollen adjustiert: mit `adjust = "holm"` in R und mit `multipletests(..., method="holm")` in Python.
+- **Die KI der Differenzen** sind in beiden Reitern unadjustierte 95%-KI: `confint()` in R gibt «Confidence level used: 0.95» und keine Zeile zur Adjustierung aus, und Python berechnet jede Differenz ± 1.96 × se. Nur die p-Werte werden für die vier Studienvisiten adjustiert: mit `adjust = "holm"` in R und mit `multipletests(..., method="holm")` in Python.
 
 Zwei weitere Blicke auf die Daten erklären den folgenden Absatz: die [Streuung](../glossary.qmd#spread){.term} der Scores und die Studienvisite nach 12 Monaten.
 
@@ -843,7 +843,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python liefert 14.43 mit 3 [Freiheitsgraden](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. Es ist dieselbe [Statistik](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. Die [p-Werte](../glossary.qmd#p-value){.term} unterscheiden sich in der dritten Dezimalstelle, weil der [F-Test](../glossary.qmd#f-statistic){.term} von R [Satterthwaite-Freiheitsgrade](../glossary.qmd#satterthwaite){.term} verwendet (317) und der [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} von Python sie als unendlich behandelt, wie im ersten Kasten «R oder Python». Berichten Sie den Wert von R.
+Der [Wald-Test](../glossary.qmd#wald-test){.term} von Python liefert 14.43 mit 3 [Freiheitsgraden](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. Es ist dieselbe [Statistik](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. Die [p-Werte](../glossary.qmd#p-value){.term} unterscheiden sich in der dritten Dezimalstelle, weil der [F-Test](../glossary.qmd#f-statistic){.term} von R [Satterthwaite-Freiheitsgrade](../glossary.qmd#satterthwaite){.term} verwendet (317) und der [Chi-Quadrat-Test](../glossary.qmd#chi-square-statistic){.term} von Python sie als unendlich behandelt, wie im Kasten «R oder Python: Freiheitsgrade». Berichten Sie den Wert von R.
 
 Der Schmerz ist ein ganzzahliger Score, ein lineares Modell ist hier daher eine Näherung; bei vier Studienvisiten und 120 Patientinnen und Patienten ist es eine vernünftige.
 :::

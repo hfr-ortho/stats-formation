@@ -467,3 +467,34 @@ def test_limits_conclusion_comes_before_the_sem_paragraph(site):
 def test_sem_and_sdc_are_printed_rounded_in_python(site):
     shown = " ".join(pre.get_text() for pre in section(AGREEMENT, "bland-altman").select(".cell-output pre"))
     assert "1.21284788823662" not in shown and "1.212848 3.361843" in shown
+
+
+# ---- content review of 20.11.2026, Task 3.7, review fix round 2 -------------------------
+
+def translated(lang, page, anchor):
+    found = BeautifulSoup((SITE_ROOT / lang / page).read_text(encoding="utf-8"), "html.parser").select_one(f"section#{anchor}")
+    assert found is not None, f"{lang}/{page} has no section #{anchor}"
+    return text_of(found)
+
+
+def test_page_16_names_its_r_vs_python_boxes_by_subject_not_position(site):
+    text = text_of(load(MIXED))
+    assert "the first R vs Python box" not in text and "the R vs Python box on degrees of freedom" in text
+    box = next(c for c in section(MIXED, "random-intercept").select(".callout") if "a random slope per visit" in text_of(c))
+    assert "lmer(prom_score ~ visit + (visit | case_id), data = knees)" in text_of(box)
+
+
+def test_cpak_agreement_sentence_says_what_the_output_prints(site):
+    text = text_of(section(AGREEMENT, "kappa"))
+    assert "0.667 × 60" not in text and "R prints 0.6666667" in text
+    assert "Those 40 knees lie on the diagonal of the first table (8 + 13 + 3 + 3 + 9 + 4)" in text
+
+
+def test_limit_cis_are_found_by_name_not_by_position(site):
+    text = text_of(section(AGREEMENT, "bland-altman"))
+    assert "R's last table" not in text and "the lower and upper rows in R" in text
+
+
+def test_translations_of_the_round_2_points(site):
+    assert "für die vier Studienvisiten adjustiert" in translated("de", MIXED, "group-by-time")
+    assert "Ici, un ajustement par statsmodels" in translated("fr", MIXED, "random-intercept")

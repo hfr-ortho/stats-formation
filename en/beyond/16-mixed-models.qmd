@@ -129,7 +129,7 @@ check_agree(list(intercept = fixef(knee_model)[["(Intercept)"]], visit_6wk = fix
 check_agree(list(sd_knee = knee_sd[1], sd_residual = knee_sd[2]), reticulate::py$chk_sd, tol = 1e-5)
 # The standard errors differ in the fourth significant figure: lme4 computes them with the variances
 # held fixed, statsmodels from the whole likelihood's Hessian (checked by hand while writing this
-# page). See the R vs Python box.
+# page). See the R vs Python box on degrees of freedom.
 check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_se, tol = 1e-3)
 ```
 
@@ -243,7 +243,7 @@ A **random slope** would go further: each knee would get its own rate of change 
 
 ::: {.callout-tip}
 ## 🔀 R vs Python: a random slope per visit
-lme4 refuses `(visit | case_id)` here, with the message "number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable". statsmodels doesn't stop: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` returns a fit that reports convergence, with no warning. A fit from statsmodels here is no reason to trust a random slope: lme4's message gives the reason.
+lme4 refuses `lmer(prom_score ~ visit + (visit | case_id), data = knees)` here, with the message "number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable". statsmodels doesn't stop: `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` returns a fit that reports convergence, with no warning. A fit from statsmodels here is no reason to trust a random slope: lme4's message gives the reason.
 :::
 
 ```{python}
@@ -510,7 +510,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. R prints the second [df](../glossary.qmd#degrees-of-freedom){.term} as `DenDF` 309.58 and the [p-value](../glossary.qmd#p-value){.term} as `6.924e-15`. Python's [Wald test](../glossary.qmd#wald-test){.term} is a [chi-square](../glossary.qmd#chi-square-statistic){.term} test on 3 degrees of freedom: 77.15, also p < 0.001. R's [F](../glossary.qmd#f-statistic){.term} is that [statistic](../glossary.qmd#test-statistic){.term} divided by its 3 degrees of freedom: 77.15 / 3 = 25.72, against R's 25.73, because the two programs' [standard errors](../glossary.qmd#standard-error){.term} differ slightly (the first R vs Python box).
+- **visit:arm, F = 25.73 on 3 and 310 df, p < 0.001:** the patterns differ. R prints the second [df](../glossary.qmd#degrees-of-freedom){.term} as `DenDF` 309.58 and the [p-value](../glossary.qmd#p-value){.term} as `6.924e-15`. Python's [Wald test](../glossary.qmd#wald-test){.term} is a [chi-square](../glossary.qmd#chi-square-statistic){.term} test on 3 degrees of freedom: 77.15, also p < 0.001. R's [F](../glossary.qmd#f-statistic){.term} is that [statistic](../glossary.qmd#test-statistic){.term} divided by its 3 degrees of freedom: 77.15 / 3 = 25.72, against R's 25.73, because the two programs' [standard errors](../glossary.qmd#standard-error){.term} differ slightly (the R vs Python box on degrees of freedom).
 - **The EMMs and the differences (boot minus cast)** show how. At 6 weeks the boot led by 3.0 points, and at 3 months the boot led by 3.6 points (17.34 vs 13.78). By 6 months the gap was 0.4 points, and at 12 months it was −0.4 points (95% CI −1.5 to 0.7): the gap had closed.
 - **The CIs of the differences** are unadjusted 95% CIs in both tabs: R's `confint()` prints "Confidence level used: 0.95" and no adjustment line, and Python computes each difference ± 1.96 × se. Only the p-values are adjusted for the four visits: by `adjust = "holm"` in R and by `multipletests(..., method="holm")` in Python.
 
@@ -843,7 +843,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Python's [Wald test](../glossary.qmd#wald-test){.term} gives 14.43 on 3 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. It is the same [statistic](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. The [p-values](../glossary.qmd#p-value){.term} differ in the third decimal because R's [F test](../glossary.qmd#f-statistic){.term} uses [Satterthwaite degrees of freedom](../glossary.qmd#satterthwaite){.term} (317) and Python's [chi-square](../glossary.qmd#chi-square-statistic){.term} test treats them as infinite, as in the first R vs Python box. Report R's.
+Python's [Wald test](../glossary.qmd#wald-test){.term} gives 14.43 on 3 [degrees of freedom](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. It is the same [statistic](../glossary.qmd#test-statistic){.term}: 14.43 / 3 = 4.81. The [p-values](../glossary.qmd#p-value){.term} differ in the third decimal because R's [F test](../glossary.qmd#f-statistic){.term} uses [Satterthwaite degrees of freedom](../glossary.qmd#satterthwaite){.term} (317) and Python's [chi-square](../glossary.qmd#chi-square-statistic){.term} test treats them as infinite, as in the R vs Python box on degrees of freedom. Report R's.
 
 Pain is a whole-number score, so a linear model is an approximation here; with four visits and 120 patients it's a reasonable one.
 :::

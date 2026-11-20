@@ -129,7 +129,7 @@ check_agree(list(intercept = fixef(knee_model)[["(Intercept)"]], visit_6wk = fix
 check_agree(list(sd_knee = knee_sd[1], sd_residual = knee_sd[2]), reticulate::py$chk_sd, tol = 1e-5)
 # The standard errors differ in the fourth significant figure: lme4 computes them with the variances
 # held fixed, statsmodels from the whole likelihood's Hessian (checked by hand while writing this
-# page). See the R vs Python box.
+# page). See the R vs Python box on degrees of freedom.
 check_agree(list(se_1yr = sqrt(diag(vcov(knee_model)))[4]), reticulate::py$chk_se, tol = 1e-3)
 ```
 
@@ -243,7 +243,7 @@ Une **pente aléatoire** irait plus loin : chaque genou aurait son propre rythm
 
 ::: {.callout-tip}
 ## 🔀 R ou Python : une pente aléatoire par visite
-lme4 refuse `(visit | case_id)` ici, avec le message « number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable ». statsmodels ne s'arrête pas : `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` renvoie un ajustement qui annonce la convergence, sans avertissement. Un ajustement par statsmodels n'est donc pas une raison de faire confiance à une pente aléatoire : le message de lme4 en donne la raison.
+lme4 refuse `lmer(prom_score ~ visit + (visit | case_id), data = knees)` ici, avec le message « number of observations (=1146) <= number of random effects (=1320) for term (visit | case_id); the random-effects parameters and the residual variance (or scale parameter) are probably unidentifiable ». statsmodels ne s'arrête pas : `smf.mixedlm("prom_score ~ visit", knees, groups="case_id", re_formula="~visit").fit(reml=True)` renvoie un ajustement qui annonce la convergence, sans avertissement. Ici, un ajustement par statsmodels n'est donc pas une raison de faire confiance à une pente aléatoire : le message de lme4 en donne la raison.
 :::
 
 ```{python}
@@ -510,7 +510,7 @@ check_agree(list(wald_per_df = arm_anova["visit:arm", "F value"], se_diff_3mo = 
             reticulate::py$chk_se, tol = 1e-3)
 ```
 
-- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} comme `DenDF` 309.58 et la [valeur p](../glossary.qmd#p-value){.term} comme `6.924e-15`. Le [test de Wald](../glossary.qmd#wald-test){.term} de Python est un test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le [F](../glossary.qmd#f-statistic){.term} de R est cette [statistique](../glossary.qmd#test-statistic){.term} divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les [erreurs standard](../glossary.qmd#standard-error){.term} des deux programmes diffèrent légèrement (le premier encadré « R ou Python »).
+- **visit:arm, F = 25.73 sur 3 et 310 degrés de liberté (ddl), p < 0.001 :** les profils diffèrent. R affiche les seconds [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term} comme `DenDF` 309.58 et la [valeur p](../glossary.qmd#p-value){.term} comme `6.924e-15`. Le [test de Wald](../glossary.qmd#wald-test){.term} de Python est un test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} à 3 degrés de liberté : 77.15, avec aussi p < 0.001. Le [F](../glossary.qmd#f-statistic){.term} de R est cette [statistique](../glossary.qmd#test-statistic){.term} divisée par ses 3 degrés de liberté : 77.15 / 3 = 25.72, contre 25.73 dans R, parce que les [erreurs standard](../glossary.qmd#standard-error){.term} des deux programmes diffèrent légèrement (l'encadré « R ou Python : degrés de liberté »).
 - **Les EMM et les différences (orthèse moins plâtre)** montrent comment. À 6 semaines, l'orthèse avait un score supérieur de 3.0 points, et à 3 mois l'orthèse avait un score supérieur de 3.6 points (17.34 contre 13.78). À 6 mois, l'écart était de 0.4 point, et à 12 mois il était de −0.4 point (IC à 95 % de −1.5 à 0.7) : l'écart s'était refermé.
 - **Les IC des différences** sont des IC à 95 % non ajustés dans les deux onglets : `confint()` de R affiche « Confidence level used: 0.95 » et aucune ligne d'ajustement, et Python calcule chaque différence ± 1.96 × se. Seules les valeurs p sont ajustées, afin de tenir compte des quatre visites : par `adjust = "holm"` en R et par `multipletests(..., method="holm")` en Python.
 
@@ -843,7 +843,7 @@ print(marginal_means(pain_model, arm_grid).round(2))
 
 > **Results:** For the visit × arm interaction in pain, F(3, 317) = 4.81 (p = 0.003). The estimated mean pain was 3.7 (95% CI 3.3 to 4.2) with a boot and 4.9 (95% CI 4.5 to 5.4) with a cast at 6 weeks, and 1.3 (95% CI 0.8 to 1.7) with a boot and 1.6 (95% CI 1.2 to 2.1) with a cast at 12 months.
 
-Le [test de Wald](../glossary.qmd#wald-test){.term} de Python donne 14.43 sur 3 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. C'est la même [statistique](../glossary.qmd#test-statistic){.term} : 14.43 / 3 = 4.81. Les [valeurs p](../glossary.qmd#p-value){.term} diffèrent à la troisième décimale parce que le [test F](../glossary.qmd#f-statistic){.term} de R utilise les [degrés de liberté de Satterthwaite](../glossary.qmd#satterthwaite){.term} (317) et que le test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} de Python les considère comme infinis, comme dans le premier encadré « R ou Python ». Rapportez celle de R.
+Le [test de Wald](../glossary.qmd#wald-test){.term} de Python donne 14.43 sur 3 [degrés de liberté](../glossary.qmd#degrees-of-freedom){.term}, p = 0.002. C'est la même [statistique](../glossary.qmd#test-statistic){.term} : 14.43 / 3 = 4.81. Les [valeurs p](../glossary.qmd#p-value){.term} diffèrent à la troisième décimale parce que le [test F](../glossary.qmd#f-statistic){.term} de R utilise les [degrés de liberté de Satterthwaite](../glossary.qmd#satterthwaite){.term} (317) et que le test du [khi-deux](../glossary.qmd#chi-square-statistic){.term} de Python les considère comme infinis, comme dans l'encadré « R ou Python : degrés de liberté ». Rapportez celle de R.
 
 La douleur est un score en nombres entiers : un modèle linéaire n'en est donc qu'une approximation ; avec quatre visites et 120 patients, c'est une approximation raisonnable.
 :::

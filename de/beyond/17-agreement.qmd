@@ -322,7 +322,7 @@ check_agree(list(bias = bias, bias_low = bias_ci[1], sd = sd_diff, limit_low = l
 
 - **Bias = 0.50°** ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.08° bis 0.93°): Person 2 misst im Mittel ein halbes Grad höher als Person 1. Dieselbe Differenz fand [Seite 7](../catalog/07-two-paired-groups.qmd#exercises) in Übung 2 mit einem [t-Test für gepaarte Stichproben](../glossary.qmd#t-test){.term}.
 - **Übereinstimmungsgrenzen −2.74° bis 3.74°:** Bei etwa 95 % der Knie liegt die Messung von Person 2 zwischen 2.7° unter und 3.7° über der von Person 1, sofern die Differenzen ungefähr normalverteilt sind. Hier liegen 3 der 60 Punkte (5 %) ausserhalb der gestrichelten Linien (die letzte Zahl, die vor der Grafik ausgegeben wird).
-- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°; die letzte Tabelle von R und die letzten beiden Zeilen von Python, in denen auf jede Grenze ihr KI folgt) zeigen, wie [genau](../glossary.qmd#precision){.term} 60 Knie die Grenzen festlegen.
+- **Die KI der Grenzen** (−3.48° bis −2.00° und 3.00° bis 4.48°; die Zeilen `lower` und `upper` in R und die zwei Zeilen von Python, in denen auf jede Grenze ihr KI folgt) zeigen, wie [genau](../glossary.qmd#precision){.term} 60 Knie die Grenzen festlegen.
 - **Das Diagramm:** Die Punkte streuen gleichmässig um die Bias-Linie, ohne Trend nach oben oder unten, wenn sich der mittlere Winkel ändert. Ein Trend würde bedeuten, dass die beiden Personen bei manchen Knien (etwa bei stärkerem Varus) stärker voneinander abweichen als bei anderen, und ein einziges Paar von Grenzen würde diese Knie nicht beschreiben.
 
 Ob Grenzen von −2.7° bis 3.7° gut genug sind, ist eine klinische und keine statistische Frage. Würde eine Differenz von 3° die geplante Korrektur in Ihrer Studie verändern, ist sie relevant. Legen Sie die akzeptablen Grenzen **vor** der [Reliabilitätsstudie](../glossary.qmd#reliability){.term} fest und vergleichen Sie die Grenzen (und ihre KI) damit.
@@ -408,7 +408,7 @@ check_agree(list(agreement = mean(cpak$R1 == cpak$R2), kappa = cpak_kappa[["kapp
             reticulate::py$chk)
 ```
 
-Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %; die Ausgabe zeigt 0.667, und 0.667 × 60 = 40). Sie liegen auf der Diagonale der ersten Tabelle, die die Klassen von Person 1 in den Zeilen und die von Person 2 in den Spalten zeigt. Ein Teil davon wäre aber auch zufällig entstanden: hier 20.1 %, wie der Kasten unten berechnet. Kappa = 0.58 ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.44 bis 0.73): beim [Schätzwert](../glossary.qmd#estimate){.term} mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim [ICC](../glossary.qmd#icc){.term} beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
+Die beiden Personen gaben bei 40 der 60 Knie dieselbe CPAK-Klasse an (66.7 %; R gibt 0.6666667 aus und Python 0.6666666666666666, also zwei Drittel, und zwei Drittel von 60 sind 40). Diese 40 Knie liegen auf der Diagonale der ersten Tabelle (8 + 13 + 3 + 3 + 9 + 4), die die Klassen von Person 1 in den Zeilen und die von Person 2 in den Spalten zeigt. Ein Teil davon wäre aber auch zufällig entstanden: hier 20.1 %, wie der Kasten unten berechnet. Kappa = 0.58 ([95%-KI](../glossary.qmd#confidence-interval){.term} 0.44 bis 0.73): beim [Schätzwert](../glossary.qmd#estimate){.term} mässige Übereinstimmung auf der Skala von Landis und Koch (0.41 bis 0.60 mässig, 0.61 bis 0.80 substanziell, über 0.80 fast vollkommen). Wie beim [ICC](../glossary.qmd#icc){.term} beurteilen Sie auch hier nach dem KI: mässig bis substanziell.
 
 ::: {.callout-note collapse="true"}
 ## 🔍 Unter der Haube: Kappa von Hand
@@ -606,7 +606,9 @@ stopifnot(
   isTRUE(all.equal(parts[["knees"]] / sum(parts), inter_icc$value)),
   isTRUE(all.equal(parts[["knees"]] / (parts[["knees"]] + parts[["error"]]), inter_c$value)),
   round(intra_icc$value, 4) == 0.9148,
-  round(mean(cpak$R1 == cpak$R2), 3) == 0.667, round(0.667 * 60) == 40,
+  format(mean(cpak$R1 == cpak$R2), digits = 7) == "0.6666667",
+  reticulate::py_eval('repr(float((cpak["R1"] == cpak["R2"]).mean()))') == "0.6666666666666666",
+  isTRUE(all.equal(2 / 3 * 60, 40)), diag(table(cpak$R1, cpak$R2))[1:6] == c(8, 13, 3, 3, 9, 4), 8 + 13 + 3 + 3 + 9 + 4 == 40,
   rowSums(cpak_table)[["I"]] == 15, colSums(cpak_table)[["I"]] == 12, 15 / 60 * 12 / 60 == 0.05,
   round(100 * by_chance, 1) == 20.1, round((0.667 - 0.201) / (1 - 0.201), 2) == 0.58,
   isTRUE(all.equal((observed - by_chance) / (1 - by_chance), cpak_kappa[["kappa"]])),
