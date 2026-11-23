@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Zwei Grössen, an denselben Patientinnen und Patienten gemessen: die Femurtorsion im CT und auf der modifizierten Budin-Aufnahme, die Verbesserung eines [PROM](../glossary.qmd#prom){.term} (patientenberichtetes Messinstrument) und die Zufriedenheit, die ASA-Klasse und die Hypertonie. Die Tests auf dieser Seite vergleichen keine Gruppen. Sie geben **in einer einzigen Zahl an, wie stark die beiden zusammenhängen**, mit einem 95%-[KI](../glossary.qmd#confidence-interval){.term} (Konfidenzintervall). Wenn Sie die eine Grösse aus der anderen **vorhersagen** möchten, verwenden Sie die Regression ([Seite 11](11-predict-from-one.qmd)).
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- zwischen der Korrelation nach Pearson und nach Spearman wählen, anhand des Streudiagramms und der Art der beiden Variablen.
+- eine Korrelation in R oder Python berechnen und einen Results-Satz schreiben, mit r oder ρ, seinem 95%-KI und dem p-Wert.
+- einen Results-Satz für zwei kategoriale Variablen schreiben, mit den Prozentanteilen in jeder Gruppe, dem Chi-Quadrat-Test und Cramérs V (φ bei einer 2 × 2-Tabelle) mit seinem 95%-KI.
+
+**Zeitbedarf:** etwa 30 Minuten zum Lesen, etwa 1.5 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [den Abschnitt zum Chi-Quadrat-Test auf Seite 8](08-three-plus-unmatched.qmd#chi-square), auf dem die Kontingenzkoeffizienten aufbauen.
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze (die Bildgebungsdaten zur Hüfterhaltung für Pearson, sonst die [Kohorte](../glossary.qmd#cohort){.term} zum Gelenkersatz). Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
@@ -56,6 +69,7 @@ Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» r und t von Hand nach.
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Streudiagramm der femoralen Torsion in der Budin-Aufnahme gegen das CT für 80 Hüften: Die Punkte folgen einer Geraden, aber einer flacheren als die gestrichelte Linie, auf der beide Methoden gleich messen würden; Budin misst bei geringer Torsion etwas mehr als das CT und bei hoher weniger."
 library(tidyverse)
 
 imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE)   # eine Zeile pro Hüfte
@@ -69,6 +83,7 @@ ggplot(imaging, aes(torsion_ct_deg, torsion_budin_deg)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Streudiagramm der femoralen Torsion in der Budin-Aufnahme gegen das CT für 80 Hüften, in Blau: Die Punkte folgen einer Geraden, aber einer flacheren als die gestrichelte Linie, auf der beide Methoden gleich messen würden; Budin misst bei geringer Torsion etwas mehr als das CT, bei hoher weniger."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -271,6 +286,7 @@ Weil nur die Reihenfolge zählt, kann ein einzelner Ausreisser das Ergebnis nich
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boxplots der Verbesserung im HOOS JR oder KOOS JR von vor der Operation bis nach 1 Jahr, nach Zufriedenheit von 1 (sehr unzufrieden) bis 5 (sehr zufrieden): Die mediane Verbesserung steigt mit jeder Stufe, von 25.4 Punkten bei 1 bis 43.8 bei 5."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -298,6 +314,7 @@ change |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boxplots der Verbesserung im HOOS JR oder KOOS JR von vor der Operation bis nach 1 Jahr, nach Zufriedenheit von 1 (sehr unzufrieden) bis 5 (sehr zufrieden), mit orangen Medianlinien: Die mediane Verbesserung steigt mit jeder Stufe, von 25.4 Punkten bei 1 bis 43.8 bei 5."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -631,6 +648,16 @@ Wenn Sie die Zeilen der Tabelle vertauschen, ändert sich V nicht; V kann daher 
 ::: {.callout-tip}
 ## 🔀 R oder Python: Cramérs V gibt es in zwei Versionen
 `cramers_v()` und `phi()` von effectsize wenden standardmässig eine Korrektur der [systematischen Abweichung](../glossary.qmd#bias){.term} bei kleinen [Stichproben](../glossary.qmd#sample){.term} an (hier V = 0.18, das Resultat mit dem Titel `Cramer's V (adj.)` im R-Tab), `association()` von scipy dagegen nicht. `adjust = FALSE` schaltet sie aus, damit beide übereinstimmen; geben Sie in jedem Fall im Methodenteil an, welche Version Sie verwendet haben. Bei einer 2 × 2-Tabelle ergibt `association(method="cramer")` φ ohne dessen Vorzeichen.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Verwenden Sie r nach Pearson für zwei ungefähr normalverteilte Messungen, deren Streudiagramm aussieht wie eine Punktwolke, die entlang einer Geraden gestreckt ist; wenn eine der beiden schief oder ordinal ist, Ausreisser hat oder die Punkte einer Kurve folgen, verwenden Sie ρ nach Spearman.
+- r sieht nur Geraden, und ein einzelner Ausreisser kann eine Korrelation erzeugen oder verdecken: Schauen Sie sich daher immer zuerst das Streudiagramm an.
+- r hängt von der Spannweite der Werte in der Stichprobe ab: Dieselben zwei Methoden ergeben in einer Stichprobe mit enger Spannweite ein tieferes r.
+- Eine Korrelation sagt nicht, was was verursacht, und ein hohes r ist keine Übereinstimmung: Zwei Methoden können gemeinsam steigen und fallen und trotzdem verschiedene Winkel messen; ob eine Methode die andere ersetzen kann, beurteilen Sie mit den Bland-Altman-Grenzen.
+- Der Chi-Quadrat-Test fragt, ob zwei kategoriale Variablen überhaupt zusammenhängen; Cramérs V (φ bei einer 2 × 2-Tabelle) sagt, wie stark: Bevorzugen Sie es gegenüber dem Kontingenzkoeffizienten C nach Pearson, dessen Maximum unter 1 liegt und von der Grösse der Tabelle abhängt.
+- V gibt die Stärke an, nicht das Muster: Nehmen Sie die Zeilenprozente in Ihre Resultate auf.
 :::
 
 ```{r}

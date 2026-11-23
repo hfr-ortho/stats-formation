@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Les mêmes patients mesurés **trois fois ou plus** (avant l'opération, puis à 6 semaines, 3 mois et 1 an), ou des **[ensembles appariés](../glossary.qmd#matched){.term}** de trois patients ou plus. C'est la [page 7](07-two-paired-groups.qmd) étendue à plus de deux mesures. Comme à la [page 8](08-three-plus-unmatched.qmd), chaque test pose d'abord une seule question : **le [critère](../glossary.qmd#outcome){.term} diffère-t-il quelque part entre les visites (ou les groupes) ?** [Quelles visites diffèrent ?](#which-groups-differ) explique la suite.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir entre l'ANOVA à mesures répétées et le test de Friedman pour un critère mesuré trois fois ou plus chez les mêmes patients, selon le type de critère et sa forme.
+- exécuter une ANOVA à mesures répétées en R ou en Python chez les patients mesurés à chaque visite, et rédiger une phrase de Résultats avec la moyenne (ET) de chaque visite, F avec ses degrés de liberté, la valeur p, et l'êta carré partiel avec son IC à 95 %.
+- exécuter le test Q de Cochran sur un critère oui/non mesuré trois fois ou plus, et rédiger une phrase de Résultats avec la proportion à chaque visite et son IC de Wilson à 95 %.
+
+**Durée :** environ 50 minutes de lecture, environ 2.5 à 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 7](07-two-paired-groups.qmd), que cette page étend à plus de deux mesures, et la [page 8](08-three-plus-unmatched.qmd), dont l'ANOVA à un facteur et le modèle de Cox servent de base à la première et à la dernière section.
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient) et les ensembles appariés de la cohorte de prothèses articulaires, ou l'essai orthèse contre plâtre de la [page 6](06-two-unpaired-groups.qmd#unpaired-t). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -66,6 +79,7 @@ C'est parce qu'il met de côté les différences entre les patients que le test 
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boîtes à moustaches des scores T de fonction physique PROMIS aux quatre visites, pour les 328 interventions mesurées aux quatre : les boîtes montent à chaque visite et gardent des hauteurs semblables, et dès 3 mois la moustache supérieure atteint 57.0, le meilleur score que le questionnaire peut enregistrer."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -93,6 +107,7 @@ pf |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boîtes à moustaches des scores T de fonction physique PROMIS aux quatre visites, pour les 328 interventions mesurées aux quatre, avec des lignes de médiane orange : les boîtes montent à chaque visite et gardent des hauteurs semblables, et dès 3 mois la moustache supérieure atteint 57.0."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -328,6 +343,7 @@ Le bras orthèse de l'essai de la [page 6](06-two-unpaired-groups.qmd#unpaired-t
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boîtes à moustaches du score EFAS à 6 semaines, 3 mois et 12 mois pour les 50 patients du bras orthèse qui ont les trois scores : les médianes montent à chaque visite (12.5, 17 et 20), et à 12 mois la moustache supérieure atteint le plafond de 24."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # une ligne par patient et par visite
@@ -357,6 +373,7 @@ efas_boot |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boîtes à moustaches du score EFAS à 6 semaines, 3 mois et 12 mois pour les 50 patients du bras orthèse qui ont les trois scores, avec des lignes de médiane orange : les médianes montent à chaque visite (12.5, 17 et 20), et à 12 mois la moustache supérieure atteint 24."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -924,6 +941,16 @@ Chaque test ci-dessus répond à « existe-t-il une différence entre les visit
 | [Cox stratifiée](../glossary.qmd#stratification){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} par rapport à une [référence](../glossary.qmd#reference-group){.term} choisie | [14](../survival/14-cox-regression.qmd) |
 
 Pour des [PROM](../glossary.qmd#prom){.term} répétés, un [modèle mixte](../beyond/16-mixed-models.qmd#why-mixed-models) répond aux deux questions à la fois (le score change-t-il, et à quelles visites ?) tout en gardant les patients qui ont manqué une visite.
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- L'ANOVA à mesures répétées, le test de Friedman et le test Q de Cochran exigent que chaque patient soit mesuré à chaque visite : un patient qui a manqué une visite est écarté complètement, et si ces patients diffèrent des autres, le résultat est biaisé ; les modèles mixtes utilisent toutes les données disponibles de chacun.
+- Utilisez l'ANOVA à mesures répétées pour une mesure dont les changements entre les visites sont à peu près normaux, ou quand les patients sont nombreux ; si le critère est asymétrique, s'accumule au plancher ou au plafond, ou est ordinal, utilisez le test de Friedman.
+- Un F significatif ne dit pas quelles visites diffèrent : comparez les visites avec des tests appariés et une correction pour comparaisons multiples (page 15).
+- Le test de Friedman n'utilise que le classement des visites de chaque patient, et ignore donc l'ampleur des changements : rapportez les médianes (ou les changements) pour que les lecteurs voient l'ampleur de l'amélioration.
+- Le test Q de Cochran dit seulement qu'un critère oui/non n'était pas le même à chaque visite, pas dans quel sens il a changé : décrivez la proportion à chaque visite avec son IC à 95 %, et comparez des paires de visites avec le test de McNemar et une correction pour comparaisons multiples.
+- Un modèle de Cox a besoin d'événements, pas seulement de patients : avec 24 révisions réparties sur trois implants, les IC sont larges et le modèle ne permet d'ajuster sur rien d'autre.
+:::
 
 ```{r}
 #| include: false

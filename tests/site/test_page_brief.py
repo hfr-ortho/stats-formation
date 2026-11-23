@@ -43,6 +43,11 @@ DONE = [
     "catalog/05-one-group-vs-hypothetical.qmd",
     "catalog/06-two-unpaired-groups.qmd",
     "catalog/07-two-paired-groups.qmd",
+    "catalog/08-three-plus-unmatched.qmd",
+    "catalog/09-three-plus-matched.qmd",
+    "catalog/10-association.qmd",
+    "catalog/11-predict-from-one.qmd",
+    "catalog/12-predict-from-several.qmd",
 ]
 
 # The box titles, without their emoji (Doc's decision D6). The emoji are 🎯 and 📌 in every language.

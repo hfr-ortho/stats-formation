@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Drei oder mehr Gruppen aus **verschiedenen** Patientinnen und Patienten: die vier ASA-Klassen, die drei Chirurginnen und Chirurgen, drei Arten von Transplantaten für das vordere Kreuzband (VKB), die Implantate A, B und C. Sie könnten jedes Gruppenpaar mit den Tests auf [Seite 6](06-two-unpaired-groups.qmd) vergleichen, aber jeder zusätzliche Test ist eine weitere Gelegenheit für ein [falsch positives](../glossary.qmd#false-positive){.term} Resultat. Die Tests auf dieser Seite stellen zuerst eine einzige Frage: **Gibt es überhaupt einen Unterschied zwischen den Gruppen?** Lautet die Antwort ja, zeigt [Welche Gruppen unterscheiden sich?](#which-groups-differ) den nächsten Schritt.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- zwischen der einfaktoriellen ANOVA und dem Kruskal-Wallis-Test wählen, wenn eine Zielgrösse zwischen drei oder mehr unabhängigen Gruppen verglichen wird, je nach Art der Zielgrösse und ihrer Form in jeder Gruppe.
+- eine einfaktorielle ANOVA in R oder Python durchführen und einen Results-Satz schreiben, mit dem Mittelwert (SD) jeder Gruppe, F mit seinen Freiheitsgraden, dem p-Wert und ω² mit seinem 95%-KI.
+- eine Tabelle erkennen, deren erwartete Häufigkeiten für den Chi-Quadrat-Test zu klein sind, und wählen, was Sie stattdessen tun.
+
+**Zeitbedarf:** etwa 60 Minuten zum Lesen, etwa 2.5 bis 3 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [Seite 3](../foundations/03-distributions.qmd#within-groups) zur Beurteilung einer Verteilung innerhalb jeder Gruppe und [Seite 6](06-two-unpaired-groups.qmd), deren Tests für zwei Gruppen diese Seite erweitert.
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term} oder (beim [Chi-Quadrat-Test](../glossary.qmd#chi-square-test){.term}) zu den VKB-Rekonstruktionen. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
@@ -56,6 +69,7 @@ Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» F von Hand nach.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boxplots des Alters bei der Operation für die ASA-Klassen 1 bis 4: Die Boxen und ihre Medianlinien liegen mit jeder Klasse höher, da das Alter mit der ASA-Klasse stetig steigt; ein Alter in ASA 3 liegt unterhalb des unteren Whiskers und ist als Punkt eingezeichnet."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boxplots des Alters bei der Operation für die ASA-Klassen 1 bis 4, mit orangen Medianlinien: Die Boxen liegen mit jeder Klasse höher, da das Alter mit der ASA-Klasse stetig steigt; ein Alter in ASA 3 liegt unterhalb des unteren Whiskers und ist als leerer Kreis eingezeichnet."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -653,6 +668,7 @@ Das Modell muss nur wissen, wie sich die Hazards der Gruppen zueinander verhalte
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens: Die Implantate A und B verlaufen eng beieinander, und C fällt schon früh unter beide ab; unter der Grafik eine Tabelle der Eingriffe unter Risiko für A, B und C, dann eine der bisherigen Revisionen."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -669,6 +685,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = cohort, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens auf einer Skala von 0 bis 1: Die Implantate A und B verlaufen eng beieinander, und C fällt schon früh unter beide ab; unter der Grafik hat jedes Implantat eine Zeile mit den Eingriffen unter Risiko und eine mit den bisherigen Revisionen."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -865,6 +882,16 @@ Die obigen Tests beantworten die Frage «Gibt es überhaupt einen Unterschied zw
 | [Cox-Regression](../glossary.qmd#cox-regression){.term} | [Hazard Ratios](../glossary.qmd#hazard-ratio){.term} gegenüber einer gewählten [Referenz](../glossary.qmd#reference-group){.term} oder [Kontraste](../glossary.qmd#contrast){.term} zwischen Gruppen | [14](../survival/14-cox-regression.qmd) |
 
 Der Tukey-HSD-Test begrenzt falsch positive Resultate von sich aus, und ebenso der Dunn-Test und andere paarweise Tests, sobald die Holm-Adjustierung angewendet wird; keiner von ihnen braucht daher zuerst einen signifikanten [Gesamttest](../glossary.qmd#overall-test){.term}. Legen Sie vor dem Ansehen der Daten fest, welche Vergleiche Sie durchführen, und sagen Sie das im Methodenteil ([Seite 15](../beyond/15-post-hoc.qmd#overall-test-first)).
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Für einen Messwert, der zwischen drei oder mehr unabhängigen Gruppen verglichen wird, verwenden Sie die einfaktorielle ANOVA, wenn er innerhalb jeder Gruppe ungefähr normalverteilt ist oder jede Gruppe ausreichend gross und nicht stark schief ist; ist er schief, häuft er sich am Boden oder an der Decke oder ist er ordinal, verwenden Sie den Kruskal-Wallis-Test.
+- Eine signifikante ANOVA bedeutet, dass sich mindestens ein Gruppenmittelwert von einem anderen unterscheidet, nicht, dass sich jede Gruppe von jeder anderen unterscheidet: Schliessen Sie keine Reihe unadjustierter t-Tests an, sondern verwenden Sie einen Post-hoc-Test (Seite 15).
+- ω² ist der Anteil der Variation, den die Gruppen erklären; effectsize gibt standardmässig ein einseitiges Intervall aus, und `alternative = "two.sided"` verlangt das übliche zweiseitige 95%-KI.
+- Der Chi-Quadrat-Test braucht erwartete Häufigkeiten, die nicht zu klein sind (die einfache Regel: jede mindestens 5); verletzt die Tabelle die Regel, an die Sie sich halten, fassen Sie Kategorien zusammen, die inhaltlich zusammenpassen, oder verwenden Sie den exakten Test nach Fisher.
+- Fehlende Antworten fehlen nicht zufällig: Berichten Sie, wie viele Personen in jeder Gruppe geantwortet haben, und prüfen Sie, ob sich der Anteil der Personen ohne Antwort zwischen den Gruppen unterscheidet.
+- Jedes Hazard Ratio bezieht sich auf die Referenzgruppe: Wählen Sie sie bewusst und sagen Sie, welche es ist.
+:::
 
 ```{r}
 #| include: false

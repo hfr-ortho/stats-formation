@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Trois groupes ou plus de patients **différents** : les quatre classes ASA, les trois chirurgiens, trois types de greffon du LCA, les implants A, B et C. Vous pourriez comparer chaque paire de groupes avec les tests de la [page 6](06-two-unpaired-groups.qmd), mais chaque test de plus est une nouvelle occasion d'obtenir un [faux positif](../glossary.qmd#false-positive){.term}. Les tests de cette page posent d'abord une seule question : **existe-t-il une différence quelconque entre les groupes ?** Si la réponse est oui, [Quels groupes diffèrent ?](#which-groups-differ) explique la suite.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir entre l'ANOVA à un facteur et le test de Kruskal-Wallis pour un critère comparé entre trois groupes indépendants ou plus, selon le type de critère et sa forme dans chaque groupe.
+- exécuter une ANOVA à un facteur en R ou en Python et rédiger une phrase de Résultats avec la moyenne (ET) de chaque groupe, F avec ses degrés de liberté, la valeur p, et ω² avec son IC à 95 %.
+- repérer un tableau dont les effectifs attendus sont trop petits pour le test du khi-deux, et choisir que faire à la place.
+
+**Durée :** environ 60 minutes de lecture, environ 2.5 à 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 3](../foundations/03-distributions.qmd#within-groups) pour juger une distribution dans chaque groupe, et la [page 6](06-two-unpaired-groups.qmd), dont cette page étend les tests à deux groupes.
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires ou (pour le [test du khi-deux](../glossary.qmd#chi-square-test){.term}) les reconstructions du LCA. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -56,6 +69,7 @@ Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boîtes à moustaches de l'âge à l'opération pour les classes ASA 1 à 4 : les boîtes et leurs lignes de médiane sont plus hautes à chaque classe, car l'âge augmente régulièrement avec la classe ASA ; un âge en ASA 3 se situe sous la moustache inférieure et est représenté par un point."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boîtes à moustaches de l'âge à l'opération pour les classes ASA 1 à 4, avec des lignes de médiane orange : les boîtes sont plus hautes à chaque classe, car l'âge augmente régulièrement avec la classe ASA ; un âge en ASA 3 se situe sous la moustache inférieure et est représenté par un cercle vide."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -653,6 +668,7 @@ Le modèle a seulement besoin de savoir comment les hazards des groupes se compa
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision : les implants A et B restent proches l'un de l'autre, et C s'en écarte vers le bas dès le début ; sous le graphique, un tableau des interventions à risque pour A, B et C, puis un des révisions cumulées."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -669,6 +685,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = cohort, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision sur une échelle de 0 à 1 : les implants A et B restent proches l'un de l'autre, et C s'en écarte vers le bas dès le début ; sous le graphique, chaque implant a une ligne d'interventions à risque et une ligne de révisions cumulées."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -865,6 +882,16 @@ Les **tests post hoc** comparent les paires en gardant le [taux d'erreur global]
 | [Régression de Cox](../glossary.qmd#cox-regression){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} par rapport à une [référence](../glossary.qmd#reference-group){.term} choisie, ou [contrastes](../glossary.qmd#contrast){.term} entre groupes | [14](../survival/14-cox-regression.qmd) |
 
 Le HSD de Tukey contrôle seul les faux positifs, comme le test de Dunn et les autres tests deux à deux une fois l'ajustement de Holm appliqué : aucun n'a besoin d'un [test global](../glossary.qmd#overall-test){.term} significatif au préalable. Décidez avant de voir les données quelles comparaisons vous ferez, et dites-le dans vos Méthodes ([page 15](../beyond/15-post-hoc.qmd#overall-test-first)).
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Pour une mesure comparée entre trois groupes indépendants ou plus, utilisez l'ANOVA à un facteur quand elle est à peu près normale dans chaque groupe, ou que chaque groupe est assez grand et pas fortement asymétrique ; si elle est asymétrique, s'accumule au plancher ou au plafond, ou est ordinale, utilisez le test de Kruskal-Wallis.
+- Une ANOVA significative signifie qu'au moins une moyenne diffère d'une autre, pas que chaque groupe diffère de tous les autres : ne la faites pas suivre d'une série de tests t non ajustés, utilisez un test post hoc (page 15).
+- ω² est la part de la variation qu'expliquent les groupes ; par défaut, effectsize donne un intervalle unilatéral, et `alternative = "two.sided"` demande l'IC à 95 % bilatéral habituel.
+- Le test du khi-deux exige des effectifs attendus qui ne soient pas trop petits (la règle simple : chacun d'au moins 5) ; si le tableau enfreint la règle que vous suivez, regroupez des catégories qui vont ensemble, ou utilisez le test exact de Fisher.
+- Les réponses manquantes ne sont pas aléatoires : indiquez combien de patients ont répondu dans chaque groupe, et demandez-vous si la non-réponse diffère d'un groupe à l'autre.
+- Chaque hazard ratio est relatif au groupe de référence : choisissez-le à dessein et dites lequel c'est.
+:::
 
 ```{r}
 #| include: false

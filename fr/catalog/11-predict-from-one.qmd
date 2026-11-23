@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Une [corrélation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) dit à quel point deux choses vont ensemble. La **régression** dit **de combien le [critère de jugement](../glossary.qmd#outcome){.term} change pour chaque unité du [prédicteur](../glossary.qmd#predictor){.term}**, et permet de prédire le critère pour un nouveau patient. Le type de régression dépend du critère : une [mesure](../glossary.qmd#continuous-variable){.term} qui suit une droite ou une courbe, une mesure dont les résidus autour d'une droite ne sont pas à peu près [normaux](../glossary.qmd#normal-distribution){.term}, un [critère oui/non](../glossary.qmd#binary){.term}, ou un délai jusqu'à un [événement](../glossary.qmd#event){.term}. Pour plusieurs prédicteurs à la fois, voir la [page 12](12-predict-from-several.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir la régression pour un prédicteur selon le critère : une mesure qui suit une droite ou une courbe, une mesure dont les résidus ne sont pas à peu près normaux, un critère oui/non, ou un délai jusqu'à un événement.
+- exécuter une régression linéaire simple en R ou en Python et rédiger une phrase de Résultats avec la pente, son IC à 95 % et la valeur p.
+- ajuster une courbe de récupération par régression non linéaire et rédiger une phrase de Résultats avec son score de départ, son plateau et le délai jusqu'à la moitié du gain, chacun avec son IC à 95 %.
+
+**Durée :** environ 55 minutes de lecture, environ 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 3](../foundations/03-distributions.qmd#look) pour lire un graphique QQ, et la [section sur la régression de Cox de la page 8](08-three-plus-unmatched.qmd#cox), sur laquelle s'appuie la section Cox de cette page.
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires et les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient), la fracture du fémur proximal pour la [régression logistique](../glossary.qmd#logistic-regression){.term}, les reconstructions du ligament croisé antérieur (LCA) pour la [régression de Cox](../glossary.qmd#cox-regression){.term}. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -56,6 +69,7 @@ Une fois le [modèle](../glossary.qmd#model){.term} exécuté, un encadré sous 
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points de la durée opératoire en fonction de l'IMC pour 600 interventions, avec la droite des moindres carrés : les points se dispersent autour d'une droite ascendante, sans courbe ni valeur atypique extrême ; l'IMC va de 18.0 à 44.5."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -71,6 +85,7 @@ range(cohort$bmi)   # IMC le plus bas et le plus élevé des données
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points de la durée opératoire en fonction de l'IMC pour 600 interventions, en bleu, avec la droite des moindres carrés : les points se dispersent autour d'une droite ascendante, sans courbe ni valeur atypique extrême ; l'IMC va de 18.0 à 44.5."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -190,6 +205,7 @@ Avant de faire confiance à la droite, tracez les résidus en fonction des valeu
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Nuage de points des résidus en fonction de la durée opératoire ajustée, avec une ligne horizontale à 0 : les points forment une bande régulière autour de 0, sans courbe ni forme d'entonnoir."
 tibble(fitted = fitted(bmi_model), residual = resid(bmi_model)) |>
   ggplot(aes(fitted, residual)) +
   geom_point(alpha = 0.4) +
@@ -200,6 +216,7 @@ tibble(fitted = fitted(bmi_model), residual = resid(bmi_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points des résidus en fonction de la durée opératoire ajustée, en bleu, avec une ligne horizontale à 0 : les points forment une bande régulière autour de 0, sans courbe ni forme d'entonnoir."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.scatter(bmi_model.fittedvalues, bmi_model.resid, alpha=0.4)
 ax.axhline(0, color="black")
@@ -218,6 +235,7 @@ Vérifiez ensuite que les résidus sont à peu près normaux avec un [graphique 
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Graphique QQ des résidus en fonction des quantiles de la loi normale : les points sont sur la droite, sauf les résidus les plus extrêmes à chaque bout, qui s'infléchissent un peu vers 0, signe de queues un peu plus courtes que celles d'une distribution normale."
 tibble(residual = resid(bmi_model)) |>
   ggplot(aes(sample = residual)) +
   geom_qq(alpha = 0.4) +
@@ -228,6 +246,7 @@ tibble(residual = resid(bmi_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique QQ des résidus en fonction des quantiles de la loi normale, points bleus sur une droite rouge : les points sont sur la droite, sauf les résidus les plus extrêmes à chaque bout, qui s'infléchissent un peu vers 0."
 from scipy import stats
 
 fig, ax = plt.subplots(figsize=(6, 3))
@@ -333,6 +352,7 @@ Une fois le [modèle](../glossary.qmd#model){.term} exécuté, un encadré sous 
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points de 1146 scores KOOS JR provenant de 330 genoux en fonction des jours depuis l'opération, scores préopératoires au jour 0 : les scores forment quatre groupes, un par visite, et montent rapidement pendant les 3 premiers mois, puis plus lentement jusqu'à 1 an."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -353,6 +373,7 @@ count(koos, visit)        # scores à chaque visite
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points de 1146 scores KOOS JR provenant de 330 genoux en fonction des jours depuis l'opération, en bleu, scores préopératoires au jour 0 : les scores forment quatre groupes, un par visite, et montent rapidement pendant les 3 premiers mois, puis plus lentement jusqu'à 1 an."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -544,6 +565,7 @@ Le code R sous « Exécuter l'analyse » fait les étapes 3 et 4 à la main.
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points du KOOS JR à 1 an en fonction du KOOS JR avant l'opération pour 246 genoux, avec une courbe LOWESS qui monte régulièrement d'environ 70 à environ 99 sur l'étendue des scores préopératoires ; 37 genoux sont au plafond de 100."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -570,6 +592,7 @@ smooth$y[c(1, length(smooth$y))]   # la hauteur de la courbe au score préopéra
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points du KOOS JR à 1 an en fonction du KOOS JR avant l'opération pour 246 genoux, en bleu, avec une courbe LOWESS qui monte régulièrement d'environ 70 à environ 99 sur l'étendue des scores préopératoires ; 37 genoux sont au plafond de 100."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -740,6 +763,7 @@ Le modèle utilise le délai avant l'opération comme un nombre, en unités de 2
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Diagramme en barres des décès dans les 30 jours selon le délai entre l'admission et l'opération : 5.1 % jusqu'à 24 heures, un peu plus dans les deux tranches intermédiaires, et 18.2 % après plus de 72 heures."
 library(tidyverse)
 
 hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE) |>
@@ -761,6 +785,7 @@ ggplot(by_delay, aes(delay_band, percent)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Diagramme en barres, en bleu, des décès dans les 30 jours selon le délai entre l'admission et l'opération : 5.1 % jusqu'à 24 heures, un peu plus dans les deux tranches intermédiaires, et 18.2 % après plus de 72 heures."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -970,6 +995,7 @@ Couper la pente en deux groupes ne sert qu'à l'image ; le modèle utilise la p
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Courbes de Kaplan-Meier de la survie de la greffe pour une pente tibiale de 12° ou plus et de moins de 12° : les courbes restent ensemble pendant environ un an, puis la courbe des 12° ou plus descend plus bas ; sous chaque groupe, des lignes de reconstructions à risque (73 et 277 au début) et d'échecs cumulés (11 et 20)."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -987,6 +1013,7 @@ survfit2(Surv(followup_years, graft_failure) ~ slope_group, data = acl, conf.typ
 ## Python
 
 ```{python}
+#| fig-alt: "Courbes de Kaplan-Meier de la survie de la greffe sur une échelle de 0 à 1 pour une pente tibiale de 12° ou plus et de moins de 12° : les courbes restent ensemble pendant environ un an, puis la courbe des 12° ou plus descend plus bas ; sous chaque groupe, des lignes de reconstructions à risque (73 et 277 au début) et d'échecs cumulés (11 et 20)."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -1105,6 +1132,16 @@ La pente n'a pas été attribuée aux patients : ceux qui ont une pente forte p
 ::: {.callout-tip}
 ## 🔀 R ou Python : lifelines s'arrête trop tôt
 Par défaut, lifelines arrête ses [itérations](../glossary.qmd#convergence){.term} un peu trop tôt : le code Python resserre donc la tolérance avec `fit_options={"precision": 1e-9}`. Ici, cela ne change rien de visible ; à la page 12, si.
+:::
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Avant de faire confiance à une droite, tracez les résidus en fonction des valeurs ajustées (une bande de largeur régulière autour de 0, sans courbe) et vérifiez-les avec un graphique QQ ; s'ils ne sont pas à peu près normaux, utilisez la régression non paramétrique.
+- La droite prédit le critère moyen pour chaque valeur du prédicteur : l'intervalle de prédiction d'un nouveau patient est bien plus large que l'IC de la moyenne, et la droite ne doit pas servir à prédire hors de l'étendue des données.
+- La régression non linéaire ajuste une courbe dont vous connaissez la forme à l'avance ; quand chaque genou fournit plusieurs scores, ses IC ne sont pas fiables, et un modèle mixte en tient compte.
+- Theil-Sen résiste aux valeurs atypiques, mais rien ne peut voir au-dessus d'un plafond, et une courbe LOWESS est la moins fiable à ses deux extrémités.
+- La régression logistique suppose que le logarithme des odds change en ligne droite avec le prédicteur, et son odds ratio n'est pas un risque relatif : les deux ne sont proches que lorsque l'événement est rare.
+- Un hazard ratio pour un prédicteur qui n'a pas été attribué, comme la pente tibiale, n'est pas un effet de traitement : les patients qui ont une pente forte peuvent différer par d'autres aspects.
 :::
 
 ```{r}

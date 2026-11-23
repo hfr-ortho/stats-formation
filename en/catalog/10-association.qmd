@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Two things measured on the same patients: femoral torsion on CT and on the modified Budin view, [PROM](../glossary.qmd#prom){.term} improvement and satisfaction, ASA class and hypertension. The tests on this page don't compare groups. They put **one number on how strongly the two go together**, with a 95% [CI](../glossary.qmd#confidence-interval){.term}. If you want to **predict** one from the other, use regression ([page 11](11-predict-from-one.qmd)).
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between Pearson's and Spearman's correlation from the scatter plot and the kind of the two variables.
+- Run a correlation in R or Python and write a Results sentence with r or ρ, its 95% CI and the p-value.
+- Write a Results sentence for two categorical variables with the percentages in each group, the chi-square test, and Cramér's V (φ on a 2 × 2 table) with its 95% CI.
+
+**Time:** about 30 minutes to read, about 1.5 hours with the exercises (an estimate).
+
+**Read first:** [page 8's chi-square section](08-three-plus-unmatched.qmd#chi-square), which the contingency coefficients build on.
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets (hip imaging for Pearson, the joint replacement [cohort](../glossary.qmd#cohort){.term} otherwise). Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -56,6 +69,7 @@ Once the test has run, a box under "Read the output" rebuilds r and t by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of femoral torsion on the Budin view against CT for 80 hips: the points follow a straight line, but a flatter one than the dashed line where the two methods would read the same, so Budin reads a little above CT at low torsion and below it at high torsion."
 library(tidyverse)
 
 imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE)   # one row per hip
@@ -69,6 +83,7 @@ ggplot(imaging, aes(torsion_ct_deg, torsion_budin_deg)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of femoral torsion on the Budin view against CT for 80 hips, in blue: the points follow a straight line, but a flatter one than the dashed line where the two methods would read the same; Budin reads a little above CT at low torsion, below it at high torsion."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -271,6 +286,7 @@ Because only the order counts, one outlier can't dominate the result, and a rela
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Box plots of the improvement in HOOS JR or KOOS JR from before surgery to 1 year, by satisfaction from 1 (very dissatisfied) to 5 (very satisfied): the median improvement climbs with each level, from 25.4 points at 1 to 43.8 at 5."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -298,6 +314,7 @@ change |>
 ## Python
 
 ```{python}
+#| fig-alt: "Box plots of the improvement in HOOS JR or KOOS JR from before surgery to 1 year, by satisfaction from 1 (very dissatisfied) to 5 (very satisfied), with orange median lines: the median improvement climbs with each level, from 25.4 points at 1 to 43.8 at 5."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -631,6 +648,16 @@ Shuffling the rows of the table doesn't change V, so V can't say that hypertensi
 ::: {.callout-tip}
 ## 🔀 R vs Python: Cramér's V has two versions
 effectsize's `cramers_v()` and `phi()` apply a small-[sample](../glossary.qmd#sample){.term} [bias](../glossary.qmd#bias){.term} correction by default (here V = 0.18, the result headed `Cramer's V (adj.)` in the R tab), while scipy's `association()` doesn't. `adjust = FALSE` turns it off so the two match; whichever you use, say which in your Methods. On a 2 × 2 table, `association(method="cramer")` gives φ without its sign.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Use Pearson's r for two roughly normal measurements whose scatter plot looks like a cloud stretched along a line; if either is skewed or ordinal, has outliers, or the points follow a curve, use Spearman's ρ.
+- r only sees straight lines, and one outlier can create or hide a correlation, so always look at the scatter plot first.
+- r depends on the range of the patients sampled: the same two methods give a lower r in a sample with a narrow range.
+- A correlation doesn't say which causes which, and a high r isn't agreement: two methods can rise and fall together and still read different angles; to ask whether one can replace the other, use Bland-Altman limits.
+- The chi-square test asks whether two categorical variables are linked at all; Cramér's V (φ on a 2 × 2 table) says how strongly: prefer it to Pearson's C, whose maximum is below 1 and depends on the table's size.
+- V gives the strength, not the pattern: put the row percentages in your Results.
 :::
 
 ```{r}

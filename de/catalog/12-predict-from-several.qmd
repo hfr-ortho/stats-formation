@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 [Zielgrössen](../glossary.qmd#outcome){.term} hängen selten von nur einem Faktor ab. Bei schwereren Patientinnen und Patienten dauert die Operation womöglich länger, bei älteren aber auch, und Knieoperationen dauern länger als Hüftoperationen. Die **[multiple Regression](../glossary.qmd#multivariable){.term}** nimmt mehrere [Prädiktoren](../glossary.qmd#predictor){.term} in ein [Modell](../glossary.qmd#model){.term} auf, sodass jeder [Koeffizient](../glossary.qmd#coefficient){.term} der Effekt dieses Prädiktors ist, **während die anderen konstant gehalten werden**: [adjustiert für](../glossary.qmd#adjustment){.term} sie. Es sind dieselben vier Regressionen wie auf [Seite 11](11-predict-from-one.qmd), nur mit mehr als einem Prädiktor.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- eine multiple lineare Regression in R oder Python durchführen und einen Results-Satz schreiben, mit dem adjustierten Koeffizienten, um den es in Ihrer Frage geht, seinem 95%-KI und dem p-Wert.
+- aus der Anzahl der Ereignisse abschätzen, wie viele Koeffizienten ein logistisches oder ein Cox-Modell verkraftet, bevor Sie seine Prädiktoren wählen.
+- mit einem natürlichen kubischen Spline prüfen, ob der Effekt eines gemessenen Prädiktors einer Geraden folgt, die beiden Anpassungen vergleichen und den Results-Satz schreiben.
+
+**Zeitbedarf:** etwa 45 Minuten zum Lesen, etwa 3 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [Seite 11](11-predict-from-one.qmd), deren vier Regressionen diese Seite auf mehrere Prädiktoren erweitert, und [den Abschnitt zur Cox-Regression auf Seite 8](08-three-plus-unmatched.qmd#cox).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: der [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term} und den [PROMs](../glossary.qmd#prom){.term} (patientenberichtete Messinstrumente), bei der [logistischen Regression](../glossary.qmd#logistic-regression){.term} den VKB-Rekonstruktionen. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
@@ -57,6 +70,7 @@ Nach dem Modell rechnet ein Kasten unter «Ausgabe lesen» den adjustierten Koef
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Streudiagramm der Operationsdauer gegen den BMI, nach Eingriff gefärbt: Die Operationsdauer steigt bei Hüft-TP und Knie-TP mit dem BMI an, und die Punkte der Knie-TP liegen im Mittel etwas höher (88.3 gegenüber 79.8 Minuten)."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Streudiagramm der Operationsdauer gegen den BMI, nach Eingriff gefärbt (Hüft-TP blau, Knie-TP orange): Die Operationsdauer steigt bei beiden mit dem BMI an, und die Punkte der Knie-TP liegen im Mittel etwas höher (88.3 gegenüber 79.8 Minuten)."
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
@@ -186,6 +201,7 @@ Bevor Sie den Koeffizienten trauen, prüfen Sie die [Residuen](../glossary.qmd#r
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Streudiagramm der Residuen der multiplen Regression gegen die angepasste Operationsdauer, mit einer waagrechten Linie bei 0: Die Punkte bilden ein Band gleichbleibender Breite um 0, ohne Krümmung und ohne Trichterform."
 tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
   ggplot(aes(fitted, residual)) +
   geom_point(alpha = 0.4) +
@@ -196,6 +212,7 @@ tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Streudiagramm der Residuen der multiplen Regression gegen die angepasste Operationsdauer, in Blau, mit einer waagrechten Linie bei 0: Die Punkte bilden ein Band gleichbleibender Breite um 0, ohne Krümmung und ohne Trichterform."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.scatter(time_model.fittedvalues, time_model.resid, alpha=0.4)
 ax.axhline(0, color="black")
@@ -257,6 +274,7 @@ Beide Werkzeuge dieses Abschnitts sind Anpassungen nach der Methode der kleinste
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Streudiagramm von 2052 Scores gegen die Tage seit der Operation, nach Gelenk gefärbt (906 von Hüften, 1146 von Knien): Beide steigen an und flachen dann ab, und die Hüft-Scores scheinen das früher zu erreichen."
 library(tidyverse)
 library(splines)
 
@@ -279,6 +297,7 @@ count(recovery_data, joint)
 ## Python
 
 ```{python}
+#| fig-alt: "Streudiagramm von 2052 Scores gegen die Tage seit der Operation, nach Gelenk gefärbt (Hüften blau, Knie orange; 906 und 1146 Scores): Beide steigen an und flachen dann ab, und die Hüft-Scores scheinen das früher zu erreichen."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -781,6 +800,16 @@ Der Unterschied zwischen den Geschlechtern war nicht die Frage; das Modell wurde
 ::: {.callout-tip}
 ## 🔀 R oder Python: Konvergenz und Namen
 Wie auf [Seite 8](08-three-plus-unmatched.qmd#cox) hört die [Standard-Konvergenzregel](../glossary.qmd#convergence){.term} von lifelines etwas zu früh auf (ohne `fit_options` ergibt sich für Implantat B ein Hazard Ratio von 0.82915 statt der 0.82912 in der Ausgabe oben), daher verschärft der Python-Code sie mit `fit_options={"precision": 1e-9}`. lifelines nennt die Terme `implant[T.C]` und `sex[T.Male]`; R nennt sie `implantC` und `sexMale`.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Jeder Koeffizient einer multiplen Regression ist der Effekt dieses Prädiktors, während die anderen konstant gehalten werden, aber adjustiert heisst nicht verursacht: Die Adjustierung entfernt nur den Teil eines Effekts, der durch die Variablen im Modell erklärt wird, nicht durch weggelassene oder nie gemessene.
+- Wählen Sie die Prädiktoren, bevor Sie die Resultate ansehen, aus klinischem Wissen; wer Variablen hinzufügt, bis etwas signifikant wird, oder jene weglässt, die es nicht sind, erhält Resultate, die sich nicht replizieren lassen.
+- Die Anzahl der Ereignisse begrenzt ein logistisches oder ein Cox-Modell: Als gängige Faustregel gelten mindestens 10 Patientinnen und Patienten in der kleineren Gruppe der Zielgrösse, oder etwa 10 Ereignisse, pro Koeffizient, den das Modell schätzt, und ein Prädiktor mit drei Kategorien braucht zwei.
+- Verwenden Sie nur Prädiktoren, die vor der Zielgrösse bekannt sind: Ein Transplantatversagen im ersten Jahr ist Teil der Zielgrösse Rückkehr zum Sport, kein Prädiktor dafür.
+- Ein natürlicher kubischer Spline lässt den Effekt eines gemessenen Prädiktors sich in einem gewöhnlichen linearen, logistischen oder Cox-Modell krümmen, und der Vergleich mit der Geraden ist der übliche Weg zu prüfen, ob eine Gerade ausreicht.
+- Die Koeffizienten der Adjustierungsvariablen sind Adjustierungen, keine Befunde, und ein ungeplanter Befund ist ein Grund für eine neue Studie: Berichten Sie ihn als explorativ.
 :::
 
 ```{r}

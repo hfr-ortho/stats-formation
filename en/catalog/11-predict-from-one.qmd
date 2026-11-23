@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 A [correlation](../glossary.qmd#correlation){.term} ([page 10](10-association.qmd)) says how strongly two things go together. **Regression** says **how much the [outcome](../glossary.qmd#outcome){.term} changes for each unit of the [predictor](../glossary.qmd#predictor){.term}**, and lets you predict the outcome for a new patient. Which regression depends on the outcome: a [measurement](../glossary.qmd#continuous-variable){.term} on a straight line or a curve, a measurement whose residuals around a straight line aren't roughly [normal](../glossary.qmd#normal-distribution){.term}, a [yes/no outcome](../glossary.qmd#binary){.term}, or time until an [event](../glossary.qmd#event){.term}. With several predictors at once, see [page 12](12-predict-from-several.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose the regression for one predictor from the outcome: a measurement on a straight line or a curve, a measurement whose residuals aren't roughly normal, a yes/no outcome, or time until an event.
+- Run a simple linear regression in R or Python and write a Results sentence with the slope, its 95% CI and the p-value.
+- Fit a recovery curve by nonlinear regression and write a Results sentence with its start, plateau and half-gain time, each with its 95% CI.
+
+**Time:** about 55 minutes to read, about 3 hours with the exercises (an estimate).
+
+**Read first:** [page 3](../foundations/03-distributions.qmd#look) on reading a QQ plot, and [page 8's Cox regression section](08-three-plus-unmatched.qmd#cox), which the Cox section here builds on.
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term} and [PROMs](../glossary.qmd#prom){.term}, hip fracture for [logistic regression](../glossary.qmd#logistic-regression){.term}, ACL reconstructions for [Cox regression](../glossary.qmd#cox-regression){.term}. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -56,6 +69,7 @@ Once the [model](../glossary.qmd#model){.term} has run, a box under "Read the ou
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of operative time against BMI for 600 procedures, with the least-squares line: the points scatter around a rising straight line, with no curve and no extreme outliers; BMI runs from 18.0 to 44.5."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -71,6 +85,7 @@ range(cohort$bmi)   # lowest and highest BMI in the data
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of operative time against BMI for 600 procedures, in blue, with the least-squares line: the points scatter around a rising straight line, with no curve and no extreme outliers; BMI runs from 18.0 to 44.5."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -190,6 +205,7 @@ Before trusting the line, plot the residuals against the fitted values: they sho
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Scatter plot of the residuals against the fitted operative time, with a horizontal line at 0: the points form an even band around 0, with no curve and no funnel shape."
 tibble(fitted = fitted(bmi_model), residual = resid(bmi_model)) |>
   ggplot(aes(fitted, residual)) +
   geom_point(alpha = 0.4) +
@@ -200,6 +216,7 @@ tibble(fitted = fitted(bmi_model), residual = resid(bmi_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of the residuals against the fitted operative time, in blue, with a horizontal line at 0: the points form an even band around 0, with no curve and no funnel shape."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.scatter(bmi_model.fittedvalues, bmi_model.resid, alpha=0.4)
 ax.axhline(0, color="black")
@@ -218,6 +235,7 @@ Then check that the residuals are roughly normal with a [QQ plot](../glossary.qm
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "QQ plot of the residuals against normal quantiles: the points lie on the line, except that the most extreme residuals at each end bend a little toward 0, a sign of slightly shorter tails than a normal distribution has."
 tibble(residual = resid(bmi_model)) |>
   ggplot(aes(sample = residual)) +
   geom_qq(alpha = 0.4) +
@@ -228,6 +246,7 @@ tibble(residual = resid(bmi_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "QQ plot of the residuals against normal quantiles, blue points on a red line: the points lie on the line, except that the most extreme residuals at each end bend a little toward 0."
 from scipy import stats
 
 fig, ax = plt.subplots(figsize=(6, 3))
@@ -333,6 +352,7 @@ Once the [model](../glossary.qmd#model){.term} has run, a box under "Read the ou
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of 1146 KOOS JR scores from 330 knees against days since surgery, pre-op scores at day 0: the scores sit in four clusters, one per visit, and climb steeply over the first 3 months, then more slowly toward 1 year."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -353,6 +373,7 @@ count(koos, visit)        # scores at each visit
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of 1146 KOOS JR scores from 330 knees against days since surgery, in blue, pre-op scores at day 0: the scores sit in four clusters, one per visit, and climb steeply over the first 3 months, then more slowly toward 1 year."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -544,6 +565,7 @@ The R code under "Run it" does steps 3 and 4 by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of KOOS JR at 1 year against KOOS JR before surgery for 246 knees, with a LOWESS curve that rises steadily from about 70 to about 99 across the pre-op scores; 37 knees sit at the ceiling of 100."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -570,6 +592,7 @@ smooth$y[c(1, length(smooth$y))]   # the curve's height at the lowest and highes
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of KOOS JR at 1 year against KOOS JR before surgery for 246 knees, in blue, with a LOWESS curve that rises steadily from about 70 to about 99 across the pre-op scores; 37 knees sit at the ceiling of 100."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -740,6 +763,7 @@ The model uses time to surgery as a number, in units of 24 hours, so the odds ra
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Bar chart of deaths within 30 days by time from admission to surgery: 5.1% up to 24 hours, a little higher in the two middle bands, and 18.2% over 72 hours."
 library(tidyverse)
 
 hip_fracture <- read_csv("data/hip_fracture.csv", show_col_types = FALSE) |>
@@ -761,6 +785,7 @@ ggplot(by_delay, aes(delay_band, percent)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Bar chart, in blue, of deaths within 30 days by time from admission to surgery: 5.1% up to 24 hours, a little higher in the two middle bands, and 18.2% over 72 hours."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -970,6 +995,7 @@ Splitting slope in two is only for the picture; the model uses slope as a number
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curves of graft survival for a tibial slope of 12° or more and under 12°: the curves stay together for about a year, then the 12° or more curve falls lower; under each group, rows of reconstructions at risk (73 and 277 at the start) and failures so far (11 and 20)."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -987,6 +1013,7 @@ survfit2(Surv(followup_years, graft_failure) ~ slope_group, data = acl, conf.typ
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curves of graft survival on a 0 to 1 scale for a tibial slope of 12° or more and under 12°: the curves stay together for about a year, then the 12° or more curve falls lower; under each group, rows of reconstructions at risk (73 and 277 at the start) and failures so far (11 and 20)."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -1105,6 +1132,16 @@ Slope wasn't assigned: patients with a steep slope may differ in other ways. A h
 ::: {.callout-tip}
 ## 🔀 R vs Python: lifelines stops early
 lifelines [stops iterating](../glossary.qmd#convergence){.term} slightly early by default, so the Python code tightens it with `fit_options={"precision": 1e-9}`. Here that changes nothing visible; on page 12 it does.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Before trusting a straight line, plot the residuals against the fitted values (an even band around 0, with no curve) and check them with a QQ plot; if they aren't roughly normal, use nonparametric regression.
+- The line predicts the average outcome at each value of the predictor: one new patient's prediction interval is far wider than the CI for the mean, and the line shouldn't be used to predict outside the range of the data.
+- Nonlinear regression fits a curve whose shape you know in advance; when each knee contributes several scores, its CIs can't be trusted, and a mixed model accounts for this.
+- Theil-Sen resists outliers, but nothing can see above a ceiling, and a LOWESS curve is least reliable at its two ends.
+- Logistic regression assumes the log odds change in a straight line with the predictor, and its odds ratio isn't a risk ratio: the two are close only when the outcome is rare.
+- A hazard ratio for a predictor that wasn't assigned, such as tibial slope, isn't a treatment effect: patients with a steep slope may differ in other ways.
 :::
 
 ```{r}

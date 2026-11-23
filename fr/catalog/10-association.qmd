@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Deux choses mesurées chez les mêmes patients : la torsion fémorale au scanner et sur l'incidence de Budin modifiée, l'amélioration des [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient) et la satisfaction, la classe ASA et l'hypertension. Les tests de cette page ne comparent pas des groupes. Ils donnent **un seul nombre pour dire à quel point les deux vont ensemble**, avec un [IC](../glossary.qmd#confidence-interval){.term} à 95 % (intervalle de confiance). Si vous voulez **prédire** l'une à partir de l'autre, utilisez la régression ([page 11](11-predict-from-one.qmd)).
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir entre la corrélation de Pearson et celle de Spearman d'après le nuage de points et le type des deux variables.
+- calculer une corrélation en R ou en Python et rédiger une phrase de Résultats avec r ou ρ, son IC à 95 % et la valeur p.
+- rédiger une phrase de Résultats pour deux variables catégorielles avec les pourcentages dans chaque groupe, le test du khi-deux, et le V de Cramér (φ sur un tableau 2 × 2) avec son IC à 95 %.
+
+**Durée :** environ 30 minutes de lecture, environ 1.5 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [section sur le test du khi-deux de la page 8](08-three-plus-unmatched.qmd#chi-square), sur laquelle s'appuient les coefficients de contingence.
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice (l'imagerie de la hanche pour Pearson, la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires pour les autres). Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -56,6 +69,7 @@ Une fois le test exécuté, un encadré sous « Lire le résultat » recalcule
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points de la torsion fémorale sur l'incidence de Budin en fonction du scanner pour 80 hanches : les points suivent une droite, mais plus plate que la ligne pointillée où les deux méthodes liraient la même valeur ; Budin lit un peu plus haut que le scanner à faible torsion et plus bas à forte torsion."
 library(tidyverse)
 
 imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE)   # une ligne par hanche
@@ -69,6 +83,7 @@ ggplot(imaging, aes(torsion_ct_deg, torsion_budin_deg)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points de la torsion fémorale sur l'incidence de Budin en fonction du scanner pour 80 hanches, en bleu : les points suivent une droite, mais plus plate que la ligne pointillée où les deux méthodes liraient la même valeur ; Budin lit un peu plus haut que le scanner à faible torsion, plus bas à forte torsion."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -271,6 +286,7 @@ Comme seul l'ordre compte, une seule valeur atypique ne peut pas dominer le rés
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Boîtes à moustaches de l'amélioration du HOOS JR ou du KOOS JR entre l'avant-opération et 1 an, selon la satisfaction de 1 (très insatisfait) à 5 (très satisfait) : l'amélioration médiane augmente à chaque niveau, de 25.4 points à 1 jusqu'à 43.8 à 5."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -298,6 +314,7 @@ change |>
 ## Python
 
 ```{python}
+#| fig-alt: "Boîtes à moustaches de l'amélioration du HOOS JR ou du KOOS JR entre l'avant-opération et 1 an, selon la satisfaction de 1 (très insatisfait) à 5 (très satisfait), avec des lignes de médiane orange : l'amélioration médiane augmente à chaque niveau, de 25.4 points à 1 jusqu'à 43.8 à 5."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -631,6 +648,16 @@ Mélanger les lignes du tableau ne change pas V : V ne peut donc pas dire que l
 ::: {.callout-tip}
 ## 🔀 R ou Python : le V de Cramér existe en deux versions
 `cramers_v()` et `phi()` d'effectsize appliquent par défaut une correction du [biais](../glossary.qmd#bias){.term} des petits [échantillons](../glossary.qmd#sample){.term} (ici V = 0.18, le résultat intitulé `Cramer's V (adj.)` dans l'onglet R), alors que `association()` de scipy n'en applique pas. `adjust = FALSE` la désactive pour que les deux concordent ; quelle que soit la version que vous utilisez, dites laquelle dans vos Méthodes. Sur un tableau 2 × 2, `association(method="cramer")` donne φ sans son signe.
+:::
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Utilisez le r de Pearson pour deux mesures à peu près normales dont le nuage de points ressemble à un nuage étiré le long d'une droite ; si l'une est asymétrique ou ordinale, a des valeurs atypiques, ou si les points suivent une courbe, utilisez le ρ de Spearman.
+- r ne voit que les droites, et une seule valeur atypique peut créer ou masquer une corrélation : regardez donc toujours d'abord le nuage de points.
+- r dépend de l'étendue des valeurs chez les patients étudiés : les deux mêmes méthodes donnent un r plus bas dans un échantillon dont l'étendue est étroite.
+- Une corrélation ne dit pas laquelle des deux variables cause l'autre, et un r élevé n'est pas une concordance : deux méthodes peuvent monter et descendre ensemble tout en lisant des angles différents ; pour savoir si l'une peut remplacer l'autre, utilisez les limites de Bland-Altman.
+- Le test du khi-deux demande si deux variables catégorielles sont liées, tout court ; le V de Cramér (φ sur un tableau 2 × 2) dit à quel point : préférez-le au C de Pearson, dont le maximum est inférieur à 1 et dépend de la taille du tableau.
+- V donne la force du lien, pas son profil : mettez les pourcentages par ligne dans vos Résultats.
 :::
 
 ```{r}

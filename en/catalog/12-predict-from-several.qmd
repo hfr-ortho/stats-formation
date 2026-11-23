@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 [Outcomes](../glossary.qmd#outcome){.term} rarely depend on one thing. Heavier patients may take longer to operate on, but so may older ones, and knees take longer than hips. **[Multiple regression](../glossary.qmd#multivariable){.term}** puts several [predictors](../glossary.qmd#predictor){.term} in one [model](../glossary.qmd#model){.term}, so each [coefficient](../glossary.qmd#coefficient){.term} is that predictor's effect **with the others held fixed**: [adjusted for](../glossary.qmd#adjustment){.term} them. The regressions are the same four as on [page 11](11-predict-from-one.qmd), with more than one predictor.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Run a multiple linear regression in R or Python and write a Results sentence with the adjusted coefficient your question is about, its 95% CI and the p-value.
+- Work out from the number of events how many coefficients a logistic or Cox model can take, before choosing its predictors.
+- Check whether a measured predictor's effect is a straight line by adding a natural cubic spline and comparing the two fits, and write the Results sentence.
+
+**Time:** about 45 minutes to read, about 3 hours with the exercises (an estimate).
+
+**Read first:** [page 11](11-predict-from-one.qmd), whose four regressions this page extends to several predictors, and [page 8's Cox regression section](08-three-plus-unmatched.qmd#cox).
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term} and [PROMs](../glossary.qmd#prom){.term}, and ACL reconstructions for [logistic regression](../glossary.qmd#logistic-regression){.term}. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -57,6 +70,7 @@ Once the model has run, a box under "Read the output" rebuilds BMI's adjusted co
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of operative time against BMI, colored by procedure: operative time rises with BMI for both THA and TKA, and the TKA points sit a little higher on average (88.3 against 79.8 minutes)."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of operative time against BMI, colored by procedure (THA blue, TKA orange): operative time rises with BMI for both, and the TKA points sit a little higher on average (88.3 against 79.8 minutes)."
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
@@ -186,6 +201,7 @@ Before trusting the coefficients, check the [residuals](../glossary.qmd#residual
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Scatter plot of the multiple regression's residuals against the fitted operative time, with a horizontal line at 0: the points form an even band around 0, with no curve and no funnel shape."
 tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
   ggplot(aes(fitted, residual)) +
   geom_point(alpha = 0.4) +
@@ -196,6 +212,7 @@ tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of the multiple regression's residuals against the fitted operative time, in blue, with a horizontal line at 0: the points form an even band around 0, with no curve and no funnel shape."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.scatter(time_model.fittedvalues, time_model.resid, alpha=0.4)
 ax.axhline(0, color="black")
@@ -257,6 +274,7 @@ Both tools in this section are least-squares fits, like the ones on [page 11](11
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Scatter plot of 2052 scores against days since surgery, colored by joint (906 from hips, 1146 from knees): both rise and level off, and the hip scores seem to get there sooner."
 library(tidyverse)
 library(splines)
 
@@ -279,6 +297,7 @@ count(recovery_data, joint)
 ## Python
 
 ```{python}
+#| fig-alt: "Scatter plot of 2052 scores against days since surgery, colored by joint (hips blue, knees orange; 906 and 1146 scores): both rise and level off, and the hip scores seem to get there sooner."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -781,6 +800,16 @@ The sex difference wasn't the question; the model was built to adjust for sex, n
 ::: {.callout-tip}
 ## 🔀 R vs Python: convergence and names
 As on [page 8](08-three-plus-unmatched.qmd#cox), lifelines' default [convergence](../glossary.qmd#convergence){.term} rule stops a little early (without `fit_options`, the hazard ratio for implant B comes out as 0.82915 instead of the 0.82912 in the output above), so the Python code tightens it with `fit_options={"precision": 1e-9}`. lifelines names the terms `implant[T.C]` and `sex[T.Male]`; R names them `implantC` and `sexMale`.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Each coefficient of a multiple regression is that predictor's effect with the others held fixed, but adjusted isn't caused: adjusting removes only the part of an effect explained by the variables in the model, not by those left out or never measured.
+- Choose the predictors before looking at the results, from what you know clinically; adding variables until something becomes significant, or dropping those that aren't, gives results that won't replicate.
+- Events limit a logistic or Cox model: a common rule of thumb is at least 10 patients in the smaller outcome group, or about 10 events, per coefficient the model estimates, and a predictor with three categories takes two.
+- Use only predictors known before the outcome: a graft failure in the first year is part of the return-to-sport outcome, not a predictor of it.
+- A natural cubic spline lets a measured predictor's effect bend inside an ordinary linear, logistic or Cox model, and comparing it with the straight line is the usual way to check whether a straight line is good enough.
+- The coefficients of the adjustment variables are adjustments, not findings, and an unplanned finding is a reason for a new study: report it as exploratory.
 :::
 
 ```{r}

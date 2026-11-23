@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Three or more groups of **different** patients: the four ASA classes, the three surgeons, three kinds of ACL graft, implants A, B and C. You could compare every pair of groups with the tests on [page 6](06-two-unpaired-groups.qmd), but each extra test is another chance of a [false positive](../glossary.qmd#false-positive){.term}. The tests on this page ask one question first: **is there any difference among the groups at all?** If the answer is yes, [Which groups differ?](#which-groups-differ) explains the next step.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between one-way ANOVA and the Kruskal-Wallis test for an outcome compared across three or more independent groups, from the kind of outcome and its shape in each group.
+- Run a one-way ANOVA in R or Python and write a Results sentence with each group's mean (SD), F with its degrees of freedom, the p-value, and ω² with its 95% CI.
+- Spot a table whose expected counts are too small for the chi-square test, and choose what to do instead.
+
+**Time:** about 60 minutes to read, about 2.5 to 3 hours with the exercises (an estimate).
+
+**Read first:** [page 3](../foundations/03-distributions.qmd#within-groups) on judging a distribution within each group, and [page 6](06-two-unpaired-groups.qmd), whose two-group tests this page extends.
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term}, or (for the [chi-square test](../glossary.qmd#chi-square-test){.term}) the ACL reconstructions. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -56,6 +69,7 @@ Once the test has run, a box under "Read the output" rebuilds F by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Box plots of age at surgery for ASA classes 1 to 4: the boxes and their median lines sit higher with each class, as age rises steadily with ASA class; one age in ASA 3 lies below its lower whisker and is drawn as a dot."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE) |>
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Box plots of age at surgery for ASA classes 1 to 4, with orange median lines: the boxes sit higher with each class, as age rises steadily with ASA class; one age in ASA 3 lies below its lower whisker and is drawn as an open circle."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -653,6 +668,7 @@ The model only needs to know how the groups' hazards compare, never the hazard i
 ```{r}
 #| warning: false
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curves of revision-free survival: implants A and B track each other closely, and C falls away from both from early on; under the plot, a table of procedures at risk for A, B and C, then one of revisions so far."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -669,6 +685,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = cohort, conf.type = "lo
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curves of revision-free survival on a 0 to 1 scale: implants A and B track each other closely, and C falls away from both from early on; under the plot, each implant has a row of procedures at risk and a row of revisions so far."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -865,6 +882,16 @@ The tests above answer "is there any difference among the groups?". When the ans
 | [Cox regression](../glossary.qmd#cox-regression){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} against a chosen [reference](../glossary.qmd#reference-group){.term}, or [contrasts](../glossary.qmd#contrast){.term} between groups | [14](../survival/14-cox-regression.qmd) |
 
 Tukey's HSD controls false positives on its own, and so do Dunn's test and other pairwise tests once Holm's adjustment is applied, so none of them needs a significant [overall test](../glossary.qmd#overall-test){.term} first. Decide before you see the data which comparisons you'll make, and say so in your Methods ([page 15](../beyond/15-post-hoc.qmd#overall-test-first)).
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- For a measurement compared across three or more independent groups, use one-way ANOVA when it is roughly normal within each group, or each group is reasonably large and not badly skewed; if it is skewed, piles up at a floor or ceiling, or is ordinal, use the Kruskal-Wallis test.
+- A significant ANOVA means at least one group mean differs from another, not that every group differs from every other: don't follow it with a string of unadjusted t tests, use a post-hoc test (page 15).
+- ω² is the share of the variation that the groups account for; effectsize gives a one-sided interval by default, and `alternative = "two.sided"` asks for the usual two-sided 95% CI.
+- The chi-square test needs expected counts that aren't too small (the simple rule: every one at least 5); if the table breaks the rule you go by, combine categories that make sense together, or use Fisher's exact test.
+- Missing answers aren't random: report how many answered in each group, and consider whether non-response differs between groups.
+- Every hazard ratio is relative to the reference group, so choose it on purpose and say which it is.
+:::
 
 ```{r}
 #| include: false

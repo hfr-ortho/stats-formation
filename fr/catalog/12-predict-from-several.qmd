@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Un [critère de jugement](../glossary.qmd#outcome){.term} dépend rarement d'une seule chose. L'opération de patients plus lourds dure peut-être plus longtemps, mais celle de patients plus âgés aussi, et les genoux prennent plus de temps que les hanches. La **[régression multiple](../glossary.qmd#multivariable){.term}** met plusieurs [prédicteurs](../glossary.qmd#predictor){.term} dans un seul [modèle](../glossary.qmd#model){.term} : chaque [coefficient](../glossary.qmd#coefficient){.term} est donc l'effet de ce prédicteur **les autres étant maintenus constants**, c'est-à-dire [ajusté sur](../glossary.qmd#adjustment){.term} eux. Ce sont les quatre mêmes régressions que celles de la [page 11](11-predict-from-one.qmd), avec plus d'un prédicteur.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- exécuter une régression linéaire multiple en R ou en Python et rédiger une phrase de Résultats avec le coefficient ajusté sur lequel porte votre question, son IC à 95 % et la valeur p.
+- déterminer, d'après le nombre d'événements, combien de coefficients un modèle logistique ou de Cox peut admettre, avant de choisir ses prédicteurs.
+- vérifier si l'effet d'un prédicteur mesuré suit une droite en ajoutant une spline cubique naturelle et en comparant les deux ajustements, et rédiger la phrase de Résultats.
+
+**Durée :** environ 45 minutes de lecture, environ 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 11](11-predict-from-one.qmd), dont cette page étend les quatre régressions à plusieurs prédicteurs, et la [section sur la régression de Cox de la page 8](08-three-plus-unmatched.qmd#cox).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires et les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par le patient), et les reconstructions du ligament croisé antérieur (LCA) pour la [régression logistique](../glossary.qmd#logistic-regression){.term}. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -57,6 +70,7 @@ Une fois le modèle exécuté, un encadré sous « Lire le résultat » recalc
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points de la durée opératoire en fonction de l'IMC, coloré selon l'intervention : la durée opératoire augmente avec l'IMC pour les PTH comme pour les PTG, et les points des PTG sont un peu plus hauts en moyenne (88.3 contre 79.8 minutes)."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -73,6 +87,7 @@ cohort |>
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points de la durée opératoire en fonction de l'IMC, coloré selon l'intervention (PTH en bleu, PTG en orange) : la durée opératoire augmente avec l'IMC pour les deux, et les points des PTG sont un peu plus hauts en moyenne (88.3 contre 79.8 minutes)."
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.formula.api as smf
@@ -186,6 +201,7 @@ Avant de faire confiance aux coefficients, vérifiez les [résidus](../glossary.
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Nuage de points des résidus de la régression multiple en fonction de la durée opératoire ajustée, avec une ligne horizontale à 0 : les points forment une bande régulière autour de 0, sans courbe ni forme d'entonnoir."
 tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
   ggplot(aes(fitted, residual)) +
   geom_point(alpha = 0.4) +
@@ -196,6 +212,7 @@ tibble(fitted = fitted(time_model), residual = resid(time_model)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points des résidus de la régression multiple en fonction de la durée opératoire ajustée, en bleu, avec une ligne horizontale à 0 : les points forment une bande régulière autour de 0, sans courbe ni forme d'entonnoir."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.scatter(time_model.fittedvalues, time_model.resid, alpha=0.4)
 ax.axhline(0, color="black")
@@ -257,6 +274,7 @@ Les deux outils de cette section sont des ajustements par les moindres carrés, 
 ```{r}
 #| warning: false
 #| fig-height: 3.5
+#| fig-alt: "Nuage de points de 2052 scores en fonction des jours depuis l'opération, coloré selon l'articulation (906 de hanches, 1146 de genoux) : les deux montent puis se stabilisent, et les scores des hanches semblent y arriver plus tôt."
 library(tidyverse)
 library(splines)
 
@@ -279,6 +297,7 @@ count(recovery_data, joint)
 ## Python
 
 ```{python}
+#| fig-alt: "Nuage de points de 2052 scores en fonction des jours depuis l'opération, coloré selon l'articulation (hanches en bleu, genoux en orange ; 906 et 1146 scores) : les deux montent puis se stabilisent, et les scores des hanches semblent y arriver plus tôt."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -781,6 +800,16 @@ La différence entre les sexes n'était pas la question : le modèle a été co
 ::: {.callout-tip}
 ## 🔀 R ou Python : convergence et noms
 Comme à la [page 8](08-three-plus-unmatched.qmd#cox), la règle de [convergence](../glossary.qmd#convergence){.term} par défaut de lifelines s'arrête un peu trop tôt (sans `fit_options`, le hazard ratio de l'implant B vaut 0.82915 au lieu du 0.82912 de la sortie ci-dessus) : le code Python la resserre donc avec `fit_options={"precision": 1e-9}`. lifelines nomme les termes `implant[T.C]` et `sex[T.Male]` ; R les nomme `implantC` et `sexMale`.
+:::
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Chaque coefficient d'une régression multiple est l'effet de ce prédicteur les autres étant maintenus constants, mais ajusté ne veut pas dire causal : l'ajustement retire seulement la part d'un effet expliquée par les variables présentes dans le modèle, pas par celles laissées de côté ou jamais mesurées.
+- Choisissez les prédicteurs avant de regarder les résultats, d'après ce que vous savez cliniquement ; ajouter des variables jusqu'à ce que quelque chose devienne significatif, ou retirer celles qui ne le sont pas, donne des résultats qui ne se reproduiront pas.
+- Les événements limitent un modèle logistique ou de Cox : une règle empirique courante est d'au moins 10 patients dans le plus petit des deux groupes définis par le critère, ou d'environ 10 événements, par coefficient estimé par le modèle, et un prédicteur à trois catégories en prend deux.
+- N'utilisez que des prédicteurs connus avant la survenue du critère : un échec de la greffe la première année fait partie du critère retour au sport, il ne le prédit pas.
+- Une spline cubique naturelle laisse l'effet d'un prédicteur mesuré se courber dans un modèle linéaire, logistique ou de Cox ordinaire, et la comparer à la droite est la façon habituelle de vérifier si une droite suffit.
+- Les coefficients des variables d'ajustement sont des ajustements, pas des résultats, et un résultat non prévu justifie une nouvelle étude : présentez-le comme exploratoire.
 :::
 
 ```{r}

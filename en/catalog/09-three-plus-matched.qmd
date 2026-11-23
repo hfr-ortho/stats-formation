@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 The same patients measured **three or more times** (before surgery, then at 6 weeks, 3 months and 1 year), or **[matched sets](../glossary.qmd#matched){.term}** of three or more patients. This is [page 7](07-two-paired-groups.qmd) extended past two measurements. As on [page 8](08-three-plus-unmatched.qmd), each test asks one question first: **does the [outcome](../glossary.qmd#outcome){.term} differ anywhere among the visits (or groups)?** [Which visits differ?](#which-groups-differ) explains what to do next.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between repeated-measures ANOVA and the Friedman test for an outcome measured three or more times on the same patients, from the kind of outcome and its shape.
+- Run a repeated-measures ANOVA in R or Python on the patients measured at every visit, and write a Results sentence with each visit's mean (SD), F with its degrees of freedom, the p-value, and partial eta squared with its 95% CI.
+- Run Cochran's Q test on a yes/no outcome measured three or more times, and write a Results sentence with the proportion at each visit and its Wilson 95% CI.
+
+**Time:** about 50 minutes to read, about 2.5 to 3 hours with the exercises (an estimate).
+
+**Read first:** [page 7](07-two-paired-groups.qmd), which this page extends past two measurements, and [page 8](08-three-plus-unmatched.qmd), whose one-way ANOVA and Cox model the first and last sections build on.
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [PROMs](../glossary.qmd#prom){.term} and matched sets, or the boot vs cast trial from [page 6](06-two-unpaired-groups.qmd#unpaired-t). Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -66,6 +79,7 @@ Setting the differences between patients aside is what makes the test sensitive:
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Box plots of PROMIS physical function T-scores at the four visits for the 328 procedures measured at all four: the boxes climb at every visit and keep similar heights, and from 3 months the upper whisker reaches 57.0, the best the form can record."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -93,6 +107,7 @@ pf |>
 ## Python
 
 ```{python}
+#| fig-alt: "Box plots of PROMIS physical function T-scores at the four visits for the 328 procedures measured at all four, with orange median lines: the boxes climb at every visit and keep similar heights, and from 3 months the upper whisker reaches 57.0."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -328,6 +343,7 @@ The boot arm of the trial from [page 6](06-two-unpaired-groups.qmd#unpaired-t) h
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Box plots of the EFAS score at 6 weeks, 3 months and 12 months for the 50 boot-arm patients with all three scores: the medians rise at each visit (12.5, 17 and 20), and at 12 months the upper whisker reaches the ceiling of 24."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # one row per patient and visit
@@ -357,6 +373,7 @@ efas_boot |>
 ## Python
 
 ```{python}
+#| fig-alt: "Box plots of the EFAS score at 6 weeks, 3 months and 12 months for the 50 boot-arm patients with all three scores, with orange median lines: the medians rise at each visit (12.5, 17 and 20), and at 12 months the upper whisker reaches 24."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -924,6 +941,16 @@ Each test above answers "is there any difference among the visits (or implants)?
 | [Stratified Cox](../glossary.qmd#stratification){.term} | [Hazard ratios](../glossary.qmd#hazard-ratio){.term} against a chosen [reference](../glossary.qmd#reference-group){.term} | [14](../survival/14-cox-regression.qmd) |
 
 For repeated [PROMs](../glossary.qmd#prom){.term}, a [mixed model](../beyond/16-mixed-models.qmd#why-mixed-models) answers both questions at once (does the score change, and at which visits?) while keeping patients who missed a visit.
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Repeated-measures ANOVA, the Friedman test and Cochran's Q need every patient measured at every visit: a patient who missed one visit is dropped completely, and if those patients differ from the others, the result is biased; mixed models use everyone's available data.
+- Use repeated-measures ANOVA for a measurement whose changes between visits are roughly normal, or when there are plenty of patients; if the outcome is skewed, piles up at a floor or ceiling, or is ordinal, use the Friedman test.
+- A significant F doesn't say which visits differ: compare the visits with paired tests and a correction for multiple comparisons (page 15).
+- The Friedman test only uses each patient's ranking of the visits, so it ignores how big the changes are: report the medians (or the changes) so readers can see the size of the improvement.
+- Cochran's Q only says a yes/no outcome wasn't the same at every visit, not in which direction it changed: describe the proportion at each visit with its 95% CI, and compare pairs of visits with McNemar's test and a correction for multiple comparisons.
+- A Cox model needs events, not just patients: with 24 revisions across three implants, the CIs are wide and the model can't support adjustment for anything else.
+:::
 
 ```{r}
 #| include: false
