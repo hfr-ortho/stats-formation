@@ -29,6 +29,17 @@ Pages [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalog/06-
 
 [Page 14](14-cox-regression.qmd) covers [Cox regression](../glossary.qmd#cox-regression){.term}.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Run a Kaplan-Meier analysis and a log-rank test in R or Python, and write a Results sentence with each group's survivorship at a fixed time, its 95% CI and the test.
+- Choose between 1 − Kaplan-Meier and the cumulative incidence when patients can die before they are revised, and calculate the one that answers the question.
+- Calculate the median follow-up with the reverse Kaplan-Meier method and report it in the Methods and Results.
+
+**Time:** about 40 minutes to read, about 2 to 2.5 hours with the exercises (an estimate).
+:::
+
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages and data loaded earlier.
@@ -229,6 +240,7 @@ Now the practice [cohort](../glossary.qmd#cohort){.term}: 600 procedures, each [
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curve of revision-free survival for 600 procedures: it falls in small steps from 100% and is flat at 78.0% after the last revision at 7.9 years; 95% band, censoring ticks, table of procedures at risk (600, 332, 84, 21) and revisions so far."
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
@@ -246,6 +258,7 @@ km |>
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curve of revision-free survival, 0 to 1 scale, 600 procedures: it falls in small steps from 1 and is flat at 0.780 after the last revision at 7.9 years; 95% band, censoring ticks, table of procedures at risk (600, 331, 83, 21) and revisions so far."
 from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
@@ -429,6 +442,7 @@ The **log-rank test** asks whether two or more [survival curves](../glossary.qmd
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curves of revision-free survival in total hips by approach: the posterior curve drops sharply in the first months (88.7% vs 98.6% anterior at 6 months), then the curves meet and cross late; 95% bands, tables of hips at risk and revisions."
 tha <- cohort |> filter(procedure == "THA")        # approach applies to hips only
 
 survfit2(Surv(followup_years, revised) ~ approach, data = tha, conf.type = "log-log") |>
@@ -446,6 +460,7 @@ approach_logrank$pvalue      # the printout rounds p to one digit; this is the f
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curves of revision-free survival in total hips by approach, 0 to 1 scale: the posterior curve drops sharply in the first months (88.7% vs 98.6% anterior at 6 months), then the curves meet and cross late; 95% bands, tables of hips at risk and revisions."
 from lifelines.statistics import logrank_test
 
 tha = cohort[cohort["procedure"] == "THA"]                # approach applies to hips only
@@ -585,6 +600,7 @@ The data need one status column with three values. In the [cohort](../glossary.q
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Cumulative incidence curves of revision (dashed) and death (solid): revision runs higher at first, then death overtakes it and ends higher, 24.0% against 19.3% at 10 years; shaded 95% bands."
 cohort <- cohort |>
   mutate(status = factor(event_status, levels = c(0, 1, 2),
                          labels = c("censored", "revision", "death")))   # censored must come first
@@ -607,6 +623,7 @@ tidy_survfit(cif, times = c(2, 5, 10)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Cumulative incidence curves of revision and death as proportions, without bands: revision runs higher at first, then death overtakes it and ends higher, 24.0% against 19.3% at 10 years."
 from scipy.stats import norm
 from statsmodels.duration.survfunc import CumIncidenceRight
 
@@ -769,6 +786,16 @@ Say which one you report. Never call 1 − Kaplan-Meier "the proportion of patie
 - **The cumulative incidence:** R's `survfit()` estimates it whenever the status has more than two [levels](../glossary.qmd#categorical-variable){.term}. In Python, use statsmodels' `CumIncidenceRight()`: it gives the estimates and their [standard errors](../glossary.qmd#standard-error){.term} but no CI, so the code builds the same [log-log CI](../glossary.qmd#log-log-interval){.term} as R. lifelines also has an `AalenJohansenFitter`, but it moves [tied](../glossary.qmd#ties){.term} follow-up times by a small random amount, which can shift an estimate read at exactly 5 or 10 years, so we don't use it.
 - **Gray's test:** Python has no mature implementation of Gray's test. Plot the curves in Python, but run the test in R. tidycmprsk's `cuminc()` also gives the cumulative incidences, with a slightly different CI method.
 - **Fine-Gray regression** models the cumulative incidence with [several predictors at once](../glossary.qmd#multivariable){.term}; it's R only too ([page 14](14-cox-regression.qmd#fine-gray)).
+:::
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Kaplan-Meier assumes that a censored patient has the same future risk as the patients still being followed; if many patients are lost to follow-up, say how many and why.
+- A survivorship figure means nothing without its time point: give the 95% CI and the number still at risk at the time you quote.
+- Don't draw conclusions from the far right-hand end of the curve, where few procedures remain at risk and each late revision moves the curve a lot.
+- Always plot the curves before you trust the log-rank test: when the curves cross, a non-significant test can hide a real difference.
+- The median of the observed times is misleading as follow-up; the reverse Kaplan-Meier method answers how long patients would have been followed if nothing had happened to them.
+- 1 − Kaplan-Meier answers how well the implant performs while patients are alive, the cumulative incidence what proportion of patients will actually be revised: say which one you report.
 :::
 
 ```{r}

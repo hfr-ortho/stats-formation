@@ -29,6 +29,17 @@ Die Seiten [4](../catalog/04-describe-one-group.qmd#kaplan-meier), [6](../catalo
 
 [Seite 14](14-cox-regression.qmd) behandelt die [Cox-Regression](../glossary.qmd#cox-regression){.term}.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- eine Kaplan-Meier-Analyse und einen Log-Rank-Test in R oder Python durchführen und einen Results-Satz schreiben, mit dem Überleben des Implantats jeder Gruppe zu einem festen Zeitpunkt, seinem 95%-KI und dem Test.
+- zwischen 1 − Kaplan-Meier und der kumulativen Inzidenz wählen, wenn Patientinnen und Patienten sterben können, bevor sie revidiert werden, und den Schätzwert berechnen, der die Frage beantwortet.
+- die mediane Nachbeobachtungszeit mit der inversen Kaplan-Meier-Methode berechnen und sie im Methoden- und im Resultatteil berichten.
+
+**Zeitbedarf:** etwa 40 Minuten zum Lesen, etwa 2 bis 2.5 Stunden mit den Übungen (eine Schätzung).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages und Daten, die weiter oben geladen wurden.
@@ -229,6 +240,7 @@ Jetzt die [Übungskohorte](../glossary.qmd#cohort){.term}: 600 Eingriffe, jeder 
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens für 600 Eingriffe: Sie fällt in kleinen Stufen von 100 % ab und bleibt flach bei 78.0 % nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko (600, 332, 84, 21) und der bisherigen Revisionen."
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
@@ -246,6 +258,7 @@ km |>
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens auf einer Skala von 0 bis 1 für 600 Eingriffe: Sie fällt in kleinen Stufen von 1 ab und bleibt flach bei 0.780 nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko (600, 331, 83, 21) und der bisherigen Revisionen."
 from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
@@ -429,6 +442,7 @@ Der **Log-Rank-Test** fragt, ob sich zwei oder mehr [Überlebenskurven](../gloss
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens bei Hüft-TP nach Zugang: Die posteriore Kurve fällt in den ersten Monaten steil ab (88.7 % gegenüber 98.6 % anterior nach 6 Monaten), danach nähern sich die Kurven an und kreuzen sich spät; 95%-Bänder und Tabellen der Hüften unter Risiko und der bisherigen Revisionen."
 tha <- cohort |> filter(procedure == "THA")        # der Zugang gilt nur für Hüften
 
 survfit2(Surv(followup_years, revised) ~ approach, data = tha, conf.type = "log-log") |>
@@ -446,6 +460,7 @@ approach_logrank$pvalue      # die Ausgabe rundet p auf eine Stelle; das ist der
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens bei Hüft-TP nach Zugang, auf einer Skala von 0 bis 1: Die posteriore Kurve fällt in den ersten Monaten steil ab (88.7 % gegenüber 98.6 % anterior nach 6 Monaten), danach nähern sich die Kurven an und kreuzen sich spät; 95%-Bänder und Tabellen der Hüften unter Risiko und der bisherigen Revisionen."
 from lifelines.statistics import logrank_test
 
 tha = cohort[cohort["procedure"] == "THA"]                # der Zugang gilt nur für Hüften
@@ -585,6 +600,7 @@ Die Daten brauchen eine Statusspalte mit drei Werten. In der [Kohorte](../glossa
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kurven der kumulativen Inzidenz von Revision (gestrichelt) und Tod (durchgezogen): Die Revision liegt zuerst höher, dann überholt der Tod sie und endet höher, 24.0 % gegenüber 19.3 % nach 10 Jahren; schattierte 95%-Bänder."
 cohort <- cohort |>
   mutate(status = factor(event_status, levels = c(0, 1, 2),
                          labels = c("censored", "revision", "death")))   # «censored» muss an erster Stelle stehen
@@ -607,6 +623,7 @@ tidy_survfit(cif, times = c(2, 5, 10)) |>
 ## Python
 
 ```{python}
+#| fig-alt: "Kurven der kumulativen Inzidenz von Revision und Tod als Anteile, ohne Bänder: Die Revision liegt zuerst höher, dann überholt der Tod sie und endet höher, 24.0 % gegenüber 19.3 % nach 10 Jahren."
 from scipy.stats import norm
 from statsmodels.duration.survfunc import CumIncidenceRight
 
@@ -769,6 +786,16 @@ Geben Sie an, welche Sie berichten. Nennen Sie 1 − Kaplan-Meier nie «den Ante
 - **Die kumulative Inzidenz:** `survfit()` von R schätzt sie, sobald der Status mehr als zwei [Stufen](../glossary.qmd#categorical-variable){.term} hat. Verwenden Sie in Python `CumIncidenceRight()` von statsmodels: Es liefert die Schätzwerte und ihre [Standardfehler](../glossary.qmd#standard-error){.term}, aber kein KI, daher bildet der Code dasselbe [log-log-KI](../glossary.qmd#log-log-interval){.term} wie R. lifelines hat auch einen `AalenJohansenFitter`, aber er verschiebt gleiche ([gebundene](../glossary.qmd#ties){.term}) Nachbeobachtungszeiten um einen kleinen Zufallsbetrag, was einen Schätzwert bei genau 5 oder 10 Jahren verändern kann, daher verwenden wir ihn nicht.
 - **Der Gray-Test:** Python hat keine ausgereifte Implementierung des Gray-Tests. Zeichnen Sie die Kurven in Python, führen Sie den Test aber in R aus. `cuminc()` von tidycmprsk liefert auch die kumulativen Inzidenzen, mit einer etwas anderen KI-Methode.
 - **Die Fine-Gray-Regression** modelliert die kumulative Inzidenz mit [mehreren Prädiktoren gleichzeitig](../glossary.qmd#multivariable){.term}; auch sie gibt es nur in R ([Seite 14](14-cox-regression.qmd#fine-gray)).
+:::
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Kaplan-Meier setzt voraus, dass eine zensierte Person dasselbe zukünftige Risiko hat wie die Personen, die noch nachbeobachtet werden; wenn viele Personen in der Nachbeobachtung verloren gehen, geben Sie an, wie viele und warum.
+- Eine Angabe zum Überleben des Implantats bedeutet nichts ohne ihren Zeitpunkt: Geben Sie das 95%-KI an und die Anzahl unter Risiko zu dem Zeitpunkt, den Sie nennen.
+- Ziehen Sie aus dem rechten Ende der Kurve keine Schlüsse: Dort sind nur noch wenige Eingriffe unter Risiko, und jede späte Revision verschiebt die Kurve stark.
+- Zeichnen Sie die Kurven immer, bevor Sie dem Log-Rank-Test trauen: Wenn sich die Kurven kreuzen, kann ein nicht signifikanter Test einen realen Unterschied verbergen.
+- Der Median der beobachteten Zeiten ist als Mass für die Nachbeobachtung irreführend; die inverse Kaplan-Meier-Methode beantwortet, wie lange die Personen nachbeobachtet worden wären, wenn ihnen nichts zugestossen wäre.
+- 1 − Kaplan-Meier beantwortet, wie gut das Implantat funktioniert, solange die Patientinnen und Patienten leben, die kumulative Inzidenz, welcher Anteil tatsächlich revidiert wird: Geben Sie an, welche Sie berichten.
 :::
 
 ```{r}

@@ -20,6 +20,19 @@ Les [PROM](../glossary.qmd#prom){.term} (mesures des résultats rapportés par l
 
 Les exemples utilisent le KOOS JR (score du genou pour prothèse articulaire, version abrégée) pour les 330 prothèses totales de genou. Les hanches répondent à un autre questionnaire, le HOOS JR (score de la hanche pour prothèse articulaire, version abrégée), et rien ne garantit qu'un point sur l'un vaille un point sur l'autre : les deux ne sont donc pas mélangés dans un même [modèle](../glossary.qmd#model){.term}. Le dernier exemple, sur la question de savoir si la récupération diffère entre les groupes, utilise le score EFAS (score de la Société européenne du pied et de la cheville) de l'[essai](../glossary.qmd#randomized-trial){.term} orthèse contre plâtre de la [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), qui compte lui aussi quatre visites.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- ajuster un modèle linéaire mixte à intercept aléatoire en R ou en Python et rapporter la moyenne marginale estimée à chaque visite avec son IC à 95 %.
+- repérer les patients que l'ANOVA à mesures répétées écarterait pour une visite manquée, et ajuster plutôt un modèle mixte qui garde tous les scores.
+- tester avec une interaction visite × bras si la récupération diffère entre deux bras, et rédiger la phrase de Résultats avec les moyennes estimées de chaque bras.
+
+**Durée :** environ 35 minutes de lecture, environ 2 à 2.5 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [section de la page 9 sur l'ANOVA à mesures répétées](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) et la [section de la page 12 sur les splines](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages, les données et les modèles créés plus haut.
@@ -201,6 +214,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Boîtes à moustaches des résidus du modèle du genou aux quatre visites : les quatre boîtes sont centrées près de 0 et à peu près symétriques, avec des dispersions semblables ; une ligne pointillée marque 0."
 knee_residuals <- knees |> mutate(residual = residuals(knee_model))   # chaque score moins la valeur ajustée du modèle pour son genou et sa visite
 knee_residuals |> group_by(visit) |> summarise(sd = sd(residual))     # la dispersion des résidus à chaque visite
 ggplot(knee_residuals, aes(visit, residual)) +
@@ -212,6 +226,7 @@ ggplot(knee_residuals, aes(visit, residual)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Boîtes à moustaches des résidus du modèle du genou aux quatre visites : les quatre boîtes sont centrées près de 0 et à peu près symétriques, avec des dispersions semblables ; une ligne pointillée marque 0."
 knee_residuals = knees.assign(residual=knee_model.resid)                           # chaque score moins la valeur ajustée du modèle pour son genou et sa visite
 print(knee_residuals.groupby("visit", observed=True)["residual"].std().round(2))   # la dispersion des résidus à chaque visite
 fig, ax = plt.subplots(figsize=(7, 3.5))
@@ -344,6 +359,7 @@ Jusqu'ici, chaque visite a sa propre [moyenne](../glossary.qmd#mean){.term} : c
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Graphique linéaire de la courbe spline du KOOS JR en fonction des jours depuis l'opération, avec les quatre moyennes des visites en points : la courbe passe près des points, puis monte jusqu'à un pic de 88.6 au jour 247, entre 3 mois et 1 an, où aucun genou n'a reçu de score, et redescend."
 curve_model <- lmer(prom_score ~ ns(visit_days, df = 3) + (1 | case_id), data = knees)
 
 days <- tibble(visit_days = c(-14, 42, 90, 365))           # les jours de visite programmés
@@ -362,6 +378,7 @@ ggplot(curve, aes(visit_days, prom_score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique linéaire de la courbe spline du KOOS JR en fonction des jours depuis l'opération, avec les quatre moyennes des visites en points : la courbe passe près des points, puis monte jusqu'à un pic de 88.6 au jour 247, entre 3 mois et 1 an, où aucun genou n'a reçu de score, et redescend."
 day_knots = list(knees["visit_days"].quantile([1/3, 2/3]))     # les mêmes nœuds que ns(df = 3) de R
 day_low, day_high = knees["visit_days"].min(), knees["visit_days"].max()
 curve_model = smf.mixedlm("prom_score ~ cr(visit_days, knots=day_knots, lower_bound=day_low, upper_bound=day_high,"
@@ -416,6 +433,7 @@ Pour savoir si la récupération avec une orthèse diffère de la récupération
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Graphique d'interaction du score EFAS moyen estimé par visite pour le plâtre (« cast ») et l'orthèse (« boot »), avec des barres d'IC à 95 % : le bras orthèse est plus haut à 6 semaines et à 3 mois (17.3 contre 13.8), l'écart est de 0.4 point à 6 mois, et à 12 mois le bras plâtre est plus haut (20.6 contre 20.2)."
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE) |>
   filter(!is.na(efas)) |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "6mo", "12mo")),
@@ -439,6 +457,7 @@ summary(arm_gaps, by = NULL, adjust = "holm")      # Holm sur les quatre visites
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique linéaire du score EFAS moyen estimé par visite pour le plâtre (« cast ») et l'orthèse (« boot »), avec des barres d'erreur à 95 % : le bras orthèse est plus haut à 6 semaines et à 3 mois (17.3 contre 13.8), l'écart est de 0.4 point à 6 mois, et à 12 mois le bras plâtre est plus haut (20.6 contre 20.2)."
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
@@ -637,6 +656,16 @@ Pour la comparaison entre une orthèse et un plâtre :
 > **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with unadjusted 95% CIs and Holm-adjusted p-values.
 >
 > **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Un modèle mixte utilise tous les scores de tous les patients ; l'ANOVA à mesures répétées écarte chaque patient qui a manqué une visite, ce qui gaspille des données et peut biaiser le résultat.
+- Rapportez la moyenne marginale estimée du modèle à chaque visite avec son IC à 95 %, et choisissez à l'avance les comparaisons entre visites : comparer toutes les paires de visites demanderait un ajustement.
+- Ne forcez pas la récupération à être une droite : tracez toujours d'abord les moyennes des visites, et si vous utilisez le temps comme nombre, laissez-le se courber.
+- Pour savoir si la récupération diffère entre les bras, testez l'interaction visite × bras ; l'effet principal du bras seul ne compare que les niveaux moyens.
+- Lisez une interaction d'après les moyennes : une interaction claire dit que l'écart entre les bras change au cours du temps ; rapportez donc les moyennes marginales estimées et les différences avec leurs IC.
+- Pour les patients opérés des deux côtés, ajoutez un second intercept aléatoire pour le patient, avec les genoux emboîtés dans les patients, et rapportez ce modèle sauf s'il est singulier.
+:::
 
 ```{r}
 #| include: false

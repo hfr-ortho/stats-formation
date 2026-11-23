@@ -20,6 +20,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Die Beispiele verwenden den KOOS JR (Score für Knie-Gelenkersatz, Kurzform) bei den 330 Knie-TP. Bei Hüften wird ein anderer Fragebogen beantwortet (HOOS JR, Score für Hüft-Gelenkersatz, Kurzform), und ein Punkt auf dem einen ist nicht zwingend gleich viel wert wie ein Punkt auf dem anderen; deshalb werden die beiden nicht in einem [Modell](../glossary.qmd#model){.term} vermischt. Das letzte Beispiel, ob sich die Erholung zwischen Gruppen unterscheidet, verwendet den EFAS-Score (Score der Europäischen Gesellschaft für Fuss- und Sprunggelenkchirurgie) aus der [Studie](../glossary.qmd#randomized-trial){.term} zu Walker und Gips von [Seite 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), die ebenfalls vier Studienvisiten hat.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- ein lineares gemischtes Modell mit zufälligem Achsenabschnitt in R oder Python anpassen und das geschätzte Randmittel bei jeder Kontrolle mit seinem 95%-KI berichten.
+- die Patientinnen und Patienten erkennen, die die ANOVA mit Messwiederholung wegen einer verpassten Kontrolle weglassen würde, und stattdessen ein gemischtes Modell anpassen, das jeden Score behält.
+- mit einer Interaktion Studienvisite × Studienarm testen, ob sich die Erholung zwischen zwei Studienarmen unterscheidet, und den Results-Satz mit den geschätzten Mittelwerten jedes Studienarms schreiben.
+
+**Zeitbedarf:** etwa 35 Minuten zum Lesen, etwa 2 bis 2.5 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [den Abschnitt zur ANOVA mit Messwiederholung auf Seite 9](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) und [den Abschnitt zu Splines auf Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages, Daten und Modelle, die zuvor erstellt wurden.
@@ -201,6 +214,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Boxplots der Residuen des Knie-Modells bei den vier Kontrollen: Alle vier Boxen liegen um 0 und sind ungefähr symmetrisch, mit ähnlicher Streuung; eine gestrichelte Linie markiert 0."
 knee_residuals <- knees |> mutate(residual = residuals(knee_model))   # jeder Score minus die Modellanpassung für sein Knie und seine Kontrolle
 knee_residuals |> group_by(visit) |> summarise(sd = sd(residual))     # die Streuung der Residuen bei jeder Kontrolle
 ggplot(knee_residuals, aes(visit, residual)) +
@@ -212,6 +226,7 @@ ggplot(knee_residuals, aes(visit, residual)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Boxplots der Residuen des Knie-Modells bei den vier Kontrollen: Alle vier Boxen liegen um 0 und sind ungefähr symmetrisch, mit ähnlicher Streuung; eine gestrichelte Linie markiert 0."
 knee_residuals = knees.assign(residual=knee_model.resid)                           # jeder Score minus die Modellanpassung für sein Knie und seine Kontrolle
 print(knee_residuals.groupby("visit", observed=True)["residual"].std().round(2))   # die Streuung der Residuen bei jeder Kontrolle
 fig, ax = plt.subplots(figsize=(7, 3.5))
@@ -344,6 +359,7 @@ Bisher hat jede Kontrolle ihren eigenen [Mittelwert](../glossary.qmd#mean){.term
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Liniendiagramm der Spline-Kurve für den KOOS JR gegen die Tage seit der Operation, mit den vier Mittelwerten der Kontrollen als Punkten: Die Kurve verläuft nahe an den Punkten, steigt dann zu einem Gipfel von 88.6 am Tag 247, zwischen 3 Monaten und 1 Jahr, wo kein Knie bewertet wurde, und fällt ab."
 curve_model <- lmer(prom_score ~ ns(visit_days, df = 3) + (1 | case_id), data = knees)
 
 days <- tibble(visit_days = c(-14, 42, 90, 365))           # die geplanten Kontrolltage
@@ -362,6 +378,7 @@ ggplot(curve, aes(visit_days, prom_score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Liniendiagramm der Spline-Kurve für den KOOS JR gegen die Tage seit der Operation, mit den vier Mittelwerten der Kontrollen als Punkten: Die Kurve verläuft nahe an den Punkten, steigt dann zu einem Gipfel von 88.6 am Tag 247, zwischen 3 Monaten und 1 Jahr, wo kein Knie bewertet wurde, und fällt ab."
 day_knots = list(knees["visit_days"].quantile([1/3, 2/3]))     # dieselben Knoten, die ns(df = 3) in R verwendet
 day_low, day_high = knees["visit_days"].min(), knees["visit_days"].max()
 curve_model = smf.mixedlm("prom_score ~ cr(visit_days, knots=day_knots, lower_bound=day_low, upper_bound=day_high,"
@@ -416,6 +433,7 @@ Um zu fragen, ob sich die Erholung mit einem Walker von der Erholung mit einem G
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Interaktionsdiagramm des geschätzten mittleren EFAS-Scores nach Studienvisite für Gips («cast») und Walker («boot»), mit 95%-KI-Balken: Der Walker-Arm liegt nach 6 Wochen und 3 Monaten höher (17.3 gegenüber 13.8), der Abstand beträgt 0.4 Punkte nach 6 Monaten, und nach 12 Monaten liegt der Gips-Arm höher (20.6 gegenüber 20.2)."
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE) |>
   filter(!is.na(efas)) |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "6mo", "12mo")),
@@ -439,6 +457,7 @@ summary(arm_gaps, by = NULL, adjust = "holm")      # Holm über alle vier Studie
 ## Python
 
 ```{python}
+#| fig-alt: "Liniendiagramm des geschätzten mittleren EFAS-Scores nach Studienvisite für Gips («cast») und Walker («boot»), mit 95%-Fehlerbalken: Der Walker-Arm liegt nach 6 Wochen und 3 Monaten höher (17.3 gegenüber 13.8), der Abstand beträgt 0.4 Punkte nach 6 Monaten, und nach 12 Monaten liegt der Gips-Arm höher (20.6 gegenüber 20.2)."
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
@@ -637,6 +656,16 @@ Für den Vergleich zwischen einem Walker und einem Gips:
 > **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with unadjusted 95% CIs and Holm-adjusted p-values.
 >
 > **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Ein gemischtes Modell verwendet jeden Score jeder Patientin und jedes Patienten; die ANOVA mit Messwiederholung lässt alle weg, die eine Kontrolle verpasst haben, was Daten verschwendet und das Resultat verzerren kann.
+- Berichten Sie das geschätzte Randmittel des Modells bei jeder Kontrolle mit seinem 95%-KI und wählen Sie die Vergleiche zwischen Kontrollen im Voraus: Ein Vergleich jedes Paars von Kontrollen würde eine Adjustierung erfordern.
+- Zwingen Sie die Erholung nicht in eine Gerade: Stellen Sie die Mittelwerte der Kontrollen immer zuerst grafisch dar, und wenn Sie die Zeit als Zahl verwenden, lassen Sie sie sich biegen.
+- Um zu fragen, ob sich die Erholung zwischen den Studienarmen unterscheidet, testen Sie die Interaktion Studienvisite × Studienarm; der Haupteffekt des Studienarms allein vergleicht nur die mittleren Niveaus.
+- Lesen Sie eine Interaktion anhand der Mittelwerte: Eine klare Interaktion besagt, dass sich der Abstand zwischen den Studienarmen im Zeitverlauf verändert; berichten Sie deshalb die geschätzten Randmittel und die Differenzen mit ihren KI.
+- Bei beidseitig operierten Patientinnen und Patienten fügen Sie einen zweiten zufälligen Achsenabschnitt für die Person hinzu, mit den Knien verschachtelt in den Personen, und berichten dieses Modell, es sei denn, es ist singulär.
+:::
 
 ```{r}
 #| include: false

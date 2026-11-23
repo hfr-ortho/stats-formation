@@ -20,6 +20,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 The examples use KOOS JR, the knee score, in the 330 total knee replacements. Hips answer a different questionnaire (HOOS JR), and a point on one isn't guaranteed to equal a point on the other, so the two aren't mixed in one [model](../glossary.qmd#model){.term}. The last example, on whether recovery differs between groups, uses the EFAS score from the boot vs cast [trial](../glossary.qmd#randomized-trial){.term} on [page 6](../catalog/06-two-unpaired-groups.qmd#unpaired-t), which also has four visits.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Fit a linear mixed model with a random intercept in R or Python and report the estimated marginal mean at each visit with its 95% CI.
+- Spot the patients that repeated-measures ANOVA would drop for a missed visit, and fit a mixed model that keeps every score instead.
+- Test whether recovery differs between two arms with a visit × arm interaction, and write the Results sentence with each arm's estimated means.
+
+**Time:** about 35 minutes to read, about 2 to 2.5 hours with the exercises (an estimate).
+
+**Read first:** [page 9's section on repeated-measures ANOVA](../catalog/09-three-plus-matched.qmd#repeated-measures-anova) and [page 12's section on splines](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression).
+:::
+
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages, data and models made earlier.
@@ -201,6 +214,7 @@ check_agree(list(total = var(around$from_visit_mean), first_last = alike["preop"
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Box plots of the knee model's residuals at the four visits: all four boxes are centered near 0 and roughly symmetric, with similar spreads; a dashed line marks 0."
 knee_residuals <- knees |> mutate(residual = residuals(knee_model))   # each score minus the model's fit for its knee and visit
 knee_residuals |> group_by(visit) |> summarise(sd = sd(residual))     # the residuals' spread at each visit
 ggplot(knee_residuals, aes(visit, residual)) +
@@ -212,6 +226,7 @@ ggplot(knee_residuals, aes(visit, residual)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Box plots of the knee model's residuals at the four visits: all four boxes are centered near 0 and roughly symmetric, with similar spreads; a dashed line marks 0."
 knee_residuals = knees.assign(residual=knee_model.resid)                           # each score minus the model's fit for its knee and visit
 print(knee_residuals.groupby("visit", observed=True)["residual"].std().round(2))   # the residuals' spread at each visit
 fig, ax = plt.subplots(figsize=(7, 3.5))
@@ -344,6 +359,7 @@ So far each visit has its own [mean](../glossary.qmd#mean){.term}: **time as cat
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Line chart of the spline curve for KOOS JR against days since surgery, with the four visit means as points: the curve passes close to the points, then rises to a peak of 88.6 on day 247, between 3 months and 1 year, where no knee was scored, and falls."
 curve_model <- lmer(prom_score ~ ns(visit_days, df = 3) + (1 | case_id), data = knees)
 
 days <- tibble(visit_days = c(-14, 42, 90, 365))           # the scheduled visit days
@@ -362,6 +378,7 @@ ggplot(curve, aes(visit_days, prom_score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Line chart of the spline curve for KOOS JR against days since surgery, with the four visit means as points: the curve passes close to the points, then rises to a peak of 88.6 on day 247, between 3 months and 1 year, where no knee was scored, and falls."
 day_knots = list(knees["visit_days"].quantile([1/3, 2/3]))     # the same knots R's ns(df = 3) uses
 day_low, day_high = knees["visit_days"].min(), knees["visit_days"].max()
 curve_model = smf.mixedlm("prom_score ~ cr(visit_days, knots=day_knots, lower_bound=day_low, upper_bound=day_high,"
@@ -416,6 +433,7 @@ To ask whether recovery with a boot differs from recovery with a cast, add [arm]
 
 ```{r}
 #| fig-height: 3.5
+#| fig-alt: "Interaction plot of the estimated mean EFAS score by visit for cast and boot, with 95% CI bars: the boot arm is higher at 6 weeks and 3 months (17.3 against 13.8), the gap is 0.4 points at 6 months, and at 12 months the cast arm is higher (20.6 against 20.2)."
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE) |>
   filter(!is.na(efas)) |>
   mutate(visit = factor(visit, levels = c("6wk", "3mo", "6mo", "12mo")),
@@ -439,6 +457,7 @@ summary(arm_gaps, by = NULL, adjust = "holm")      # Holm across all four visits
 ## Python
 
 ```{python}
+#| fig-alt: "Line chart of the estimated mean EFAS score by visit for cast and boot, with 95% error bars: the boot arm is higher at 6 weeks and 3 months (17.3 against 13.8), the gap is 0.4 points at 6 months, and at 12 months the cast arm is higher (20.6 against 20.2)."
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
 
@@ -637,6 +656,16 @@ For the comparison between a boot and a cast:
 > **Methods:** EFAS scores at 6 weeks, 3 months, 6 months and 12 months were analyzed with a linear mixed model with visit, arm and their interaction as fixed effects and a random intercept for each patient, fitted by restricted maximum likelihood. All available scores were used. The interaction was tested with Satterthwaite degrees of freedom. Differences between arms at each visit are reported with unadjusted 95% CIs and Holm-adjusted p-values.
 >
 > **Results:** Of 120 randomized patients, 80 (66.7%) had all four scores; all 431 scores were analyzed. At 3 months the estimated mean EFAS score was 17.3 (95% CI 16.6 to 18.1) with a boot and 13.8 (95% CI 13.0 to 14.5) with a cast (difference 3.6 points, 95% CI 2.5 to 4.6; Holm-adjusted p < 0.001). At 12 months it was 20.2 (95% CI 19.4 to 20.9) with a boot and 20.6 (95% CI 19.8 to 21.4) with a cast (difference −0.4 points, 95% CI −1.5 to 0.7; Holm-adjusted p = 0.898). For the visit × arm interaction, F(3, 310) = 25.73 (p < 0.001).
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- A mixed model uses every score from every patient; repeated-measures ANOVA drops every patient who missed a visit, which wastes data and can bias the result.
+- Report the model's estimated marginal mean at each visit with its 95% CI, and choose the comparisons between visits in advance: comparing every pair of visits would need an adjustment.
+- Don't force recovery into a straight line: always plot the visit means first, and if you use time as a number, let it bend.
+- To ask whether recovery differs between the arms, test the visit × arm interaction; the main effect of arm alone only compares the average levels.
+- Read an interaction through its means: a clear interaction says the gap between the arms changes over time, so report the estimated marginal means and the differences with their CIs.
+- For patients who had both sides operated on, add a second random intercept for the patient, with knees nested in patients, and report that model unless it is singular.
+:::
 
 ```{r}
 #| include: false

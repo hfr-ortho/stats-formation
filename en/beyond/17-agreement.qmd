@@ -18,6 +18,17 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Before a measurement goes into a study, someone should ask: if it were measured again, would you get the same answer? Alignment angles on long-leg radiographs are a good example. Before an osteotomy around the knee, the surgeon works out the correction from the hip-knee-ankle angle (HKA), the medial proximal tibial angle (MPTA) and the lateral distal femoral angle (LDFA), so an error in the reading becomes an error in the correction. Two surgeons can place the same landmarks a little differently, and one surgeon can place them differently on another day. This page shows how to measure that, using the practice data's [reliability](../glossary.qmd#reliability){.term} study: 60 knees, each measured by two raters (R1 and R2), twice, at least two weeks apart.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose the ICC form that fits the design (two-way random or mixed, absolute agreement, single rater), run it in R or Python, and describe it by its CI with Koo and Li's guide.
+- Calculate the Bland-Altman bias and 95% limits of agreement and write the Results sentence.
+- Spot a correlation coefficient offered as evidence that two raters agree, and show why the ICC and the Bland-Altman limits answer that question instead.
+
+**Time:** about 30 minutes to read, about 1.5 to 2 hours with the exercises (an estimate).
+:::
+
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages and data loaded in the first one.
@@ -252,6 +263,7 @@ The [ICC](../glossary.qmd#icc){.term} is a ratio and has no units. To see how fa
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Bland-Altman plot of the HKA angle for 60 knees, rater 2 minus rater 1 against the mean of the two readings: the points scatter evenly around the solid bias line at 0.50°, with no trend, and 3 lie outside the dashed limits of agreement at −2.74° and 3.74°."
 inter_hka <- inter_hka |> mutate(difference = R2 - R1, mean = (R1 + R2) / 2)
 
 n_knees <- nrow(inter_hka)
@@ -277,6 +289,7 @@ ggplot(inter_hka, aes(mean, difference)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Bland-Altman plot of the HKA angle for 60 knees, rater 2 minus rater 1 against the mean of the two readings: the points scatter evenly around the solid bias line at 0.50°, with no trend, and 3 lie outside the dashed limits of agreement at −2.74° and 3.74°."
 inter = first_session.pivot(index="knee_id", columns="rater", values="hka_deg")
 difference = inter["R2"] - inter["R1"]
 mean = (inter["R1"] + inter["R2"]) / 2
@@ -569,6 +582,16 @@ DescTools' `CohenKappa()` and statsmodels' `cohens_kappa()` give the same kappa 
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
 > **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Reliability (the ICC) asks whether a measurement can tell patients apart, agreement (the Bland-Altman limits) how close two readings are in the measurement's own units: report both.
+- The same data give a different ICC for each definition and type, and for a one-way model, so write the form out in the Methods.
+- Judge an ICC or a kappa by its CI, not by the point estimate.
+- Whether the limits of agreement are good enough is a clinical question: decide the acceptable limits before you run the reliability study.
+- Correlation measures whether two readings rise and fall together, not whether they're equal: report the ICC and the Bland-Altman limits, not r.
+- Kappa depends on how common each category is, so report the raw agreement and the table beside kappa.
+:::
 
 ```{r}
 #| include: false

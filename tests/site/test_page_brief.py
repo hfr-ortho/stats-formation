@@ -48,6 +48,11 @@ DONE = [
     "catalog/10-association.qmd",
     "catalog/11-predict-from-one.qmd",
     "catalog/12-predict-from-several.qmd",
+    "survival/13-kaplan-meier.qmd",
+    "survival/14-cox-regression.qmd",
+    "beyond/15-post-hoc.qmd",
+    "beyond/16-mixed-models.qmd",
+    "beyond/17-agreement.qmd",
     "report/18-example-report.qmd",
 ]
 

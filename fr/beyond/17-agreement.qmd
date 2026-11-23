@@ -18,6 +18,17 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Avant d'intégrer une mesure dans une étude, il faut se demander : si on la refaisait, obtiendrait-on la même réponse ? Les angles d'alignement sur les radiographies des longs axes (*long-leg radiographs*) en sont un bon exemple. Avant une ostéotomie autour du genou, le chirurgien calcule la correction à partir de l'angle hanche-genou-cheville (HKA), de l'angle tibial proximal médial (MPTA) et de l'angle fémoral distal latéral (LDFA) : une erreur de lecture devient donc une erreur de correction. Deux chirurgiens peuvent placer les mêmes repères un peu différemment, et un même chirurgien peut les placer autrement un autre jour. Cette page montre comment mesurer cela, avec l'étude de [fiabilité](../glossary.qmd#reliability){.term} des données d'exercice : 60 genoux, chacun mesuré par deux évaluateurs (R1 et R2), deux fois, à au moins deux semaines d'intervalle.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir la forme de CCI qui convient au plan d'étude (deux facteurs à effets aléatoires ou mixtes, concordance absolue, un seul évaluateur), la calculer en R ou en Python, et la décrire d'après son IC avec le guide de Koo et Li.
+- calculer le biais de Bland-Altman et les limites de concordance à 95 %, puis rédiger la phrase de Résultats.
+- repérer un coefficient de corrélation présenté comme la preuve que deux évaluateurs concordent, et montrer pourquoi le CCI et les limites de Bland-Altman répondent à cette question à sa place.
+
+**Durée :** environ 30 minutes de lecture, environ 1.5 à 2 heures avec les exercices (estimation).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages et les données chargés dans le premier.
@@ -252,6 +263,7 @@ Le [CCI](../glossary.qmd#icc){.term} est un rapport et n'a pas d'unité. Pour vo
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Graphique de Bland-Altman de l'angle HKA pour 60 genoux, évaluateur 2 moins évaluateur 1 en fonction de la moyenne des deux lectures : les points se répartissent régulièrement autour de la ligne continue du biais à 0.50°, sans tendance, et 3 se trouvent hors des limites de concordance en pointillés à −2.74° et 3.74°."
 inter_hka <- inter_hka |> mutate(difference = R2 - R1, mean = (R1 + R2) / 2)
 
 n_knees <- nrow(inter_hka)
@@ -277,6 +289,7 @@ ggplot(inter_hka, aes(mean, difference)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique de Bland-Altman de l'angle HKA pour 60 genoux, évaluateur 2 moins évaluateur 1 en fonction de la moyenne des deux lectures : les points se répartissent régulièrement autour de la ligne continue du biais à 0.50°, sans tendance, et 3 se trouvent hors des limites de concordance en pointillés à −2.74° et 3.74°."
 inter = first_session.pivot(index="knee_id", columns="rater", values="hka_deg")
 difference = inter["R2"] - inter["R1"]
 mean = (inter["R1"] + inter["R2"]) / 2
@@ -569,6 +582,16 @@ Les poids dépendent de l'ordre des catégories. Placez-les vous-même dans leur
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
 > **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- La fiabilité (le CCI) demande si une mesure permet de distinguer les patients les uns des autres, la concordance (les limites de Bland-Altman) à quel point deux lectures sont proches dans l'unité propre de la mesure : rapportez les deux.
+- Les mêmes données donnent un CCI différent pour chaque définition et chaque type, et pour un modèle à un facteur : écrivez donc la forme en toutes lettres dans les Méthodes.
+- Jugez un CCI ou un kappa d'après son IC, pas d'après l'estimation seule.
+- Savoir si les limites de concordance sont suffisantes est une question clinique : fixez les limites acceptables avant de mener l'étude de fiabilité.
+- La corrélation mesure si deux lectures montent et descendent ensemble, pas si elles sont égales : rapportez le CCI et les limites de Bland-Altman, pas r.
+- Le kappa dépend de la fréquence de chaque catégorie : indiquez donc la concordance brute et le tableau à côté du kappa.
+:::
 
 ```{r}
 #| include: false

@@ -18,6 +18,17 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Bevor eine Messung in eine Studie eingeht, sollte man sich fragen: Würde eine erneute Messung dasselbe Resultat ergeben? Die Achsenwinkel auf Ganzbeinaufnahmen (Röntgenaufnahmen des ganzen Beins) sind ein gutes Beispiel. Vor einer Osteotomie um das Knie berechnen Chirurginnen und Chirurgen die Korrektur aus dem Hüft-Knie-Sprunggelenk-Winkel (HKA), dem medialen proximalen Tibiawinkel (MPTA) und dem lateralen distalen Femurwinkel (LDFA). Ein Fehler beim Ablesen wird so zu einem Fehler in der Korrektur. Zwei Chirurginnen oder Chirurgen setzen dieselben Referenzpunkte ein wenig unterschiedlich, und dieselbe Person setzt sie an einem anderen Tag wieder anders. Diese Seite zeigt, wie Sie das messen, anhand der [Reliabilitätsstudie](../glossary.qmd#reliability){.term} in den Übungsdaten: 60 Knie, jedes von zwei beurteilenden Personen (R1 und R2) zweimal gemessen, im Abstand von mindestens zwei Wochen.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- die ICC-Form wählen, die zum Design passt (zweifaktoriell mit zufälligen oder gemischten Effekten, absolute Übereinstimmung, einzelne beurteilende Person), sie in R oder Python berechnen und sie anhand ihres KI mit der Richtschnur von Koo und Li beschreiben.
+- den Bland-Altman-Bias und die 95%-Übereinstimmungsgrenzen berechnen und den Results-Satz formulieren.
+- eine Korrelation erkennen, die als Beleg für die Übereinstimmung zweier Beurteilender angeführt wird, und zeigen, warum der ICC und die Bland-Altman-Grenzen diese Frage beantworten.
+
+**Zeitbedarf:** etwa 30 Minuten zum Lesen, etwa 1.5 bis 2 Stunden mit den Übungen (eine Schätzung).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages und die Daten, die der erste Block lädt.
@@ -252,6 +263,7 @@ Der [ICC](../glossary.qmd#icc){.term} ist ein Verhältnis und hat keine Einheit.
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Bland-Altman-Diagramm des HKA-Winkels für 60 Knie, Person 2 minus Person 1 gegen den Mittelwert der beiden Messungen: Die Punkte streuen gleichmässig um die durchgezogene Bias-Linie bei 0.50°, ohne Trend, und 3 liegen ausserhalb der gestrichelten Übereinstimmungsgrenzen bei −2.74° und 3.74°."
 inter_hka <- inter_hka |> mutate(difference = R2 - R1, mean = (R1 + R2) / 2)
 
 n_knees <- nrow(inter_hka)
@@ -277,6 +289,7 @@ ggplot(inter_hka, aes(mean, difference)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Bland-Altman-Diagramm des HKA-Winkels für 60 Knie, Person 2 minus Person 1 gegen den Mittelwert der beiden Messungen: Die Punkte streuen gleichmässig um die durchgezogene Bias-Linie bei 0.50°, ohne Trend, und 3 liegen ausserhalb der gestrichelten Übereinstimmungsgrenzen bei −2.74° und 3.74°."
 inter = first_session.pivot(index="knee_id", columns="rater", values="hka_deg")
 difference = inter["R2"] - inter["R1"]
 mean = (inter["R1"] + inter["R2"]) / 2
@@ -569,6 +582,16 @@ Die Gewichte hängen von der Reihenfolge der Kategorien ab. Legen Sie sie selbst
 > **Methods:** Two raters measured the hip-knee-ankle angle, MPTA and LDFA on 60 long-leg radiographs used for osteotomy planning, twice, at least 2 weeks apart. Inter-rater reliability was assessed with two-way random-effects, and intra-rater reliability with two-way mixed-effects, absolute-agreement, single-rater intraclass correlation coefficients (ICC(A,1)), interpreted according to Koo and Li. Inter-rater reliability used each rater's first reading; intra-rater reliability compared rater 1's two readings. Agreement was assessed with Bland-Altman 95% limits of agreement. Agreement on CPAK class was assessed with Cohen's kappa, and on the ordered arithmetic HKA group with linearly weighted kappa.
 >
 > **Results:** For the hip-knee-ankle angle, the inter-rater ICC was 0.89 (95% CI 0.82 to 0.93) and rater 1's intra-rater ICC 0.91 (95% CI 0.86 to 0.95). The mean difference between rater 2 and rater 1 was 0.50° (95% CI 0.08° to 0.93°), with 95% limits of agreement from −2.74° (95% CI −3.48° to −2.00°) to 3.74° (95% CI 3.00° to 4.48°). For CPAK class, the raters gave the same class to 40 of 60 knees (66.7%) and κ = 0.58 (95% CI 0.44 to 0.73); for the arithmetic HKA group, weighted κ = 0.73 (95% CI 0.58 to 0.87).
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Die Reliabilität (der ICC) fragt, ob eine Messung Patientinnen und Patienten voneinander unterscheiden kann, die Übereinstimmung (die Bland-Altman-Grenzen), wie nahe zwei Messungen in den Einheiten der Messung selbst beieinanderliegen: Berichten Sie beides.
+- Dieselben Daten ergeben für jede Definition und jeden Typ einen anderen ICC, und auch für ein einfaktorielles Modell; schreiben Sie die Form deshalb im Methodenteil aus.
+- Beurteilen Sie einen ICC oder ein Kappa nach dem KI, nicht nach dem Schätzwert.
+- Ob die Übereinstimmungsgrenzen gut genug sind, ist eine klinische Frage: Legen Sie die akzeptablen Grenzen vor der Reliabilitätsstudie fest.
+- Die Korrelation misst, ob zwei Messungen gemeinsam steigen und fallen, nicht, ob sie gleich sind: Berichten Sie den ICC und die Bland-Altman-Grenzen, nicht r.
+- Kappa hängt davon ab, wie häufig jede Kategorie ist; berichten Sie deshalb neben Kappa die einfache Übereinstimmung und die Tabelle.
+:::
 
 ```{r}
 #| include: false

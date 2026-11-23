@@ -25,6 +25,19 @@ La [page 13](13-kaplan-meier.qmd) a comparé des [courbes de survie](../glossary
 - comment modéliser les [risques concurrents](../glossary.qmd#competing-risk){.term}
 - comment rédiger le résultat
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- ajuster un modèle de Cox en R ou en Python et rédiger une phrase de Résultats avec le hazard ratio, son IC à 95 % et la valeur p.
+- vérifier si l'effet d'un prédicteur mesuré est une droite, avec une spline cubique naturelle, et si les risques sont proportionnels, avec les résidus de Schoenfeld mis à l'échelle.
+- rapporter un modèle de Cox ajusté, avec les hazard ratios univariés et multivariés côte à côte dans un tableau, et les Méthodes et les Résultats qui l'accompagnent.
+
+**Durée :** environ 45 minutes de lecture, environ 2.5 à 3 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 13](13-kaplan-meier.qmd) pour les courbes de survie, la censure et les risques concurrents, et la [section de la page 12 sur les splines](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne cette page
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages, les données et les modèles créés plus haut.
@@ -360,6 +373,7 @@ Le hazard ratio d'aucun prédicteur n'a clairement changé au cours du temps (li
 
 ```{r}
 #| fig-height: 4
+#| fig-alt: "Graphique des résidus de Schoenfeld, voie postérieure contre voie antérieure : des points près de +2 et de −2, et une ligne de tendance continue du logarithme du hazard ratio qui part haut dans les premiers mois, puis passe sous la ligne pointillée à 0.31, la valeur unique du modèle ; bandes de confiance en pointillés."
 tha <- cohort |> filter(procedure == "THA")
 approach_model <- coxph(Surv(followup_years, revised) ~ approach, data = tha)
 coef(approach_model)                                 # le logarithme du hazard ratio : là où se trouvera la ligne pointillée
@@ -374,6 +388,7 @@ abline(h = coef(approach_model), lty = 2)            # le hazard ratio unique qu
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique des résidus de Schoenfeld, voie postérieure contre voie antérieure, sur un axe du temps logarithmique : des points près de +2 et de −2, et une ligne de tendance continue du logarithme du hazard ratio qui part haut dans les premiers mois, puis passe sous la ligne pointillée à 0.31, la valeur unique du modèle ; sans bandes de confiance."
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 tha = cohort[cohort["procedure"] == "THA"]
@@ -751,6 +766,16 @@ Avant de soumettre, vérifiez que l'article indique :
 - sur quelles covariables l'[ajustement](../glossary.qmd#adjustment){.term} a été fait, et pourquoi
 - comment les prédicteurs [continus](../glossary.qmd#continuous-variable){.term} ont été modélisés, et comment les [risques proportionnels](../glossary.qmd#proportional-hazards){.term} ont été vérifiés
 - comment les patients bilatéraux et les décès ont été traités
+
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- « Trois fois le hazard » ne veut pas dire trois fois plus de révisions : rapportez le hazard ratio comme un rapport de taux, et donnez les risques cumulés séparément.
+- Choisissez les covariables avant de regarder les résultats, pour une raison que vous pouvez justifier par écrit : ajustez sur les facteurs de confusion, pas sur ce que l'implant cause, et ne les choisissez jamais d'après les données.
+- Regardez le graphique des résidus en plus du test : avec beaucoup d'événements, le test signale des changements trop petits pour compter, avec peu, il manque de vrais changements, et un test non significatif n'est pas la preuve que les risques sont proportionnels.
+- Quand un hazard ratio change au cours du temps, stratifiez par ce prédicteur s'il n'est qu'un ajustement, ou découpez le suivi à un point de coupure choisi à l'avance si vous avez besoin de son effet.
+- Les deux articulations d'un même patient ne sont en général pas indépendantes : garder les deux et utiliser des erreurs standard robustes en grappes sur le patient est le choix habituel.
+- Un hazard ratio de sous-distribution (modèle de Fine-Gray) n'est pas un hazard ratio : lisez-le seulement comme une incidence cumulée plus haute ou plus basse, et appelez-le hazard ratio de sous-distribution dans le texte et les tableaux.
+:::
 
 ```{r}
 #| include: false
