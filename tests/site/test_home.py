@@ -173,3 +173,14 @@ def test_games_howell_row_pairs_it_with_welchs_anova(site):
     row = next(text for name, text, _ in index_rows() if name == "Games-Howell test")
     assert "after Welch's ANOVA; it doesn't assume similar spreads" in row
     assert "when the spreads differ" not in row
+    # Fix round 1: the Student's t test row already links equal variances; a term is linked once per section.
+    links = next(links for name, _, links in index_rows() if name == "Games-Howell test")
+    assert "glossary.html#equal-variances" not in links
+
+
+def test_german_risk_ratio_row_says_how_many_times_as_likely(site):
+    """Fix round 1 of task 3.10: the German pages say "wie viele Male so wahrscheinlich ... wie", as page 6 does."""
+    soup = BeautifulSoup((SITE_ROOT / "de" / A_TO_Z).read_text(encoding="utf-8"), "html.parser")
+    row = next(text_of(tr) for tr in soup.select("main table tbody tr") if text_of(tr.select_one("td")).startswith("Relatives Risiko"))
+    assert "wie viele Male so wahrscheinlich eine Ja/Nein-Zielgrösse in der einen Gruppe ist wie in der anderen" in row
+    assert "wie viel Mal" not in row

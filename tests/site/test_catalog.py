@@ -798,3 +798,17 @@ def test_page_8_tells_the_cox_score_test_from_the_log_rank_test(site):
     text = text_of(section("catalog/08-three-plus-unmatched.html", "cox"))
     assert "The log-rank test, the" not in text
     assert "is the Cox model's score test, 33.48, close to the log-rank statistic but not the same" in text
+    # Fix round 1: the 33.47 is printed under "Run it", not on the last line of the box's own Python tab.
+    assert "(Python's last line)" not in text and "Its statistic is 33.47 (the last line Python prints under" in text
+
+
+def test_page_6_log_rank_counts_procedures(site):
+    """Fix round 1 of task 3.10: data/cohort.csv has one row per procedure (246 rows with implant A are 232 patients)."""
+    text = text_of(section("catalog/06-two-unpaired-groups.html", "log-rank"))
+    assert "procedures in each group (246 with implant A, 137 with C)" in text
+    assert "patients in each group" not in text
+
+
+def test_page_11_shows_rs_two_risk_table_rows(site):
+    """Fix round 1 of task 3.10: as on pages 6, 8 and 13; page 4 alone shows and explains lifelines' default."""
+    assert 'rows_to_show=["At risk", "Events"]' in code_of(section("catalog/11-predict-from-one.html", "cox"))

@@ -238,3 +238,9 @@ def test_bmi_and_sex_sentences_count_procedures_and_missing_values_give_no_cause
     assert "THA patients are women" not in demographics
     assert "couldn't find" not in demographics
     assert "is missing a few BMIs, ASA classes and lengths of stay" in demographics
+
+
+def test_distributions_page_uses_american_spelling(site):
+    """Fix round 1 of task 3.10: American spelling in English prose."""
+    text = text_of("foundations/03-distributions.html")
+    assert "Either analyse" not in text and "Either analyze one procedure per patient" in text

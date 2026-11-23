@@ -274,3 +274,8 @@ def test_the_done_box_says_the_next_box_lists_only_some_of_what_is_missing(site)
     text = text_of(section(REPORT, "manuscript"))
     assert "the next box lists some of what is missing" in text
     assert "the next box lists what is missing" not in text
+
+
+def test_page_18_uses_american_spelling(site):
+    """Fix round 1 of task 3.10: American spelling in English prose (the R object `analysed` is code)."""
+    assert "fared differently from those analyzed" in text_of(load(REPORT))

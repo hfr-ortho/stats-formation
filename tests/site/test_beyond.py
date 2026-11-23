@@ -507,3 +507,8 @@ def test_asa_class_sizes_count_procedures(site):
     text = text_of(section(POST_HOC, "after-anova"))
     assert "(ASA 1 with 36 procedures and ASA 4 with 18)" in text
     assert "36 patients" not in text
+
+
+def test_page_15_uses_american_spelling(site):
+    """Fix round 1 of task 3.10: American spelling in English prose."""
+    assert "favourite" not in text_of(load(POST_HOC)) and "favorite result" in text_of(load(POST_HOC))
