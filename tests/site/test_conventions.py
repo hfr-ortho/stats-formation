@@ -1,7 +1,7 @@
 """Site-wide page conventions (spec section 6)."""
 
 from sitelib import FREEZE, INTERPRETATION, PAGES, SITE, load, results_of, text_of
-from test_page_brief import DONE, NUMBERED
+from test_page_brief import DONE, MOST, NUMBERED, SOME
 
 
 def test_rule_flags_interpretation_in_results_sentences():
@@ -71,10 +71,12 @@ def test_callout_legend_shows_all_six_kinds(site):
     assert "90 words a minute" in text_of(legend) and "an estimate" in text_of(legend)
     # during a rollout the boxes arrive page by page, so no claim that every numbered page has them; once DONE
     # equals NUMBERED (since 23.11.2026) the legend says every numbered page has them
-    # (tests/site/test_page_brief.py::test_legend_tells_the_truth_about_the_rollout checks all three languages)
+    # (tests/site/test_page_brief.py::test_legend_tells_the_truth_about_the_rollout checks all three languages,
+    # with the same rule: "most" while half or more of the numbered pages lack the boxes, then "some")
     if set(DONE) != set(NUMBERED):
         assert "page by page" in text_of(legend)
-        assert "most numbered pages don't have them yet" in text_of(legend)   # 17 of 18 today; "some" after Task 4.4
+        missing = len(NUMBERED) - len(DONE)
+        assert (MOST if missing >= len(NUMBERED) / 2 else SOME)["en"] in text_of(legend)
         assert "each numbered page" not in text_of(legend) and "every numbered page" not in text_of(legend)
     else:
         assert "every numbered page" in text_of(legend).lower() and "page by page" not in text_of(legend)

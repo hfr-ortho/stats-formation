@@ -2,7 +2,7 @@
 text alternative (spec docs/superpowers/specs/2026-11-20-page-brief-design.md; audit findings L2 and U7).
 
 The boxes arrived page by page: `DONE` lists the pages that have them, and the page tests run on those
-pages only. Since 23.11.2026 `DONE` equals `NUMBERED`; a page added later joins both lists with its boxes.
+pages only. Since 23.11.2026 `DONE` equals `NUMBERED`; a page added later joins both lists and `HANDS_ON` with its boxes.
 The rules themselves are tested on small strings at the bottom, so we know they bite before a page relies
 on them."""
 
@@ -333,6 +333,14 @@ def test_every_done_page_is_numbered_and_exists_in_every_language():
             assert (ROOT / lang / page).exists(), f"{lang}/{page}"
 
 
+@pytest.mark.parametrize("lang", LANGS)
+def test_numbered_lists_every_numbered_page_on_disk(lang):
+    """A numbered page added to a language folder but not to NUMBERED would escape every page test while the
+    legend says every numbered page has its boxes."""
+    on_disk = sorted(p.relative_to(ROOT / lang).as_posix() for p in (ROOT / lang).glob("*/[0-9][0-9]-*.qmd"))
+    assert sorted(NUMBERED) == on_disk
+
+
 @pytest.mark.parametrize("lang,page", PAGES)
 def test_page_opens_with_goals_and_time(site, lang, page):
     soup = built(lang, page)
@@ -452,14 +460,15 @@ def test_manuscript_figures_are_the_listed_ones():
 def test_legend_tells_the_truth_about_the_rollout(site, lang):
     """While some numbered page lacks its boxes, the legend says they arrive page by page and never that
     every numbered page has them. Since Task 4.6 (23.11.2026) every numbered page has them, so the legend
-    says so in its own language (EVERY_PAGE) and no longer says page by page. The first branch stays for a
-    page added later."""
+    says so in its own language (EVERY_PAGE) and no longer says page by page. The first branch stays; it runs
+    only if a page is ever listed in NUMBERED before it has its boxes."""
     legend = text_of(built(lang, "getting-started/using-this-site.qmd").select_one("section#the-boxes-youll-see"))
     if set(DONE) != set(NUMBERED):
         assert ROLLOUT[lang] in legend
         assert [p for p in EVERY_PAGE[lang] if p.casefold() in legend.casefold()] == []
         missing = len(NUMBERED) - len(DONE)
-        assert (MOST if missing >= len(NUMBERED) / 2 else SOME)[lang] in legend, f"{missing} of 18 pages lack the boxes"
+        assert (MOST if missing >= len(NUMBERED) / 2 else SOME)[lang] in legend, \
+            f"{missing} of {len(NUMBERED)} pages lack the boxes"
     else:
         assert ROLLOUT[lang] not in legend
         assert [p for p in EVERY_PAGE[lang] if p.casefold() in legend.casefold()], "no claim that every page has them"
