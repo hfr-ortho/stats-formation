@@ -4,7 +4,9 @@ import re
 
 import pytest
 
-from sitelib import CELL_ANCHORS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, code_of, load, section, target, text_of, unreported
+from bs4 import BeautifulSoup
+
+from sitelib import CELL_ANCHORS, FREEZE, NO_EVIDENCE_AS_NO_DIFFERENCE, SITE_ROOT, code_of, load, section, target, text_of, unreported
 
 # Catalog pages written so far. Later phases add pages 8-12 here.
 WRITTEN = [
@@ -822,7 +824,15 @@ def test_odds_ratio_exercise_asks_what_the_misreading_would_conclude(site):
     assert "Read as a risk ratio, the odds ratio would say" in text_of(exercises)
 
 
-def test_survival_figures_count_procedures_not_patients(site):
-    """data/cohort.csv has one row per procedure: 246 rows are 232 patients with implant A (review C1)."""
-    for img in section("catalog/06-two-unpaired-groups.html", "log-rank").select("img"):
-        assert "patient" not in img["alt"], img["alt"]
+@pytest.mark.parametrize("lang,patients,procedures", [("en", "patient", "procedures"),
+                                                     ("de", "Person", "Eingriffe"),
+                                                     ("fr", "patient", "interventions")])
+def test_survival_figures_count_procedures_not_patients(site, lang, patients, procedures):
+    """data/cohort.csv has one row per procedure: 246 rows are 232 patients with implant A (review C1).
+    German pages say "Personen" (or "Patientinnen und Patienten") for patients."""
+    soup = BeautifulSoup((SITE_ROOT / lang / "catalog" / "06-two-unpaired-groups.html").read_text(encoding="utf-8"), "html.parser")
+    images = soup.select("section#log-rank img")
+    assert len(images) == 2
+    for img in images:
+        assert patients.lower() not in img["alt"].lower() and "patient" not in img["alt"].lower(), img["alt"]
+        assert procedures in img["alt"], img["alt"]

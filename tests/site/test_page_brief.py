@@ -84,6 +84,9 @@ ESTIMATE = {"en": "(an estimate)", "de": "(eine Schätzung)", "fr": "(estimation
 ROLLOUT = {"en": "page by page", "de": "Seite für Seite", "fr": "page par page"}
 EVERY_PAGE = {"en": ("each numbered page", "every numbered page"), "de": ("jeder nummerierten Seite",),
               "fr": ("chaque page numérotée",)}
+# How many pages still lack the boxes: "most" while half or more do, then "some".
+MOST = {"en": "most numbered pages", "de": "die meisten nummerierten Seiten", "fr": "la plupart des pages numérotées"}
+SOME = {"en": "some numbered pages", "de": "einige nummerierte Seiten", "fr": "certaines pages numérotées"}
 
 # Page 18 renders to Word too: its boxes sit inside html-only blocks (spec, "Page 18").
 REPORT = "report/18-example-report.qmd"
@@ -405,6 +408,8 @@ def test_legend_tells_the_truth_about_the_rollout(site, lang):
     if set(DONE) != set(NUMBERED):
         assert ROLLOUT[lang] in legend
         assert [p for p in EVERY_PAGE[lang] if p in legend] == []
+        missing = len(NUMBERED) - len(DONE)
+        assert (MOST if missing >= len(NUMBERED) / 2 else SOME)[lang] in legend, f"{missing} of 18 pages lack the boxes"
     else:
         assert ROLLOUT[lang] not in legend
 
@@ -503,9 +508,9 @@ def depth_at(lines, start, i):
 
 
 def key_points_problems(text: str, page: str = "") -> list[str]:
-    """Where the key points sit in the source. Everywhere but page 18: after the box, only blank lines and
-    hidden chunks come before `## Exercises`, and the page's last `# Prose guard` chunk is among them (pages 1
-    and 2 end with several hidden chunks). Page 18: the guard sits in the manuscript region, so the box is
+    """Where the key points sit in the source. Everywhere but page 18: the box sits above the whole run of
+    hidden chunks that ends the page (pages 1 and 2 end with several), so no hidden chunk ends right above it;
+    after it only blank lines and hidden chunks come before `## Exercises`, the page's last `# Prose guard` among them. Page 18: the guard sits in the manuscript region, so the box is
     the first thing in the html-only block that follows the guard, and `## Exercises` comes next."""
     lines = text.split("\n")
     opens = [i for i in top_level(lines) if KEY_POINTS_OPEN.match(lines[i])]
@@ -530,6 +535,10 @@ def key_points_problems(text: str, page: str = "") -> list[str]:
         if following >= len(lines) or not EXERCISES_HEADING.match(lines[following]):
             problems.append("on page 18 `## Exercises` follows the key points")
         return problems
+    # the box sits above the whole trailing run of hidden chunks: no hidden chunk ends right above it
+    above = previous_nonblank(lines, start - 1)
+    if any(chunk_end(lines, s) == above and is_hidden(options_of("\n".join(lines[s + 1:above]))) for s in chunk_starts(lines)):
+        return ["the key points sit inside the run of hidden chunks that ends the page; put them above it"]
     j = next_nonblank(lines, end + 1)
     while j < len(lines) and not EXERCISES_HEADING.match(lines[j]):
         if not (CHUNK_START.match(lines[j]) and is_hidden(options_of("\n".join(lines[j + 1:chunk_end(lines, j)])))):
@@ -615,6 +624,8 @@ EXERCISE_HEADING = EXERCISES + "\n\nText.\n"
 def test_key_points_rule_wants_only_hidden_chunks_and_the_last_guard_before_exercises():
     assert key_points_problems(POINTS + GUARD + "\n" + EXERCISE_HEADING) == []
     assert key_points_problems(POINTS + GUARD + "\n" + PY_GUARD + "\n" + EXERCISE_HEADING) == []   # page 2
+    assert key_points_problems(GUARD + "\n" + POINTS + PY_GUARD + "\n" + EXERCISE_HEADING)          # between page 2's guards
+    assert key_points_problems(HIDDEN + "\n" + POINTS + GUARD + "\n" + EXERCISE_HEADING)            # inside the hidden run
     assert key_points_problems(POINTS + HIDDEN + "\n" + GUARD + "\n" + EXERCISE_HEADING) == []     # page 1
     assert key_points_problems(GUARD + "\n" + POINTS + EXERCISE_HEADING)                           # guard above
     assert key_points_problems(POINTS + "Some prose.\n\n" + GUARD + "\n" + EXERCISE_HEADING)       # prose between

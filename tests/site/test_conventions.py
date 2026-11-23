@@ -73,6 +73,7 @@ def test_callout_legend_shows_all_six_kinds(site):
     # (tests/site/test_page_brief.py::test_legend_tells_the_truth_about_the_rollout checks all three languages)
     if set(DONE) != set(NUMBERED):
         assert "page by page" in text_of(legend)
+        assert "most numbered pages don't have them yet" in text_of(legend)   # 17 of 18 today; "some" after Task 4.4
         assert "each numbered page" not in text_of(legend) and "every numbered page" not in text_of(legend)
 
 
