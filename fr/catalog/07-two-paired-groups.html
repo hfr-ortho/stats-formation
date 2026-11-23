@@ -612,6 +612,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <!-- data-checksum: f354a6da47f62ead35825a3d2b8ef6d9 -->
 <p>Des données <strong>appariées</strong> vont par deux&nbsp;: le même patient avant et après l’opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients <a href="../../fr/glossary.html#matched" class="term">appariés</a> selon l’âge, le sexe et l’IMC. Les tests pour données <a href="../../fr/glossary.html#paired" class="term">appariées</a> comparent chaque patient avec lui-même (ou avec le patient auquel il est apparié), ce qui élimine la <a href="../../fr/glossary.html#spread" class="term">variation</a> entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la <a href="../../fr/catalog/06-two-unpaired-groups.html">page 6</a>.</p>
+<div class="page-brief callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>🎯 Objectifs et durée
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><strong>Après cette page, vous saurez&nbsp;:</strong></p>
+<ul>
+<li>choisir un test pour données appariées quand les deux mesures vont ensemble, et choisir entre le test t pour échantillons appariés et le test des rangs signés de Wilcoxon d’après la forme des différences et la présence d’un plancher ou d’un plafond dans les mesures.</li>
+<li>exécuter le test apparié en R ou en Python et rédiger une phrase de Résultats avec le résumé de chaque mesure, la différence moyenne ou l’estimateur de Hodges-Lehmann avec son IC à 95&nbsp;%, et la valeur p.</li>
+<li>rédiger la phrase de Résultats pour un critère oui/non mesuré deux fois&nbsp;: combien de patients ont changé dans chaque sens, et l’odds ratio des paires discordantes du test de McNemar avec son IC à 95&nbsp;%.</li>
+</ul>
+<p><strong>Durée&nbsp;:</strong> environ 45 minutes de lecture, environ 2 à 2.5 heures avec les exercices (estimation).</p>
+<p><strong>À lire d’abord&nbsp;:</strong> la <a href="../../fr/foundations/01-tidy-data.html#what-tidy-means">page 1</a> pour les formats large et long, la <a href="../../fr/foundations/03-distributions.html">page 3</a> pour juger si une distribution est à peu près normale, la <a href="../../fr/catalog/04-describe-one-group.html#kaplan-meier">section Kaplan-Meier de la page 4</a> pour le suivi et la censure, et <a href="../../fr/getting-started/using-this-site.html#how-results-are-reported">Comment rapporter les résultats</a>.</p>
+</div>
+</div>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -666,7 +686,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="regarder-dabord-les-données" class="level3">
 <h3 class="anchored" data-anchor-id="regarder-dabord-les-données">Regarder d’abord les données</h3>
 <p>L’angle alpha mesure à quel point la partie antérieure de la jonction tête-col fémorale fait saillie (morphologie cam)&nbsp;: plus l’angle est grand, plus la bosse est importante. Les données de préservation de la hanche contiennent une ligne par hanche (une hanche par patient), chez de jeunes adultes évalués pour une chirurgie de préservation de la hanche, avec l’angle alpha mesuré sur deux incidences&nbsp;: l’<strong>incidence en grenouille</strong> (profil, <em>frog-leg</em>) et l’<strong>incidence de Dunn à 45°</strong>.</p>
-<p>Les données appariées doivent être en <strong><a href="../../fr/glossary.html#long-format" class="term">format large</a></strong>&nbsp;: une ligne par patient, avec les deux mesures côte à côte. C’est déjà le cas ici&nbsp;; la <a href="../../fr/foundations/01-tidy-data.html#reshaping">page 1</a> montre comment remodeler des données qui ne le sont pas.</p>
+<p>Les données appariées doivent être en <strong><a href="../../fr/glossary.html#long-format" class="term">format large</a></strong>&nbsp;: une ligne par patient, avec les deux mesures côte à côte. C’est déjà le cas ici&nbsp;; la <a href="#wilcoxon-signed-rank">section suivante</a> remodèle des données qui ne le sont pas, avec <code>pivot_wider()</code> dans R et <code>.pivot()</code> dans Python.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Python</a></li></ul>
 <div class="tab-content" data-group="language">
@@ -700,7 +720,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" alt="Histogramme des différences d'angle alpha, Dunn 45° moins incidence en grenouille, pour 80 hanches&nbsp;: une bosse à peu près symétrique, centrée à droite de la ligne pointillée à 0 (différence moyenne 3.7°)&nbsp;: la plupart des hanches ont donc une valeur plus élevée sur l'incidence de Dunn&nbsp;; des barres de 1° de large." width="672"></p>
 </figure>
 </div>
 </div>
@@ -734,7 +754,7 @@ std          11.161818          10.837896</code></pre>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" alt="Histogramme des différences d'angle alpha, Dunn 45° moins incidence en grenouille, pour 80 hanches&nbsp;: une bosse à peu près symétrique, centrée à droite de la ligne pointillée à 0 (différence moyenne 3.7°)&nbsp;: la plupart des hanches ont donc une valeur plus élevée sur l'incidence de Dunn&nbsp;; des barres de 1° de large."></p>
 </figure>
 </div>
 </div>
@@ -801,7 +821,7 @@ mean difference
 <li><strong>IC à 95&nbsp;% de 2.73 à 4.61&nbsp;:</strong> l’<a href="../../fr/glossary.html#confidence-interval" class="term">intervalle de confiance</a> (IC) de la différence moyenne.</li>
 </ul>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -810,7 +830,7 @@ mean difference
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Python</a></li></ul>
@@ -984,7 +1004,7 @@ mean difference
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" alt="Histogramme des 246 changements du KOOS JR, 1 an moins avant l'opération&nbsp;: chaque changement se situe à droite de la ligne pointillée à 0, et ensemble ils forment une bosse assez symétrique&nbsp;; des barres de 2.5 points de large." width="672"></p>
 </figure>
 </div>
 </div>
@@ -1036,7 +1056,7 @@ mean difference
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" alt="Histogramme des 246 changements du KOOS JR, 1 an moins avant l'opération&nbsp;: chaque changement se situe à droite de la ligne pointillée à 0, et ensemble ils forment une bosse assez symétrique&nbsp;; des barres de 2.5 points de large."></p>
 </figure>
 </div>
 </div>
@@ -1120,7 +1140,7 @@ Wilcoxon    0.0   two-sided  4.179101e-42  1.0  0.964621</code></pre>
 <li><strong>La dernière ligne</strong> (R affiche <code>1.768687e-74</code>, Python quelques chiffres de plus)&nbsp;: la valeur p du test des signes, donc p &lt; 0.001. Il ne compte que les directions&nbsp;: 246 améliorations et 0 détérioration.</li>
 </ul>
 <div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1129,7 +1149,7 @@ Wilcoxon    0.0   two-sided  4.179101e-42  1.0  0.964621</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-7-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-1" role="tab" aria-controls="tabset-7-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-7-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-7-2" role="tab" aria-controls="tabset-7-2" aria-selected="false" href="">Python</a></li></ul>
@@ -1688,6 +1708,26 @@ Name: exp(coef), dtype: float64</code></pre>
 <p>R met <code>strata(set_id)</code> dans la formule du modèle&nbsp;; lifelines prend <code>strata=["set_id"]</code> comme argument séparé. Avec si peu d’événements et autant de strates, la règle de <a href="../../fr/glossary.html#convergence" class="term">convergence</a> par défaut de lifelines s’arrête un peu trop tôt (un hazard ratio de 3.4997 au lieu de 3.5), donc nous la resserrons avec <code>fit_options={"precision": 1e-9}</code>. (Sans <code>fit_options</code>, l’ajustement affiche 3.4997.)</p>
 </div>
 </div>
+<div class="key-points callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>📌 L’essentiel
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Un test pour données appariées ne peut utiliser que les patients mesurés aux deux moments&nbsp;: indiquez donc toujours combien de patients avaient les deux mesures.</li>
+<li>N’analysez pas des données appariées comme des données indépendantes&nbsp;: un test non apparié ignore quelles mesures vont ensemble, et il est faux même quand il donne par hasard le même résultat.</li>
+<li>La condition du test t pour échantillons appariés porte sur les différences, pas sur chaque mesure prise séparément&nbsp;; si les différences ne sont pas à peu près normales, ou si les mesures s’accumulent au plancher ou au plafond, utilisez le test des rangs signés de Wilcoxon quand les différences sont réparties de façon symétrique autour de leur centre, et le test des signes quand elles sont nettement asymétriques, que l’échelle est ordinale ou que votre affirmation porte sur la différence médiane.</li>
+<li>Une valeur p minuscule ne dit pas combien de patients se sont améliorés d’une quantité importante&nbsp;: pour les PROM, indiquez aussi la proportion de patients dont le changement a atteint la différence minimale cliniquement importante (DMCI).</li>
+<li>Sur des données oui/non appariées, ne croisez pas oui/non avec les deux moments pour faire un test du khi-deux ou de Fisher ordinaire&nbsp;: ce tableau compte chaque patient deux fois, alors que le test de McNemar utilise chaque patient une seule fois, grâce au tableau avant × après.</li>
+<li>Pour des paires appariées et un délai jusqu’à un événement, un modèle de Cox stratifié par paire donne le hazard ratio au sein des paires&nbsp;; un modèle de Cox ordinaire répond à une autre question, et prendre en compte l’appariement reste le choix habituel.</li>
+</ul>
+</div>
+</div>
 </section>
 </section>
 <section id="exercises" class="level2">
@@ -1695,7 +1735,7 @@ Name: exp(coef), dtype: float64</code></pre>
 <p>Les solutions utilisent les packages et les données chargés dans les sections ci-dessus&nbsp;: exécutez donc d’abord la page depuis le début.</p>
 <p><strong>1.</strong> Les mêmes hanches ont aussi eu leur torsion fémorale mesurée au scanner et sur l’incidence de Budin modifiée (<code>torsion_ct_deg</code>, <code>torsion_budin_deg</code>). L’incidence de Budin mesure-t-elle la torsion de façon systématiquement différente du scanner&nbsp;? Indiquez la <a href="../../fr/glossary.html#mean-difference" class="term">différence de moyennes</a> avec son <a href="../../fr/glossary.html#confidence-interval" class="term">IC</a> à 95&nbsp;% et d<sub>z</sub>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1704,7 +1744,7 @@ Name: exp(coef), dtype: float64</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-13" class="callout-13-contents callout-collapse collapse">
+<div id="callout-15" class="callout-15-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-14-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-14-1" role="tab" aria-controls="tabset-14-1" aria-selected="true" href="">R</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-14-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-14-2" role="tab" aria-controls="tabset-14-2" aria-selected="false" href="">Python</a></li></ul>
@@ -1791,7 +1831,7 @@ over 25°       6 -3.516667</code></pre>
 </div>
 <p><strong>2.</strong> Deux évaluateurs ont mesuré l’angle hanche-genou-cheville (HKA) sur les 60 mêmes radiographies de genou (<a href="https://github.com/hfr-ortho/stats-formation/raw/main/data/radiographic_reliability.csv"><code>data/radiographic_reliability.csv</code></a>, séance 1). L’évaluateur 2 donne-t-il systématiquement des valeurs plus élevées que l’évaluateur 1&nbsp;? Choisissez le test et exécutez-le.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-14-contents" aria-controls="callout-14" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-16-contents" aria-controls="callout-16" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1800,7 +1840,7 @@ over 25°       6 -3.516667</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-14" class="callout-14-contents callout-collapse collapse">
+<div id="callout-16" class="callout-16-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Deux mesures de la même radiographie sont <strong><a href="../../fr/glossary.html#paired" class="term">appariées</a></strong>, le test porte donc sur les différences, une par genou. Le <a href="#paired-t">test t pour échantillons appariés</a> demande que les différences, et non les mesures de chaque évaluateur, soient <a href="../../fr/glossary.html#normal-distribution" class="term">à peu près normales</a>, ou qu’il y ait environ 30 paires ou plus. Ici, il y a 60 paires, et l’histogramme des différences ne montre ni longue queue ni valeur atypique&nbsp;: elles vont de −3.0° à 4.3° (les dernières lignes de la sortie). Donc&nbsp;: le <strong>test t pour échantillons appariés</strong>.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
@@ -1821,7 +1861,7 @@ over 25°       6 -3.516667</code></pre>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-54-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-54-1.png" class="img-fluid figure-img" alt="Histogramme des 60 différences d'angle HKA, évaluateur 2 moins évaluateur 1&nbsp;: elles vont de −3.0° à 4.3° autour de la ligne pointillée à 0, sans longue queue ni valeur atypique&nbsp;; des barres de 0.5° de large." width="672"></p>
 </figure>
 </div>
 </div>
@@ -1860,7 +1900,7 @@ mean difference
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-55-1.png" class="img-fluid figure-img"></p>
+<p><img src="07-two-paired-groups_files/figure-html/unnamed-chunk-55-1.png" class="img-fluid figure-img" alt="Histogramme des 60 différences d'angle HKA, évaluateur 2 moins évaluateur 1&nbsp;: elles vont de −3.0° à 4.3° autour de la ligne pointillée à 0, sans longue queue ni valeur atypique&nbsp;; des barres de 0.5° de large."></p>
 </figure>
 </div>
 </div>
@@ -1888,7 +1928,7 @@ dtype: float64</code></pre>
 </div>
 <p><strong>3.</strong> Les patients s’améliorent beaucoup pendant les 3 premiers mois. Continuent-ils de s’améliorer entre 3 mois et 1 an&nbsp;? Testez-le pour le KOOS JR et rédigez la phrase de Résultats.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-15-contents" aria-controls="callout-15" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-17-contents" aria-controls="callout-17" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -1897,7 +1937,7 @@ dtype: float64</code></pre>
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-15" class="callout-15-contents callout-collapse collapse">
+<div id="callout-17" class="callout-17-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Le KOOS JR a un <a href="../../fr/glossary.html#ceiling-effect" class="term">plafond</a> à 1 an&nbsp;: on utilise donc le <strong><a href="../../fr/glossary.html#wilcoxon-signed-rank-test" class="term">test des rangs signés de Wilcoxon</a></strong>.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset" data-group="language">
@@ -2695,7 +2735,7 @@ if (typeof document !== "undefined") {
 <p><span lang="en">Synthetic data only</span><span lang="de">Nur synthetische Daten</span><span lang="fr">Données synthétiques uniquement</span></p>
 </div>   
     <div class="nav-footer-center">
-<p><span lang="en">Last updated: 23.11.2026, 09:48</span><span lang="de">Zuletzt aktualisiert: 23.11.2026, 09:48</span><span lang="fr">Dernière mise à jour&nbsp;: 23.11.2026, 09:48</span></p>
+<p><span lang="en">Last updated: 23.11.2026, 12:50</span><span lang="de">Zuletzt aktualisiert: 23.11.2026, 12:50</span><span lang="fr">Dernière mise à jour&nbsp;: 23.11.2026, 12:50</span></p>
 <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Faire part d'un problème</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p><span lang="en">Adapted from the <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</span><span lang="de">Adaptiert nach den <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</span><span lang="fr">Adapté des <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Texte CC BY 4.0 · Code MIT</span></p>
