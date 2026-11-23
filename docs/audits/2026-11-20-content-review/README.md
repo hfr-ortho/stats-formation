@@ -42,7 +42,7 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | U4 | 2.2 | done | pending |
 | U5 | 2.2 | done | pending |
 | U6 | 2.2 | done | pending |
-| U7 | 4.1 to 4.6 | partly (4.1 done) | pending |
+| U7 | 4.1 to 4.6 | done | pending |
 | B1 | 3.8 | done | pending |
 | B2 | 3.5 | done | pending |
 | B3 | 3.8 | done | pending |
@@ -82,7 +82,7 @@ Where each finding in the fix plan ([`docs/superpowers/plans/2026-11-20-content-
 | C12 | 3.2, 3.3 | done | pending |
 | C13 | 3.7 | done | pending |
 | C14 | 3.2 | done | pending |
-| L2 | 4.1 to 4.6 | partly (4.1 done) | pending |
+| L2 | 4.1 to 4.6 | done | pending |
 
 U1: the test that now guards against it (`tests/site/test_sources.py`) found 19 such lists per language on pages 13 to 18, not 15; all 57 are fixed.
 

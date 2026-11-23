@@ -1,6 +1,6 @@
 # Goals, time and key points on every numbered page: design
 
-Written 20.11.2026 for Task 4.1 of the content-review fixes (audit findings L2 and U7 in `docs/audits/2026-11-20-content-review/`). Doc decided the titles (D6) and the time rule (D7). The form is piloted on page 6 and waits for Doc's approval before pages 1 to 5 and 7 to 18 follow (Tasks 4.2 to 4.6).
+Written 20.11.2026 for Task 4.1 of the content-review fixes (audit findings L2 and U7 in `docs/audits/2026-11-20-content-review/`). Doc decided the titles (D6) and the time rule (D7). The form is piloted on page 6 and waits for Doc's approval before pages 1 to 5 and 7 to 18 follow (Tasks 4.2 to 4.6). Since 23.11.2026 every numbered page has the boxes and alt text: `DONE` equals `NUMBERED`.
 
 ## Intent
 
@@ -75,13 +75,13 @@ Every chunk that draws a figure carries `#| fig-alt:`, one sentence per figure. 
 
 `fig-alt` reaches both engines under knitr: checked on page 6 on 20.11.2026, the rendered `<img>` of an R chunk and of a Python (reticulate) chunk both carry the `alt` attribute.
 
-Alt text is prose: German and French pages translate it. `tests/site/test_translations.py` compares chunk options across languages; a `#| fig-alt:` line, or each item of a `fig-alt` list, is compared by its numbers and its place among the options only, and every other option and every line of code still has to match exactly.
+Alt text is prose: German and French pages translate it, except the figure inside page 18's manuscript, which keeps its English alt text (see "Page 18"). `tests/site/test_translations.py` compares chunk options across languages; a `#| fig-alt:` line, or each item of a `fig-alt` list, is compared by its numbers and its place among the options only, and every other option and every line of code still has to match exactly.
 
 ### The legend
 
-`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 90 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement.
+`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 90 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement. Its last sentence reads: "Every numbered page has this box and ends with the 📌 Key points box." (German: "Dieser Kasten steht auf jeder nummerierten Seite, und jede endet mit dem Kasten «📌 Das Wichtigste in Kürze»." French: "Chaque page numérotée comporte cet encadré et se termine par l'encadré « 📌 L'essentiel ».")
 
-The legend must be true while the boxes are rolled out. It speaks of "a numbered page" and says in one sentence that the boxes are being added page by page, starting with page 6, so most numbered pages don't have them yet. "Most" holds while 9 or more of the 18 pages lack the boxes; the rollout task that brings it below 9 (Task 4.4) changes it to "some", and `test_legend_tells_the_truth_about_the_rollout` checks which word the count calls for. The last rollout task (4.6) replaces that sentence and says "every numbered page". `tests/site/test_conventions.py::test_callout_legend_shows_all_six_kinds` checks the six titles, the two classes, the time rule and, while `DONE` differs from `NUMBERED`, the rollout sentence; `test_page_brief.py::test_legend_tells_the_truth_about_the_rollout` checks the rollout sentence in all three languages and turns round once `DONE == NUMBERED`.
+The legend must be true. During the rollout it said in one sentence that the boxes were being added page by page, starting with page 6, so most numbered pages didn't have them yet ("most" while 9 or more of the 18 pages lack the boxes, "some" below that). Since 23.11.2026 `DONE` equals `NUMBERED` and the legend says every numbered page has them; the page-by-page wording and its test branches remain only for a page added later. `tests/site/test_conventions.py::test_callout_legend_shows_all_six_kinds` checks the six titles, the two classes and the time rule in the English legend; while `DONE` differs from `NUMBERED` it checks the rollout sentence, and once they are equal that the legend says "every numbered page" and not "page by page". `test_page_brief.py::test_legend_tells_the_truth_about_the_rollout` does the same in all three languages: while `DONE` differs from `NUMBERED`, the language's "page by page" (`ROLLOUT`), the word the count calls for (`MOST` or `SOME`) and none of the `EVERY_PAGE` phrases; once they are equal, one of the `EVERY_PAGE` phrases (case ignored, since the sentence may open with it) and no "page by page".
 
 ### Styling
 
@@ -94,7 +94,7 @@ Page 18 renders to Word too (golden rule 20). Both boxes sit inside its existing
 - **The top box** is inside the first html-only block (it opens right after the hidden setup chunks), after the opening paragraph and before the "💡 How this page works" box.
 - **The key points.** Page 18's Prose guard sits outside the html-only blocks, directly after the manuscript, so the page-wide rule can't hold there. On page 18 the key points are the first thing in the html-only block that follows the Prose guard, and `## Exercises` follows them. `key_points_problems()` accepts exactly that on page 18 and rejects that form on every other page.
 
-- **A figure inside the manuscript** (Figure 1, `fig-revision`) keeps its English alt text on the German and French pages: the manuscript stays English there (golden rule 21), and `test_page_18_manuscript_stays_in_english` requires its chunk options to be identical in all three languages. `test_translated_alt_texts_are_not_english` lists the manuscript's figures in `MANUSCRIPT_FIGURES` and asserts that their alt text equals the English page's; `test_manuscript_figures_are_the_listed_ones` fails if a figure outside the html-only blocks is missing from that list. The alt text doesn't reach the Word file: checked on 23.11.2026, `word/document.xml` was byte-identical before and after `fig-alt` was added, and the picture's description stays empty.
+The alt text has its own exception on page 18. A figure inside the manuscript (Figure 1, `fig-revision`) keeps its English alt text on the German and French pages: the manuscript stays English there (golden rule 21), and `test_page_18_manuscript_stays_in_english` requires its chunk options to be identical in all three languages. `test_translated_alt_texts_are_not_english` lists the manuscript's figures in `MANUSCRIPT_FIGURES` and asserts that their alt text equals the English page's; `test_manuscript_figures_are_the_listed_ones` fails if a figure outside the html-only blocks is missing from that list. The alt text doesn't reach the Word file: checked on 23.11.2026, `word/document.xml` was byte-identical before and after `fig-alt` was added, and the picture's description stays empty.
 
 `test_report_docx_has_no_brief` checks that the Word file holds neither title.
 
@@ -108,6 +108,9 @@ What the rollout meets, and what the tests do about it:
 - **Page 18**: the placement rules above.
 - **Several Prose guards** (pages 1 and 2): the key points come before the run of hidden chunks that ends the page; the page's last Prose guard is in that run.
 - **Long fences and box openers with extra classes**: handled by `prose_words()` (see "Words to minutes"), with rule tests, rather than banned.
+- **A diagram drawn in the browser.** Page 3's flowchart is a mermaid diagram that the browser draws, so there is no image to carry alt text; the paragraph after it ("In words: …") states the flow in words instead.
+- **R and Python figures that differ only in color and marker** may carry the same sentence, but each chunk carries its own `#| fig-alt:` line.
+- **"Read first"**: each entry describes what the linked section really teaches, not what its title suggests.
 
 ### Glossary rows
 
@@ -120,7 +123,7 @@ What the rollout meets, and what the tests do about it:
 
 ### Tests
 
-`tests/site/test_page_brief.py` holds `NUMBERED` (the 18 pages, relative to a language folder), `DONE` (the pages that have their boxes; page 6 now), `TITLES`, `LEAD_INS`, `ESTIMATE`, `HANDS_ON` (the review's bands for all 18 pages), `prose_words()`, `reading_minutes()` and the source rules. Over `DONE` and the three languages:
+`tests/site/test_page_brief.py` holds `NUMBERED` (the 18 pages, relative to a language folder), `DONE` (the pages that have their boxes; equal to `NUMBERED` since 23.11.2026, and a page added later joins both lists with its boxes), `TITLES`, `LEAD_INS`, `ESTIMATE`, `HANDS_ON` (the review's bands for all 18 pages), `prose_words()`, `reading_minutes()` and the source rules. Over `DONE` and the three languages:
 
 - `test_page_opens_with_goals_and_time`: one `.page-brief` callout with the language's title, the first box on the page, before the first `## ` heading and outside every section; the goals' lead-in, exactly three goals in one list, the time line and "Read first" (if any), in that order; no glossary term links.
 - `test_stated_reading_time_follows_the_rule`: the numbers in the time line are the minutes from `reading_minutes(prose_words(English source))` and the review's band, in every language, and the line ends with the language's "(an estimate)".
@@ -128,20 +131,20 @@ What the rollout meets, and what the tests do about it:
 - `test_brief_sits_after_the_opening_paragraph` and `test_key_points_sit_above_the_prose_guard`: the source placement rules above, page 18 included.
 - `test_every_chunk_that_draws_has_alt_text`: in the source, one alt text per frozen figure in every chunk that draws, so a missing one fails before rendering.
 - `test_every_figure_has_alt_text`: the built page shows as many images as were frozen, each with an `alt` of at least 20 characters.
-- `test_translated_alt_texts_are_not_english`: no German or French alt text is identical to the English one.
+- `test_translated_alt_texts_are_not_english`: no German or French alt text is identical to the English one, except on page 18's manuscript figures (`MANUSCRIPT_FIGURES`), which carry exactly the English page's alt text.
 - `test_every_done_page_is_numbered_and_exists_in_every_language`.
 
-Over all 18 pages or all three languages: `test_drawing_rule_finds_every_frozen_figure`, `test_legend_tells_the_truth_about_the_rollout`, and `test_report_docx_has_no_brief` (page 18's Word file contains neither title; it passes trivially until page 18 gets its boxes, Task 4.6).
+Over all 18 pages or all three languages: `test_drawing_rule_finds_every_frozen_figure`, `test_legend_tells_the_truth_about_the_rollout` (see "The legend"), `test_report_docx_has_no_brief` (page 18's Word file contains neither title), and `test_manuscript_figures_are_the_listed_ones` (in each language's page 18 source, the chunks that draw outside the html-only blocks are exactly `MANUSCRIPT_FIGURES`).
 
-Rule tests on small samples: `prose_words()` ignores code (long and tilde fences too), link targets, attributes and the boxes (with extra classes too) and counts callouts and solutions; `reading_minutes(5040) == 55`, with exact halves going to the even multiple (`reading_minutes(4725) == 50`); the brief, key-points (page 18 and several guards included) and drawing rules bite; `alt_count()` reads a list.
+Rule tests on small samples: `prose_words()` ignores code (long and tilde fences too), link targets, attributes and the boxes (with extra classes too) and counts callouts and solutions; `reading_minutes(5040) == 55`, with exact halves going to the even multiple (`reading_minutes(4725) == 50`); the brief, key-points (page 18 and several guards included) and drawing rules bite; `alt_count()` reads a list; `test_manuscript_figure_rule_finds_the_figures_outside_the_html_only_blocks`: `manuscript_figures()` finds the drawing chunks outside the html-only blocks, by label or as `unnamed-chunk-N`, and not those inside the blocks, the hidden ones or a table.
 
 ### Rollout
 
-Tasks 4.2 to 4.6 add pages to `DONE`; Task 4.6 makes `DONE == NUMBERED`, drops the subset and rewrites the legend's rollout sentence. For each page: goals drafted from what its sections and exercises do, each tied to the exercise or "How to report it" that proves it; key points from its own ⚠️ boxes and "When to use it" bullets, one for each goal; one alt text per figure, written after opening the figure. Each pull request carries, for Doc to read without opening the diff, the English goals and key points and two tables: each goal with the exercise or "How to report it" that proves it, and each key point with the page line that already says it.
+Tasks 4.2 to 4.6 added pages to `DONE`; since 23.11.2026 (Task 4.6) `DONE == NUMBERED` and the legend says every numbered page has the boxes. The subset and the page-by-page wording's test branches stay, for a page added later: it joins `NUMBERED` and `DONE` with its boxes, following the steps below. For each page: goals drafted from what its sections and exercises do, each tied to the exercise or "How to report it" that proves it; key points from its own ⚠️ boxes and "When to use it" bullets, one for each goal; one alt text per figure, written after opening the figure. Each pull request carries, for Doc to read without opening the diff, the English goals and key points and two tables: each goal with the exercise or "How to report it" that proves it, and each key point with the page line that already says it.
 
 ### CLAUDE.md
 
-Golden rule 24 names the two boxes, their placement, the time rule, alt text and `tests/site/test_page_brief.py`, and is worded by `DONE`: it describes the pages listed there, so it stays true during the rollout.
+Golden rule 24 names the two boxes, their placement, the time rule, alt text and `tests/site/test_page_brief.py`. It was worded by `DONE` during the rollout, so it stayed true while pages were added. Since 23.11.2026 it says that every numbered page has the two boxes, that `DONE` equals `NUMBERED` in `tests/site/test_page_brief.py`, and that a page added later joins both lists with its boxes.
 
 ## Left to the builder
 

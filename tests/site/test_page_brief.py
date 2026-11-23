@@ -1,9 +1,10 @@
 """Every numbered page opens with "🎯 Goals and time" and ends with "📌 Key points", and every figure has a
 text alternative (spec docs/superpowers/specs/2026-11-20-page-brief-design.md; audit findings L2 and U7).
 
-The boxes arrive page by page: `DONE` lists the pages that have them, and the page tests run on those
-pages only. When `DONE` equals `NUMBERED`, drop the subset. The rules themselves are tested on small
-strings at the bottom, so we know they bite before a page relies on them."""
+The boxes arrived page by page: `DONE` lists the pages that have them, and the page tests run on those
+pages only. Since 23.11.2026 `DONE` equals `NUMBERED`; a page added later joins both lists with its boxes.
+The rules themselves are tested on small strings at the bottom, so we know they bite before a page relies
+on them."""
 
 import re
 
@@ -34,7 +35,7 @@ NUMBERED = [
     "report/18-example-report.qmd",
 ]
 
-# The pages that have their boxes and alt texts. Tasks 4.2 to 4.6 add theirs.
+# The pages that have their boxes and alt texts: all 18 since Task 4.6 (23.11.2026).
 DONE = [
     "foundations/01-tidy-data.qmd",
     "foundations/02-demographics.qmd",
@@ -95,8 +96,10 @@ HANDS_ON = {
     "report/18-example-report.qmd": (2.5,),
 }
 
-# Each language's words for the time line's "(an estimate)", and for the legend's sentence that says the boxes
-# arrive page by page. While DONE != NUMBERED the legend must say so and must not claim every page has them.
+# Each language's words for the time line's "(an estimate)", for the legend's sentence that says the boxes
+# arrive page by page, and for its sentence that says every numbered page has them (matched ignoring case, as
+# the sentence may open with it). While DONE != NUMBERED the legend must say page by page and must not claim
+# every page has them; once DONE equals NUMBERED it must claim it and must not say page by page.
 ESTIMATE = {"en": "(an estimate)", "de": "(eine Schätzung)", "fr": "(estimation)"}
 ROLLOUT = {"en": "page by page", "de": "Seite für Seite", "fr": "page par page"}
 EVERY_PAGE = {"en": ("each numbered page", "every numbered page"), "de": ("jeder nummerierten Seite",),
@@ -447,22 +450,25 @@ def test_manuscript_figures_are_the_listed_ones():
 
 @pytest.mark.parametrize("lang", LANGS)
 def test_legend_tells_the_truth_about_the_rollout(site, lang):
-    """Until every numbered page has its boxes, the legend says they arrive page by page and never that
-    every numbered page has them. Task 4.6 turns this round."""
+    """While some numbered page lacks its boxes, the legend says they arrive page by page and never that
+    every numbered page has them. Since Task 4.6 (23.11.2026) every numbered page has them, so the legend
+    says so in its own language (EVERY_PAGE) and no longer says page by page. The first branch stays for a
+    page added later."""
     legend = text_of(built(lang, "getting-started/using-this-site.qmd").select_one("section#the-boxes-youll-see"))
     if set(DONE) != set(NUMBERED):
         assert ROLLOUT[lang] in legend
-        assert [p for p in EVERY_PAGE[lang] if p in legend] == []
+        assert [p for p in EVERY_PAGE[lang] if p.casefold() in legend.casefold()] == []
         missing = len(NUMBERED) - len(DONE)
         assert (MOST if missing >= len(NUMBERED) / 2 else SOME)[lang] in legend, f"{missing} of 18 pages lack the boxes"
     else:
         assert ROLLOUT[lang] not in legend
+        assert [p for p in EVERY_PAGE[lang] if p.casefold() in legend.casefold()], "no claim that every page has them"
 
 
 @pytest.mark.parametrize("lang", LANGS)
 def test_report_docx_has_no_brief(site, lang):
-    """Page 18's boxes sit inside its html-only blocks, so the Word file shows neither. Until page 18 gets
-    its boxes (Task 4.6) this passes trivially; it is here so the rollout can't break the Word file."""
+    """Page 18's boxes sit inside its html-only blocks, so the Word file shows neither. It is here so that
+    no later change to the boxes can break the Word file."""
     text = docx_text(SITE_ROOT / lang / "report" / "18-example-report.docx")
     for title in TITLES[lang] + TITLES["en"]:
         assert title not in text.replace("’", "'"), title
