@@ -48,9 +48,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" class="quarto-color-scheme-extra" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-c3b853870abce9da58925d0537830734.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="../site_libs/bootstrap/bootstrap-dark-224830846a8e56eccb35939ddf3b7eb7.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
-<link href="../site_libs/bootstrap/bootstrap-c3b853870abce9da58925d0537830734.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-f37816182425752f5c9d1f896bf8e194.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-dark-e2d680d46db0e95e18994f4bc367fb57.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="../site_libs/bootstrap/bootstrap-f37816182425752f5c9d1f896bf8e194.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme-extra" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -644,7 +644,7 @@ Many patients score the best (or worst) value a scale allows, so the scale canno
 </dd>
 <dt><span id="censored">Censored</span></dt>
 <dd>
-Followed for a while without having the event, then no longer observed: the study ended, the patient moved away, or the patient died. All we know is that the event had not happened by then.
+Followed for a while without having the event, then no longer observed: the study ended, the patient moved away, or the patient died without the event, when death is not the event studied (see the entry Competing risk). All we know is that the event had not happened by then. The usual methods assume that censored patients have the same chance of a later event as those still being followed.
 </dd>
 <dt><span id="central-limit-theorem">Central limit theorem</span></dt>
 <dd>
@@ -826,6 +826,10 @@ A test statistic that is the ratio of two variances. In ANOVA it is the variatio
 <dd>
 Of all the results called significant in a set of tests, the expected share that are false positives. Controlling it, as the Benjamini-Hochberg adjustment does, is a less strict standard than controlling the family-wise error rate.
 </dd>
+<dt><span id="false-negative">False negative (type II error)</span></dt>
+<dd>
+A result that is not statistically significant when there truly is a difference: chance kept the sample from showing a statistically significant difference. For a true difference of a given size, its probability is called beta, and power is 1 minus beta. Statisticians call it a type II error.
+</dd>
 <dt><span id="false-positive">False positive (type I error)</span></dt>
 <dd>
 A statistically significant result when there is truly no difference: chance alone made the sample look as if there were one. A test at the 0.05 significance level gives a false positive in 5% of studies in which there is truly no difference. Statisticians call it a type I error.
@@ -956,7 +960,7 @@ A confidence interval for a Kaplan-Meier survival probability that is worked out
 </dd>
 <dt><span id="log-rank-test">Log-rank test</span></dt>
 <dd>
-A test of whether the survival curves of two or more groups differ, also called the Mantel-Cox test (the Mantel-Haenszel test for survival data is nearly identical). At each time an event happens, it works out how many events each group would be expected to have if the groups did not differ, then compares the totals observed and expected. It gives a p-value but no effect size.
+A test of whether the survival curves of two or more groups differ, also called the Mantel-Cox test. At each time an event happens, it works out how many events each group would be expected to have if the groups did not differ, then compares the totals observed and expected. For two groups, R and lifelines compute it as the Mantel-Haenszel calculation on the 2 × 2 table of each event time, and it is also called the Mantel-Haenszel test for survival data. A statistics guide that tells the two names apart says they differ only in how events at the same time are handled. It gives a p-value but no effect size.
 </dd>
 <dt><span id="logarithm">Logarithm (log scale)</span></dt>
 <dd>
@@ -984,7 +988,7 @@ A rank-based (nonparametric) test that compares two unpaired groups. It asks whe
 </dd>
 <dt><span id="matched">Matched</span></dt>
 <dd>
-Chosen to resemble each other: each patient in one group is picked to be like a patient in the other in characteristics such as age and sex. Groups are also called matched when the same patients are measured several times. Matched data need methods for matched sets, not methods for independent groups.
+Chosen to resemble each other: each patient in one group is picked to be like a patient in the other in characteristics such as age and sex. Groups are also called matched when the same patients are measured several times. Matched data are usually analyzed with methods for matched sets, not methods for independent groups.
 </dd>
 <dt><span id="maximum-likelihood">Maximum likelihood</span></dt>
 <dd>
@@ -1060,7 +1064,7 @@ The probability that an event happens divided by the probability that it does no
 </dd>
 <dt><span id="odds-ratio">Odds ratio</span></dt>
 <dd>
-The odds of the outcome in one group divided by the odds in the other. The odds are the number with the outcome divided by the number without it.
+The odds of the outcome in one group divided by the odds in the other. The odds are the number with the outcome divided by the number without it. An odds ratio is not a risk ratio: it lies further from 1, and the two differ most when the outcome is common, so reading an odds ratio as a risk ratio overstates the effect.
 </dd>
 <dt><span id="ordinal">Ordinal</span></dt>
 <dd>
@@ -1224,11 +1228,11 @@ A retrospective study uses data that already exist, such as records from routine
 </dd>
 <dt><span id="reverse-kaplan-meier">Reverse Kaplan-Meier method (median follow-up)</span></dt>
 <dd>
-A way to calculate the median follow-up, that is, how long patients were followed. It runs the Kaplan-Meier method with the roles swapped: being censored counts as the event, and patients who had the event count as censored. The plain median of all follow-up times comes out too short, because patients with an early event stop being followed early.
+A way to calculate the median follow-up, that is, how long patients were followed. It runs the Kaplan-Meier method with the roles swapped: a patient’s observation ending without the event, at the close of the study or through loss to follow-up, counts as the event, and patients who had the event count as censored. When death is not the event studied, a death can count either way, as censored or as the end of follow-up; the two can give different medians, so the Methods section says which was used. The plain median of all follow-up times comes out too short, because patients with an early event stop being followed early.
 </dd>
 <dt><span id="risk">Risk</span></dt>
 <dd>
-The probability that an event, such as a revision or a death, happens within a stated period. It is estimated as the number of patients who had the event in that period divided by the number of patients at its start.
+The probability that an event, such as a revision or a death, happens within a stated period. It is estimated as the number of patients who had the event in that period divided by the number of patients at its start. That count gives the risk only when every patient was followed for the whole period or until the event: patients who left early are counted as if they never had the event. Otherwise the risk is estimated with the Kaplan-Meier method (1 minus the survival probability) or, with competing risks, as the cumulative incidence.
 </dd>
 <dt><span id="risk-difference">Risk difference</span></dt>
 <dd>
@@ -1272,7 +1276,7 @@ How software prints very small or very large numbers. 2.7e-08 means 2.7 with the
 </dd>
 <dt><span id="score-test">Score test</span></dt>
 <dd>
-One of three standard tests of a model’s coefficients, with the likelihood ratio test and the Wald test. It is calculated at the no-effect values of the coefficients, so it does not need the fitted estimates. For a Cox model that compares groups, it is equivalent to the log-rank test.
+One of three standard tests of a model’s coefficients, with the likelihood ratio test and the Wald test. It is calculated at the no-effect values of the coefficients, so it does not need the fitted estimates. For a Cox model that compares groups, it gives the same number as the log-rank test when no two events happen at the same time; with tied event times the two differ slightly, unless the Cox model handles ties with the exact method.
 </dd>
 <dt><span id="sensitivity-analysis">Sensitivity analysis</span></dt>
 <dd>
@@ -1328,7 +1332,7 @@ The difference between two groups’ means, divided by the standard deviation. I
 </dd>
 <dt><span id="statistical-significance">Statistically significant</span></dt>
 <dd>
-A result is called statistically significant when its p-value is below a threshold fixed before the analysis, the significance level, which is almost always 0.05 (the 5% level). It means the null hypothesis is rejected because data like these would be unusual if it were true. It does not mean that the difference is large or clinically important.
+A result is called statistically significant when its p-value is below a threshold fixed before the analysis, the significance level or alpha, which is almost always 0.05 (the 5% level). It means the null hypothesis is rejected because data like these would be unusual if it were true. It does not mean that the difference is large or clinically important. A result that is not statistically significant does not show that there is no difference; the confidence interval shows which differences remain compatible with the data.
 </dd>
 <dt><span id="stepwise-selection">Stepwise selection</span></dt>
 <dd>
@@ -1344,7 +1348,7 @@ A measure of variation: take the distance of each value from a mean, square it, 
 </dd>
 <dt><span id="survival">Survival (survivorship)</span></dt>
 <dd>
-The probability of not yet having had the event at a given time after the starting point, such as the date of surgery. When the event is revision, it is the share of implants still unrevised, also called survivorship. A survival curve plots this probability against time.
+The probability of not yet having had the event at a given time after the starting point, such as the date of surgery. When the event is revision, it is the share of implants still unrevised, also called survivorship. A survival curve plots this probability against time. On this site, “survivorship free of revision” and “revision-free survival” are two names for the same estimate: the Kaplan-Meier estimate of this probability with revision as the event, with deaths censored.
 </dd>
 <dt><span id="symmetric">Symmetric</span></dt>
 <dd>
@@ -1356,7 +1360,7 @@ A score rescaled so that the average of a reference population is 50 and the sta
 </dd>
 <dt><span id="t-test">t test</span></dt>
 <dd>
-A test that compares means: one group’s mean with a hypothetical value (one-sample t test), the means of two separate groups (unpaired t test), or two paired measurements (paired t test). Its test statistic, t, is the difference divided by its standard error: the further t is from 0, the smaller the p-value. Also called Student’s t test.
+A test that compares means: one group’s mean with a hypothetical value (one-sample t test), the means of two separate groups (unpaired t test), or two paired measurements (paired t test). Its test statistic, t, is the difference divided by its standard error: the further t is from 0, the smaller the p-value. Student’s t test is also a name for t tests in general, but on this site it means the unpaired t test that assumes equal variances; the site’s unpaired t tests are Welch’s version, which does not make that assumption.
 </dd>
 <dt><span id="table-1">Table 1</span></dt>
 <dd>
@@ -2140,7 +2144,7 @@ if (typeof document !== "undefined") {
 <p><span lang="en">Synthetic data only</span><span lang="de">Nur synthetische Daten</span><span lang="fr">Données synthétiques uniquement</span></p>
 </div>   
     <div class="nav-footer-center">
-<p><span lang="en">Last updated: 20.11.2026, 11:08</span><span lang="de">Zuletzt aktualisiert: 20.11.2026, 11:08</span><span lang="fr">Dernière mise à jour&nbsp;: 20.11.2026, 11:08</span></p>
+<p><span lang="en">Last updated: 23.11.2026, 09:48</span><span lang="de">Zuletzt aktualisiert: 23.11.2026, 09:48</span><span lang="fr">Dernière mise à jour&nbsp;: 23.11.2026, 09:48</span></p>
 <div class="toc-actions"><ul><li><a href="https://github.com/hfr-ortho/stats-formation/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div>
     <div class="nav-footer-right">
 <p><span lang="en">Adapted from the <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</span><span lang="de">Adaptiert nach den <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Text CC BY 4.0 · Code MIT</span><span lang="fr">Adapté des <a href="https://total-joint-specialists.github.io/example-stats-analysis/">TJS Statistics Tutorials</a> · Texte CC BY 4.0 · Code MIT</span></p>
