@@ -48,6 +48,7 @@ DONE = [
     "catalog/10-association.qmd",
     "catalog/11-predict-from-one.qmd",
     "catalog/12-predict-from-several.qmd",
+    "report/18-example-report.qmd",
 ]
 
 # The box titles, without their emoji (Doc's decision D6). The emoji are 🎯 and 📌 in every language.
@@ -102,6 +103,11 @@ SOME = {"en": "some numbered pages", "de": "einige nummerierte Seiten", "fr": "c
 # Page 18 renders to Word too: its boxes sit inside html-only blocks (spec, "Page 18").
 REPORT = "report/18-example-report.qmd"
 HTML_ONLY = '::: {.content-visible when-format="html"}'
+# The figures of page 18's manuscript, by chunk label. The manuscript stays English in every language (golden
+# rule 21) and test_page_18_manuscript_stays_in_english needs its chunk options identical, so these figures keep
+# the English alt text in de/ and fr/. test_manuscript_figures_are_the_listed_ones keeps the list exact: a
+# figure added to the manuscript (outside the html-only blocks) fails there until it is listed here.
+MANUSCRIPT_FIGURES = ("fig-revision",)
 
 BRIEF_OPEN = re.compile(r"^::: \{\.callout-note \.page-brief\}\s*$")
 # For counting words, a box is found by its class whatever else its opener says (the placement tests insist
@@ -243,14 +249,23 @@ def drawing_chunks(text: str) -> set[int]:
     return found
 
 
+def label_of(options, i: int) -> str:
+    """A chunk's label, or knitr's "unnamed-chunk-N" with N its place among all chunks."""
+    return next((o.split(":", 1)[1].strip() for o in options if o.startswith("#| label:")), f"unnamed-chunk-{i}")
+
+
+def figure_label(img) -> str:
+    """The label of the chunk that drew a built page's image: knitr names the file <label>-<n>.png."""
+    return re.sub(r"-\d+\.png$", "", (img.get("src") or "").rsplit("/", 1)[-1])
+
+
 def frozen_figures(lang: str, page: str) -> dict[int, int]:
     """The truth: for each chunk that produced figure files in _freeze/<lang>/<page>/figure-html/, how many.
     Files are named after the chunk's label, or "unnamed-chunk-N" with N its place among all chunks."""
     chunks = executable_chunks(source(lang, page))
     labels = {}
     for i, (_, options, _) in enumerate(chunks, 1):
-        label = next((o.split(":", 1)[1].strip() for o in options if o.startswith("#| label:")), f"unnamed-chunk-{i}")
-        labels[label] = i
+        labels[label_of(options, i)] = i
     folder = ROOT / "_freeze" / lang / page.removesuffix(".qmd") / "figure-html"
     counts = {}
     for png in sorted(folder.glob("*.png")) if folder.is_dir() else []:
@@ -406,10 +421,23 @@ def test_every_figure_has_alt_text(site, lang, page):
 
 @pytest.mark.parametrize("lang,page", TRANSLATED)
 def test_translated_alt_texts_are_not_english(site, lang, page):
-    english = [img.get("alt") for img in built("en", page).select("main img")]
-    translated = [img.get("alt") for img in built(lang, page).select("main img")]
-    assert len(translated) == len(english)
-    assert [a for a, b in zip(translated, english) if a == b] == [], "alt text left in English"
+    """Every translated alt text differs from the English one, except on page 18's manuscript figures
+    (MANUSCRIPT_FIGURES), which carry exactly the English page's alt text for the same figure."""
+    english = [(figure_label(img), img.get("alt")) for img in built("en", page).select("main img")]
+    translated = [(figure_label(img), img.get("alt")) for img in built(lang, page).select("main img")]
+    assert [label for label, _ in translated] == [label for label, _ in english]
+    manuscript = set(MANUSCRIPT_FIGURES) if page == REPORT else set()
+    pairs = list(zip(translated, english))
+    assert [a for (label, a), (_, b) in pairs if label not in manuscript and a == b] == [], "alt text left in English"
+    assert [label for (label, a), (_, b) in pairs if label in manuscript and a != b] == [], \
+        "a manuscript figure's alt text differs from the English page's"
+    assert {label for label, _ in translated} >= manuscript, "a listed manuscript figure is missing from the page"
+
+
+def test_manuscript_figures_are_the_listed_ones():
+    """The figure chunks outside page 18's html-only blocks are exactly MANUSCRIPT_FIGURES, in every language."""
+    for lang in LANGS:
+        assert manuscript_figures(source(lang, REPORT)) == set(MANUSCRIPT_FIGURES), lang
 
 
 @pytest.mark.parametrize("lang", LANGS)
@@ -563,6 +591,36 @@ def key_points_problems(text: str, page: str = "") -> list[str]:
     return []
 
 
+def html_only_spans(lines) -> list[tuple[int, int]]:
+    """(opening line, closing line) of each top-level html-only block."""
+    spans, start, depth = [], None, 0
+    for i in top_level(lines):
+        if start is None:
+            if lines[i].strip() == HTML_ONLY:
+                start, depth = i, 1
+            continue
+        if DIV_CLOSE.match(lines[i]):
+            depth -= 1
+        elif lines[i].startswith(":::"):
+            depth += 1
+        if depth == 0:
+            spans.append((start, i))
+            start = None
+    return spans
+
+
+def manuscript_figures(text: str) -> set[str]:
+    """The labels of the chunks that draw outside the html-only blocks: on page 18, the manuscript's figures."""
+    lines = text.split("\n")
+    spans = html_only_spans(lines)
+    draws = drawing_chunks(text)
+    found = set()
+    for i, start in enumerate(chunk_starts(lines), 1):
+        if i in draws and not any(a < start < b for a, b in spans):
+            found.add(label_of(options_of("\n".join(lines[start + 1:chunk_end(lines, start)])), i))
+    return found
+
+
 def drawing_chunks_without_alt(text: str) -> list[int]:
     chunks = executable_chunks(text)
     return sorted(i for i in drawing_chunks(text) if alt_count(chunks[i - 1][1]) == 0)
@@ -673,6 +731,14 @@ def test_brief_rule_wants_the_first_box_after_the_opening_paragraph():
     assert brief_problems(on_18)                                                           # elsewhere: no
     outside = HTML_ONLY + "\nOpening paragraph.\n\n" + OTHER_BOX + ":::\n\nParagraph.\n\n" + BRIEF + SECTION
     assert brief_problems(outside, REPORT)
+
+
+def test_manuscript_figure_rule_finds_the_figures_outside_the_html_only_blocks():
+    sample = (HTML_ONLY + "\nSteps.\n\n```{r}\nggplot(d, aes(x)) + geom_bar()\n```\n\n::: {.callout-note}\nA box.\n:::\n:::\n\n"
+              "```{r}\n#| echo: false\n#| label: fig-one\nplot_one\n```\n\n```{r}\nhist(x)\n```\n\n"
+              "```{r}\n#| include: false\nplot(x)\n```\n\n" + HTML_ONLY + "\n```{python}\nplt.show()\n```\n:::\n")
+    assert manuscript_figures(sample) == {"fig-one", "unnamed-chunk-3"}   # not the html-only or hidden ones
+    assert manuscript_figures("```{r}\n#| label: tbl-x\nas_flex_table(t)\n```\n") == set()   # a table isn't a figure
 
 
 def test_drawing_rule_finds_plots_and_counts_alt_texts():

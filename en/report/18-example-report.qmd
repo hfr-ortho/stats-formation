@@ -24,6 +24,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ::: {.content-visible when-format="html"}
 This page puts the whole site together in one small study, from the messy abstraction workbook to the Methods and Results of a manuscript. Steps 1 to 7 do the work, in R and Python. Step 8 is the manuscript itself, and it's also a Word document: **MS Word**, under "Other Formats" in the right margin. The Word file contains only the manuscript, built from the same code every time the site is rendered.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Write a manuscript's Methods and Results from your own analysis code, with each group's numbers, every estimate's 95% CI and the p-value, as step 8 does.
+- Run the checks a reviewer may ask for on a primary result: a rank-based test when many patients score the maximum, and a regression that adjusts for the pre-op score.
+- Spot the patients a complete-case analysis leaves out, and test whether they were left out more often after one procedure than after the other.
+
+**Time:** about 45 minutes to read, about 2.5 hours with the exercises (an estimate).
+
+**Read first:** [page 1](../foundations/01-tidy-data.qmd) on tidying the workbook, [page 2](../foundations/02-demographics.qmd) on Table 1 and SMDs, [page 3](../foundations/03-distributions.qmd) on judging a distribution, [page 6](../catalog/06-two-unpaired-groups.qmd) on Welch's t test, [page 12](../catalog/12-predict-from-several.qmd) on linear regression and [page 13](../survival/13-kaplan-meier.qmd) on competing risks: each step builds on one of them.
+:::
+
 ::: {.callout-note}
 ## 💡 How this page works
 Run the code blocks in order, from the top: later blocks use the packages and data loaded in the first one. Each step links to the page that explains its method.
@@ -517,6 +530,7 @@ The primary [outcome](../glossary.qmd#outcome){.term} is the change from the pre
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Histograms of the change in score from pre-op to 1 year, THA above TKA: THA's changes (mean 42.4) lie further right than TKA's (mean 33.4); both are roughly symmetric with no long tail, in 5-point bars, and the panels share their scales."
 analysed <- study |>
   mutate(change = prom_1yr - prom_preop) |>   # the primary outcome
   filter(!is.na(change))                      # patients with both scores
@@ -546,6 +560,7 @@ both_scores
 ## Python
 
 ```{python}
+#| fig-alt: "Histograms of the change in score from pre-op to 1 year, THA above TKA: THA's changes (mean 42.4) lie further right than TKA's (mean 33.4); both are roughly symmetric with no long tail, in 5-point bars, and each panel has its own count scale."
 analysed = study.assign(change=study["prom_1yr"] - study["prom_preop"])   # the primary outcome
 analysed = analysed[analysed["change"].notna()]                           # patients with both scores
 
@@ -709,6 +724,7 @@ The secondary [outcome](../glossary.qmd#outcome){.term} is revision. First, how 
 
 ```{r}
 #| fig-height: 5
+#| fig-alt: "Step curve of the cumulative incidence of revision against years since surgery: 3.4% at 2 years and 12.6% at 5 years, inside a shaded 95% CI that widens toward the end, where the At Risk row below falls to 17 at 8 years and 5 at 10."
 study <- study |>
   mutate(status = factor(event_status, levels = c(0, 1, 2),
                          labels = c("censored", "revision", "death")))   # censored must come first
@@ -738,6 +754,7 @@ revision_plot
 ## Python
 
 ```{python}
+#| fig-alt: "Step curve of the cumulative incidence of revision against years since surgery, as a proportion: 0.034 at 2 years and 0.126 at 5 years, with no CI band and no numbers at risk (the code prints both before the plot)."
 print(study["event_status"].value_counts().sort_index().to_string())   # 0 = censored, 1 = revision, 2 = death
 
 # median follow-up and IQR: the reverse Kaplan-Meier method
@@ -886,6 +903,7 @@ as_flex_table(table_one)
 #| echo: false
 #| label: fig-revision
 #| fig-cap: "Cumulative incidence of revision, with death as a competing risk. The shaded band is the 95% CI."
+#| fig-alt: "Step curve of the cumulative incidence of revision against years since surgery: 3.4% at 2 years and 12.6% at 5 years, with a shaded 95% CI that widens toward the end and a numbers-at-risk row that falls from 120 at 0 years to 5 at 10 years."
 #| fig-height: 5
 revision_plot
 ```
@@ -976,6 +994,16 @@ if (!identical(unname(software), c("4.6.0", "2.6.1", "0.8.0", "1.0.3", "3.8-12",
 ```
 
 ::: {.content-visible when-format="html"}
+::: {.callout-note .key-points}
+## 📌 Key points
+- Write down the question, the primary outcome and the analysis before you look at the outcome data: deciding them after seeing the results makes any p-value meaningless.
+- Write each check of the tidy data so that it stops the script when it fails: a check that only prints something is easy to scroll past.
+- In an observational study, Table 1 shows standardized mean differences instead of p-values: the question is how different the groups are, not whether the difference is "significant".
+- HOOS JR and KOOS JR are different questionnaires, and a gain on one isn't guaranteed to mean the same as a gain on the other: say plainly in the Methods that the comparison is of points on each joint's own scale.
+- A patient at the ceiling might have improved more if the scale allowed it, so when many patients score the maximum the improvement may be underestimated; a test that uses ranks instead of means checks the result (Exercise 1).
+- Missing data are counted and reported, not dropped silently: the primary analysis compares patients with both scores, so every patient revised or dead in the first year is left out of it, and the Methods say so.
+:::
+
 ## Exercises {#exercises}
 
 The solutions use the packages, data and objects made in the steps above, so run the page from the top first.

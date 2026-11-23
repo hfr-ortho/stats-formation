@@ -24,6 +24,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ::: {.content-visible when-format="html"}
 Cette page réunit tout le site dans une petite étude, du classeur de dépouillement en désordre jusqu'aux Methods et Results d'un manuscrit. Les étapes 1 à 7 font le travail, en R et en Python. L'étape 8 est le manuscrit lui-même, et c'est aussi un document Word : **MS Word**, sous « Autres formats » dans la marge de droite. Le fichier Word contient seulement le manuscrit, produit par le même code à chaque génération du site. Le manuscrit reste en anglais, la langue dans laquelle vous le soumettriez à une revue : seuls le texte d'accompagnement et les commentaires du code sont traduits. Le code et le manuscrit disent THA et TKA ; dans le texte d'accompagnement, nous disons PTH et PTG.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- rédiger les Methods et Results d'un manuscrit à partir de votre propre code d'analyse, avec les chiffres de chaque groupe, l'IC à 95 % de chaque estimation et la valeur p, comme le fait l'étape 8.
+- exécuter les vérifications qu'un relecteur peut demander sur un résultat principal : un test basé sur les rangs quand beaucoup de patients obtiennent le maximum, et une régression ajustée sur le score préopératoire.
+- repérer les patients qu'une analyse des cas complets écarte, et tester s'ils ont été écartés plus souvent après une des deux interventions qu'après l'autre.
+
+**Durée :** environ 45 minutes de lecture, environ 2.5 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 1](../foundations/01-tidy-data.qmd) pour ordonner le classeur de dépouillement, la [page 2](../foundations/02-demographics.qmd) pour le tableau 1 et les SMD, la [page 3](../foundations/03-distributions.qmd) pour juger une distribution, la [page 6](../catalog/06-two-unpaired-groups.qmd) pour le test t de Welch, la [page 12](../catalog/12-predict-from-several.qmd) pour la régression linéaire et la [page 13](../survival/13-kaplan-meier.qmd) pour les risques concurrents : chaque étape s'appuie sur l'une d'elles.
+:::
+
 ::: {.callout-note}
 ## 💡 Comment cette page fonctionne
 Exécutez les blocs de code dans l'ordre, de haut en bas : les blocs suivants utilisent les packages et les données chargés dans le premier. Chaque étape renvoie à la page qui explique sa méthode.
@@ -517,6 +530,7 @@ Le [critère de jugement](../glossary.qmd#outcome){.term} principal est la varia
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Histogrammes de la variation du score entre le préopératoire et 1 an, PTH (« THA ») au-dessus de PTG (« TKA ») : les variations après PTH (moyenne 42.4) se situent plus à droite que celles après PTG (moyenne 33.4) ; les deux sont à peu près symétriques, sans longue queue, en barres de 5 points, et les panneaux ont les mêmes échelles."
 analysed <- study |>
   mutate(change = prom_1yr - prom_preop) |>   # le critère de jugement principal
   filter(!is.na(change))                      # patients avec les deux scores
@@ -546,6 +560,7 @@ both_scores
 ## Python
 
 ```{python}
+#| fig-alt: "Histogrammes de la variation du score entre le préopératoire et 1 an, PTH (« THA ») au-dessus de PTG (« TKA ») : les variations après PTH (moyenne 42.4) se situent plus à droite que celles après PTG (moyenne 33.4) ; les deux sont à peu près symétriques, sans longue queue, en barres de 5 points, et chaque panneau a sa propre échelle d'effectifs."
 analysed = study.assign(change=study["prom_1yr"] - study["prom_preop"])   # le critère de jugement principal
 analysed = analysed[analysed["change"].notna()]                           # patients avec les deux scores
 
@@ -709,6 +724,7 @@ Le [critère de jugement](../glossary.qmd#outcome){.term} secondaire est la rév
 
 ```{r}
 #| fig-height: 5
+#| fig-alt: "Courbe en escalier de l'incidence cumulée de révision selon les années depuis l'opération : 3.4 % à 2 ans et 12.6 % à 5 ans, dans un IC à 95 % ombré qui s'élargit vers la fin, où la ligne « At Risk » en dessous tombe à 17 à 8 ans et à 5 à 10 ans."
 study <- study |>
   mutate(status = factor(event_status, levels = c(0, 1, 2),
                          labels = c("censored", "revision", "death")))   # censored doit venir en premier
@@ -738,6 +754,7 @@ revision_plot
 ## Python
 
 ```{python}
+#| fig-alt: "Courbe en escalier de l'incidence cumulée de révision selon les années depuis l'opération, en proportion : 0.034 à 2 ans et 0.126 à 5 ans, sans bande d'IC ni effectifs à risque (le code affiche les deux avant le graphique)."
 print(study["event_status"].value_counts().sort_index().to_string())   # 0 = censuré, 1 = révision, 2 = décès
 
 # suivi médian et IIQ : méthode de Kaplan-Meier inversée
@@ -886,6 +903,7 @@ as_flex_table(table_one)
 #| echo: false
 #| label: fig-revision
 #| fig-cap: "Cumulative incidence of revision, with death as a competing risk. The shaded band is the 95% CI."
+#| fig-alt: "Step curve of the cumulative incidence of revision against years since surgery: 3.4% at 2 years and 12.6% at 5 years, with a shaded 95% CI that widens toward the end and a numbers-at-risk row that falls from 120 at 0 years to 5 at 10 years."
 #| fig-height: 5
 revision_plot
 ```
@@ -976,6 +994,16 @@ if (!identical(unname(software), c("4.6.0", "2.6.1", "0.8.0", "1.0.3", "3.8-12",
 ```
 
 ::: {.content-visible when-format="html"}
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Écrivez la question, le critère de jugement principal et l'analyse avant de regarder les données du critère de jugement : si vous les décidez après avoir vu les résultats, toute valeur p perd son sens.
+- Écrivez chaque contrôle des données ordonnées de façon qu'il arrête le script quand il échoue : un contrôle qui se contente d'afficher quelque chose se laisse facilement dépasser en faisant défiler l'écran.
+- Dans une étude observationnelle, le tableau 1 montre des différences moyennes standardisées (SMD) à la place des valeurs p : la question est de savoir à quel point les groupes diffèrent, pas si la différence est « significative ».
+- Le HOOS JR et le KOOS JR sont deux questionnaires différents, et un gain sur l'un n'est pas garanti équivalent à un gain sur l'autre : dites clairement dans les Methods que la comparaison porte sur des points sur l'échelle propre à chaque articulation.
+- Un patient au plafond aurait peut-être progressé davantage si l'échelle le permettait ; quand beaucoup de patients obtiennent le maximum, l'amélioration peut donc être sous-estimée, et un test qui utilise les rangs à la place des moyennes vérifie le résultat (exercice 1).
+- Les données manquantes sont comptées et rapportées, pas écartées en silence : l'analyse principale compare les patients qui ont les deux scores, donc tous les patients révisés ou décédés pendant la première année en sont absents, et les Méthodes le disent.
+:::
+
 ## Exercices {#exercises}
 
 Les solutions utilisent les packages, les données et les objets créés dans les étapes ci-dessus : exécutez donc d'abord la page depuis le début.

@@ -94,6 +94,8 @@ Page 18 renders to Word too (golden rule 20). Both boxes sit inside its existing
 - **The top box** is inside the first html-only block (it opens right after the hidden setup chunks), after the opening paragraph and before the "💡 How this page works" box.
 - **The key points.** Page 18's Prose guard sits outside the html-only blocks, directly after the manuscript, so the page-wide rule can't hold there. On page 18 the key points are the first thing in the html-only block that follows the Prose guard, and `## Exercises` follows them. `key_points_problems()` accepts exactly that on page 18 and rejects that form on every other page.
 
+- **A figure inside the manuscript** (Figure 1, `fig-revision`) keeps its English alt text on the German and French pages: the manuscript stays English there (golden rule 21), and `test_page_18_manuscript_stays_in_english` requires its chunk options to be identical in all three languages. `test_translated_alt_texts_are_not_english` lists the manuscript's figures in `MANUSCRIPT_FIGURES` and asserts that their alt text equals the English page's; `test_manuscript_figures_are_the_listed_ones` fails if a figure outside the html-only blocks is missing from that list. The alt text doesn't reach the Word file: checked on 23.11.2026, `word/document.xml` was byte-identical before and after `fig-alt` was added, and the picture's description stays empty.
+
 `test_report_docx_has_no_brief` checks that the Word file holds neither title.
 
 ### Known cases

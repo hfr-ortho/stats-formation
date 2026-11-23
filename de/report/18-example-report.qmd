@@ -24,6 +24,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 ::: {.content-visible when-format="html"}
 Diese Seite führt die ganze Website in einer kleinen Studie zusammen, von der unordentlichen Erhebungstabelle bis zu den Methods und Results eines Manuskripts. Die Schritte 1 bis 7 leisten die Arbeit, in R und Python. Schritt 8 ist das Manuskript selbst, und es ist zugleich ein Word-Dokument: **MS Word** unter «Andere Formate» im rechten Seitenrand. Die Word-Datei enthält nur das Manuskript und wird bei jedem Erstellen der Website mit demselben Code neu gebaut. Das Manuskript bleibt auf Englisch, der Sprache, in der Sie es bei einer Fachzeitschrift einreichen würden; übersetzt sind nur der Begleittext und die Kommentare im Code. Der Code und das Manuskript sagen THA und TKA; im Begleittext sagen wir Hüft-TP und Knie-TP.
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- die Methods und Results eines Manuskripts aus Ihrem eigenen Analysecode schreiben, mit den Zahlen jeder Gruppe, dem 95%-KI jedes Schätzwerts und dem p-Wert, wie es Schritt 8 tut.
+- die Prüfungen durchführen, die Gutachterinnen und Gutachter für ein primäres Resultat verlangen können: einen rangbasierten Test, wenn viele Personen den Höchstwert erreichen, und eine Regression, die für den präoperativen Score adjustiert.
+- die Personen erkennen, die eine Analyse vollständiger Fälle auslässt, und prüfen, ob sie nach dem einen Eingriff häufiger ausgelassen wurden als nach dem anderen.
+
+**Zeitbedarf:** etwa 45 Minuten zum Lesen, etwa 2.5 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [Seite 1](../foundations/01-tidy-data.qmd) zum Aufräumen der Erhebungstabelle, [Seite 2](../foundations/02-demographics.qmd) zu Tabelle 1 und den SMD, [Seite 3](../foundations/03-distributions.qmd) zur Beurteilung einer Verteilung, [Seite 6](../catalog/06-two-unpaired-groups.qmd) zum t-Test nach Welch, [Seite 12](../catalog/12-predict-from-several.qmd) zur linearen Regression und [Seite 13](../survival/13-kaplan-meier.qmd) zu konkurrierenden Risiken: Jeder Schritt baut auf einer davon auf.
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert diese Seite
 Führen Sie die Codeblöcke der Reihe nach von oben nach unten aus: Spätere Blöcke verwenden die Packages und die Daten, die der erste Block lädt. Jeder Schritt verweist auf die Seite, die seine Methode erklärt.
@@ -517,6 +530,7 @@ Die primäre [Zielgrösse](../glossary.qmd#outcome){.term} ist die Veränderung 
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Histogramme der Veränderung des Scores vom präoperativen Wert bis 1 Jahr, Hüft-TP («THA») über Knie-TP («TKA»): Die Veränderungen nach Hüft-TP (Mittelwert 42.4) liegen weiter rechts als nach Knie-TP (Mittelwert 33.4); beide sind ungefähr symmetrisch ohne langen Ausläufer, in Balken von 5 Punkten, und die Felder haben dieselben Skalen."
 analysed <- study |>
   mutate(change = prom_1yr - prom_preop) |>   # die primäre Zielgrösse
   filter(!is.na(change))                      # Patientinnen und Patienten mit beiden Scores
@@ -546,6 +560,7 @@ both_scores
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme der Veränderung des Scores vom präoperativen Wert bis 1 Jahr, Hüft-TP («THA») über Knie-TP («TKA»): Die Veränderungen nach Hüft-TP (Mittelwert 42.4) liegen weiter rechts als nach Knie-TP (Mittelwert 33.4); beide sind ungefähr symmetrisch ohne langen Ausläufer, in Balken von 5 Punkten, und jedes Feld hat eine eigene Skala für die Anzahl."
 analysed = study.assign(change=study["prom_1yr"] - study["prom_preop"])   # die primäre Zielgrösse
 analysed = analysed[analysed["change"].notna()]                           # Patientinnen und Patienten mit beiden Scores
 
@@ -709,6 +724,7 @@ Die sekundäre [Zielgrösse](../glossary.qmd#outcome){.term} ist die Revision. Z
 
 ```{r}
 #| fig-height: 5
+#| fig-alt: "Treppenkurve der kumulativen Inzidenz der Revision, aufgetragen gegen die Jahre seit der Operation: 3.4 % nach 2 Jahren und 12.6 % nach 5 Jahren, in einem schattierten 95%-KI, das gegen Ende breiter wird, wo die Zeile «At Risk» darunter auf 17 nach 8 Jahren und 5 nach 10 Jahren fällt."
 study <- study |>
   mutate(status = factor(event_status, levels = c(0, 1, 2),
                          labels = c("censored", "revision", "death")))   # censored muss an erster Stelle stehen
@@ -738,6 +754,7 @@ revision_plot
 ## Python
 
 ```{python}
+#| fig-alt: "Treppenkurve der kumulativen Inzidenz der Revision, aufgetragen gegen die Jahre seit der Operation, als Anteil: 0.034 nach 2 Jahren und 0.126 nach 5 Jahren, ohne KI-Band und ohne die Anzahl Personen unter Risiko (der Code gibt beides vor der Grafik aus)."
 print(study["event_status"].value_counts().sort_index().to_string())   # 0 = zensiert, 1 = Revision, 2 = Tod
 
 # mediane Nachbeobachtungszeit und IQR: umgekehrte Kaplan-Meier-Methode
@@ -886,6 +903,7 @@ as_flex_table(table_one)
 #| echo: false
 #| label: fig-revision
 #| fig-cap: "Cumulative incidence of revision, with death as a competing risk. The shaded band is the 95% CI."
+#| fig-alt: "Step curve of the cumulative incidence of revision against years since surgery: 3.4% at 2 years and 12.6% at 5 years, with a shaded 95% CI that widens toward the end and a numbers-at-risk row that falls from 120 at 0 years to 5 at 10 years."
 #| fig-height: 5
 revision_plot
 ```
@@ -976,6 +994,16 @@ if (!identical(unname(software), c("4.6.0", "2.6.1", "0.8.0", "1.0.3", "3.8-12",
 ```
 
 ::: {.content-visible when-format="html"}
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Schreiben Sie die Frage, die primäre Zielgrösse und die Analyse auf, bevor Sie die Daten zur Zielgrösse ansehen: Werden sie erst festgelegt, nachdem die Resultate bekannt sind, ist jeder p-Wert bedeutungslos.
+- Schreiben Sie jede Prüfung der aufgeräumten Daten so, dass sie das Skript anhält, wenn sie fehlschlägt: Eine Prüfung, die nur etwas ausgibt, übersieht man leicht.
+- Bei einer Beobachtungsstudie zeigt Tabelle 1 standardisierte Mittelwertsdifferenzen (SMD) statt p-Werten: Die Frage ist, wie verschieden die Gruppen sind, nicht, ob die Differenz «signifikant» ist.
+- HOOS JR und KOOS JR sind verschiedene Fragebögen, und ein Gewinn auf dem einen bedeutet nicht zwingend dasselbe wie ein Gewinn auf dem anderen: Halten Sie im Methodenteil klar fest, dass der Vergleich Punkte auf der jeweiligen Skala des Gelenks vergleicht.
+- Personen am oberen Ende der Skala hätten sich bei einer grösseren Skala vielleicht noch stärker verbessert; wenn viele Personen den Höchstwert erreichen, wird die Verbesserung deshalb möglicherweise unterschätzt, und ein Test, der Ränge statt Mittelwerte verwendet, prüft das Resultat (Übung 1).
+- Fehlende Daten werden gezählt und berichtet, nicht stillschweigend weggelassen: Die primäre Analyse vergleicht Personen mit beiden Scores, deshalb fehlen in ihr alle, die im ersten Jahr revidiert wurden oder starben, und der Methodenteil hält das fest.
+:::
+
 ## Übungen {#exercises}
 
 Die Lösungen verwenden die Packages, Daten und Objekte aus den Schritten oben. Führen Sie die Seite daher zuerst von oben nach unten aus.
