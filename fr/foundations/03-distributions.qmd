@@ -18,6 +18,17 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Le [tableau de décision](../choose-a-test.qmd) pose deux questions : quel est votre **objectif** (la ligne), et quel **type de données** avez-vous (la colonne) ? Cette page traite de la seconde question, et surtout de sa partie la plus difficile : une mesure est-elle assez « [gaussienne](../glossary.qmd#normal-distribution){.term} » (de distribution normale) pour la colonne de gauche ?
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- dessiner un histogramme et un graphique QQ d'une mesure, et y lire si elle est proche de la normale, asymétrique ou concentrée près d'un plafond.
+- choisir la colonne gaussienne ou la colonne des rangs du tableau de décision d'après les graphiques, la mesure et la taille de l'échantillon, et justifier ce choix dans une phrase des Méthodes.
+- rédiger une phrase qui interprète un résultat d'après sa taille d'effet et son IC à 95 %, rapportés à la DMCI, et non d'après sa seule valeur p.
+
+**Durée :** environ 35 minutes de lecture, environ 1.5 heures avec les exercices (estimation).
+:::
+
 ## Pourquoi la forme de vos données compte {#why}
 
 Les méthodes de la première colonne travaillent avec les **[moyennes](../glossary.qmd#mean){.term}** et les [écarts-types](../glossary.qmd#standard-deviation){.term} des valeurs elles-mêmes : les [tests t](../glossary.qmd#t-test){.term} et l'[ANOVA](../glossary.qmd#anova){.term} comparent des moyennes, et la [corrélation de Pearson](../glossary.qmd#pearson-correlation){.term} mesure une association en ligne droite (linéaire). Elles supposent des données à peu près [normales](../glossary.qmd#normal-distribution){.term} (pour les tests t et l'ANOVA, dans chaque groupe ; pour le test t pour échantillons appariés, les différences). Les tests de la deuxième colonne ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) travaillent sur les **[rangs](../glossary.qmd#rank){.term}**. Ils ne supposent pas de distribution normale.
@@ -37,6 +48,7 @@ Faites toujours un graphique avant de tester. Voici trois [variables](../glossar
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogrammes, chaque panneau avec ses propres échelles : le score PROM à 1 an (à gauche) se concentre à 100, le maximum de l'échelle, avec une queue à gauche ; l'âge (au milieu) est une cloche assez symétrique ; la durée de séjour (à droite) s'accumule à 0 et 1 jour, avec une longue queue à droite."
 library(tidyverse)
 
 cohort   <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -57,6 +69,7 @@ ggplot(shapes, aes(value)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogrammes, chaque panneau avec ses propres échelles : l'âge (à gauche) est une cloche assez symétrique ; la durée de séjour (au milieu) s'accumule à 0 et 1 jour, avec une longue queue à droite ; le score PROM à 1 an (à droite) se concentre à 100, le maximum de l'échelle, avec une queue à gauche."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -92,6 +105,7 @@ Un **graphique quantile-quantile (QQ plot)** rend la comparaison avec une [distr
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Graphiques QQ, chaque panneau avec ses propres échelles : les points du score PROM à 1 an (à gauche) s'aplatissent à 100, en haut ; les points de l'âge (au milieu) suivent la droite, sauf un court palier plat en haut ; les points de la durée de séjour (à droite) montent par paliers plats et remontent à l'extrémité droite."
 ggplot(shapes, aes(sample = value)) +
   geom_qq() +
   geom_qq_line() +
@@ -101,6 +115,7 @@ ggplot(shapes, aes(sample = value)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Graphiques QQ, chaque panneau avec ses propres échelles : les points de l'âge (à gauche) suivent la droite, sauf un court palier plat en haut ; les points de la durée de séjour (au milieu) montent par paliers plats et remontent à l'extrémité droite ; les points du score PROM à 1 an (à droite) s'aplatissent à 100, en haut."
 fig, axes = plt.subplots(1, 3, figsize=(10, 3))
 for ax, (name, values) in zip(axes, shapes.items()):
     stats.probplot(values, plot=ax)
@@ -240,6 +255,7 @@ Voici un exemple extrême, inventé : deux groupes de 200 valeurs, chacun exact
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Histogramme des deux groupes inventés regroupés : deux bosses, l'une autour de 40 et l'autre autour de 60, et non la cloche unique d'une distribution normale."
 group_a <- qnorm(ppoints(200), mean = 40, sd = 5)   # 200 valeurs parfaitement normales
 group_b <- qnorm(ppoints(200), mean = 60, sd = 5)
 
@@ -253,6 +269,7 @@ ggplot(tibble(value = c(group_a, group_b)), aes(value)) +   # les valeurs regrou
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des deux groupes inventés regroupés : deux bosses, l'une autour de 40 et l'autre autour de 60, et non la cloche unique d'une distribution normale."
 points = (np.arange(1, 201) - 0.5) / 200            # les mêmes probabilités que ppoints(200) de R
 group_a = stats.norm.ppf(points, loc=40, scale=5)   # 200 valeurs parfaitement normales
 group_b = stats.norm.ppf(points, loc=60, scale=5)
@@ -289,6 +306,7 @@ Dans les vraies données, les groupes sont en général bien plus proches. L'IMC
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Graphique QQ des résidus de l'IMC (l'IMC moins la moyenne de son groupe) : les points se trouvent sur une droite presque parfaite et ne s'en écartent qu'aux quelques valeurs les plus extrêmes, à chaque bout."
 shapiro.test(cohort$bmi)$p.value                         # regroupés
 
 cohort |>
@@ -306,6 +324,7 @@ ggplot(tibble(residual = residuals(fit)), aes(sample = residual)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Graphique QQ des résidus de l'IMC (l'IMC moins la moyenne de son groupe), avec une droite de référence rouge : les points se trouvent sur une droite presque parfaite et ne s'en écartent qu'aux quelques valeurs les plus extrêmes, à chaque bout."
 print(stats.shapiro(cohort["bmi"]).pvalue)               # regroupés
 
 for procedure, group in cohort.groupby("procedure"):     # chaque groupe seul
@@ -552,6 +571,16 @@ Une différence de 1.8 kg/m² est-elle *cliniquement* importante ? La valeur p 
 
 Pour les [PROM](../glossary.qmd#prom){.term}, jugez les différences par rapport à la **différence minimale cliniquement importante (DMCI)** : le plus petit changement que les patients perçoivent comme important. Les DMCI publiées varient selon l'étude et la méthode utilisée pour les établir, donc citez celle que vous utilisez. Attention à la façon de l'utiliser : une DMCI est un seuil *intra-patient*, pour le changement d'une seule personne. Une différence entre les moyennes de deux groupes qui est plus petite que la DMCI ne prouve pas qu'aucun patient n'en a bénéficié, et une différence plus grande ne veut pas dire que tous en ont bénéficié. Comparer la [proportion](../glossary.qmd#proportion){.term} de patients de chaque groupe qui ont atteint la DMCI est souvent l'analyse la plus claire.
 
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Faites toujours un graphique avant de tester : sur un graphique QQ, des points sur la droite signifient une distribution proche de la normale, des points qui remontent à l'extrémité droite une asymétrie à droite, et des points qui s'aplatissent en haut un plafond.
+- Ne laissez pas une seule valeur p choisir votre test : décidez à partir des graphiques, de ce que vous savez de la mesure et de la taille de l'échantillon, et utilisez Shapiro-Wilk comme un indice parmi d'autres, pas comme le juge.
+- La condition de normalité porte sur les données de chaque groupe (pour des données appariées, sur les différences ; pour les modèles de régression, sur les résidus), pas sur les données regroupées.
+- Les échelles ordinales, et les mesures qui s'accumulent au plafond ou au plancher, vont dans la colonne des rangs quelle que soit la taille de l'échantillon.
+- « p = 0.20, donc il n'y a pas de différence » et « p < 0.001, donc l'effet est grand » sont deux erreurs de lecture : regardez la taille d'effet et son IC à 95 %.
+- Jugez une différence de PROM par rapport à la DMCI, un seuil intra-patient : comparer la proportion de patients de chaque groupe qui l'ont atteinte est souvent l'analyse la plus claire.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -607,6 +636,9 @@ stopifnot(
 ## R
 
 ```{r}
+#| fig-alt:
+#|   - "Histogramme du score PROM avant l'opération : une cloche à peu près symétrique au milieu de l'échelle, loin du plafond de 100."
+#|   - "Graphique QQ du score PROM avant l'opération : les points suivent la droite et ne s'en écartent qu'aux quelques valeurs les plus basses et les plus hautes."
 preop <- proms |> filter(visit == "preop", !is.na(prom_score))
 ggplot(preop, aes(prom_score)) + geom_histogram(bins = 30)
 ggplot(preop, aes(sample = prom_score)) + geom_qq() + geom_qq_line()
@@ -616,6 +648,7 @@ skewness(preop$prom_score)
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme (à gauche) et graphique QQ (à droite) du score PROM avant l'opération : une cloche à peu près symétrique au milieu de l'échelle, loin du plafond de 100, et des points qui suivent la droite, sauf aux quelques valeurs les plus basses."
 preop = proms[(proms["visit"] == "preop") & proms["prom_score"].notna()]
 fig, axes = plt.subplots(1, 2, figsize=(8, 3))
 axes[0].hist(preop["prom_score"], bins=30)

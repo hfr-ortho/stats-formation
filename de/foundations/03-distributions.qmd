@@ -18,6 +18,17 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Die [Entscheidungstabelle](../choose-a-test.qmd) stellt zwei Fragen: Was ist Ihr **Ziel** (die Zeile), und welchen **Datentyp** haben Sie (die Spalte)? Diese Seite behandelt die zweite Frage, vor allem ihren schwierigsten Teil: Ist ein Messwert «[normalverteilt](../glossary.qmd#normal-distribution){.term}» genug für die linke Spalte?
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- ein Histogramm und ein QQ-Diagramm einer Messgrösse zeichnen und ablesen, ob sie nahezu normalverteilt ist, schief oder an einer Obergrenze gehäuft.
+- die Spalte für normalverteilte Daten oder die Rangspalte der Entscheidungstabelle wählen, anhand der Diagramme, der Messung und der Stichprobengrösse, und die Wahl in einem Satz für den Methodenteil begründen.
+- einen Satz schreiben, der ein Resultat anhand seiner Effektstärke und seines 95%-KI interpretiert, gemessen an der MCID und nicht allein an seinem p-Wert.
+
+**Zeitbedarf:** etwa 35 Minuten zum Lesen, etwa 1.5 Stunden mit den Übungen (eine Schätzung).
+:::
+
 ## Warum die Form Ihrer Daten wichtig ist {#why}
 
 Die Methoden der ersten Spalte arbeiten mit **[Mittelwerten](../glossary.qmd#mean){.term}** und [Standardabweichungen](../glossary.qmd#standard-deviation){.term} der Werte selbst: [t-Tests](../glossary.qmd#t-test){.term} und [ANOVA](../glossary.qmd#anova){.term} vergleichen Mittelwerte, und die [Pearson-Korrelation](../glossary.qmd#pearson-correlation){.term} misst einen geradlinigen (linearen) Zusammenhang. Sie setzen ungefähr [normalverteilte](../glossary.qmd#normal-distribution){.term} Daten voraus (bei t-Tests und ANOVA innerhalb jeder Gruppe; beim t-Test für gepaarte Stichproben die Differenzen). Die Tests der zweiten Spalte ([Mann-Whitney](../glossary.qmd#mann-whitney-test){.term}, [Wilcoxon](../glossary.qmd#wilcoxon-signed-rank-test){.term}, [Kruskal-Wallis](../glossary.qmd#kruskal-wallis-test){.term}, [Spearman](../glossary.qmd#spearman-correlation){.term}) arbeiten mit **[Rängen](../glossary.qmd#rank){.term}**. Sie setzen keine Normalverteilung voraus.
@@ -37,6 +48,7 @@ Zeichnen Sie immer, bevor Sie testen. Hier sind drei [Variablen](../glossary.qmd
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramme, jedes Feld mit eigenen Skalen: Der PROM-Score nach 1 Jahr (links) häuft sich bei 100, am oberen Ende der Skala, mit einem Ausläufer nach links; das Alter (Mitte) ist eine ziemlich symmetrische Glocke; die Aufenthaltsdauer (rechts) häuft sich bei 0 und 1 Tagen, mit einem langen Ausläufer nach rechts."
 library(tidyverse)
 
 cohort   <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -57,6 +69,7 @@ ggplot(shapes, aes(value)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme, jedes Feld mit eigenen Skalen: Das Alter (links) ist eine ziemlich symmetrische Glocke; die Aufenthaltsdauer (Mitte) häuft sich bei 0 und 1 Tagen, mit einem langen Ausläufer nach rechts; der PROM-Score nach 1 Jahr (rechts) häuft sich bei 100, am oberen Ende der Skala, mit einem Ausläufer nach links."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -92,6 +105,7 @@ Ein **QQ-Diagramm** macht den Vergleich mit einer [Normalverteilung](../glossary
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "QQ-Diagramme, jedes Feld mit eigenen Skalen: Die Punkte des PROM-Scores nach 1 Jahr (links) flachen bei 100 ab, dem oberen Ende; die Punkte des Alters (Mitte) folgen der Geraden bis auf ein kurzes flaches Stück am oberen Ende; die Punkte der Aufenthaltsdauer (rechts) steigen in flachen Stufen und biegen am rechten Ende nach oben ab."
 ggplot(shapes, aes(sample = value)) +
   geom_qq() +
   geom_qq_line() +
@@ -101,6 +115,7 @@ ggplot(shapes, aes(sample = value)) +
 ## Python
 
 ```{python}
+#| fig-alt: "QQ-Diagramme, jedes Feld mit eigenen Skalen: Die Punkte des Alters (links) folgen der Geraden bis auf ein kurzes flaches Stück am oberen Ende; die Punkte der Aufenthaltsdauer (Mitte) steigen in flachen Stufen und biegen am rechten Ende nach oben ab; die Punkte des PROM-Scores nach 1 Jahr (rechts) flachen bei 100 ab, dem oberen Ende."
 fig, axes = plt.subplots(1, 3, figsize=(10, 3))
 for ax, (name, values) in zip(axes, shapes.items()):
     stats.probplot(values, plot=ax)
@@ -240,6 +255,7 @@ Hier ein extremes, erfundenes Beispiel: zwei Gruppen mit je 200 Werten, jede exa
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Histogramm der beiden erfundenen Gruppen, zusammengelegt: zwei Buckel, einer um 40 und einer um 60, nicht die eine Glocke einer Normalverteilung."
 group_a <- qnorm(ppoints(200), mean = 40, sd = 5)   # 200 exakt normalverteilte Werte
 group_b <- qnorm(ppoints(200), mean = 60, sd = 5)
 
@@ -253,6 +269,7 @@ ggplot(tibble(value = c(group_a, group_b)), aes(value)) +   # die zusammengelegt
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der beiden erfundenen Gruppen, zusammengelegt: zwei Buckel, einer um 40 und einer um 60, nicht die eine Glocke einer Normalverteilung."
 points = (np.arange(1, 201) - 0.5) / 200            # dieselben Wahrscheinlichkeiten wie ppoints(200) in R
 group_a = stats.norm.ppf(points, loc=40, scale=5)   # 200 exakt normalverteilte Werte
 group_b = stats.norm.ppf(points, loc=60, scale=5)
@@ -289,6 +306,7 @@ In echten Daten liegen die Gruppen meist viel näher beieinander. Der BMI unters
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "QQ-Diagramm der BMI-Residuen (BMI minus Mittelwert der eigenen Gruppe): Die Punkte liegen auf einer nahezu perfekten Geraden und weichen nur bei den wenigen extremsten Werten an beiden Enden davon ab."
 shapiro.test(cohort$bmi)$p.value                         # zusammengelegt
 
 cohort |>
@@ -306,6 +324,7 @@ ggplot(tibble(residual = residuals(fit)), aes(sample = residual)) +
 ## Python
 
 ```{python}
+#| fig-alt: "QQ-Diagramm der BMI-Residuen (BMI minus Mittelwert der eigenen Gruppe), mit einer roten Referenzgeraden: Die Punkte liegen auf einer nahezu perfekten Geraden und weichen nur bei den wenigen extremsten Werten an beiden Enden davon ab."
 print(stats.shapiro(cohort["bmi"]).pvalue)               # zusammengelegt
 
 for procedure, group in cohort.groupby("procedure"):     # jede Gruppe für sich
@@ -552,6 +571,16 @@ Ist ein Unterschied von 1.8 kg/m² *klinisch* bedeutsam? Der p-Wert kann das nic
 
 Beurteilen Sie bei [PROMs](../glossary.qmd#prom){.term} Unterschiede an der **minimalen klinisch relevanten Differenz (MCID)**: der kleinsten Veränderung, die Patientinnen und Patienten als bedeutsam wahrnehmen. Publizierte MCID variieren mit der Studie und der Methode, mit der sie hergeleitet wurden; zitieren Sie daher die, die Sie verwenden. Gehen Sie vorsichtig damit um: Eine MCID ist eine Schwelle *innerhalb einer Person* für deren eigene Veränderung. Ein Unterschied zwischen den Mittelwerten zweier Gruppen, der kleiner ist als die MCID, beweist nicht, dass keine Person profitiert hat, und ein grösserer bedeutet nicht, dass alle profitiert haben. Oft ist es klarer, den [Anteil](../glossary.qmd#proportion){.term} der Personen in jeder Gruppe zu vergleichen, der die MCID erreicht hat.
 
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Zeichnen Sie immer, bevor Sie testen: Im QQ-Diagramm bedeuten Punkte auf der Geraden nahezu normalverteilt, Punkte, die am rechten Ende nach oben abbiegen, Rechtsschiefe, und Punkte, die oben abflachen, eine Obergrenze.
+- Lassen Sie nicht einen einzelnen p-Wert Ihren Test wählen: Entscheiden Sie anhand der Diagramme, anhand dessen, was Sie über die Messung wissen, und anhand der Stichprobengrösse, und verwenden Sie Shapiro-Wilk als unterstützenden Hinweis, nicht als Richter.
+- Die Voraussetzung der Normalverteilung betrifft die Daten innerhalb jeder Gruppe (bei gepaarten Daten die Differenzen, bei Regressionsmodellen die Residuen), nicht die zusammengelegten Daten.
+- Ordinale Skalen und Messgrössen, die sich an einer Ober- oder Untergrenze häufen, gehören unabhängig von der Stichprobengrösse in die Rangspalte.
+- «p = 0.20, also gibt es keinen Unterschied» und «p < 0.001, also ist der Effekt gross» sind beides Fehlinterpretationen: Schauen Sie auf die Effektstärke und ihr 95%-KI.
+- Beurteilen Sie einen Unterschied bei PROMs an der MCID, einer Schwelle innerhalb einer Person: Oft ist es klarer, den Anteil der Personen in jeder Gruppe zu vergleichen, der die MCID erreicht hat.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -607,6 +636,9 @@ stopifnot(
 ## R
 
 ```{r}
+#| fig-alt:
+#|   - "Histogramm des präoperativen PROM-Scores: eine ungefähr symmetrische Glocke in der Mitte der Skala, weit weg von der Obergrenze 100."
+#|   - "QQ-Diagramm des präoperativen PROM-Scores: Die Punkte folgen der Geraden und weichen nur bei den wenigen tiefsten und höchsten Werten davon ab."
 preop <- proms |> filter(visit == "preop", !is.na(prom_score))
 ggplot(preop, aes(prom_score)) + geom_histogram(bins = 30)
 ggplot(preop, aes(sample = prom_score)) + geom_qq() + geom_qq_line()
@@ -616,6 +648,7 @@ skewness(preop$prom_score)
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm (links) und QQ-Diagramm (rechts) des präoperativen PROM-Scores: eine ungefähr symmetrische Glocke in der Mitte der Skala, weit weg von der Obergrenze 100, und Punkte, die der Geraden folgen, ausser bei den wenigen tiefsten Werten."
 preop = proms[(proms["visit"] == "preop") & proms["prom_score"].notna()]
 fig, axes = plt.subplots(1, 2, figsize=(8, 3))
 axes[0].hist(preop["prom_score"], bins=30)

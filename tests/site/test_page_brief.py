@@ -36,6 +36,9 @@ NUMBERED = [
 
 # The pages that have their boxes and alt texts. Tasks 4.2 to 4.6 add theirs.
 DONE = [
+    "foundations/01-tidy-data.qmd",
+    "foundations/02-demographics.qmd",
+    "foundations/03-distributions.qmd",
     "catalog/06-two-unpaired-groups.qmd",
 ]
 
