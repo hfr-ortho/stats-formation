@@ -104,6 +104,49 @@ def test_setup_page_offers_the_zip_without_git(site):
     assert "stats-formation-main" in text and "git pull" in text
 
 
+SETUP_TIME = {"en": ("30 to 60 minutes", "about an hour"),
+              "de": ("30 bis 60 Minuten", "eine Stunde"),
+              "fr": ("30 à 60 minutes", "une heure")}
+
+
+def test_setup_page_says_30_to_60_minutes(site):
+    """The site owner's estimate, written as a range with "to"; the earlier "about an hour" is gone."""
+    for lang in LANGS:
+        text = built(lang, "getting-started/setup.html").select_one("main").get_text(" ")
+        now, before = SETUP_TIME[lang]
+        assert text.count(now) == 2, lang          # the opening sentence and "Before you start"
+        assert before not in text, lang
+
+
+REPORT_LABEL = {"en": "Report an error", "de": "Fehler melden", "fr": "Signaler une erreur"}
+WINDOWS_UNTESTED = {"en": "we haven't run them on a Windows PC ourselves yet",
+                    "de": "wir haben sie selbst noch nicht auf einem Windows-PC ausgeführt",
+                    "fr": "nous ne les avons pas encore exécutées nous-mêmes sur un PC Windows"}
+
+
+def test_setup_page_says_the_windows_steps_are_untested(site):
+    """Nobody has run the Windows steps yet: "Before you start" says so and points to Report an error."""
+    for lang in LANGS:
+        step_1 = built(lang, "getting-started/setup.html").select_one("main section#install-r")
+        windows = [li for el in step_1.find_previous_siblings() for li in el.select("li")
+                   if WINDOWS_UNTESTED[lang] in li.get_text(" ").replace("’", "'")]   # Quarto curls apostrophes
+        assert len(windows) == 1, lang
+        assert REPORT_LABEL[lang] in windows[0].get_text(" "), lang
+
+
+HOME_SHORTCUT = {"en": "Shift-Command-H", "de": "Umschalttaste-Befehlstaste-H", "fr": "Maj + Commande + H"}
+
+
+def test_both_open_folder_sentences_name_the_home_folder_shortcut(site):
+    """Positron's Open Folder dialog jumps to the home folder with Shift-Command-H on a Mac."""
+    for lang in LANGS:
+        section = built(lang, "getting-started/setup.html").select_one("main section#get-this-repository")
+        sentences = [el.get_text(" ") for el in section.select("p, li")
+                     if "Open Folder" in el.get_text(" ") and not el.select("p, li")]
+        assert len(sentences) == 2, (lang, sentences)
+        assert all(HOME_SHORTCUT[lang] in s for s in sentences), lang
+
+
 def test_every_python_block_on_the_setup_page_imports_what_it_uses(site):
     """Readers copy one block at a time, so a block that uses pd imports pandas itself."""
     blocks = load("getting-started/setup.html").select("div.sourceCode pre.python, pre.sourceCode.python")
