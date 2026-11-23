@@ -59,8 +59,9 @@ The reading time is the same number in all three languages and comes from the En
 
 - `prose_words(text)` counts the words of the English `.qmd` outside its YAML front matter and outside fenced code blocks, executed or display-only. A fence closes only on the same character repeated at least as often, with nothing after it, so a four-backtick wrapper around a chunk, or a `~~~` fence that holds three backticks, stays code. It drops `:::` div lines, HTML comments, link targets `](...)` and attribute blocks `{...}` (`{.term}`, `{#id}`). Text inside callouts and collapsed solutions counts: it is prose the reader may read. A word is a run of non-space characters with at least one letter or digit, so `##`, `>`, `-`, `|` and `→` don't count.
 - The two new boxes are left out of the count. Otherwise writing the time into the box would change the number it states. For counting, a box is found by its class (`.page-brief` or `.key-points`) whatever else its opener says; the placement tests still insist on the exact openers.
-- `reading_minutes(words) = max(5, 5 * round(words / 100 / 5))`: 100 words a minute, rounded to 5 minutes, never under 5. Python's `round()` sends an exact half to the even multiple (2,250 words give 20 minutes, 2,750 give 30).
-- Page 6: 4,956 words, 50 minutes (the review counted about 5,060 on an earlier version of the page, which gives the same 50).
+- `reading_minutes(words) = max(5, 5 * round(words / 90 / 5))`: 90 words a minute, rounded to 5 minutes, never under 5. Python's `round()` sends an exact half to the even multiple (2,025 words give 20 minutes, 2,475 give 30).
+- Page 6: 5,015 words, 55 minutes (5,015 ÷ 90 = 55.7, rounded to 55).
+- The rate was 100 words a minute in the pilot's first version. On 23.11.2026 Doc set it to 90: on the corrected text, 90 puts 17 of the 18 pages within 5 minutes of the content reviewers' estimates (page 16 is 10 minutes under, no page is more than 5 over), while 100 left pages 12 to 16 10 to 15 minutes under. The reviewers' figures are judgments, not measurements, and Doc will check the rate with a timed read, so it may change again.
 
 The hands-on time is the band from the review's table, labeled "(an estimate)": the reviewers judged it from word counts, code chunks and exercises, and nobody measured it.
 
@@ -78,7 +79,7 @@ Alt text is prose: German and French pages translate it. `tests/site/test_transl
 
 ### The legend
 
-`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 100 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement.
+`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 90 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement.
 
 The legend must be true while the boxes are rolled out. It speaks of "a numbered page" and says in one sentence that the boxes are being added page by page, starting with page 6, so most numbered pages don't have them yet. "Most" holds while 9 or more of the 18 pages lack the boxes; the rollout task that brings it below 9 (Task 4.4) changes it to "some", and `test_legend_tells_the_truth_about_the_rollout` checks which word the count calls for. The last rollout task (4.6) replaces that sentence and says "every numbered page". `tests/site/test_conventions.py::test_callout_legend_shows_all_six_kinds` checks the six titles, the two classes, the time rule and, while `DONE` differs from `NUMBERED`, the rollout sentence; `test_page_brief.py::test_legend_tells_the_truth_about_the_rollout` checks the rollout sentence in all three languages and turns round once `DONE == NUMBERED`.
 
@@ -130,7 +131,7 @@ What the rollout meets, and what the tests do about it:
 
 Over all 18 pages or all three languages: `test_drawing_rule_finds_every_frozen_figure`, `test_legend_tells_the_truth_about_the_rollout`, and `test_report_docx_has_no_brief` (page 18's Word file contains neither title; it passes trivially until page 18 gets its boxes, Task 4.6).
 
-Rule tests on small samples: `prose_words()` ignores code (long and tilde fences too), link targets, attributes and the boxes (with extra classes too) and counts callouts and solutions; `reading_minutes(5060) == 50`; the brief, key-points (page 18 and several guards included) and drawing rules bite; `alt_count()` reads a list.
+Rule tests on small samples: `prose_words()` ignores code (long and tilde fences too), link targets, attributes and the boxes (with extra classes too) and counts callouts and solutions; `reading_minutes(5040) == 55`, with exact halves going to the even multiple (`reading_minutes(4725) == 50`); the brief, key-points (page 18 and several guards included) and drawing rules bite; `alt_count()` reads a list.
 
 ### Rollout
 

@@ -68,7 +68,7 @@ def test_callout_legend_shows_all_six_kinds(site):
         assert title in text, title
     assert legend.select("div.callout.page-brief") and legend.select("div.callout.key-points")
     # how the times are worked out (spec docs/superpowers/specs/2026-11-20-page-brief-design.md)
-    assert "100 words a minute" in text_of(legend) and "an estimate" in text_of(legend)
+    assert "90 words a minute" in text_of(legend) and "an estimate" in text_of(legend)
     # true during the rollout: the boxes arrive page by page, so no claim that every numbered page has them
     # (tests/site/test_page_brief.py::test_legend_tells_the_truth_about_the_rollout checks all three languages)
     if set(DONE) != set(NUMBERED):

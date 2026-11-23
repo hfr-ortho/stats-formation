@@ -177,9 +177,10 @@ def prose_words(text: str) -> int:
 
 
 def reading_minutes(words: int) -> int:
-    """English prose words ÷ 100 words a minute, rounded to 5 minutes, never under 5 (Doc's decision D7).
-    Python's round() sends an exact half to the even multiple: 2,250 words give 20 minutes, 2,750 give 30."""
-    return max(5, 5 * round(words / 100 / 5))
+    """English prose words ÷ 90 words a minute, rounded to 5 minutes, never under 5 (Doc's decision D7;
+    the rate is Doc's decision of 23.11.2026, replacing 100).
+    Python's round() sends an exact half to the even multiple: 2,025 words give 20 minutes, 2,475 give 30."""
+    return max(5, 5 * round(words / 90 / 5))
 
 
 # ---------------------------------------------------------------- chunks and figures
@@ -607,11 +608,15 @@ def test_prose_words_handles_long_and_tilde_fences_and_boxes_with_more_classes()
 
 
 def test_reading_minutes_rounds_to_five():
-    assert reading_minutes(5060) == 50
-    assert reading_minutes(4940) == 50
-    assert reading_minutes(4740) == 45
-    assert reading_minutes(120) == 5
+    # 5 minutes at 90 words a minute is 450 words, so minutes = 5 * round(words / 450).
+    assert reading_minutes(5040) == 55  # 5040 / 450 = 11.2 -> 11 -> 55 (one minute above 4,950 words = 55)
+    assert reading_minutes(4860) == 55  # 4860 / 450 = 10.8 -> 11 -> 55 (one minute below)
+    assert reading_minutes(4710) == 50  # 4710 / 450 = 10.47 -> 10 -> 50 (the next multiple down)
+    assert reading_minutes(120) == 5  # 120 / 450 = 0.27 -> 0 -> floor of 5
     assert reading_minutes(0) == 5
+    # exact halves go to the even multiple: 4725 / 450 = 10.5 -> 10 -> 50; 5175 / 450 = 11.5 -> 12 -> 60
+    assert reading_minutes(4725) == 50
+    assert reading_minutes(5175) == 60
 
 
 GUARD = "```{r}\n#| include: false\n# Prose guard: numbers\nstopifnot(TRUE)\n```\n"
