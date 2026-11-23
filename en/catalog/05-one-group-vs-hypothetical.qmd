@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Sometimes there is only one group of patients, and the comparison is with a number that comes from **outside** your data: a target set by the hospital, a value published by a [registry](../glossary.qmd#registry){.term}, a benchmark in a quality report. Is our group different from that number?
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between the one-sample t test, the chi-square goodness-of-fit test and the binomial test from the kind of outcome: a measurement, a category or a yes/no outcome.
+- Run the test in R or Python and write a Results sentence with your group's value, the hypothetical value, the difference or proportion with its 95% CI, and the p-value.
+- Spot a write-up that takes a CI including the hypothetical value as proof that the group equals it.
+
+**Time:** about 40 minutes to read, about 2 to 2.5 hours with the exercises (an estimate).
+
+**Read first:** [page 3](../foundations/03-distributions.qmd) on judging whether a distribution is roughly normal, [page 4](04-describe-one-group.qmd) on the 95% CI for a mean and for a proportion, and [How results are reported](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term}, its [patient-reported outcomes](../glossary.qmd#prom){.term}, or (for the [binomial test](../glossary.qmd#binomial-test){.term}) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom. The "hypothetical" values below are made up for teaching; they aren't real registry figures or targets.
@@ -61,6 +74,7 @@ Once the test has run, a box under "Read the output" rebuilds t by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogram of operative time for the 600 procedures: a roughly symmetric hump, centered a little to the left of the dashed line at the booked 90 minutes (the mean is 84.5 minutes); bars 5 minutes wide."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -74,6 +88,7 @@ ggplot(cohort, aes(op_time_min)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogram of operative time for the 600 procedures: a roughly symmetric hump, centered a little to the left of the booked 90 minutes (the mean is 84.5 minutes); the dashed line at 90 is in the bars' color and shows only as a short mark above them."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -252,6 +267,7 @@ Once the test has run, a box under "Read the output" adds up the ranks by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogram of the 260 KOOS JR scores at 1 year: they pile up at the ceiling of 100 (the tallest bar, at the right end) with a long tail to the left, so they aren't symmetric; 170 lie above the dashed line at the target of 80 and 90 below it."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -272,6 +288,7 @@ ggplot(tibble(score = koos_1yr), aes(score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogram of the 260 KOOS JR scores at 1 year: they pile up at the ceiling of 100 (the tallest bar, at the right end) with a long tail to the left, so they aren't symmetric; 170 lie above the dashed line at the target of 80 and 90 below it."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -793,6 +810,16 @@ A target invites a [one-sided](../glossary.qmd#two-sided){.term} question: are w
 ::: {.callout-tip}
 ## 🔀 R vs Python: exact CIs
 R's `binom.test()` and scipy's `binomtest()` agree on the p-value. R prints the exact (Clopper-Pearson) CI automatically; in scipy, ask for it with `proportion_ci(method="exact")`. It's a little wider than the [Wilson interval](../glossary.qmd#wilson-interval){.term} that [page 4](04-describe-one-group.qmd#proportion) uses, which for these 1,034 of 1,200 patients runs from 84.1% to 88.0% (the last line of output under "Run it"). Either is fine; say which you used.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Key points
+- Choose the hypothetical value before you look at your data, and say where it came from: a value picked after seeing the results makes the p-value meaningless.
+- Use the one-sample t test for a measurement that is roughly normal (or a large sample that isn't badly skewed), the chi-square goodness-of-fit test for a categorical outcome with a hypothetical proportion for every category, and the binomial test for a yes/no outcome.
+- R and scipy give the CI for the mean, not for the difference: subtract the hypothetical value from the mean and from both ends of its CI yourself.
+- The goodness-of-fit test needs the counts of patients in each category, not percentages, and every expected count should be at least 5.
+- Decide one- or two-sided before you look: use a one-sided test only when the protocol named it before the data came in and a result on the other side would change nothing; otherwise report the two-sided test.
+- A CI that includes the hypothetical value isn't proof that the group equals it: don't write "our mortality matched the audit"; report the CI and let it speak.
 :::
 
 ```{r}

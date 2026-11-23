@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Manchmal gibt es nur eine Patientengruppe, und verglichen wird mit einer Zahl, die von **ausserhalb** Ihrer Daten stammt: einem Zielwert des Spitals, einem von einem [Register](../glossary.qmd#registry){.term} veröffentlichten Wert, einem Richtwert aus einem Qualitätsbericht. Unterscheidet sich unsere Gruppe von dieser Zahl?
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- zwischen dem t-Test für eine Stichprobe, dem Chi-Quadrat-Anpassungstest und dem Binomialtest wählen, je nach Art der Zielgrösse: ein Messwert, eine Kategorie oder eine Ja/Nein-Zielgrösse.
+- den Test in R oder Python durchführen und einen Results-Satz schreiben, mit dem Wert Ihrer Gruppe, dem hypothetischen Wert, der Differenz oder dem Anteil mit seinem 95%-KI sowie dem p-Wert.
+- eine Darstellung erkennen, die ein KI, das den hypothetischen Wert einschliesst, als Beweis dafür nimmt, dass die Gruppe diesem Wert entspricht.
+
+**Zeitbedarf:** etwa 40 Minuten zum Lesen, etwa 2 bis 2.5 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [Seite 3](../foundations/03-distributions.qmd) zur Beurteilung, ob Daten ungefähr normalverteilt sind, [Seite 4](04-describe-one-group.qmd) zum 95%-KI für einen Mittelwert und für einen Anteil und [Wie Resultate berichtet werden](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu einem der Übungsdatensätze: zur [Gelenkersatz-Kohorte](../glossary.qmd#cohort){.term}, zu ihren [PROMs](../glossary.qmd#prom){.term} (patientenberichtete Messinstrumente) oder (beim [Binomialtest](../glossary.qmd#binomial-test){.term}) zu den Daten zur proximalen Femurfraktur. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus. Die «hypothetischen» Werte unten sind für den Unterricht erfunden; es sind keine echten Registerzahlen oder Zielwerte.
@@ -61,6 +74,7 @@ Nach dem Test rechnet ein Kasten unter «Ausgabe lesen» t von Hand nach.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramm der Operationsdauer für die 600 Eingriffe: ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der gestrichelten Linie bei den eingeplanten 90 Minuten liegt (der Mittelwert ist 84.5 Minuten); Balken von 5 Minuten Breite."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -74,6 +88,7 @@ ggplot(cohort, aes(op_time_min)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der Operationsdauer für die 600 Eingriffe: ein ungefähr symmetrischer Hügel, dessen Mitte etwas links der eingeplanten 90 Minuten liegt (der Mittelwert ist 84.5 Minuten); die gestrichelte Linie bei 90 hat die Farbe der Balken und ist nur als kurzer Strich über ihnen sichtbar."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -252,6 +267,7 @@ Nach dem Test addiert ein Kasten unter «Ausgabe lesen» die Ränge von Hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramm der 260 KOOS JR Scores nach 1 Jahr: Sie häufen sich an der Decke von 100 (der höchste Balken, ganz rechts) und haben einen langen Ausläufer nach links, sind also nicht symmetrisch; 170 liegen über der gestrichelten Linie beim Zielwert von 80 und 90 darunter."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -272,6 +288,7 @@ ggplot(tibble(score = koos_1yr), aes(score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der 260 KOOS JR Scores nach 1 Jahr: Sie häufen sich an der Decke von 100 (der höchste Balken, ganz rechts) und haben einen langen Ausläufer nach links, sind also nicht symmetrisch; 170 liegen über der gestrichelten Linie beim Zielwert von 80 und 90 darunter."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -793,6 +810,16 @@ Ein Zielwert legt eine [einseitige](../glossary.qmd#two-sided){.term} Frage nahe
 ::: {.callout-tip}
 ## 🔀 R oder Python: exakte KI
 `binom.test()` in R und `binomtest()` in scipy stimmen beim p-Wert überein. R gibt das exakte KI (nach Clopper-Pearson) automatisch aus; in scipy fordern Sie es mit `proportion_ci(method="exact")` an. Es ist etwas breiter als das [Wilson-Intervall](../glossary.qmd#wilson-interval){.term}, das [Seite 4](04-describe-one-group.qmd#proportion) verwendet und das für diese 1,034 von 1,200 Patientinnen und Patienten von 84.1 % bis 88.0 % reicht (die letzte Zeile der Ausgabe unter «Analyse durchführen»). Beide sind in Ordnung; geben Sie an, welches Sie verwendet haben.
+:::
+
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Wählen Sie den hypothetischen Wert, bevor Sie Ihre Daten ansehen, und sagen Sie, woher er stammt: Ein Wert, der erst nach dem Blick auf die Resultate gewählt wird, macht den p-Wert bedeutungslos.
+- Verwenden Sie den t-Test für eine Stichprobe für einen ungefähr normalverteilten Messwert (oder eine grosse, nicht stark schiefe Stichprobe), den Chi-Quadrat-Anpassungstest für eine kategoriale Zielgrösse mit einem hypothetischen Anteil für jede Kategorie und den Binomialtest für eine Ja/Nein-Zielgrösse.
+- R und scipy geben das KI für den Mittelwert an, nicht für die Differenz: Ziehen Sie den hypothetischen Wert selbst vom Mittelwert und von beiden Enden seines KI ab.
+- Der Anpassungstest braucht die Anzahl der Personen in jeder Kategorie, nicht Prozentsätze, und jede erwartete Häufigkeit sollte mindestens 5 betragen.
+- Legen Sie vor dem Ansehen fest, ob einseitig oder zweiseitig: Verwenden Sie einen einseitigen Test nur, wenn das Protokoll ihn vor Eingang der Daten festgelegt hat und ein Resultat auf der anderen Seite nichts ändern würde; berichten Sie sonst den zweiseitigen Test.
+- Ein KI, das den hypothetischen Wert einschliesst, beweist nicht, dass die Gruppe diesem Wert entspricht: Schreiben Sie nicht «unsere Mortalität entsprach jener des Audits»; berichten Sie das KI und lassen Sie es für sich sprechen.
 :::
 
 ```{r}

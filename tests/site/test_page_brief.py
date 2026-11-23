@@ -39,7 +39,10 @@ DONE = [
     "foundations/01-tidy-data.qmd",
     "foundations/02-demographics.qmd",
     "foundations/03-distributions.qmd",
+    "catalog/04-describe-one-group.qmd",
+    "catalog/05-one-group-vs-hypothetical.qmd",
     "catalog/06-two-unpaired-groups.qmd",
+    "catalog/07-two-paired-groups.qmd",
 ]
 
 # The box titles, without their emoji (Doc's decision D6). The emoji are 🎯 and 📌 in every language.

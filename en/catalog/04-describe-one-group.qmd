@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Before you compare anything, describe it. This page covers the first row of the [decision table](../choose-a-test.qmd): one number (or one curve) that sums up a group of patients, with a 95% [confidence interval](../glossary.qmd#confidence-interval){.term} that says how precisely you know it. Which summary you use depends on the column, the type of data you have. [Page 3](../foundations/03-distributions.qmd) explains how to choose.
 
+::: {.callout-note .page-brief}
+## 🎯 Goals and time
+**After this page you can:**
+
+- Choose between the mean (SD) and the median (IQR) from the shape of the variable's distribution in a histogram.
+- Run the summary in R or Python and write a Results sentence that gives the estimate with its 95% CI: a mean, a median, a proportion or a Kaplan-Meier survival estimate.
+- Spot a summary that doesn't fit the data: a mean ± SD for a skewed variable, or a bare "±" that doesn't say whether it is the SD or the SEM.
+
+**Time:** about 40 minutes to read, about 2 to 2.5 hours with the exercises (an estimate).
+
+**Read first:** [page 3](../foundations/03-distributions.qmd) on judging the shape of a distribution, and [How results are reported](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 How every section on this page works
 Each section answers one question about one of the practice's datasets: the joint replacement [cohort](../glossary.qmd#cohort){.term}, its [patient-reported outcomes](../glossary.qmd#prom){.term}, or (for the [proportion](../glossary.qmd#proportion){.term}) the hip fracture data. Its first code block loads the packages and the data, so you can jump straight to the section you need. Run that section's blocks in order, top to bottom.
@@ -56,6 +69,7 @@ Once the numbers are in, a box under "Read the output" does each step by hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogram of age at surgery for the 600 procedures: a single, roughly symmetric hump, with the dashed line at the mean, 65.5 years, in the middle of it; one bar per 2 years of age."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -69,6 +83,7 @@ ggplot(cohort, aes(age)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogram of age at surgery for the 600 procedures: a single, roughly symmetric hump, with a dashed line at the mean, 65.5 years, in the middle of it; the line is in the bars' color, so it shows only above them; one bar per 2 years of age."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -238,6 +253,7 @@ The Oxford Hip Score (OHS) adds up 12 questions scored 0 to 4, so it runs from 0
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Bar chart of the 194 Oxford Hip Scores at 1 year on the whole 0 to 48 scale: the scores pile up against the maximum of 48 (39 scores, the tallest bar), with a long tail of lower scores to the left; one bar per whole score."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -257,6 +273,7 @@ ggplot(tibble(score = ohs_1yr), aes(score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogram of the 194 Oxford Hip Scores at 1 year on the whole 0 to 48 scale: the scores pile up against the maximum of 48 (39 scores, the tallest bar), with a long tail of lower scores to the left; one bar per whole score."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -644,6 +661,7 @@ Each row needs exactly two things: **how long** the patient was followed and **w
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Kaplan-Meier curve of revision-free survivorship for the 600 procedures: it steps down at each revision, to 86.3% at 5 years, in a shaded 95% band that widens most late on; a table gives procedures at risk (21 at 10 years) and revisions so far."
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
                conf.type = "log-log")              # the CI method lifelines uses
 
@@ -660,6 +678,7 @@ summary(km, times = 5)                             # the estimate at 5 years
 ## Python
 
 ```{python}
+#| fig-alt: "Kaplan-Meier curve of revision-free survivorship for the 600 procedures on a 0 to 1 scale: it steps down at each revision, to 0.863 at 5 years, in a 95% band that widens most late on; a table gives procedures at risk (21 at 10 years), censored and revised."
 km = KaplanMeierFitter()
 km.fit(cohort["followup_years"], event_observed=cohort["revised"])
 
@@ -763,6 +782,15 @@ R's `survfit()` uses a "log" CI by default; lifelines uses "[log-log](../glossar
 The tables under the two plots differ by one procedure at 4 years and at 8 years (332 and 84 in R, 331 and 83 in Python). R counts a procedure whose follow-up ends exactly at that time as still at risk; lifelines doesn't. For the same reason lifelines' own count at 5 years would be 258, not 263: the follow-up of 5 procedures ends at exactly 5 years. The Python code above counts the way R does. lifelines also adds a row for the procedures censored so far.
 :::
 
+::: {.callout-note .key-points}
+## 📌 Key points
+- Use the mean and SD for a roughly symmetric measurement; if the variable is skewed, has a ceiling or floor, or is ordinal, use the median and IQR instead.
+- Use the SD to describe patients and a 95% CI to show the precision of an estimate, and never report a bare "±" without saying which one it is.
+- Report the IQR as its two ends, not as its width, and don't report a median with an SD.
+- For a proportion, say what the denominator is, and don't use the simple Wald interval: for rare events it can dip below 0%, and the Wilson interval doesn't.
+- When patients were followed for different lengths of time, describe time to an event with a Kaplan-Meier curve, not a plain percentage; treating deaths as censored overstates the risk of revision when many patients die.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -847,6 +875,7 @@ The solutions use the packages and data loaded in the sections above, so run the
 ## R
 
 ```{r}
+#| fig-alt: "Histogram of BMI for the 600 procedures, one bar per BMI unit: a single, roughly symmetric hump around the mean of 30.4 kg/m²; the axes are labeled bmi and count."
 ggplot(cohort, aes(bmi)) + geom_histogram(binwidth = 1)
 cohort |> summarise(n = n(), mean = mean(bmi), sd = sd(bmi))
 t.test(cohort$bmi)$conf.int
@@ -855,6 +884,7 @@ t.test(cohort$bmi)$conf.int
 ## Python
 
 ```{python}
+#| fig-alt: "Histogram of BMI for the 600 procedures, one bar per BMI unit: a single, roughly symmetric hump around the mean of 30.4 kg/m²; the axes have no labels."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.hist(cohort["bmi"], bins=range(18, 46))
 plt.show()

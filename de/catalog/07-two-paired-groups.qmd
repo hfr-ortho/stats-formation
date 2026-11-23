@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 **Gepaarte** Daten kommen in Zweiergruppen, die zusammengehören: dieselbe Person vor und nach der Operation, zwei Röntgenaufnahmen derselben Hüfte, zwei Beurteilende, die dasselbe Röntgenbild ausmessen, oder zwei Personen, die einander nach Alter, Geschlecht und BMI (Body-Mass-Index) zugeordnet wurden ([gematcht](../glossary.qmd#matched){.term}). [Gepaarte](../glossary.qmd#paired){.term} Tests vergleichen jede Person mit sich selbst (oder mit ihrem Match) und entfernen so die [Variation](../glossary.qmd#spread){.term} zwischen den Personen, mit der Tests für unabhängige Gruppen zurechtkommen müssen. Wenn Ihre beiden Gruppen aus verschiedenen Personen bestehen, verwenden Sie stattdessen [Seite 6](06-two-unpaired-groups.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Ziele und Zeitbedarf
+**Nach dieser Seite können Sie:**
+
+- einen gepaarten Test wählen, wenn die beiden Messungen zusammengehören, und zwischen dem t-Test für gepaarte Stichproben und dem Wilcoxon-Vorzeichen-Rang-Test wählen, je nach Form der Differenzen und einem allfälligen Boden- oder Deckeneffekt der Messwerte.
+- den gepaarten Test in R oder Python durchführen und einen Results-Satz schreiben, mit der Zusammenfassung jeder Messung, der mittleren Differenz oder dem Hodges-Lehmann-Schätzwert mit seinem 95%-KI sowie dem p-Wert.
+- den Results-Satz für eine zweimal gemessene Ja/Nein-Zielgrösse schreiben: wie viele Personen begonnen und aufgehört haben, und das Odds Ratio der diskordanten Paare aus dem McNemar-Test mit seinem 95%-KI.
+
+**Zeitbedarf:** etwa 45 Minuten zum Lesen, etwa 2 bis 2.5 Stunden mit den Übungen (eine Schätzung).
+
+**Vorher lesen:** [den Abschnitt zum Umformen auf Seite 1](../foundations/01-tidy-data.qmd#reshaping) vom Langformat ins Breitformat, [Seite 3](../foundations/03-distributions.qmd) zur Beurteilung, ob Daten ungefähr normalverteilt sind, und [Wie Resultate berichtet werden](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 So funktioniert jeder Abschnitt dieser Seite
 Jeder Abschnitt beantwortet eine Frage zu den Übungsdaten. Der erste Codeblock eines Abschnitts lädt die Packages und die Daten, sodass Sie direkt zum gewünschten Abschnitt springen können. Führen Sie die Blöcke eines Abschnitts der Reihe nach von oben nach unten aus.
@@ -67,6 +80,7 @@ Gepaarte Daten müssen im **[Breitformat](../glossary.qmd#long-format){.term}** 
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramm der Differenzen des Alpha-Winkels, Dunn 45° minus Lauenstein, bei 80 Hüften: ein ungefähr symmetrischer Hügel, dessen Mitte rechts der gestrichelten Linie bei 0 liegt (mittlere Differenz 3.7°), die meisten Hüften messen also auf der Dunn-Aufnahme höher; Balken von 1° Breite."
 library(tidyverse)
 
 imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE) |>   # eine Zeile pro Hüfte
@@ -86,6 +100,7 @@ ggplot(imaging, aes(difference)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der Differenzen des Alpha-Winkels, Dunn 45° minus Lauenstein, bei 80 Hüften: ein ungefähr symmetrischer Hügel, dessen Mitte rechts der gestrichelten Linie bei 0 liegt (mittlere Differenz 3.7°), die meisten Hüften messen also auf der Dunn-Aufnahme höher; Balken von 1° Breite."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -273,6 +288,7 @@ Nach dem Test addiert ein Kasten unter «Ausgabe lesen» die Ränge von Hand.
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramm der 246 Veränderungen des KOOS JR, 1 Jahr minus präoperativ: Jede Veränderung liegt rechts der gestrichelten Linie bei 0, und zusammen bilden sie einen recht symmetrischen Hügel; Balken von 2.5 Punkten Breite."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -299,6 +315,7 @@ mean(koos$koos_1yr == 100)                          # Anteil der Personen mit de
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der 246 Veränderungen des KOOS JR, 1 Jahr minus präoperativ: Jede Veränderung liegt rechts der gestrichelten Linie bei 0, und zusammen bilden sie einen recht symmetrischen Hügel; Balken von 2.5 Punkten Breite."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -789,6 +806,16 @@ Ein gewöhnliches Cox-Modell auf denselben 104 Patientinnen und Patienten (ohne 
 R setzt `strata(set_id)` in die Modellformel; lifelines nimmt `strata=["set_id"]` als separates Argument. Bei so wenigen Ereignissen und vielen Strata hört die [Standard-Konvergenzregel](../glossary.qmd#convergence){.term} von lifelines etwas zu früh auf (ein Hazard Ratio von 3.4997 statt 3.5), daher verschärfen wir sie mit `fit_options={"precision": 1e-9}`. (Ohne `fit_options` gibt die Anpassung 3.4997 aus.)
 :::
 
+::: {.callout-note .key-points}
+## 📌 Das Wichtigste in Kürze
+- Ein gepaarter Test kann nur Personen verwenden, die zu beiden Zeitpunkten gemessen wurden; berichten Sie darum immer, wie viele Patientinnen und Patienten beide Messungen hatten.
+- Analysieren Sie gepaarte Daten nicht wie unabhängige Gruppen: Ein ungepaarter Test ignoriert, welche Messwerte zusammengehören, und er ist auch dann falsch, wenn er zufällig dieselbe Antwort liefert.
+- Die Voraussetzung des t-Tests für gepaarte Stichproben betrifft die Differenzen, nicht jede Messung für sich; sind die Differenzen schief, häufen sich die Messwerte am Boden oder an der Decke oder sind sie ordinal, verwenden Sie stattdessen den Wilcoxon-Vorzeichen-Rang-Test oder den Vorzeichentest.
+- Ein winziger p-Wert sagt nicht, wie viele Personen sich um einen bedeutsamen Betrag verbessert haben: Berichten Sie bei PROMs auch den Anteil der Personen, deren Veränderung die minimale klinisch relevante Differenz (MCID) erreichte.
+- Kreuztabellieren Sie bei gepaarten Ja/Nein-Daten nicht Ja/Nein gegen die beiden Zeitpunkte, um einen gewöhnlichen Chi-Quadrat-Test oder Test nach Fisher durchzuführen: Diese Tabelle zählt jede Person zweimal, der McNemar-Test dagegen verwendet jede Person einmal, über die Tabelle vorher × nachher.
+- Bei gematchten Paaren und der Zeit bis zu einem Ereignis gibt ein nach Paar stratifiziertes Cox-Modell das Hazard Ratio innerhalb der Paare an; ein gewöhnliches Cox-Modell beantwortet eine andere Frage, und die übliche Wahl bleibt, das Matching einzubeziehen.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -957,6 +984,7 @@ Zwei Messungen am selben Röntgenbild sind **[gepaart](../glossary.qmd#paired){.
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Histogramm der 60 Differenzen des HKA-Winkels, beurteilende Person 2 minus beurteilende Person 1: Sie reichen von −3.0° bis 4.3° um die gestrichelte Linie bei 0, ohne langen Ausläufer und ohne Ausreisser; Balken von 0.5° Breite."
 readings <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
   filter(session == 1) |>
   select(knee_id, rater, hka_deg) |>
@@ -975,6 +1003,7 @@ range(hka_difference)                              # die kleinste und die gröss
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramm der 60 Differenzen des HKA-Winkels, beurteilende Person 2 minus beurteilende Person 1: Sie reichen von −3.0° bis 4.3° um die gestrichelte Linie bei 0, ohne langen Ausläufer und ohne Ausreisser; Balken von 0.5° Breite."
 readings = pd.read_csv("data/radiographic_reliability.csv")
 readings = readings[readings["session"] == 1].pivot(index="knee_id", columns="rater", values="hka_deg")
 hka_difference = readings["R2"] - readings["R1"]           # Person 2 minus Person 1, eine Differenz pro Knie

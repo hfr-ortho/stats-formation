@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Des données **appariées** vont par deux : le même patient avant et après l'opération, deux incidences radiographiques de la même hanche, deux évaluateurs qui mesurent la même radiographie, ou deux patients [appariés](../glossary.qmd#matched){.term} selon l'âge, le sexe et l'IMC. Les tests pour données [appariées](../glossary.qmd#paired){.term} comparent chaque patient avec lui-même (ou avec le patient auquel il est apparié), ce qui élimine la [variation](../glossary.qmd#spread){.term} entre patients que les tests pour groupes indépendants doivent absorber. Si vos deux groupes sont des patients différents, utilisez plutôt la [page 6](06-two-unpaired-groups.qmd).
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir un test pour données appariées quand les deux mesures vont ensemble, et choisir entre le test t pour échantillons appariés et le test des rangs signés de Wilcoxon d'après la forme des différences et la présence d'un plancher ou d'un plafond dans les mesures.
+- exécuter le test apparié en R ou en Python et rédiger une phrase de Résultats avec le résumé de chaque mesure, la différence moyenne ou l'estimation de Hodges-Lehmann avec son IC à 95 %, et la valeur p.
+- rédiger la phrase de Résultats pour un critère oui/non mesuré deux fois : combien de patients ont commencé et arrêté, et l'odds ratio des paires discordantes du test de McNemar avec son IC à 95 %.
+
+**Durée :** environ 45 minutes de lecture, environ 2 à 2.5 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [section de la page 1 sur le remodelage](../foundations/01-tidy-data.qmd#reshaping) des données du format long au format large, la [page 3](../foundations/03-distributions.qmd) pour juger si une distribution est à peu près normale, et [Comment rapporter les résultats](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur les données d'exercice. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -67,6 +80,7 @@ Les données appariées doivent être en **[format large](../glossary.qmd#long-f
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramme des différences d'angle alpha, Dunn 45° moins incidence en grenouille, pour 80 hanches : une bosse à peu près symétrique, centrée à droite de la ligne pointillée à 0 (différence moyenne 3.7°) : la plupart des hanches ont donc une valeur plus élevée sur l'incidence de Dunn ; des barres de 1° de large."
 library(tidyverse)
 
 imaging <- read_csv("data/hip_preservation_imaging.csv", show_col_types = FALSE) |>   # une ligne par hanche
@@ -86,6 +100,7 @@ ggplot(imaging, aes(difference)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des différences d'angle alpha, Dunn 45° moins incidence en grenouille, pour 80 hanches : une bosse à peu près symétrique, centrée à droite de la ligne pointillée à 0 (différence moyenne 3.7°) : la plupart des hanches ont donc une valeur plus élevée sur l'incidence de Dunn ; des barres de 1° de large."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -273,6 +288,7 @@ Une fois le test exécuté, un encadré sous « Lire le résultat » additionn
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramme des 246 changements du KOOS JR, 1 an moins avant l'opération : chaque changement se situe à droite de la ligne pointillée à 0, et ensemble ils forment une bosse assez symétrique ; des barres de 2.5 points de large."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -299,6 +315,7 @@ mean(koos$koos_1yr == 100)                          # proportion de patients au 
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des 246 changements du KOOS JR, 1 an moins avant l'opération : chaque changement se situe à droite de la ligne pointillée à 0, et ensemble ils forment une bosse assez symétrique ; des barres de 2.5 points de large."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -789,6 +806,16 @@ Un modèle de Cox ordinaire sur les mêmes 104 patients (sans `strata()`) ignore
 R met `strata(set_id)` dans la formule du modèle ; lifelines prend `strata=["set_id"]` comme argument séparé. Avec si peu d'événements et autant de strates, la règle de [convergence](../glossary.qmd#convergence){.term} par défaut de lifelines s'arrête un peu trop tôt (un hazard ratio de 3.4997 au lieu de 3.5), donc nous la resserrons avec `fit_options={"precision": 1e-9}`. (Sans `fit_options`, l'ajustement affiche 3.4997.)
 :::
 
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Un test pour données appariées ne peut utiliser que les patients mesurés aux deux moments : indiquez donc toujours combien de patients avaient les deux mesures.
+- N'analysez pas des données appariées comme des données indépendantes : un test non apparié ignore quelles mesures vont ensemble, et il est faux même quand il donne par hasard le même résultat.
+- La condition du test t pour échantillons appariés porte sur les différences, pas sur chaque mesure prise séparément ; si les différences sont asymétriques, ou si les mesures se concentrent au plancher ou au plafond ou sont ordinales, utilisez plutôt le test des rangs signés de Wilcoxon ou le test des signes.
+- Une valeur p minuscule ne dit pas combien de patients se sont améliorés d'une quantité importante : pour les PROM, indiquez aussi la proportion de patients dont le changement a atteint la différence minimale cliniquement importante (DMCI).
+- Sur des données oui/non appariées, ne croisez pas oui/non avec les deux moments pour faire un test du khi-deux ou de Fisher ordinaire : ce tableau compte chaque patient deux fois, alors que le test de McNemar utilise chaque patient une seule fois, grâce au tableau avant × après.
+- Pour des paires appariées et un délai jusqu'à un événement, un modèle de Cox stratifié par paire donne le hazard ratio au sein des paires ; un modèle de Cox ordinaire répond à une autre question, et prendre en compte l'appariement reste le choix habituel.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -957,6 +984,7 @@ Deux mesures de la même radiographie sont **[appariées](../glossary.qmd#paired
 
 ```{r}
 #| fig-height: 3
+#| fig-alt: "Histogramme des 60 différences d'angle HKA, évaluateur 2 moins évaluateur 1 : elles vont de −3.0° à 4.3° autour de la ligne pointillée à 0, sans longue queue ni valeur atypique ; des barres de 0.5° de large."
 readings <- read_csv("data/radiographic_reliability.csv", show_col_types = FALSE) |>
   filter(session == 1) |>
   select(knee_id, rater, hka_deg) |>
@@ -975,6 +1003,7 @@ range(hka_difference)                              # la plus petite et la plus g
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des 60 différences d'angle HKA, évaluateur 2 moins évaluateur 1 : elles vont de −3.0° à 4.3° autour de la ligne pointillée à 0, sans longue queue ni valeur atypique ; des barres de 0.5° de large."
 readings = pd.read_csv("data/radiographic_reliability.csv")
 readings = readings[readings["session"] == 1].pivot(index="knee_id", columns="rater", values="hka_deg")
 hka_difference = readings["R2"] - readings["R1"]           # évaluateur 2 moins évaluateur 1, une différence par genou

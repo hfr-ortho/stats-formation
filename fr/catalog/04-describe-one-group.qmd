@@ -19,6 +19,19 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 
 Avant de comparer quoi que ce soit, décrivez. Cette page traite de la première ligne du [tableau de décision](../choose-a-test.qmd) : un seul nombre (ou une seule courbe) qui résume un groupe de patients, avec un [intervalle de confiance](../glossary.qmd#confidence-interval){.term} à 95 % qui dit avec quelle précision vous le connaissez. Le résumé à choisir dépend de la colonne, c'est-à-dire du type de données. La [page 3](../foundations/03-distributions.qmd) explique comment choisir.
 
+::: {.callout-note .page-brief}
+## 🎯 Objectifs et durée
+**Après cette page, vous saurez :**
+
+- choisir entre la moyenne (ET) et la médiane (IIQ) d'après la forme de la distribution de la variable dans un histogramme.
+- calculer le résumé en R ou en Python et rédiger une phrase de Résultats qui donne l'estimation avec son IC à 95 % : une moyenne, une médiane, une proportion ou une estimation de survie de Kaplan-Meier.
+- repérer un résumé qui ne convient pas aux données : une moyenne ± ET pour une variable asymétrique, ou un « ± » nu qui ne dit pas s'il s'agit de l'ET ou de l'ESM.
+
+**Durée :** environ 40 minutes de lecture, environ 2 à 2.5 heures avec les exercices (estimation).
+
+**À lire d'abord :** la [page 3](../foundations/03-distributions.qmd) pour juger la forme d'une distribution, et [Comment rapporter les résultats](../getting-started/using-this-site.qmd#how-results-are-reported).
+:::
+
 ::: {.callout-note}
 ## 💡 Comment fonctionne chaque section de cette page
 Chaque section répond à une question sur l'un des jeux de données d'exercice : la [cohorte](../glossary.qmd#cohort){.term} de prothèses articulaires, ses [mesures des résultats rapportés par le patient](../glossary.qmd#prom){.term} (PROM) ou, pour la [proportion](../glossary.qmd#proportion){.term}, les données sur les fractures du fémur proximal. Son premier bloc de code charge les packages et les données : vous pouvez donc aller directement à la section dont vous avez besoin. Exécutez les blocs de cette section dans l'ordre, de haut en bas.
@@ -56,6 +69,7 @@ Une fois les nombres obtenus, un encadré sous « Lire le résultat » refait 
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Histogramme de l'âge à l'opération pour les 600 interventions : une seule bosse, à peu près symétrique, avec la ligne pointillée à la moyenne, 65.5 ans, en son milieu ; une barre par tranche de 2 ans."
 library(tidyverse)
 
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
@@ -69,6 +83,7 @@ ggplot(cohort, aes(age)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme de l'âge à l'opération pour les 600 interventions : une seule bosse, à peu près symétrique, avec une ligne pointillée à la moyenne, 65.5 ans, en son milieu ; la ligne a la couleur des barres et n'apparaît qu'au-dessus d'elles ; une barre par tranche de 2 ans."
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -238,6 +253,7 @@ L'Oxford Hip Score (OHS) additionne 12 questions notées de 0 à 4 : il va donc
 ```{r}
 #| warning: false
 #| fig-height: 3
+#| fig-alt: "Diagramme en barres des 194 scores Oxford Hip Score à 1 an sur toute l'échelle de 0 à 48 : les scores se concentrent au maximum de 48 (39 scores, la barre la plus haute), avec une longue traîne de scores plus bas vers la gauche ; une barre par score entier."
 library(tidyverse)
 
 proms <- read_csv("data/proms_long.csv", show_col_types = FALSE)
@@ -257,6 +273,7 @@ ggplot(tibble(score = ohs_1yr), aes(score)) +
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme des 194 scores Oxford Hip Score à 1 an sur toute l'échelle de 0 à 48 : les scores se concentrent au maximum de 48 (39 scores, la barre la plus haute), avec une longue traîne de scores plus bas vers la gauche ; une barre par score entier."
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -644,6 +661,7 @@ Chaque ligne a besoin d'exactement deux informations : **combien de temps** le 
 
 ```{r}
 #| fig-height: 4.5
+#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision pour les 600 interventions : elle descend d'une marche à chaque révision, jusqu'à 86.3 % à 5 ans, dans une bande de confiance à 95 % ombrée qui s'élargit surtout vers la fin ; un tableau donne les interventions à risque (21 à 10 ans) et les révisions cumulées."
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
                conf.type = "log-log")              # la méthode d'IC que lifelines utilise
 
@@ -660,6 +678,7 @@ summary(km, times = 5)                             # l'estimation à 5 ans
 ## Python
 
 ```{python}
+#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision pour les 600 interventions, sur une échelle de 0 à 1 : elle descend d'une marche à chaque révision, jusqu'à 0.863 à 5 ans, dans une bande de confiance à 95 % qui s'élargit surtout vers la fin ; un tableau donne les interventions à risque (21 à 10 ans), censurées et révisées."
 km = KaplanMeierFitter()
 km.fit(cohort["followup_years"], event_observed=cohort["revised"])
 
@@ -763,6 +782,15 @@ Traiter les décès comme des censures, comme ici, suppose que les patients déc
 Les tableaux sous les deux graphiques diffèrent d'une intervention à 4 ans et à 8 ans (332 et 84 dans R, 331 et 83 dans Python). R compte une intervention dont le suivi se termine exactement à ce moment comme encore à risque ; lifelines, non. Pour la même raison, le propre comptage de lifelines à 5 ans serait 258, et non 263 : le suivi de 5 interventions se termine à exactement 5 ans. Le code Python ci-dessus compte comme R. lifelines ajoute aussi une ligne pour les interventions censurées jusque-là.
 :::
 
+::: {.callout-note .key-points}
+## 📌 L'essentiel
+- Utilisez la moyenne et l'ET pour une mesure à peu près symétrique ; si la variable est asymétrique, a un effet plafond ou plancher, ou est ordinale, utilisez plutôt la médiane et l'IIQ.
+- Utilisez l'ET pour décrire les patients et un IC à 95 % pour montrer la précision d'une estimation, et n'écrivez jamais un « ± » nu sans dire de quoi il s'agit.
+- Donnez l'IIQ par ses deux bornes, pas par sa largeur, et ne donnez pas une médiane avec un ET.
+- Pour une proportion, dites quel est le dénominateur, et n'utilisez pas l'intervalle de Wald simple : pour les événements rares, il peut descendre sous 0 %, l'intervalle de Wilson, non.
+- Si les patients ont été suivis pendant des durées différentes, décrivez le délai jusqu'à un événement par une courbe de Kaplan-Meier, pas par un simple pourcentage ; traiter les décès comme des censures surestime le risque de révision quand beaucoup de patients décèdent.
+:::
+
 ```{r}
 #| include: false
 # Prose guard: numbers quoted in the text above. If the data change, update the text.
@@ -847,6 +875,7 @@ Les solutions utilisent les packages et les données chargés dans les sections 
 ## R
 
 ```{r}
+#| fig-alt: "Histogramme de l'IMC pour les 600 interventions, une barre par unité d'IMC : une seule bosse, à peu près symétrique, autour de la moyenne de 30.4 kg/m² ; les axes sont intitulés bmi et count."
 ggplot(cohort, aes(bmi)) + geom_histogram(binwidth = 1)
 cohort |> summarise(n = n(), mean = mean(bmi), sd = sd(bmi))
 t.test(cohort$bmi)$conf.int
@@ -855,6 +884,7 @@ t.test(cohort$bmi)$conf.int
 ## Python
 
 ```{python}
+#| fig-alt: "Histogramme de l'IMC pour les 600 interventions, une barre par unité d'IMC : une seule bosse, à peu près symétrique, autour de la moyenne de 30.4 kg/m² ; les axes n'ont pas de titre."
 fig, ax = plt.subplots(figsize=(6, 3))
 ax.hist(cohort["bmi"], bins=range(18, 46))
 plt.show()
