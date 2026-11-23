@@ -37,17 +37,19 @@ A reader opening a numbered page can't tell what it will teach, how long it take
 
 ### The top box: "🎯 Goals and time"
 
-`::: {.callout-note .page-brief}` with the title `## 🎯 Goals and time`, placed directly after the page's opening paragraph(s) and before the first `## ` heading. It is the first box on the page: on page 6 it comes before the "💡 How every section on this page works" box.
+`::: {.callout-note .page-brief}` with the title `## 🎯 Goals and time`, placed directly after the page's opening paragraph(s) and before the first `## ` heading. It is the first box on the page: on page 6 it comes before the "💡 How every section on this page works" box. On page 18 it sits inside the first html-only block, after the opening paragraph and before the "💡 How this page works" box (see "Page 18").
 
 Three parts, in this order, each with a bold lead-in:
 
-1. **After this page you can:** and exactly three bullets. Each goal is something the reader can do after the page and can check themselves against, with a plain verb (choose, run, write, report, explain, spot), never "understand". Each must be answerable by one of the page's exercises or one of its "How to report it" steps. Together they serve the site's three aims: reading the literature critically, understanding how a study's analysis is designed, and writing results.
+1. **After this page you can:** and exactly three bullets. Each goal is something the reader can do after the page and can check themselves against, with a plain verb (choose, run, write, report, explain, spot), never "understand". Each must be answerable by one of the page's exercises or one of its "How to report it" steps; where a goal is only shown in a solution, the exercise's prompt asks for it (page 6, Exercise 3). Together they serve the site's three aims: reading the literature critically, understanding how a study's analysis is designed, and writing results.
 2. **Time:** "about N minutes to read, about X to Y hours with the exercises (an estimate)." N follows the rule below; X to Y is the band from the review's table (`learning-design.md`, L2), or "about X hours" where the band is one number.
 3. **Read first:** links, only where the page's own text assumes an earlier page. Left out where nothing is assumed.
 
 ### The end box: "📌 Key points"
 
-`::: {.callout-note .key-points}` with the title `## 📌 Key points`, after the last content section and directly before the hidden `# Prose guard` chunk, which itself sits before `## Exercises`. Four to six bullets, one sentence each, drawn from the page's own ⚠️ boxes and "When to use it" bullets. A key point adds no claim the page doesn't already make, and agrees with the page as it stands (on page 6: Welch's t test by default, never test the variances first, the Mann-Whitney test isn't a test of medians). Points without numbers are preferred; a number from the data is pinned by the Prose guard below. No glossary term links: hover text inside a summary box is noise.
+`::: {.callout-note .key-points}` with the title `## 📌 Key points`, after the last content section, as the last thing a reader sees before `## Exercises`. In the source, only blank lines and hidden chunks come between the box and `## Exercises`, and the page's last `# Prose guard` chunk is among them. On page 6 the guard follows the box directly. Pages 1 and 2 end with several hidden chunks (page 2: an R Prose guard, then a Python one, the last one); the box goes before the first of them, so the last Prose guard still sits below it. Page 18 has its own rule (see "Page 18").
+
+Four to six bullets, one sentence each, drawn from the page's own ⚠️ boxes and "When to use it" bullets, and from its other teaching text where a goal would otherwise have no key point (page 6: the odds ratio point, from the Fisher section and Exercise 3). Each goal has a key point. A key point adds no claim the page doesn't already make, agrees with the page as it stands (on page 6: Welch's t test by default, never test the variances first, the Mann-Whitney test isn't a test of medians), and doesn't turn the page's observation into an instruction the page doesn't give. Where it repeats a wording the page warns against, it quotes it as the page does. Points without numbers are preferred; a number from the data is pinned by the Prose guard. No glossary term links: hover text inside a summary box is noise.
 
 **Placement against the catalog anatomy.** On a catalog page the box falls inside the last `##` section in the rendered HTML (on page 6, inside the log-rank section's "How to report it" step, after its ⚠️ and 🔀 boxes). `tests/site/test_catalog.py::test_section_follows_the_page_anatomy` reads only the `###` step headings, and a callout title isn't a heading, so the test accepts it unchanged. The box needs no section of its own, and none was added. If a later page's anatomy test objects, the fix is to teach that test that a `.key-points` callout ends a section, never to weaken the step check.
 
@@ -55,26 +57,30 @@ Three parts, in this order, each with a bold lead-in:
 
 The reading time is the same number in all three languages and comes from the English source:
 
-- `prose_words(text)` counts the words of the English `.qmd` outside its YAML front matter and outside fenced code blocks (``` and ~~~ fences, executed or display-only). It drops `:::` div lines, HTML comments, link targets `](...)` and attribute blocks `{...}` (`{.term}`, `{#id}`). Text inside callouts and collapsed solutions counts: it is prose the reader may read. A word is a run of non-space characters with at least one letter or digit, so `##`, `>`, `-`, `|` and `→` don't count.
-- The two new boxes are left out of the count. Otherwise writing the time into the box would change the number it states.
+- `prose_words(text)` counts the words of the English `.qmd` outside its YAML front matter and outside fenced code blocks, executed or display-only. A fence closes only on the same character repeated at least as often, with nothing after it, so a four-backtick wrapper around a chunk, or a `~~~` fence that holds three backticks, stays code. It drops `:::` div lines, HTML comments, link targets `](...)` and attribute blocks `{...}` (`{.term}`, `{#id}`). Text inside callouts and collapsed solutions counts: it is prose the reader may read. A word is a run of non-space characters with at least one letter or digit, so `##`, `>`, `-`, `|` and `→` don't count.
+- The two new boxes are left out of the count. Otherwise writing the time into the box would change the number it states. For counting, a box is found by its class (`.page-brief` or `.key-points`) whatever else its opener says; the placement tests still insist on the exact openers.
 - `reading_minutes(words) = max(5, 5 * round(words / 100 / 5))`: 100 words a minute, rounded to 5 minutes, never under 5. Python's `round()` sends an exact half to the even multiple (2,250 words give 20 minutes, 2,750 give 30).
-- Page 6: 4,940 words, 50 minutes (the review counted about 5,060 on an earlier version of the page, which gives the same 50).
+- Page 6: 4,956 words, 50 minutes (the review counted about 5,060 on an earlier version of the page, which gives the same 50).
 
 The hands-on time is the band from the review's table, labeled "(an estimate)": the reviewers judged it from word counts, code chunks and exercises, and nobody measured it.
 
 ### Alt text
 
-Every chunk that draws a figure carries `#| fig-alt:` with one sentence: the kind of plot, its variables, and the pattern the page's text discusses (for example "Bar charts of pain at 6 weeks on the 0 to 10 scale, one bar per whole score, boot arm above and cast arm below: most scores lie between 2 and 6, and the boot arm's scores sit lower (median 4) than the cast arm's (median 5)."). The writer opens the rendered figure before writing its sentence and takes every number from the page's own output or text. The R and Python figures of one tabset each get their own sentence, since they differ in detail (page 6: the Python histograms give each panel its own count scale, the Python Kaplan-Meier plot shows survival as a proportion and adds censored counts).
+Every chunk that draws a figure carries `#| fig-alt:`, one sentence per figure. The sentence leads with the kind of plot and the pattern the page's text discusses, then gives the detail (panels, scales, bands, tables). Aim for about 250 characters or fewer in English; translations run longer. For example: "Bar charts of pain at 6 weeks: the boot arm's scores (median 4, upper panel) sit lower than the cast arm's (median 5, lower panel); most scores lie between 2 and 6, with one bar per whole score from 0 to 10."
+
+- The writer opens the rendered figure before writing its sentence, and takes every number from the page's own output or text; a number the text doesn't already quote goes into the Prose guard (page 6: the 5-year survival as proportions, 0.899 and 0.711).
+- A number says what it counts. `data/cohort.csv` has one row per procedure, so its counts are procedures ("Eingriffe", "interventions"), never patients: 246 rows with implant A are 232 patients.
+- The R and Python figures of one tabset each get their own sentence, since they differ in detail (page 6: the Python histograms give each panel its own count scale, the Python Kaplan-Meier plot shows survival as a proportion and adds censored counts).
 
 `fig-alt` reaches both engines under knitr: checked on page 6 on 20.11.2026, the rendered `<img>` of an R chunk and of a Python (reticulate) chunk both carry the `alt` attribute.
 
-Alt text is prose: German and French pages translate it. `tests/site/test_translations.py` compares chunk options across languages; a `#| fig-alt:` line is compared by its numbers and its place among the options only, and every other option and every line of code still has to match exactly.
-
-Known cases for the rollout: a chunk that draws two figures (page 3, two `ggplot()` calls in one chunk) needs one alt text per figure (knitr takes a list), and page 18's labeled figure chunk (`fig-revision`) needs checking against its caption.
+Alt text is prose: German and French pages translate it. `tests/site/test_translations.py` compares chunk options across languages; a `#| fig-alt:` line, or each item of a `fig-alt` list, is compared by its numbers and its place among the options only, and every other option and every line of code still has to match exactly.
 
 ### The legend
 
-`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 100 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement. `tests/site/test_conventions.py::test_callout_legend_shows_all_six_kinds` (formerly "four kinds") checks the six titles, the two classes and the time rule.
+`getting-started/using-this-site.qmd` ("The boxes you'll see", `#the-boxes-youll-see`) shows the two boxes, the 🎯 box first and the 📌 box last, around the four existing kinds. The 🎯 entry says how the times are worked out: the English page's words at 100 words a minute, rounded to 5 minutes, the same in every language; the time with the exercises is an estimate, not a measurement.
+
+The legend must be true while the boxes are rolled out. It speaks of "a numbered page" and says in one sentence that the boxes are being added page by page, starting with page 6, so some numbered pages don't have them yet. The last rollout task (4.6) replaces that sentence and says "every numbered page". `tests/site/test_conventions.py::test_callout_legend_shows_all_six_kinds` checks the six titles, the two classes, the time rule and, while `DONE` differs from `NUMBERED`, the rollout sentence; `test_page_brief.py::test_legend_tells_the_truth_about_the_rollout` checks the rollout sentence in all three languages and turns round once `DONE == NUMBERED`.
 
 ### Styling
 
@@ -82,7 +88,23 @@ Both boxes keep the note style and get one rule in `styles.css`: a 2-pixel frame
 
 ### Page 18
 
-Page 18 renders to Word too (golden rule 20). Its two boxes sit inside its existing `::: {.content-visible when-format="html"}` blocks, so the Word file doesn't change. `test_report_docx_has_no_brief` checks that the Word file holds neither title.
+Page 18 renders to Word too (golden rule 20). Both boxes sit inside its existing `::: {.content-visible when-format="html"}` blocks, so the Word file doesn't change:
+
+- **The top box** is inside the first html-only block (it opens right after the hidden setup chunks), after the opening paragraph and before the "💡 How this page works" box.
+- **The key points.** Page 18's Prose guard sits outside the html-only blocks, directly after the manuscript, so the page-wide rule can't hold there. On page 18 the key points are the first thing in the html-only block that follows the Prose guard, and `## Exercises` follows them. `key_points_problems()` accepts exactly that on page 18 and rejects that form on every other page.
+
+`test_report_docx_has_no_brief` checks that the Word file holds neither title.
+
+### Known cases
+
+What the rollout meets, and what the tests do about it:
+
+- **Pages without figures** (1, 2 and 15). `test_every_figure_has_alt_text` compares the number of images on the built page with the number of frozen figures: a page with no figure chunks passes with no images; a page whose source has figure chunks but whose built page shows none fails.
+- **Which chunks draw.** The source rule finds a figure chunk by its calls: in R the ggplot family, `ggsurvfit()`, `ggcuminc()` (pages 13 and 18), `emmip()` (page 16) and base graphics; in Python `plt.show()`; and any chunk labeled `fig-...`, which is a figure even when it only prints a stored plot (page 18's `fig-revision`). The truth is the frozen output: knitr names each figure file after its chunk's label, or `unnamed-chunk-N` with N the chunk's place among all executable chunks, the mermaid diagram on page 3 included. `test_drawing_rule_finds_every_frozen_figure` checks, on all 18 English pages, that the rule finds exactly the chunks that produced files under `_freeze/en/<page>/figure-html/`; it holds on all 18 today. `test_every_chunk_that_draws_has_alt_text` asks each such chunk for as many alt texts as it froze figures.
+- **A chunk that draws several figures** (page 3: one chunk draws a histogram and a QQ plot) carries a YAML list, one item per figure, in figure order: `#| fig-alt:` followed by one `#|   - "..."` line per figure. `test_translations.py` compares each item by its numbers, so the items translate but their number and their numbers can't change.
+- **Page 18**: the placement rules above.
+- **Several Prose guards** (pages 1 and 2): the key points come before the run of hidden chunks that ends the page; the page's last Prose guard is in that run.
+- **Long fences and box openers with extra classes**: handled by `prose_words()` (see "Words to minutes"), with rule tests, rather than banned.
 
 ### Glossary rows
 
@@ -95,26 +117,28 @@ Page 18 renders to Word too (golden rule 20). Its two boxes sit inside its exist
 
 ### Tests
 
-`tests/site/test_page_brief.py` holds `NUMBERED` (the 18 pages, relative to a language folder), `DONE` (the pages that have their boxes; page 6 now), `TITLES`, `LEAD_INS`, `HANDS_ON` (the review's bands for all 18 pages), `prose_words()` and `reading_minutes()`. Over `DONE` and the three languages:
+`tests/site/test_page_brief.py` holds `NUMBERED` (the 18 pages, relative to a language folder), `DONE` (the pages that have their boxes; page 6 now), `TITLES`, `LEAD_INS`, `ESTIMATE`, `HANDS_ON` (the review's bands for all 18 pages), `prose_words()`, `reading_minutes()` and the source rules. Over `DONE` and the three languages:
 
-- `test_page_opens_with_goals_and_time`: one `.page-brief` callout with the language's title, the first box on the page, before the first `## ` heading and outside every section, with the goals and time lead-ins, exactly three goal bullets and no glossary term links.
-- `test_stated_reading_time_follows_the_rule`: the numbers in the time line are the minutes from `reading_minutes(prose_words(English source))` and the review's band, in every language.
+- `test_page_opens_with_goals_and_time`: one `.page-brief` callout with the language's title, the first box on the page, before the first `## ` heading and outside every section; the goals' lead-in, exactly three goals in one list, the time line and "Read first" (if any), in that order; no glossary term links.
+- `test_stated_reading_time_follows_the_rule`: the numbers in the time line are the minutes from `reading_minutes(prose_words(English source))` and the review's band, in every language, and the line ends with the language's "(an estimate)".
 - `test_page_ends_with_key_points`: one `.key-points` callout with the language's title, four to six bullets, no `a.term`, after the last `##` heading before Exercises and before `section#exercises`.
-- `test_key_points_sit_above_the_prose_guard`: in the source, the box closes and the hidden `# Prose guard` chunk follows directly.
-- `test_every_figure_has_alt_text`: every `img` inside `main` has an `alt` of at least 20 characters.
-- `test_every_chunk_that_draws_has_alt_text`: in the source, every visible chunk that draws (`ggplot()` and base graphics in R, `plt.show()` in Python) has `#| fig-alt:`, so a missing one fails before rendering.
+- `test_brief_sits_after_the_opening_paragraph` and `test_key_points_sit_above_the_prose_guard`: the source placement rules above, page 18 included.
+- `test_every_chunk_that_draws_has_alt_text`: in the source, one alt text per frozen figure in every chunk that draws, so a missing one fails before rendering.
+- `test_every_figure_has_alt_text`: the built page shows as many images as were frozen, each with an `alt` of at least 20 characters.
+- `test_translated_alt_texts_are_not_english`: no German or French alt text is identical to the English one.
 - `test_every_done_page_is_numbered_and_exists_in_every_language`.
-- `test_report_docx_has_no_brief`: page 18's Word file, in each language, contains neither title. It passes trivially until page 18 gets its boxes (Task 4.6).
 
-Rule tests on small samples: `prose_words()` ignores code, link targets, attributes and the boxes and counts callouts and solutions; `reading_minutes(5060) == 50`; the key-points and drawing rules bite.
+Over all 18 pages or all three languages: `test_drawing_rule_finds_every_frozen_figure`, `test_legend_tells_the_truth_about_the_rollout`, and `test_report_docx_has_no_brief` (page 18's Word file contains neither title; it passes trivially until page 18 gets its boxes, Task 4.6).
+
+Rule tests on small samples: `prose_words()` ignores code (long and tilde fences too), link targets, attributes and the boxes (with extra classes too) and counts callouts and solutions; `reading_minutes(5060) == 50`; the brief, key-points (page 18 and several guards included) and drawing rules bite; `alt_count()` reads a list.
 
 ### Rollout
 
-Tasks 4.2 to 4.6 add pages to `DONE`; Task 4.6 makes `DONE == NUMBERED` and drops the subset. For each page: goals drafted from what its sections and exercises do, each tied to the exercise or "How to report it" that proves it; key points from its own ⚠️ boxes and "When to use it" bullets; one alt text per figure, written after opening the figure. Each pull request lists the English goals and key points so Doc can read them without opening the diff.
+Tasks 4.2 to 4.6 add pages to `DONE`; Task 4.6 makes `DONE == NUMBERED`, drops the subset and rewrites the legend's rollout sentence. For each page: goals drafted from what its sections and exercises do, each tied to the exercise or "How to report it" that proves it; key points from its own ⚠️ boxes and "When to use it" bullets, one for each goal; one alt text per figure, written after opening the figure. Each pull request carries, for Doc to read without opening the diff, the English goals and key points and two tables: each goal with the exercise or "How to report it" that proves it, and each key point with the page line that already says it.
 
 ### CLAUDE.md
 
-A golden rule names the two boxes, their placement, the time rule, alt text and `tests/site/test_page_brief.py`.
+Golden rule 24 names the two boxes, their placement, the time rule, alt text and `tests/site/test_page_brief.py`, and is worded by `DONE`: it describes the pages listed there, so it stays true during the rollout.
 
 ## Left to the builder
 

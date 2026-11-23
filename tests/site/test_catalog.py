@@ -812,3 +812,17 @@ def test_page_6_log_rank_counts_procedures(site):
 def test_page_11_shows_rs_two_risk_table_rows(site):
     """Fix round 1 of task 3.10: as on pages 6, 8 and 13; page 4 alone shows and explains lifelines' default."""
     assert 'rows_to_show=["At risk", "Events"]' in code_of(section("catalog/11-predict-from-one.html", "cox"))
+
+
+def test_odds_ratio_exercise_asks_what_the_misreading_would_conclude(site):
+    """Page 6's third goal (spot an odds ratio read as a risk ratio) is exercised, not only shown."""
+    exercises = section("catalog/06-two-unpaired-groups.html", "exercises")
+    prompt = next(text_of(p) for p in exercises.select(":scope > p") if text_of(p).startswith("3."))
+    assert "took the odds ratio for a risk ratio would conclude" in prompt
+    assert "Read as a risk ratio, the odds ratio would say" in text_of(exercises)
+
+
+def test_survival_figures_count_procedures_not_patients(site):
+    """data/cohort.csv has one row per procedure: 246 rows are 232 patients with implant A (review C1)."""
+    for img in section("catalog/06-two-unpaired-groups.html", "log-rank").select("img"):
+        assert "patient" not in img["alt"], img["alt"]

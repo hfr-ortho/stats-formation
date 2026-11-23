@@ -1,6 +1,7 @@
 """Site-wide page conventions (spec section 6)."""
 
 from sitelib import FREEZE, INTERPRETATION, PAGES, SITE, load, results_of, text_of
+from test_page_brief import DONE, NUMBERED
 
 
 def test_rule_flags_interpretation_in_results_sentences():
@@ -68,6 +69,11 @@ def test_callout_legend_shows_all_six_kinds(site):
     assert legend.select("div.callout.page-brief") and legend.select("div.callout.key-points")
     # how the times are worked out (spec docs/superpowers/specs/2026-11-20-page-brief-design.md)
     assert "100 words a minute" in text_of(legend) and "an estimate" in text_of(legend)
+    # true during the rollout: the boxes arrive page by page, so no claim that every numbered page has them
+    # (tests/site/test_page_brief.py::test_legend_tells_the_truth_about_the_rollout checks all three languages)
+    if set(DONE) != set(NUMBERED):
+        assert "page by page" in text_of(legend)
+        assert "each numbered page" not in text_of(legend) and "every numbered page" not in text_of(legend)
 
 
 def test_every_python_print_shows_its_output(site):

@@ -72,7 +72,7 @@ The trial [randomized](../glossary.qmd#randomized-trial){.term} 120 patients, 60
 ```{r}
 #| warning: false
 #| fig-height: 4
-#| fig-alt: "Histograms of the EFAS score at 3 months, boot arm above and cast arm below on the same scales: both are roughly bell-shaped, no patient is at 0 or 24, and the boot arm (mean 17.4) sits to the right of the cast arm (mean 13.8)."
+#| fig-alt: "Histograms of the EFAS score at 3 months: the boot arm (mean 17.4, upper panel) sits to the right of the cast arm (mean 13.8, lower panel); both are roughly bell-shaped, no patient is at 0 or 24, and the panels share their scales."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # one row per patient and visit
@@ -94,7 +94,7 @@ efas_3mo |>
 ## Python
 
 ```{python}
-#| fig-alt: "Histograms of the EFAS score at 3 months, boot arm above and cast arm below, each panel with its own count scale: both are roughly bell-shaped, no patient is at 0 or 24, and the boot arm (mean 17.4) sits to the right of the cast arm (mean 13.8)."
+#| fig-alt: "Histograms of the EFAS score at 3 months: the boot arm (mean 17.4, upper panel) sits to the right of the cast arm (mean 13.8, lower panel); both are roughly bell-shaped, no patient is at 0 or 24, and each panel has its own count scale."
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
@@ -282,7 +282,7 @@ The trial measured pain on a numeric rating scale (NRS) from 0 (no pain) to 10 (
 ```{r}
 #| warning: false
 #| fig-height: 4
-#| fig-alt: "Bar charts of pain at 6 weeks on the 0 to 10 scale, one bar per whole score, boot arm above and cast arm below: most scores lie between 2 and 6, and the boot arm's scores sit lower (median 4) than the cast arm's (median 5)."
+#| fig-alt: "Bar charts of pain at 6 weeks: the boot arm's scores (median 4, upper panel) sit lower than the cast arm's (median 5, lower panel); most scores lie between 2 and 6, with one bar per whole score from 0 to 10."
 library(tidyverse)
 
 trial <- read_csv("data/foot_ankle_rct_long.csv", show_col_types = FALSE)   # one row per patient and visit
@@ -306,7 +306,7 @@ pain_6wk |>
 ## Python
 
 ```{python}
-#| fig-alt: "Histograms of pain at 6 weeks on the 0 to 10 scale, one bar per whole score, boot arm above and cast arm below: most scores lie between 2 and 6, and the boot arm's scores sit lower (median 4) than the cast arm's (median 5)."
+#| fig-alt: "Histograms of pain at 6 weeks: the boot arm's scores (median 4, upper panel) sit lower than the cast arm's (median 5, lower panel); most scores lie between 2 and 6, with one bar per whole score from 0 to 10."
 import numpy as np
 import pandas as pd
 import pingouin as pg
@@ -776,7 +776,7 @@ A patient who leaves the study early is [censored](../glossary.qmd#censored){.te
 ```{r}
 #| warning: false
 #| fig-height: 4.5
-#| fig-alt: "Kaplan-Meier curves of revision-free survival, in percent, against years since surgery for implants A and C, with shaded 95% confidence bands and a table below of the patients at risk and the revisions (246 with implant A and 137 with C at the start): implant C's curve falls faster from the start, and the gap keeps growing."
+#| fig-alt: "Kaplan-Meier curves of revision-free survival: implant C's curve falls faster than A's from the start and the gap keeps growing (A 89.9%, C 71.1% at 5 years); shaded 95% bands and a table of procedures at risk."
 library(tidyverse)
 library(survival)
 library(ggsurvfit)
@@ -795,7 +795,7 @@ survfit2(Surv(followup_years, revised) ~ implant, data = a_vs_c, conf.type = "lo
 ## Python
 
 ```{python}
-#| fig-alt: "Kaplan-Meier curves of revision-free survival, as a proportion, against years since surgery for implants A and C, with shaded 95% confidence bands and a table below of the patients at risk, censored and revised (246 with implant A and 137 with C at the start): implant C's curve falls faster from the start, and the gap keeps growing."
+#| fig-alt: "Kaplan-Meier curves of revision-free survival, as proportions: implant C's curve falls faster than A's from the start and the gap keeps growing (A 0.899, C 0.711 at 5 years); 95% bands and a table of procedures at risk, censored and revised."
 import pandas as pd
 import matplotlib.pyplot as plt
 from lifelines import KaplanMeierFitter, CoxPHFitter
@@ -994,11 +994,11 @@ R's `survdiff()` takes a formula with a grouping variable. lifelines' `logrank_t
 
 ::: {.callout-note .key-points}
 ## 📌 Key points
-- Use Welch's t test from the start; don't test the variances first to choose between Student's and Welch's.
-- If the outcome is skewed, piles up at a floor or ceiling, or is ordinal, use the Mann-Whitney test instead of the t test.
-- The Mann-Whitney test asks whether one group's values tend to be larger, not whether the medians differ: report the medians, but don't write that they differed significantly.
+- Use Welch's t test from the start, without testing the variances first; if the outcome is skewed, piles up at a floor or ceiling, or is ordinal, use the Mann-Whitney test instead.
+- The Mann-Whitney test asks whether one group's values tend to be larger, not whether the medians differ: report the medians, but don't write "the medians differed significantly".
 - For a yes/no outcome, Fisher's exact test is valid for any sample size; the chi-square test needs every expected count to be at least 5.
-- "No difference" needs a narrow CI: when the CI is wide, the study can't tell, so write "no significant difference", not that the groups do equally well.
+- An odds ratio isn't a risk ratio: when the outcome is common it lies further from 1, so reading it as one overstates the effect.
+- "No difference" needs a narrow CI: when the CI is wide, the study can't tell, so don't conclude that the groups do equally well.
 - For time to an event, compare the whole survival curves with the log-rank test; overlapping CIs at one time point aren't a test.
 :::
 
@@ -1083,6 +1083,7 @@ stopifnot(
   round(implant_logrank$chisq, 1) == 20.5, implant_logrank$pvalue < 0.001,
   round(hr[1, c("exp(coef)", "lower .95", "upper .95")], 2) == c(3.04, 1.83, 5.04),
   round(100 * km5$surv, 1) == c(89.9, 71.1),
+  round(km5$surv, 3) == c(0.899, 0.711),   # as the Python survival figure's alt text gives them
   round(100 * c(survival_5$lower, survival_5$upper), 1) == c(84.7, 61.5, 93.3, 78.8),
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(tapply(ex_6wk$efas, ex_6wk$arm, mean), 1) == c(12.4, 9.5), round(tapply(ex_6wk$efas, ex_6wk$arm, sd), 1) == c(2.7, 2.9),
@@ -1156,7 +1157,7 @@ By 12 months many patients are at or near the [ceiling](../glossary.qmd#ceiling-
 
 ```{r}
 #| fig-height: 4
-#| fig-alt: "Bar charts of the EFAS score at 12 months, one bar per whole score, boot arm above and cast arm below: many patients in both arms score at or near the ceiling of 24, which 13% of boot patients and 17% of cast patients reached."
+#| fig-alt: "Bar charts of the EFAS score at 12 months: in both arms many patients score at or near the ceiling of 24, which 13% of boot patients (upper panel) and 17% of cast patients (lower panel) reached."
 efas_12mo <- trial |>
   filter(visit == "12mo", !is.na(efas)) |>
   mutate(arm = factor(arm, levels = c("boot", "cast")))
@@ -1186,7 +1187,7 @@ print(efas_12mo.groupby("arm")["efas"].agg(at_24=lambda s: (s == 24).sum(), perc
 There's no clear evidence of a difference at 12 months, after the boot's lead of 3.6 points at 3 months. Notice too that 18 of the 120 patients missed the 12-month visit, 5 in the boot arm, 13 in the cast arm: when one arm loses more patients, the patients left in it may no longer be comparable with the other arm's. Whether the gap between the arms really changes over time is a question for one [model](../glossary.qmd#model){.term} of every visit: [page 16](../beyond/16-mixed-models.qmd#group-by-time) shows how. (The table shows 55 and 47 patients: 60 − 55 = 5 and 60 − 47 = 13.)
 :::
 
-**3.** Is return to sport 12 months after ACL reconstruction different for women and men? Choose the test, run it, and write the Results sentence with the [risk difference](../glossary.qmd#risk-difference){.term}, [risk ratio](../glossary.qmd#risk-ratio){.term} and [odds ratio](../glossary.qmd#odds-ratio){.term}.
+**3.** Is return to sport 12 months after ACL reconstruction different for women and men? Choose the test, run it, and write the Results sentence with the [risk difference](../glossary.qmd#risk-difference){.term}, [risk ratio](../glossary.qmd#risk-ratio){.term} and [odds ratio](../glossary.qmd#odds-ratio){.term}, and say what a reader who took the odds ratio for a risk ratio would conclude.
 
 ::: {.callout-tip collapse="true"}
 ## Solution

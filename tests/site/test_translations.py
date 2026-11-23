@@ -136,12 +136,24 @@ def fences(text: str) -> list[tuple[str, str]]:
 
 
 FIG_ALT = re.compile(r"^#\| fig-alt:\s*(.*)$")
+FIG_ALT_ITEM = re.compile(r"^#\|\s+- (.*)$")
 
 
 def alt_as_numbers(options):
     """A chunk's options with each `#| fig-alt:` sentence reduced to its numbers: the alt text is prose and
-    is translated, but its numbers and its place among the options stay as in English."""
-    return [f"#| fig-alt: {number_tokens(m.group(1))}" if (m := FIG_ALT.match(o)) else o for o in options]
+    is translated, but its numbers and its place among the options stay as in English. A chunk that draws
+    several figures gives a YAML list (`#| fig-alt:` then one `#|   - "..."` line per figure): each item is
+    reduced the same way, so the number of items must match too."""
+    out, in_list = [], False
+    for o in options:
+        item = FIG_ALT_ITEM.match(o) if in_list else None
+        if item:
+            out.append(f"#|   - {number_tokens(item.group(1))}")
+            continue
+        m = FIG_ALT.match(o)
+        in_list = bool(m) and not m.group(1).strip()
+        out.append(f"#| fig-alt: {number_tokens(m.group(1))}" if m else o)
+    return out
 
 
 def is_hidden(options):
@@ -951,6 +963,19 @@ def test_fig_alt_is_prose_but_every_other_option_is_code():
     assert code_problems(en, en.replace("#| fig-height: 4", "#| fig-height: 5").replace("Bar chart", "Diagramme"))
     assert code_problems(en, en.replace('#| fig-alt: "Bar chart of pain: medians 4 and 5."\n', ""))
     assert code_problems(en, en.replace("plot(x)", "plot(y)").replace("Bar chart", "Diagramme"))
+
+
+def test_fig_alt_list_items_are_prose_too():
+    """A chunk that draws two figures carries a YAML list, one alt text per figure (page 3)."""
+    en = ('```{r}\n#| fig-alt:\n#|   - "Histogram of 30 scores."\n#|   - "QQ plot of the same 30 scores."\n'
+          '#| fig-height: 3\nplot(x)\nplot(y)\n```\n')
+    fr = en.replace("Histogram of 30 scores.", "Histogramme de 30 scores.").replace(
+        "QQ plot of the same 30 scores.", "Diagramme QQ des mêmes 30 scores.")
+    assert not code_problems(en, fr)
+    assert code_problems(en, fr.replace("des mêmes 30", "des mêmes 31"))                    # a number
+    assert code_problems(en, fr.replace('#|   - "Diagramme QQ des mêmes 30 scores."\n', ""))   # an item dropped
+    assert code_problems(en, fr.replace("#| fig-height: 3", "#| fig-height: 4"))            # another option
+    assert code_problems(en, fr.replace("#| fig-height: 3", "#|   - \"Encore 30.\"\n#| fig-height: 3"))   # an item added
 
 
 def test_mermaid_labels_translate_but_its_structure_does_not():
