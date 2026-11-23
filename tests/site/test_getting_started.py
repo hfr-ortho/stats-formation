@@ -119,9 +119,9 @@ def test_setup_page_says_30_to_60_minutes(site):
 
 
 REPORT_LABEL = {"en": "Report an error", "de": "Fehler melden", "fr": "Signaler une erreur"}
-WINDOWS_UNTESTED = {"en": "we haven't run them on a Windows PC ourselves yet",
-                    "de": "wir haben sie selbst noch nicht auf einem Windows-PC ausgeführt",
-                    "fr": "nous ne les avons pas encore exécutées nous-mêmes sur un PC Windows"}
+WINDOWS_UNTESTED = {"en": "we haven't run the Windows steps on a Windows PC ourselves yet",
+                    "de": "Die Schritte für Windows haben wir selbst noch nicht auf einem Windows-PC ausgeführt",
+                    "fr": "nous n'avons pas encore exécuté nous-mêmes les étapes pour Windows sur un PC Windows"}
 
 
 def test_setup_page_says_the_windows_steps_are_untested(site):

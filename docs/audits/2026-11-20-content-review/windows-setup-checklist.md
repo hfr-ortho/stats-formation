@@ -2,11 +2,11 @@
 
 **What to do:** on a Windows PC, follow the setup page <https://hfr-ortho.github.io/stats-formation/en/getting-started/setup.html> from step 1 to step 8, in order, exactly as written. Tick each line below when you get there.
 
-**When something differs:** write down what you saw, with the exact words on the screen (a photo or screenshot of the message is even better), and what you did next.
+**When something differs:** write down what you saw, with the exact words on the screen (a photo or screenshot of the message is even better; make sure no patient information or other work is visible in it), and what you did next.
 
 ## Your computer
 
-- Windows version and edition (Settings → System → About shows them): ____________
+- Windows version and edition (Settings → System → About, under *Windows specifications*): ____________
 - Processor: the *System type* line under *Device specifications* on the same page: ____________
 - Managed by HFR (an HFR laptop or desktop) or your own PC? ____________
 - Language Windows is set to: ____________
@@ -14,12 +14,13 @@
 
 ## Before you start
 
-Each line quotes the page. Tick it if it was as described; if not, write what you saw.
+Each line quotes the page; some add a question. Tick it if it was as described; if not, write what you saw.
 
 - [ ] "PowerShell on Windows (open the Start menu, type "PowerShell" and press Enter)". As described? If not, what did you see:
 - [ ] "about 5 GB free". How much free space did the setup use, if you can tell:
 - [ ] "the installers may ask for an administrator password". Which installers asked? Did you have the password, or did you need someone else:
 - [ ] "install the software on the computer's own disk (`C:`), not on a network drive". Did any installer offer a folder that is not on `C:`? Which one, and which folder:
+- [ ] "tell us with **Report an error** on this page". Click it once: did an email open on this PC? If not, what happened:
 
 ## Step 1: R
 
@@ -45,12 +46,13 @@ Each line quotes the page. Tick it if it was as described; if not, write what yo
 - [ ] Not on the page, a question: does Positron's download page show a button that recommends an installer for your PC (for example "Recommended for your PC")? Its exact words, and which installer it points to:
 - [ ] "open **Settings → System → About**: if the *System type* line under *Device specifications* contains the word "ARM", take an ARM64 installer". As described? Which installer did you take, User or System:
 - [ ] "a user install goes into your own user folder (`C:\Users\<your user name>\AppData\Local\Programs\Positron`)" and "a system install goes into `C:\Program Files\Positron`". Where did yours go:
+- [ ] Only if Positron updated during the test: "a user install […] installs updates in the background; a system install […] when an update is available Positron downloads it and shows a notice at the bottom left". As described?
 
 ## Step 5: getting the files
 
 - [ ] "In Terminal (Mac) or PowerShell (Windows), make a `projects` folder and download ("clone") the repository into it": `mkdir -p ~/projects`, then `cd ~/projects`, then `git clone https://github.com/hfr-ortho/stats-formation.git`. Did each command work in PowerShell? Any message:
 - [ ] "`~` stands for your home folder […] usually `C:\Users\<your user name>` on Windows". Where did the `projects` folder end up:
-- [ ] "`Documents` and `Desktop` are often synced by […] OneDrive (Windows)". Is your home folder, or `projects`, synced by OneDrive?
+- [ ] "`Documents` and `Desktop` are often synced by […] OneDrive (Windows)". Is your home folder, or `projects`, synced by OneDrive? (Write "don't know" if you can't tell.)
 - [ ] "`git clone` starts with `Cloning into 'stats-formation'...` and prints no line that starts with `fatal`". What it printed (if a line starts with `fatal`, copy it whole):
 - [ ] "in Positron: **File → Open Folder…**, go to your home folder […], open `projects` and choose `stats-formation`". As described? If not, what did you see:
 - [ ] "In Positron, the file list on the left (click the Explorer icon if you don't see it) shows the repository's folders, among them `data` and `scripts`." As described?
@@ -87,13 +89,17 @@ Only if you also try the route without Git (the section "Without Git: download a
 
 - [ ] "run `git pull`. If nothing has changed, it prints `Already up to date.` (or the same in your system's language)." What it printed:
 
+## Reading the data without cloning (optional)
+
+- [ ] Only if you try it (section "Reading the data without cloning", second R block): did `download.file(url, path, mode = "wb")` and the line after it read the Excel file?
+
 ## Troubleshooting rows that name Windows
 
 Only if you met the problem; otherwise leave the line empty.
 
-- [ ] "`uv: command not found`, or "not recognized"": "Close the terminal window, open a new one, and try again." Did that fix it?
 - [ ] "open the Command Palette (Cmd+Shift+P on a Mac, Ctrl+Shift+P on Windows), type `Interpreter: Restart Active Interpreter Session` and press Return (Mac) or Enter (Windows)". As described?
 - [ ] "<https://cloud.r-project.org/bin/windows/base/old/> (Windows)": if you needed an older R, did this page offer R 4.6?
+- [ ] "`uv: command not found`, or "not recognized"": "Close the terminal window, open a new one, and try again." Did that fix it?
 - [ ] "`Could not resolve host: github.com`": "run `where.exe git` in PowerShell. If the answer starts with `K:` or another network drive, uninstall Git and install it again (step 3) in a folder on `C:`." What did `where.exe git` answer? Did reinstalling fix it?
 
 ## At the end

@@ -7,7 +7,8 @@ Every finding has an ID. The one-line version is here; the quoted sentence, the 
 - [accuracy.md](accuracy.md): IDs A, B, C
 - [usability-and-setup.md](usability-and-setup.md): IDs U
 - [learning-design.md](learning-design.md): IDs L, with reading times per page and a proposed workshop series
-- [windows-setup-checklist.md](windows-setup-checklist.md): for U5 (Windows untested), a checklist for one person to run the setup page on a Windows PC and report back
+
+For U5 (Windows untested): [windows-setup-checklist.md](windows-setup-checklist.md), a checklist for a person who runs the setup page once on a Windows PC and reports back.
 
 ## Bottom line
 
