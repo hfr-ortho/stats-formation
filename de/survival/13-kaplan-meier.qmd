@@ -240,7 +240,7 @@ Jetzt die [Übungskohorte](../glossary.qmd#cohort){.term}: 600 Eingriffe, jeder 
 
 ```{r}
 #| fig-height: 4.5
-#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens für 600 Eingriffe: Sie fällt in kleinen Stufen von 100 % ab und bleibt flach bei 78.0 % nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko (600, 332, 84, 21) und der bisherigen Revisionen."
+#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens für 600 Eingriffe: Sie fällt in kleinen Stufen von 100 % ab und bleibt flach bei 78.0 % nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko und der bisherigen Revisionen."
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
@@ -258,7 +258,7 @@ km |>
 ## Python
 
 ```{python}
-#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens auf einer Skala von 0 bis 1 für 600 Eingriffe: Sie fällt in kleinen Stufen von 1 ab und bleibt flach bei 0.780 nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko (600, 331, 83, 21) und der bisherigen Revisionen."
+#| fig-alt: "Kaplan-Meier-Kurve des revisionsfreien Überlebens auf einer Skala von 0 bis 1 für 600 Eingriffe: Sie fällt in kleinen Stufen von 1 ab und bleibt flach bei 0.780 nach der letzten Revision nach 7.9 Jahren; schattiertes 95%-Band, Zensierungsstriche und eine Tabelle der Eingriffe unter Risiko und der bisherigen Revisionen."
 from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
@@ -460,7 +460,7 @@ approach_logrank$pvalue      # die Ausgabe rundet p auf eine Stelle; das ist der
 ## Python
 
 ```{python}
-#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens bei Hüft-TP nach Zugang, auf einer Skala von 0 bis 1: Die posteriore Kurve fällt in den ersten Monaten steil ab (88.7 % gegenüber 98.6 % anterior nach 6 Monaten), danach nähern sich die Kurven an und kreuzen sich spät; 95%-Bänder und Tabellen der Hüften unter Risiko und der bisherigen Revisionen."
+#| fig-alt: "Kaplan-Meier-Kurven des revisionsfreien Überlebens bei Hüft-TP nach Zugang, auf einer Skala von 0 bis 1: Die posteriore Kurve fällt in den ersten Monaten steil ab (0.887 gegenüber 0.986 anterior nach 6 Monaten), danach nähern sich die Kurven an und kreuzen sich spät; 95%-Bänder und Tabellen der Hüften unter Risiko und der bisherigen Revisionen."
 from lifelines.statistics import logrank_test
 
 tha = cohort[cohort["procedure"] == "THA"]                # der Zugang gilt nur für Hüften
@@ -623,7 +623,7 @@ tidy_survfit(cif, times = c(2, 5, 10)) |>
 ## Python
 
 ```{python}
-#| fig-alt: "Kurven der kumulativen Inzidenz von Revision und Tod als Anteile, ohne Bänder: Die Revision liegt zuerst höher, dann überholt der Tod sie und endet höher, 24.0 % gegenüber 19.3 % nach 10 Jahren."
+#| fig-alt: "Kurven der kumulativen Inzidenz von Revision und Tod als Anteile, ohne Bänder: Die Revision liegt zuerst höher, dann überholt der Tod sie und endet höher, 0.240 gegenüber 0.193 nach 10 Jahren."
 from scipy.stats import norm
 from statsmodels.duration.survfunc import CumIncidenceRight
 
@@ -869,6 +869,9 @@ stopifnot(
   nrow(cohort) / 10 == 60, sum(cohort$followup_years >= 8) >= 60, sum(cohort$followup_years >= 10) < 60,
   round(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]], 2) == 5.00,
   format(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]) == "5",
+  # numbers added with Task 4.5: the Python alt texts quote proportions (anterior first, then posterior)
+  round(approach_6m$surv, 3) == c(0.986, 0.887), round(death_rows$estimate[3], 3) == 0.240,
+  round(revision_rows$estimate[3], 3) == 0.193,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

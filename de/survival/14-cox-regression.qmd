@@ -30,12 +30,12 @@ cat(sprintf("<!-- data-checksum: %s -->", unname(tools::md5sum("data/CHECKSUMS.m
 **Nach dieser Seite können Sie:**
 
 - ein Cox-Modell in R oder Python anpassen und einen Results-Satz mit dem Hazard Ratio, seinem 95%-KI und dem p-Wert schreiben.
-- prüfen, ob der Effekt eines gemessenen Prädiktors eine gerade Linie ist, mit einem natürlichen kubischen Spline, und ob die Hazards proportional sind, mit skalierten Schoenfeld-Residuen.
+- mit einem natürlichen kubischen Spline prüfen, ob der Effekt eines gemessenen Prädiktors eine gerade Linie ist, und mit skalierten Schoenfeld-Residuen, ob die Hazards proportional sind.
 - ein adjustiertes Cox-Modell berichten, mit den univariablen und multivariablen Hazard Ratios nebeneinander in einer Tabelle und dem Methoden- und Resultatteil dazu.
 
 **Zeitbedarf:** etwa 45 Minuten zum Lesen, etwa 2.5 bis 3 Stunden mit den Übungen (eine Schätzung).
 
-**Vorher lesen:** [Seite 13](13-kaplan-meier.qmd) zu Überlebenskurven, Zensierung und konkurrierenden Risiken und [den Abschnitt zu Splines auf Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression).
+**Vorher lesen:** [Seite 13](13-kaplan-meier.qmd) zu Überlebenskurven, Zensierung und konkurrierenden Risiken und [den Abschnitt zur multiplen nichtlinearen Regression auf Seite 12](../catalog/12-predict-from-several.qmd#multiple-nonlinear-regression), der Splines erklärt.
 :::
 
 ::: {.callout-note}
@@ -373,7 +373,7 @@ Bei keinem Prädiktor änderte sich das Hazard Ratio klar über die Zeit (Zeile 
 
 ```{r}
 #| fig-height: 4
-#| fig-alt: "Diagramm der Schoenfeld-Residuen, posteriorer gegen anterioren Zugang: Punkte nahe +2 und −2 und eine durchgezogene Trendlinie des logarithmierten Hazard Ratio, die in den ersten Monaten hoch beginnt und dann unter die gestrichelte Linie bei 0.31 fällt, den einzigen Wert des Modells; gestrichelte Konfidenzbänder."
+#| fig-alt: "Diagramm der Schoenfeld-Residuen, posteriorer gegen anterioren Zugang: Punkte nahe +2 und −2 und eine durchgezogene Trendlinie des logarithmierten Hazard Ratio, die in den ersten Monaten hoch beginnt und dann unter die gestrichelte Linie bei 0.31 fällt, den einzelnen Wert des Modells; gestrichelte Konfidenzbänder."
 tha <- cohort |> filter(procedure == "THA")
 approach_model <- coxph(Surv(followup_years, revised) ~ approach, data = tha)
 coef(approach_model)                                 # das logarithmierte Hazard Ratio: dort liegt die gestrichelte Linie
@@ -388,7 +388,7 @@ abline(h = coef(approach_model), lty = 2)            # das einzelne Hazard Ratio
 ## Python
 
 ```{python}
-#| fig-alt: "Diagramm der Schoenfeld-Residuen, posteriorer gegen anterioren Zugang, auf einer logarithmischen Zeitachse: Punkte nahe +2 und −2 und eine durchgezogene Trendlinie des logarithmierten Hazard Ratio, die in den ersten Monaten hoch beginnt und dann unter die gestrichelte Linie bei 0.31 fällt, den einzigen Wert des Modells; ohne Bänder."
+#| fig-alt: "Diagramm der Schoenfeld-Residuen, posteriorer gegen anterioren Zugang, auf einer logarithmischen Zeitachse: Punkte nahe +2 und −2 und eine durchgezogene Trendlinie des logarithmierten Hazard Ratio, die in den ersten Monaten hoch beginnt und dann unter die gestrichelte Linie bei 0.31 fällt, den einzelnen Wert des Modells; ohne Bänder."
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 tha = cohort[cohort["procedure"] == "THA"]
@@ -772,7 +772,7 @@ Bevor Sie einreichen, prüfen Sie, ob das Manuskript Folgendes angibt:
 - «Dreifacher Hazard» bedeutet nicht dreimal so viele Revisionen: Berichten Sie das Hazard Ratio als Verhältnis von Raten und geben Sie die kumulativen Risiken getrennt an.
 - Legen Sie die Kovariaten fest, bevor Sie die Resultate ansehen, aus einem Grund, den Sie aufschreiben können: Adjustieren Sie für Störfaktoren, nicht für das, was das Implantat verursacht, und wählen Sie sie nie anhand der Daten aus.
 - Schauen Sie neben dem Test auch die Abbildung der Residuen an: Bei vielen Ereignissen erkennt der Test Veränderungen, die zu klein sind, um eine Rolle zu spielen, bei wenigen übersieht er reale, und ein nicht signifikanter Test ist kein Beweis, dass die Hazards proportional sind.
-- Wenn sich ein Hazard Ratio mit der Zeit verändert, stratifizieren Sie nach diesem Prädiktor, wenn er nur der Adjustierung dient, oder teilen Sie die Nachbeobachtung an einem vorab gewählten Zeitpunkt auf, wenn Sie seinen Effekt brauchen.
+- Wenn sich ein Hazard Ratio mit der Zeit verändert, gibt es zwei übliche Lösungen: nach diesem Prädiktor stratifizieren, wenn er nur der Adjustierung dient, oder die Nachbeobachtung an einem vorab gewählten Zeitpunkt aufteilen, wenn Sie seinen Effekt brauchen.
 - Die beiden Gelenke einer Person sind meist nicht unabhängig: Beide zu behalten und robuste, nach Person geclusterte Standardfehler zu verwenden, ist die übliche Wahl.
 - Ein Subdistribution Hazard Ratio aus dem Fine-Gray-Modell ist kein Hazard Ratio: Lesen Sie es nur als höhere oder niedrigere kumulative Inzidenz und nennen Sie es im Text und in den Tabellen Subdistribution Hazard Ratio.
 :::

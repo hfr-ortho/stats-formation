@@ -240,7 +240,7 @@ Now the practice [cohort](../glossary.qmd#cohort){.term}: 600 procedures, each [
 
 ```{r}
 #| fig-height: 4.5
-#| fig-alt: "Kaplan-Meier curve of revision-free survival for 600 procedures: it falls in small steps from 100% and is flat at 78.0% after the last revision at 7.9 years; 95% band, censoring ticks, table of procedures at risk (600, 332, 84, 21) and revisions so far."
+#| fig-alt: "Kaplan-Meier curve of revision-free survival for 600 procedures: it falls in small steps from 100% and is flat at 78.0% after the last revision at 7.9 years; 95% band, censoring ticks and a table of procedures at risk and revisions so far."
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
@@ -258,7 +258,7 @@ km |>
 ## Python
 
 ```{python}
-#| fig-alt: "Kaplan-Meier curve of revision-free survival, 0 to 1 scale, 600 procedures: it falls in small steps from 1 and is flat at 0.780 after the last revision at 7.9 years; 95% band, censoring ticks, table of procedures at risk (600, 331, 83, 21) and revisions so far."
+#| fig-alt: "Kaplan-Meier curve of revision-free survival, 0 to 1 scale, 600 procedures: it falls in small steps from 1 and is flat at 0.780 after the last revision at 7.9 years; 95% band, censoring ticks and a table of procedures at risk and revisions so far."
 from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
@@ -460,7 +460,7 @@ approach_logrank$pvalue      # the printout rounds p to one digit; this is the f
 ## Python
 
 ```{python}
-#| fig-alt: "Kaplan-Meier curves of revision-free survival in total hips by approach, 0 to 1 scale: the posterior curve drops sharply in the first months (88.7% vs 98.6% anterior at 6 months), then the curves meet and cross late; 95% bands, tables of hips at risk and revisions."
+#| fig-alt: "Kaplan-Meier curves of revision-free survival in total hips by approach, 0 to 1 scale: the posterior curve drops sharply in the first months (0.887 vs 0.986 anterior at 6 months), then the curves meet and cross late; 95% bands, tables of hips at risk and revisions."
 from lifelines.statistics import logrank_test
 
 tha = cohort[cohort["procedure"] == "THA"]                # approach applies to hips only
@@ -623,7 +623,7 @@ tidy_survfit(cif, times = c(2, 5, 10)) |>
 ## Python
 
 ```{python}
-#| fig-alt: "Cumulative incidence curves of revision and death as proportions, without bands: revision runs higher at first, then death overtakes it and ends higher, 24.0% against 19.3% at 10 years."
+#| fig-alt: "Cumulative incidence curves of revision and death as proportions, without bands: revision runs higher at first, then death overtakes it and ends higher, 0.240 against 0.193 at 10 years."
 from scipy.stats import norm
 from statsmodels.duration.survfunc import CumIncidenceRight
 
@@ -869,6 +869,9 @@ stopifnot(
   nrow(cohort) / 10 == 60, sum(cohort$followup_years >= 8) >= 60, sum(cohort$followup_years >= 10) < 60,
   round(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]], 2) == 5.00,
   format(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]) == "5",
+  # numbers added with Task 4.5: the Python alt texts quote proportions (anterior first, then posterior)
+  round(approach_6m$surv, 3) == c(0.986, 0.887), round(death_rows$estimate[3], 3) == 0.240,
+  round(revision_rows$estimate[3], 3) == 0.193,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),

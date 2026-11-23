@@ -34,7 +34,7 @@ La [page 14](14-cox-regression.qmd) traite la [régression de Cox](../glossary.q
 **Après cette page, vous saurez :**
 
 - exécuter une analyse de Kaplan-Meier et un test du log-rank en R ou en Python, et rédiger une phrase de Résultats avec la survie de l'implant de chaque groupe à un temps fixé, son IC à 95 % et le test.
-- choisir entre 1 − Kaplan-Meier et l'incidence cumulée quand des patients peuvent décéder avant d'être révisés, et calculer celle qui répond à la question.
+- choisir entre 1 − Kaplan-Meier et l'incidence cumulée quand des patients peuvent décéder avant d'être révisés, et calculer l'estimation qui répond à la question.
 - calculer le suivi médian par la méthode de Kaplan-Meier inversé et le rapporter dans les Méthodes et les Résultats.
 
 **Durée :** environ 40 minutes de lecture, environ 2 à 2.5 heures avec les exercices (estimation).
@@ -240,7 +240,7 @@ Passons à la [cohorte](../glossary.qmd#cohort){.term} d'exercice : 600 interve
 
 ```{r}
 #| fig-height: 4.5
-#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision pour 600 interventions : elle descend par petites marches depuis 100 % et reste plate à 78.0 % après la dernière révision à 7.9 ans ; bande de confiance à 95 % ombrée, traits de censure et tableau des interventions à risque (600, 332, 84, 21) et des révisions cumulées."
+#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision pour 600 interventions : elle descend par petites marches depuis 100 % et reste plate à 78.0 % après la dernière révision à 7.9 ans ; bande de confiance à 95 % ombrée, traits de censure et tableau des interventions à risque et des révisions cumulées."
 cohort <- read_csv("data/cohort.csv", show_col_types = FALSE)
 
 km <- survfit2(Surv(followup_years, revised) ~ 1, data = cohort,
@@ -258,7 +258,7 @@ km |>
 ## Python
 
 ```{python}
-#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision sur une échelle de 0 à 1 pour 600 interventions : elle descend par petites marches depuis 1 et reste plate à 0.780 après la dernière révision à 7.9 ans ; bande de confiance à 95 % ombrée, traits de censure et tableau des interventions à risque (600, 331, 83, 21) et des révisions cumulées."
+#| fig-alt: "Courbe de Kaplan-Meier de la survie sans révision sur une échelle de 0 à 1 pour 600 interventions : elle descend par petites marches depuis 1 et reste plate à 0.780 après la dernière révision à 7.9 ans ; bande de confiance à 95 % ombrée, traits de censure et tableau des interventions à risque et des révisions cumulées."
 from lifelines.plotting import add_at_risk_counts
 
 cohort = pd.read_csv("data/cohort.csv")
@@ -460,7 +460,7 @@ approach_logrank$pvalue      # la sortie arrondit p à un chiffre ; voici la val
 ## Python
 
 ```{python}
-#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision des prothèses totales de hanche selon la voie d'abord, sur une échelle de 0 à 1 : la courbe de la voie postérieure chute nettement dans les premiers mois (88.7 % contre 98.6 % pour la voie antérieure à 6 mois), puis les courbes se rejoignent et se croisent tard ; bandes de confiance à 95 % et tableaux des hanches à risque et des révisions cumulées."
+#| fig-alt: "Courbes de Kaplan-Meier de la survie sans révision des prothèses totales de hanche selon la voie d'abord, sur une échelle de 0 à 1 : la courbe de la voie postérieure chute nettement dans les premiers mois (0.887 contre 0.986 pour la voie antérieure à 6 mois), puis les courbes se rejoignent et se croisent tard ; bandes de confiance à 95 % et tableaux des hanches à risque et des révisions cumulées."
 from lifelines.statistics import logrank_test
 
 tha = cohort[cohort["procedure"] == "THA"]                # la voie d'abord ne concerne que les hanches
@@ -623,7 +623,7 @@ tidy_survfit(cif, times = c(2, 5, 10)) |>
 ## Python
 
 ```{python}
-#| fig-alt: "Courbes d'incidence cumulée de la révision et du décès en proportions, sans bandes de confiance : la révision est d'abord plus haute, puis le décès la dépasse et finit plus haut, 24.0 % contre 19.3 % à 10 ans."
+#| fig-alt: "Courbes d'incidence cumulée de la révision et du décès en proportions, sans bandes de confiance : la révision est d'abord plus haute, puis le décès la dépasse et finit plus haut, 0.240 contre 0.193 à 10 ans."
 from scipy.stats import norm
 from statsmodels.duration.survfunc import CumIncidenceRight
 
@@ -869,6 +869,9 @@ stopifnot(
   nrow(cohort) / 10 == 60, sum(cohort$followup_years >= 8) >= 60, sum(cohort$followup_years >= 10) < 60,
   round(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]], 2) == 5.00,
   format(quantile(death_ends_km, probs = 0.5, conf.int = FALSE)[[1]]) == "5",
+  # numbers added with Task 4.5: the Python alt texts quote proportions (anterior first, then posterior)
+  round(approach_6m$surv, 3) == c(0.986, 0.887), round(death_rows$estimate[3], 3) == 0.240,
+  round(revision_rows$estimate[3], 3) == 0.193,
   # exercise solutions (recomputed here: the guard runs before the solution chunks)
   round(100 * procedure_5$surv, 1) == c(86.9, 85.9),
   round(100 * procedure_5$lower, 1) == c(81.4, 80.9), round(100 * procedure_5$upper, 1) == c(90.8, 89.6),
